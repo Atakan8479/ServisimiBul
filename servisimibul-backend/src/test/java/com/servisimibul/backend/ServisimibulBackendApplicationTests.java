@@ -1,13 +1,23 @@
 package com.servisimibul.backend;
 
+import com.servisimibul.backend.geography.District;
+import com.servisimibul.backend.geography.DistrictRepository;
+import com.servisimibul.backend.geography.Neighborhood;
+import com.servisimibul.backend.geography.NeighborhoodRepository;
+import com.servisimibul.backend.geography.Province;
+import com.servisimibul.backend.geography.ProvinceRepository;
+import com.servisimibul.backend.geography.School;
+import com.servisimibul.backend.geography.SchoolRepository;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 class ServisimibulBackendApplicationTests {
@@ -17,6 +27,18 @@ class ServisimibulBackendApplicationTests {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private ProvinceRepository provinceRepository;
+
+    @Autowired
+    private DistrictRepository districtRepository;
+
+    @Autowired
+    private NeighborhoodRepository neighborhoodRepository;
+
+    @Autowired
+    private SchoolRepository schoolRepository;
 
     @Test
     @Transactional
@@ -47,6 +69,25 @@ class ServisimibulBackendApplicationTests {
         jdbcTemplate.update("insert into province (code, name) values ('34', 'Istanbul')");
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from province where code = '34'", Integer.class)).isOne();
+    }
+
+    @Test
+    @Transactional
+    void repositoriesPersistGeographyAndEnforceSchoolSourceIdentity() {
+        Province province = provinceRepository.save(new Province("34", "Istanbul"));
+        District district = districtRepository.save(new District(province, "Kadikoy"));
+        Neighborhood neighborhood = neighborhoodRepository.save(new Neighborhood(district, "Caferaga"));
+        School school = schoolRepository.saveAndFlush(
+                new School(neighborhood, "Example School", "Example address", "MEB", "123")
+        );
+
+        assertThat(school.getId()).isNotNull();
+        assertThat(school.isActive()).isTrue();
+        assertThat(school.getNeighborhood().getDistrict().getProvince().getCode()).isEqualTo("34");
+
+        assertThatThrownBy(() -> schoolRepository.saveAndFlush(
+                new School(neighborhood, "Duplicate Source School", null, "MEB", "123")
+        )).isInstanceOf(DataIntegrityViolationException.class);
     }
 
 }
