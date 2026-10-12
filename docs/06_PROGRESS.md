@@ -54,3 +54,12 @@ Never mark tasks done because code was generated: verification and review requir
 - Java 21 Maven packaging passed locally with tests skipped; the existing GitHub Backend workflow then passed the full Maven `verify` run against disposable PostgreSQL 17.
 - The integration test persisted the complete province-to-school hierarchy and confirmed duplicate `(source_name, source_code)` pairs are rejected by the database constraint.
 - Controllers, services, CSV import, public APIs, authentication, and later-gate models remain out of scope.
+
+## Verified Java toolchain alignment — 2026-10-12
+
+- Branch: `codex/jdk25-java21-alignment`.
+- Approved convention: developers run IntelliJ IDEA and Maven with JDK 25 while the application remains Java 21 source/bytecode compatible.
+- The shared IntelliJ project selects `openjdk-25` with Java 21 language level; Java 27 preview features are disabled.
+- On the inspected Windows workstation, Microsoft OpenJDK 25.0.4.1 is registered in IntelliJ, and new PowerShell sessions resolve both `java` and Maven to that JDK.
+- `.\mvnw.cmd --batch-mode -DskipTests package` succeeded with JDK 25; Maven compiled main and test sources with `release 21`, and the application class has class-file major version 65 (Java 21).
+- Database-backed tests were intentionally skipped because this toolchain task did not provision the required disposable PostgreSQL database and must not run tests against shared Supabase.

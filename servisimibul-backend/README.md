@@ -2,6 +2,17 @@
 
 The backend uses Supabase PostgreSQL as its shared development database. Flyway owns the schema and Hibernate only validates it.
 
+## Java toolchain
+
+Use JDK 25 to run IntelliJ IDEA and Maven. The application remains Java 21 source/bytecode compatible through `<java.version>21</java.version>` in `pom.xml`; do not enable Java 22+ language features or preview features.
+
+Each developer must configure JDK 25 on their own computer:
+
+- Set IntelliJ Project SDK and Maven Runner JRE to JDK 25.
+- Set the IntelliJ project language level to Java 21.
+- Set `JAVA_HOME` to the local JDK 25 installation and ensure its `bin` directory precedes older Java installations in `PATH`.
+- Verify both `java -version` and `.\mvnw.cmd --version` before building.
+
 ## Environment
 
 Copy `.env.example` to an ignored `.env` and replace the example values. Spring Boot does not read `.env` itself, so load it through the IntelliJ run configuration or export the variables before starting the application.
