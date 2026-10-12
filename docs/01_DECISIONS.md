@@ -5,7 +5,7 @@ Approval state is important: never turn a proposal into a settled decision witho
 ## APPROVED decisions
 | ID | Decision | Rationale/consequence |
 |---|---|---|
-| D001 | Java 21; Spring Boot; Maven; React + TypeScript; PostgreSQL via Supabase; modular monolith | Existing backend is the base. |
+| D001 | Java 21 source/bytecode compatibility; JDK 25 developer toolchain; Spring Boot; Maven; React + TypeScript; PostgreSQL via Supabase; modular monolith | Existing backend is the base. JDK 25 may run Maven and IntelliJ, but Maven must continue compiling with Java 21 compatibility. |
 | D002 | Flyway owns schema migrations; Hibernate `ddl-auto=validate` | Avoid manual database drift. |
 | D003 | Supabase provides PostgreSQL, NOT Supabase Auth | Spring Security is responsible for identity. |
 | D004 | Server-side sessions + HttpOnly cookie, NOT JWT | CSRF protection and secure session lifecycle needed. Spring Session JDBC is recommended, still inspect compatibility. |
