@@ -1,14 +1,14 @@
 # Progress ledger (update only after verification)
 
 ## Current gate: 3 — Geography entity model
-Status: Gates 0–2 are complete. The Gate 2 foundation was merged in PR #1, and the explicitly approved controlled Supabase cutover completed successfully on 2026-10-12. Gate 3 implementation has not started.
+Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask is implemented and verified in PR #3; review is pending. The separate school CSV import strategy has not started.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
 | 0 Context + repo read-only review | complete | Repository/docs/backend review, 2026-10-11 | Workflow continued to Gate 1 |
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
-| 3 Geography entity model | pending | — | — |
+| 3 Geography entity model | in review | PR #3; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved 2026-10-12; review pending |
 | 4 Auth/session/email/admin review | pending | — | — |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
@@ -45,3 +45,12 @@ Never mark tasks done because code was generated: verification and review requir
 - Flyway applied V1 successfully to Supabase PostgreSQL 17.11. Hibernate `ddl-auto=validate` then completed through the restricted runtime connection.
 - The final read-only Supabase audit confirmed one successful V1 history row, four empty RLS-enabled geography tables, four `servisimibul_app` policies, runtime CRUD grants, and no `anon` or `authenticated` read access.
 - Flyway was disabled again in the ignored local `.env` after the controlled migration run. No credential values were printed or committed.
+
+## Verified Gate 3 geography persistence evidence — 2026-10-12
+
+- Branch: `codex/gate3-geography-persistence`; PR #3.
+- `Province`, `District`, `Neighborhood`, and `School` map to the existing Flyway V1 schema; no migration or Supabase change was required.
+- Minimal Spring Data JPA repositories were added for the four entities. Relationships are lazy and unidirectional, with no cascade deletion.
+- Java 21 Maven packaging passed locally with tests skipped; the existing GitHub Backend workflow then passed the full Maven `verify` run against disposable PostgreSQL 17.
+- The integration test persisted the complete province-to-school hierarchy and confirmed duplicate `(source_name, source_code)` pairs are rejected by the database constraint.
+- Controllers, services, CSV import, public APIs, authentication, and later-gate models remain out of scope.
