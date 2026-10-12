@@ -37,8 +37,9 @@ Prefer SPA served under same origin as `/api/v1`. Any cross-origin cookie setup 
 - `POST /api/v1/admin/operators/{id}/request-revision`
 - `POST /api/v1/admin/operators/{id}/suspend`
 - `GET/POST/PATCH /api/v1/admin/schools[/{id}]`
-- `POST /api/v1/admin/schools/imports?dryRun=...`
 - `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON)
+
+School CSV import is deferred by D019 and is not part of the current pilot API.
 
 ## API standards
 Use DTOs (never return entities containing password hash), validation, stable pagination, `ProblemDetail` or equivalent structured errors, 401 unauthenticated vs 403 unauthorized; 404 where resource privacy matters; 409 conflicts. Propose HTTP contract revisions for human approval before code. Never let a client supply arbitrary operator_id for self-management endpoints.
