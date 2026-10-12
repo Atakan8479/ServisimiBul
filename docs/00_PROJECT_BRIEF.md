@@ -8,7 +8,7 @@ Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No st
 ## MVP mandatory capabilities
 - PostgreSQL persistence, JPA/Hibernate, Flyway migrations, stable dev/test configuration.
 - Reference location hierarchy: Province -> District -> Neighborhood, School located in a Neighborhood.
-- Admin school CRUD and controlled bulk CSV import with duplicate handling and a source identifier if available.
+- Admin school CRUD for a deliberately small pilot catalog containing schools the team is actively testing with. Bulk import and a complete Istanbul catalog are deferred until there is demonstrated need.
 - Operator email registration and verification before login; role-based authentication and server-side sessions; two securely created admins.
 - Admin approval, request-for-revision with explanation, operator edits/resubmission, and account suspension handling.
 - Operator profile includes mandatory business name and publicly reachable phone; operator can control whether entire profile is shown.

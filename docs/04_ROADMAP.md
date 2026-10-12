@@ -12,13 +12,13 @@ Inspect current schema and exact constraints/rows/Flyway history. Supabase dev c
 Use existing `servisimibul-backend` and `pom.xml`. Confirm compatibility with Java 21, Spring Boot 4.1.1, PostgreSQL Flyway modules; set env-driven datasource (no secrets), `ddl-auto=validate`; commit controlled migrations matching approved Gate 1. Provide clean-db integration test and initial CI smoke test. Success = migration repeatable with verified history, successful build/tests.
 
 ## Gate 3 — Core geography/data integrity
-JPA entities/repositories for Province, District, Neighborhood, School. Admin CSV import strategy as separate subtask after geo model. Validate FKs, unique constraints, correct source-code identity and cross-province checks in service design. Success = repo tests and migration behavior pass.
+JPA entities/repositories for Province, District, Neighborhood, School. Validate FKs, unique constraints, correct source-code identity and cross-province checks in service design. Bulk CSV import is deferred by D019. Success = repo tests and migration behavior pass.
 
 ## Gate 4 — Identity/security
 AppUser + OperatorProfile + review/audit entities; email verification before login; session+HttpOnly+CSRF; admin seed bootstrap. Session JDBC schema migrations and expiry cleanup. MUST phase in sub-issues (security skeleton, registration, verification, sessions, admin review) with tests. Success = role, owner, session, CSRF, disabled-account and verification tests.
 
 ## Gate 5 — Operator/admin school coverage
-OperatorSchool & OperatorSchoolCoverage API and operator profile edits; review/needs-correction/resubmission flow; admin school management and CSV import. Success = ownership/cross-province/unique checks, verified import dedup and review logic.
+OperatorSchool & OperatorSchoolCoverage API and operator profile edits; review/needs-correction/resubmission flow; admin CRUD for the deliberately small pilot school catalog. Bulk CSV import remains deferred. Success = ownership/cross-province/unique checks and verified admin school management.
 
 ## Gate 6 — Anonymous public discovery
 Search by school + neighborhood; deterministic operator pagination; publication predicate; contact phone visible for a public profile; offerings NOT required. Responsive UI flow can be parallel only after API contract. Success = empty-offering case, wrong-school coverage, inactive/underapproved tests.
@@ -30,7 +30,7 @@ Optional Vehicle/ServiceOffering, own ServiceOfferingCoverage subset, never misl
 Frontend admin/operator UI, complete responsive public path, performance/page loads, data privacy review, rate limiting, backup and operational instructions, session expiry/cleanup test, manual Supabase cost checks, staging→pilot smoke tests.
 
 ## Two-developer coordination
-A: database, geo catalog, schema constraints, import/query performance.
+A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.
 Both: architecture/contract reviews, tests, PRs; one migration owner at a time. No parallel branch changes to same Flyway version.
 
