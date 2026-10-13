@@ -33,6 +33,8 @@ Approval state is important: never turn a proposal into a settled decision witho
 | D026 | APIs use RFC Problem Details plus stable application error codes; pagination is zero-based with default size 20 and maximum size 50 | Validation may include field errors; sensitive details are omitted. Use 400/401/403/404/409/429 consistently and `Retry-After` for explicit rate-limit responses. Results require stable ordering. Approved 2026-10-13. |
 | D027 | Public contact email is excluded from MVP | Mandatory public contact phone is the sole public contact channel. Authentication email remains private. Approved 2026-10-13. |
 | D028 | New operator profiles default `is_publicly_visible` to `true` | This does not bypass publication rules: the operator appears only when every derived publication condition is satisfied. The operator may hide the profile at any time. Approved 2026-10-13. |
+| D029 | The identity table is named `app_user` | Avoids PostgreSQL `user` keyword ambiguity while retaining the approved `AppUser` domain name. Approved 2026-10-13. |
+| D030 | Operator application review decisions are exactly `APPROVED` and `CHANGES_REQUESTED` for MVP | Suspension remains a separate account/profile condition and is not a review decision. Approved 2026-10-13. |
 
 ## PROPOSED (not yet approved)
 - `ServiceOfferingCoverage` referencing `OperatorSchoolCoverage` plus transactional consistency validation.
