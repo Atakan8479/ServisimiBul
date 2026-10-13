@@ -2,6 +2,30 @@
 
 The backend uses Supabase PostgreSQL as its shared development database. Flyway owns the schema and Hibernate only validates it.
 
+## Code map
+
+Production code is grouped by feature, not repeated technical-layer folders:
+
+| Package/path | Responsibility |
+|---|---|
+| `auth` | Registration, verification, password recovery, validation, email delivery, and auth API errors |
+| `identity` | User/operator JPA entities, lifecycle enums, repositories, and database-backed user loading |
+| `security` | Spring Security configuration, authenticated principal/current user, token hashing, and session-revocation contract |
+| `geography` | Province, district, neighborhood, and school entities/repositories |
+| `resources/db/migration` | Ordered Flyway migrations; never edit an applied migration |
+| `src/test/...` | Tests mirror the production feature packages |
+
+For authentication, read files in this order:
+
+1. `AuthController` and `AuthRequests` — HTTP endpoints and request shapes.
+2. `AuthService` — workflow orchestration and non-enumerating behavior.
+3. `AuthPersistenceService` — transaction boundaries and database state changes.
+4. `AuthInputValidator`, `AuthRateLimiter`, and `TokenGenerator` — focused security helpers.
+5. `AuthEmailSender` — email contract plus disabled/SMTP implementations.
+6. `ApiExceptionHandler` and `AuthExceptions` — safe API error responses.
+
+Keep a feature in one package while it remains readable. Add a subpackage only when it represents a genuinely independent concept; do not create parallel `controller`, `service`, and `repository` folder trees merely to sort a few files.
+
 ## Java toolchain
 
 Use JDK 25 to run IntelliJ IDEA and Maven. The application remains Java 21 source/bytecode compatible through `<java.version>21</java.version>` in `pom.xml`; do not enable Java 22+ language features or preview features.
