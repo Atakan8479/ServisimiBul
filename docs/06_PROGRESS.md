@@ -9,7 +9,7 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. B-03 passed isolated Pos
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged; B-03 PR #33, workflow `38450980182` passed | B-02 scope and D029–D030 approved 2026-10-13; B-03 follows approved J-01 contract and awaits review |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged; B-03 PR #33, latest workflow `38458744022` passed | B-02 scope and D029–D030 approved 2026-10-13; B-03 follows approved J-01 contract and awaits review |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
 | 7 Optional offerings/tariff JSON | pending | — | — |
@@ -22,7 +22,7 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. B-03 passed isolated Pos
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
-| B-03 Registration, verification, and recovery | in review | GitHub issue #10; PR #33; PostgreSQL 17 workflow `38450980182` passed 27 tests | Implements the approved J-01 authentication contract; mutual PR review pending |
+| B-03 Registration, verification, and recovery | in review | GitHub issue #10; PR #33; latest PostgreSQL 17 workflow `38458744022` passed | Implements the approved J-01 authentication contract; mutual PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -110,4 +110,5 @@ Never mark tasks done because code was generated: verification and review requir
 - Password reset preserves verification/application state and calls the session-revocation boundary. B-04 must replace its current no-op implementation when it adds Spring Session; no login session can exist before B-04.
 - `AuthInputValidatorTests` and `AuthRateLimiterTests` passed locally on Java 21: 4 tests, 0 failures.
 - Backend workflow `38450980182` passed V1→V2→V3 migration, Hibernate validation, and all 27 tests on isolated PostgreSQL 17, including 9 B-03 workflow tests: 0 failures, 0 errors, 0 skipped.
+- A readability follow-up consolidated related request/email types, reducing the `auth` production package from 17 files to 11, and added repository/backend code maps. Workflow `38458744022` passed after the structure-only change.
 - No migration was added and shared Supabase was not read, migrated, or otherwise modified.
