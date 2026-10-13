@@ -20,8 +20,11 @@ Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask
 | Task | Status | Evidence | Human approval |
 |---|---|---|---|
 | J-01 Authentication and API contract | in review | GitHub issue #7; branch `codex/j-01-auth-api-contract`; decisions D020–D028 | Contract approved by Onat on 2026-10-13; mutual PR review pending |
+| A-10 Backend deployment and observability | implemented; review/CI pending | GitHub issue #27; branch `codex/a-10-backend-deployment-observability`; 7 focused tests pass; Java 21-targeted package succeeds | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
+
+A-10 was intentionally started before its planned Phase 4 dependencies at human request. The branch adds production and migration profiles, status-only health/readiness, ECS JSON logging, SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, feature implementation, and the approved tariff-storage decision are still required.
 
 ## Session handoff template
 Date:
@@ -71,3 +74,13 @@ Never mark tasks done because code was generated: verification and review requir
 - On the inspected Windows workstation, Microsoft OpenJDK 25.0.4.1 is registered in IntelliJ, and new PowerShell sessions resolve both `java` and Maven to that JDK.
 - `.\mvnw.cmd --batch-mode -DskipTests package` succeeded with JDK 25; Maven compiled main and test sources with `release 21`, and the application class has class-file major version 65 (Java 21).
 - Database-backed tests were intentionally skipped because this toolchain task did not provision the required disposable PostgreSQL database and must not run tests against shared Supabase.
+
+## Verified A-10 local evidence — 2026-10-13
+
+- Branch: `codex/a-10-backend-deployment-observability`.
+- Spring Boot Actuator and mail dependencies compile under JDK 25 with Java 21 release compatibility; the repackaged JAR build succeeded.
+- `ObservabilityEndpointTests` and `ProductionConfigurationTests`: 7 tests, 0 failures, 0 errors, 0 skipped.
+- Production startup in the focused test emitted ECS JSON, exposed only the health endpoint, omitted configured database/SMTP secret values, and did not create/log Spring Boot's temporary generated user password.
+- `/livez`, `/readyz`, and Actuator health groups returned only aggregate status/probe-group information; sensitive Actuator endpoints and the discovery page were unavailable; cross-origin requests received no Actuator CORS header.
+- A full `./mvnw --batch-mode verify` was attempted without database environment variables. The 7 A-10 tests passed, while the 2 pre-existing geography integration tests could not create a datasource because no disposable PostgreSQL 17 service is installed locally. Shared Supabase was deliberately not used; GitHub CI must run the full suite with its isolated PostgreSQL service.
+- No migration or shared database operation was performed.

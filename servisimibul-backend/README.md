@@ -19,6 +19,8 @@ Copy `.env.example` to an ignored `.env` and replace the example values. Spring 
 
 `SB_DB_USER` must be the least-privilege `servisimibul_app` login, not `postgres`. Migration credentials are separate and should only be present during an approved migration run. Keep `SB_FLYWAY_ENABLED=false` for the normal application runtime.
 
+Local HTTP development must explicitly set `SPRING_PROFILES_ACTIVE=local` and `SB_COOKIE_SECURE=false`, as shown in `.env.example`. Deployed environments use the `prod` profile, which enforces a Secure `SBSESSION` cookie and structured JSON logs.
+
 Before V1 runs, an administrator must provision the runtime login outside Flyway. Use a newly generated password and never commit the executed statement:
 
 ```sql
@@ -41,3 +43,9 @@ Run locally by pointing the `SB_DB_*` variables at a disposable PostgreSQL datab
 ```
 
 Do not run the test suite against the shared Supabase project: the V1 test expects a clean database.
+
+## Deployment and probes
+
+The backend exposes status-only `/livez` and `/readyz` probes. All sensitive Actuator endpoints are disabled. Runtime and migration credentials must remain separate.
+
+See [`docs/07_BACKEND_DEPLOYMENT.md`](../docs/07_BACKEND_DEPLOYMENT.md) for the environment contract, controlled migration sequence, smoke checks, observability policy, and rollback procedure. The UKOME tariff store remains an explicit architecture gate and is not written inside the JAR.
