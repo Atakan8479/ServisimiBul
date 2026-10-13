@@ -8,6 +8,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -18,13 +21,16 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "app_user")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AppUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Getter
     private UUID id;
 
     @Column(nullable = false, unique = true, length = 254)
+    @Getter
     private String email;
 
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -32,9 +38,11 @@ public class AppUser {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
+    @Getter
     private UserRole role;
 
     @Column(name = "is_enabled", nullable = false)
+    @Getter
     private boolean enabled = true;
 
     @Column(name = "email_verified_at")
@@ -48,9 +56,6 @@ public class AppUser {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected AppUser() {
-    }
-
     private AppUser(String email, String passwordHash, UserRole role) {
         this.email = normalizeEmail(email);
         this.passwordHash = Objects.requireNonNull(passwordHash);
@@ -63,22 +68,6 @@ public class AppUser {
 
     static AppUser newAdmin(String email, String passwordHash) {
         return new AppUser(email, passwordHash, UserRole.ADMIN);
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public UserRole getRole() {
-        return role;
-    }
-
-    public boolean isEnabled() {
-        return enabled;
     }
 
     public boolean isEmailVerified() {

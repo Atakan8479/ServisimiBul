@@ -11,6 +11,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.OffsetDateTime;
@@ -19,10 +22,12 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "operator_application_review")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OperatorApplicationReview {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Getter
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -35,17 +40,16 @@ public class OperatorApplicationReview {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
+    @Getter
     private ReviewDecision decision;
 
     @Column(columnDefinition = "text")
+    @Getter
     private String reason;
 
     @CreationTimestamp
     @Column(name = "reviewed_at", nullable = false, updatable = false)
     private OffsetDateTime reviewedAt;
-
-    protected OperatorApplicationReview() {
-    }
 
     public OperatorApplicationReview(
             OperatorProfile operator,
@@ -62,15 +66,4 @@ public class OperatorApplicationReview {
         this.reason = reason == null ? null : reason.strip();
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public ReviewDecision getDecision() {
-        return decision;
-    }
-
-    public String getReason() {
-        return reason;
-    }
 }

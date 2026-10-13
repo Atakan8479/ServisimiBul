@@ -9,6 +9,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.OffsetDateTime;
@@ -17,10 +20,12 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "password_reset_token")
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class PasswordResetToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
+    @Getter
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -34,14 +39,12 @@ public class PasswordResetToken {
     private OffsetDateTime expiresAt;
 
     @Column(name = "consumed_at")
+    @Getter
     private OffsetDateTime consumedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
-
-    protected PasswordResetToken() {
-    }
 
     public PasswordResetToken(AppUser user, String tokenHash, OffsetDateTime expiresAt) {
         this.user = Objects.requireNonNull(user);
@@ -49,11 +52,4 @@ public class PasswordResetToken {
         this.expiresAt = Objects.requireNonNull(expiresAt);
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public OffsetDateTime getConsumedAt() {
-        return consumedAt;
-    }
 }

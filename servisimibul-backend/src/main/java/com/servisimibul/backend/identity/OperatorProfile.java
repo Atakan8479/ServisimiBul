@@ -11,6 +11,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -20,6 +23,8 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "operator_profile")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OperatorProfile {
 
     @Id
@@ -57,9 +62,6 @@ public class OperatorProfile {
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
-    protected OperatorProfile() {
-    }
-
     public OperatorProfile(AppUser user, String businessName, String contactPhone) {
         if (Objects.requireNonNull(user).getRole() != UserRole.OPERATOR) {
             throw new IllegalArgumentException("Only an operator can own an operator profile");
@@ -69,35 +71,4 @@ public class OperatorProfile {
         this.contactPhone = Objects.requireNonNull(contactPhone).strip();
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public AppUser getUser() {
-        return user;
-    }
-
-    public String getBusinessName() {
-        return businessName;
-    }
-
-    public String getContactPhone() {
-        return contactPhone;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public OperatorApprovalStatus getApprovalStatus() {
-        return approvalStatus;
-    }
-
-    public boolean isActive() {
-        return active;
-    }
-
-    public boolean isPubliclyVisible() {
-        return publiclyVisible;
-    }
 }
