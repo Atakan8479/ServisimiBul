@@ -15,6 +15,14 @@ Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask
 | 7 Optional offerings/tariff JSON | pending | — | — |
 | 8 Pilot QA and UI | pending | — | — |
 
+## Active work-package progress
+
+| Task | Status | Evidence | Human approval |
+|---|---|---|---|
+| J-01 Authentication and API contract | in review | GitHub issue #7; branch `codex/j-01-auth-api-contract`; decisions D020–D028 | Contract approved by Onat on 2026-10-13; mutual PR review pending |
+
+J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
+
 ## Session handoff template
 Date:
 Git branch / PR:

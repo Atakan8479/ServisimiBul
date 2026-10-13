@@ -7,9 +7,11 @@ Existing manually created schema is described in `05_REPO_STATE.md`; new migrati
 
 ## Identity and operator
 `AppUser(id UUID, email UNIQUE, password_hash, role ADMIN|OPERATOR, is_enabled, email_verified_at, timestamps)` — **final SQL table name not fixed; avoid `user` reserved-name confusion**.
-`OperatorProfile(id UUID, user_id UNIQUE FK, business_name NOT NULL, contact_phone NOT NULL, optional public email/description, approval_status, is_active, is_publicly_visible, timestamps)`.
+`OperatorProfile(id UUID, user_id UNIQUE FK, business_name NOT NULL, contact_phone NOT NULL, optional description, approval_status, is_active, is_publicly_visible, timestamps)`.
 A required public phone does NOT mean profile automatically visible; public visibility still needs approval and flags. Keep private authentication email and public contact fields separate.
-`EmailVerificationToken(user_id, token_hash, expires_at, consumed_at)` and `OperatorApplicationReview(operator_id, reviewed_by, decision, reason?, timestamp)` when auth/application stage starts. A correction request requires a reason, operator may revise/re-submit.
+`EmailVerificationToken(user_id, token_hash, expires_at, consumed_at)`, `PasswordResetToken(user_id, token_hash, expires_at, consumed_at)`, and `OperatorApplicationReview(operator_id, reviewed_by, decision, reason?, timestamp)` are added during the auth/application stage. Tokens are stored only as hashes and are single-use. A correction request requires a reason, and the operator may revise/re-submit.
+
+Authentication email is never public in MVP. The mandatory contact phone is the sole public contact channel. Registration accepts email, password, business name, and contact phone and creates only an operator application in `DRAFT`; ADMIN identities are bootstrap-only.
 
 ## School/coverage relationships
 `OperatorSchool(id UUID, operator_id FK, school_id FK, is_active, UNIQUE(operator_id,school_id))`.
@@ -24,7 +26,9 @@ Only neighborhoods belonging to the school province allowed, even if in differen
 `match operator` iff verified user & enabled account & approved operator & active operator & public visibility true & active school & active OperatorSchool & general coverage matches selected school/neighborhood. Public name and contact phone included. ServiceOffering does NOT appear as mandatory join; optionally load only published offerings whose specific coverage matches school+neighborhood. Paginate DISTINCT operators before fetching offering details. No price estimate if distance is not known.
 
 ## Lifecycle
-New registration → email unverified (no login) → email verified → `PENDING` admin review. Admin approves or requests corrections with explanation. Correction request redirects operator to edit/resubmit; re-submitted application returns to `PENDING`. Proposed status names are *not* fully approved; capture final enum/review model before implementation. Suspensions revoke/deny sessions and remove public visibility. Duplicate `isPublished` operator field is forbidden; derive actual visibility.
+New registration → `DRAFT` with email unverified (no login) → email verified → limited operator dashboard → explicit submission to `PENDING`. Admin approval moves to `APPROVED`; a correction request with an explanation moves to `CHANGES_REQUESTED`; re-submission returns to `PENDING`. There is no permanent `REJECTED` application state in MVP. Suspension is a separate account/profile condition that revokes sessions and removes public visibility.
+
+New operator profiles default `is_publicly_visible` to `true`. This preference alone never publishes a profile: every discovery request still evaluates the complete publication predicate. Validated edits by an approved operator take effect immediately and do not trigger renewed admin review in MVP. Switching public visibility off or on also does not require review. A future moderation/re-review design is deferred until pilot evidence justifies it. Duplicate `isPublished` operator state remains forbidden; derive actual visibility.
 
 ## UKOME pricing
 MVP stores ONLY official UKOME tariff in admin-editable JSON outside packaged JAR (location not final), with city, authority, academic year, source, effective dates and distance brackets (amounts exact integer kuruş recommended). Backend validates nonnegative prices, valid nonoverlapping intervals, provenance and dates; admin endpoint writes atomically and restricts concurrent edits. Never claim fee in a band is an operator quote or that neighborhood establishes exact km. No fare DB tables; no monthly_price in MVP ServiceOffering.

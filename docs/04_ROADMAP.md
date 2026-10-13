@@ -15,7 +15,7 @@ Use existing `servisimibul-backend` and `pom.xml`. Confirm compatibility with Ja
 JPA entities/repositories for Province, District, Neighborhood, School. Validate FKs, unique constraints, correct source-code identity and cross-province checks in service design. Bulk CSV import is deferred by D019. Success = repo tests and migration behavior pass.
 
 ## Gate 4 — Identity/security
-AppUser + OperatorProfile + review/audit entities; email verification before login; session+HttpOnly+CSRF; admin seed bootstrap. Session JDBC schema migrations and expiry cleanup. MUST phase in sub-issues (security skeleton, registration, verification, sessions, admin review) with tests. Success = role, owner, session, CSRF, disabled-account and verification tests.
+AppUser + OperatorProfile + review/audit entities; email verification before login; password recovery; session+HttpOnly+CSRF; one-shot two-admin bootstrap. Spring Session JDBC schema migrations, normal 30-minute inactivity sessions, optional non-sliding 90-day “Remember me” sessions, global revocation triggers, concurrent-session limits, and expiry cleanup. MUST phase in sub-issues (security skeleton, registration, verification/recovery, sessions, admin review) with tests. Success = role, owner, session lifetime/revocation, CSRF, disabled-account, verification, recovery, and non-enumeration tests.
 
 ## Gate 5 — Operator/admin school coverage
 OperatorSchool & OperatorSchoolCoverage API and operator profile edits; review/needs-correction/resubmission flow; admin CRUD for the deliberately small pilot school catalog. Bulk CSV import remains deferred. Success = ownership/cross-province/unique checks and verified admin school management.
