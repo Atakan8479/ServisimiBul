@@ -12,7 +12,7 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. The approved J-02 offeri
 | 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 workflow run `38445768813` | B-02 reviewed and merged 2026-10-13; later B-03/B-04 work pending |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | contract in review | J-02 branch `codex/j-02-offering-tariff-frontend-contract`; D031–D036 | Contract approved by Atakan 2026-10-14; implementation pending |
+| 7 Optional offerings/tariff JSON | contract in review | J-02 issue #8; PR #34; D031–D036 | Contract approved by Atakan 2026-10-14; implementation pending |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -22,7 +22,7 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. The approved J-02 offeri
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
-| J-02 Offering, tariff, and frontend contract | in review | GitHub issue #8; branch `codex/j-02-offering-tariff-frontend-contract`; decisions D031–D036 | Decision bundle approved by Atakan 2026-10-14; PR review pending |
+| J-02 Offering, tariff, and frontend contract | in review | GitHub issue #8; PR #34; decisions D031–D036 | Decision bundle approved by Atakan 2026-10-14; PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -104,7 +104,7 @@ Never mark tasks done because code was generated: verification and review requir
 
 ## Verified J-02 contract evidence — 2026-10-14
 
-- GitHub issue #8; branch `codex/j-02-offering-tariff-frontend-contract`; based on merged `origin/main` commit `3f064b856af546f73afe0132736fccd47006c52e`.
+- GitHub issue #8; PR #34 from branch `codex/j-02-offering-tariff-frontend-contract`; based on merged `origin/main` commit `3f064b856af546f73afe0132736fccd47006c52e`.
 - Human-approved decisions D031–D036 define the optional-but-vehicle-backed offering model, vehicle lifecycle and constraints, persistent filesystem tariff store, immutable/atomic optimistic-concurrency writes, tariff metadata/band validation, and frontend baseline.
 - Project brief, decision register, domain/data, security/API, roadmap, repository-state, and progress documents were reconciled to the same contract; superseded nullable-vehicle and unresolved-tariff-storage language was removed.
 - `git diff --check` passed. Targeted repository searches found no remaining nullable offering-to-vehicle rule, unresolved tariff-storage placeholder, or obsolete tariff query parameter in the scoped documents.
