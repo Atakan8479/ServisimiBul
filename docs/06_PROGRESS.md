@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Phase 0 — Flyway security reconciliation
-Status: Gates 0–3 and J-01 are complete. A-01 is implemented on its feature branch; isolated PostgreSQL 17 CI remains required before merge. B-02 must wait for A-01 review and merge.
+Status: Gates 0–3 and J-01 are complete. A-01 passed isolated PostgreSQL 17 CI and is awaiting mutual review. B-02 must wait for A-01 review and merge.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -20,7 +20,7 @@ Status: Gates 0–3 and J-01 are complete. A-01 is implemented on its feature br
 | Task | Status | Evidence | Human approval |
 |---|---|---|---|
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
-| A-01 Flyway security and repository reconciliation | in progress | GitHub issue #6; branch `codex/a-01-flyway-security-reconciliation`; JDK 25/Java 21 package passed; PostgreSQL 17 CI pending | Scope reassigned to Onat on 2026-10-13; mutual PR review pending |
+| A-01 Flyway security and repository reconciliation | in review | GitHub issue #6; PR #31; JDK 25/Java 21 package and PostgreSQL 17 Backend workflow run `38443338668` passed | Scope reassigned to Onat on 2026-10-13; mutual PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -75,11 +75,11 @@ Never mark tasks done because code was generated: verification and review requir
 - `.\mvnw.cmd --batch-mode -DskipTests package` succeeded with JDK 25; Maven compiled main and test sources with `release 21`, and the application class has class-file major version 65 (Java 21).
 - Database-backed tests were intentionally skipped because this toolchain task did not provision the required disposable PostgreSQL database and must not run tests against shared Supabase.
 
-## A-01 local evidence — 2026-10-13
+## Verified A-01 evidence — 2026-10-13
 
-- Branch: `codex/a-01-flyway-security-reconciliation`; GitHub issue #6.
+- Branch: `codex/a-01-flyway-security-reconciliation`; GitHub issue #6; PR #31.
 - V1 was left unchanged; V2 contains only privilege revocations for `public.flyway_schema_history`.
 - The integration test expects Flyway schema version 2, verifies a repeated migration executes zero migrations, verifies `anon`, `authenticated`, and `servisimibul_app` have no Flyway-history privileges, and verifies the runtime connection cannot read the history table.
 - `.\mvnw.cmd --batch-mode -DskipTests package` passed with JDK 25 and Java 21 release compilation.
-- Database-backed tests were not run locally because no disposable PostgreSQL service is installed. The existing backend workflow must provide the PostgreSQL 17 result before merge.
+- Backend workflow run `38443338668` passed the full Maven verification against isolated PostgreSQL 17, including clean V1→V2 migration, repeat no-op, Hibernate validation, and Flyway-history access denial.
 - No shared Supabase read/write, migration, or schema operation was performed.
