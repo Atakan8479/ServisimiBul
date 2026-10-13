@@ -19,6 +19,12 @@ When sources conflict: stop, explain the conflict, and request a decision. Do no
 - Finish with changed files, commands run, tests and outcomes, important decisions, proposed next task. Update `docs/06_PROGRESS.md` only with verified results after approval.
 - Use feature branches and pull requests; never push directly to `main` without explicit permission. Code review is required before merge.
 
+## Java and Lombok conventions
+- Prefer `final` dependencies with Lombok `@RequiredArgsConstructor` for Spring services, controllers, and components. Do not use field injection.
+- For ordinary JPA entities, prefer Lombok `@Getter` and `@NoArgsConstructor(access = AccessLevel.PROTECTED)`, plus explicit constructors and domain methods for valid state changes.
+- Do not use blanket `@Setter`, `@Data`, or `@AllArgsConstructor` on JPA entities. Prefer Java records for request/response DTOs.
+- Authentication and credential-bearing classes are the exception: generate only accessors known to be safe, never generate or expose getters or `toString()` output for password/token hashes, and keep security-sensitive behavior explicit when that is clearer.
+
 ## Product invariants
 - Public discovery platform: parent search needs no account; no booking, payment, GPS, route optimization or student records in MVP.
 - Operator is NOT necessarily driver; operator can serve multiple schools and own multiple vehicles.
