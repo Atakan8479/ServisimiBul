@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1 — Identity/security foundation
-Status: Gates 0–3, J-01, and A-01 are complete. B-02 passed isolated PostgreSQL 17 CI and is awaiting mutual review in PR #32.
+## Current stage: Phase 1 — Contract and identity/security sequencing
+Status: Gates 0–3, J-01, A-01, and B-02 are complete. The approved J-02 offering, tariff, and frontend contract is being documented for review; implementation remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,10 +9,10 @@ Status: Gates 0–3, J-01, and A-01 are complete. B-02 passed isolated PostgreSQ
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32; PostgreSQL 17 workflow run `38445768813` | B-02 scope and D029–D030 approved 2026-10-13; mutual PR review pending |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 workflow run `38445768813` | B-02 reviewed and merged 2026-10-13; later B-03/B-04 work pending |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | pending | — | — |
+| 7 Optional offerings/tariff JSON | contract in review | J-02 issue #8; PR #34; D031–D036 | Contract approved by Atakan 2026-10-14; implementation pending |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -21,13 +21,16 @@ Status: Gates 0–3, J-01, and A-01 are complete. B-02 passed isolated PostgreSQ
 |---|---|---|---|
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
-| B-02 Identity persistence and security foundation | in review | GitHub issue #9; PR #32; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat 2026-10-13; mutual PR review pending |
+| B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
+| J-02 Offering, tariff, and frontend contract | in review | GitHub issue #8; PR #34; decisions D031–D036 | Decision bundle approved by Atakan 2026-10-14; PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
 B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. Registration/recovery controllers, email delivery, Spring Session lifecycle, and admin bootstrap remain assigned to B-03/B-04. No shared Supabase operation is part of PR #32.
+
+J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
 ## Session handoff template
 Date:
@@ -98,3 +101,12 @@ Never mark tasks done because code was generated: verification and review requir
 - `.\mvnw.cmd --batch-mode -DskipTests package` passed locally on JDK 25 with Java 21 release compilation.
 - Backend workflow run `38445768813` passed V1→V2→V3 migration, Hibernate validation, migration repeat no-op, RLS/grant checks, persistence, token replay/expiry, disabled/unverified authentication, ownership identity, route authorization, anonymous-session, and CSRF coverage on isolated PostgreSQL 17: 14 tests, 0 failures, 0 errors, 0 skipped.
 - Shared Supabase was not read, migrated, or otherwise modified.
+
+## Verified J-02 contract evidence — 2026-10-14
+
+- GitHub issue #8; PR #34 from branch `codex/j-02-offering-tariff-frontend-contract`; based on merged `origin/main` commit `3f064b856af546f73afe0132736fccd47006c52e`.
+- Human-approved decisions D031–D036 define the optional-but-vehicle-backed offering model, vehicle lifecycle and constraints, persistent filesystem tariff store, immutable/atomic optimistic-concurrency writes, tariff metadata/band validation, and frontend baseline.
+- Project brief, decision register, domain/data, security/API, roadmap, repository-state, and progress documents were reconciled to the same contract; superseded nullable-vehicle and unresolved-tariff-storage language was removed.
+- `git diff --check` passed. Targeted repository searches found no remaining nullable offering-to-vehicle rule, unresolved tariff-storage placeholder, or obsolete tariff query parameter in the scoped documents.
+- Maven and frontend tests were not run because J-02 changes documentation only and introduces no application source, dependency, configuration, or migration.
+- No shared Supabase operation, production-setting change, migration, or database mutation was performed.

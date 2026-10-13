@@ -35,18 +35,20 @@ Approval state is important: never turn a proposal into a settled decision witho
 | D028 | New operator profiles default `is_publicly_visible` to `true` | This does not bypass publication rules: the operator appears only when every derived publication condition is satisfied. The operator may hide the profile at any time. Approved 2026-10-13. |
 | D029 | The identity table is named `app_user` | Avoids PostgreSQL `user` keyword ambiguity while retaining the approved `AppUser` domain name. Approved 2026-10-13. |
 | D030 | Operator application review decisions are exactly `APPROVED` and `CHANGES_REQUESTED` for MVP | Suspension remains a separate account/profile condition and is not a review decision. Approved 2026-10-13. |
-
-## PROPOSED (not yet approved)
-- `ServiceOfferingCoverage` referencing `OperatorSchoolCoverage` plus transactional consistency validation.
+| D031 | Vehicle and ServiceOffering remain optional for discovery, but every ServiceOffering must reference an active Vehicle owned by the same operator | `vehicle_id` is mandatory. An offering draft may have zero coverage, while publication requires at least one valid ServiceOfferingCoverage entry that belongs to the same OperatorSchool and is a subset of its general coverage. Approved 2026-10-14. |
+| D032 | Vehicle plate and capacity are mandatory; vehicle removal is lifecycle-based rather than hard deletion | Canonical plate values are trimmed, uppercased, stripped of spaces/hyphens, and globally unique. Capacity must be greater than zero; nullable `available_seats`, when present, is between zero and capacity. Deactivation transactionally unpublishes dependent offerings; reactivation never republishes them automatically. Approved 2026-10-14. |
+| D033 | Admin-editable tariff JSON is stored in a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR` | The directory must be mounted on a persistent deployment volume and is never the packaged JAR, classpath, frontend, or PostgreSQL fare tables. Supabase Storage is intentionally excluded for MVP because its S3 compatibility does not provide object versioning and its server-side access keys have broad bucket access. Approved 2026-10-14. |
+| D034 | Tariff updates use immutable version files plus atomic replacement of `current.json`, with optimistic concurrency | Each write supplies the expected current version; stale updates return 409 instead of last-write-wins. Temp-file and atomic move occur on the same filesystem. Rollback creates a new version containing prior content; history is never overwritten. MVP permits one tariff-writer backend instance; horizontal write scaling requires a new distributed-lock/store decision. A-09 owns off-volume backup and restoration verification. Approved 2026-10-14. |
+| D035 | Official tariff bands and provenance have a strict JSON contract | Bands are sorted, contiguous, non-overlapping half-open intervals `[minDistanceKm,maxDistanceKm)`; the first starts at zero and only the final band has `maxDistanceKm=null`. Amounts are nonnegative integer kuruş. Source title, official URL, authority, academic year, effective dates, and version are mandatory. Approved 2026-10-14. |
+| D036 | The frontend baseline is a Node.js 24 LTS/npm Vite React+TypeScript SPA | Commit `package-lock.json`; use strict TypeScript, ESLint, Prettier, React Router Data Mode, React Hook Form with Zod, Vitest, React Testing Library, and MSW. Production uses same-origin relative `/api/v1`; local Vite proxies `/api` to Spring Boot so cookies and CSRF retain same-origin behavior. Browser-visible `VITE_*` variables must contain no secrets. Approved 2026-10-14. |
 
 ## DEFERRED (not current scope)
 - School CSV import, full-catalog ingestion, and automated school synchronization. Revisit only after pilot usage demonstrates a need; approve the source, duplicate rules, preview/commit behavior, and error policy before implementation.
 
 ## OPEN questions requiring explicit resolution before relevant implementation
 1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
-2. Where admin-editable tariff JSON is persistently stored (volume/object storage), backup, concurrency, versioning, UKOME source and effective-date rules.
-3. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
-4. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
+2. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
+3. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
 
 ## Decision change procedure
 When an approved decision changes: update this document, related domain/API/roadmap files, acceptance tests and task scope in the same reviewed PR. Never silently overwrite the old rule.
