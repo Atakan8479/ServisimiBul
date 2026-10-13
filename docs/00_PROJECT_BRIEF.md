@@ -17,7 +17,7 @@ Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No st
 - Price reference: official UKOME fee bands from editable persistent JSON; only verified official tariffs, no price estimates based on neighborhood.
 
 ## Optional-detail capability; not required for discovery
-- Vehicle records and ServiceOffering details; available seats and vehicle nullable; each offering can have independent ServiceOfferingCoverage constrained to the general coverage of the same OperatorSchool.
+- Vehicle records and ServiceOffering details are optional, but every offering references an active vehicle owned by the same operator. Vehicle plate and capacity are required; available seats remain optional and cannot exceed capacity. Each offering can have independent ServiceOfferingCoverage constrained to the general coverage of the same OperatorSchool.
 - No ServiceOffering must be necessary for operator search visibility.
 
 ## Not MVP

@@ -26,6 +26,11 @@ Validated profile edits by an approved operator take effect immediately without 
 
 Authentication email remains private. Public contact email is not part of MVP; the required contact phone is the only public contact channel.
 
+## Vehicle and offering contract
+Vehicle and ServiceOffering data are optional details and never gate the base operator discovery result. A ServiceOffering nevertheless requires an active vehicle owned by the same operator as its OperatorSchool. The API canonicalizes a vehicle plate by trimming, uppercasing, and removing spaces/hyphens before applying global uniqueness. Capacity is mandatory and greater than zero; nullable `availableSeats` must be between zero and that vehicle's capacity.
+
+Vehicle hard deletion is not available in MVP. Deactivation transactionally unpublishes all dependent offerings, and reactivation does not publish them again. An offering draft may have no coverage, but publication requires at least one coverage item from the same OperatorSchool's general coverage plus an active owned vehicle. Removing general coverage must not leave an invalid published offering.
+
 ## Public endpoints (draft; refine before coding)
 - `GET /api/v1/provinces`
 - `GET /api/v1/districts?provinceId=...`
@@ -33,7 +38,7 @@ Authentication email remains private. Public contact email is not part of MVP; t
 - `GET /api/v1/schools?query=...`
 - `GET /api/v1/operators?schoolId=...&neighborhoodId=...&page=0&size=20`
 - `GET /api/v1/operators/{id}`
-- `GET /api/v1/tariffs?provinceId=...` (official JSON only)
+- `GET /api/v1/tariffs?provinceCode=...` (official JSON only)
 
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
@@ -50,8 +55,14 @@ Authentication email remains private. Public contact email is not part of MVP; t
 - `GET/PATCH /api/v1/operator/profile`
 - `GET/POST /api/v1/operator/schools`
 - `PUT /api/v1/operator/schools/{id}/coverage`
-- `GET/POST/PATCH /api/v1/operator/offerings[/{id}]`
+- `GET/POST /api/v1/operator/vehicles`
+- `GET/PATCH /api/v1/operator/vehicles/{id}`
+- `POST /api/v1/operator/vehicles/{id}/deactivate`
+- `GET/POST /api/v1/operator/offerings`
+- `GET/PATCH /api/v1/operator/offerings/{id}`
 - `PUT /api/v1/operator/offerings/{id}/coverage`
+- `POST /api/v1/operator/offerings/{id}/publish`
+- `POST /api/v1/operator/offerings/{id}/unpublish`
 - `POST /api/v1/operator/application/submit`
 - `POST /api/v1/operator/application/resubmit`
 
@@ -61,9 +72,14 @@ Authentication email remains private. Public contact email is not part of MVP; t
 - `POST /api/v1/admin/operators/{id}/request-revision`
 - `POST /api/v1/admin/operators/{id}/suspend`
 - `GET/POST/PATCH /api/v1/admin/schools[/{id}]`
-- `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON)
+- `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON; request includes expected current version)
 
 School CSV import is deferred by D019 and is not part of the current pilot API.
+
+## Tariff storage and write contract
+Only the backend reads or writes the persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the deployment mounts it on a writable persistent volume. Tariff content is never a classpath/JAR/frontend asset or a PostgreSQL fare table, and Supabase Storage is excluded for MVP. Do not expose storage credentials or filesystem paths to the browser.
+
+An accepted admin update writes a new immutable version file and atomically replaces `current.json` using a temp file on the same filesystem. The client must send the version it read; a stale version returns 409 Problem Details with stable code `tariff_version_conflict` and changes no file. A rollback is another versioned write, not history mutation. Only one tariff-writer backend instance is supported until a distributed concurrency design is approved. Tariff files must satisfy D035's provenance, effective-date, interval, and integer-kuruş rules. A-09 must define and verify off-volume backup and restore.
 
 ## API standards
 Use DTOs and never return entities containing password or token hashes. Errors use RFC Problem Details (`application/problem+json`) with `type`, `title`, `status`, `detail`, `instance`, a stable application `code`, optional `fieldErrors`, and an optional safe `traceId`. Never include credentials, tokens, cookie values, stack traces, or account-enumerating details.
@@ -71,6 +87,11 @@ Use DTOs and never return entities containing password or token hashes. Errors u
 Use 400 for validation/syntax, 401 for unauthenticated, 403 for unauthorized, 404 where resource privacy matters, 409 for state/uniqueness conflicts, and 429 for explicit rate-limit responses with `Retry-After`. Authentication and recovery endpoints may intentionally return the same generic success response for existing and nonexistent accounts.
 
 Pagination uses a zero-based nonnegative `page`, `size` defaulting to 20 and limited to 1–50, deterministic stable ordering, and a response containing `content`, `page`, `size`, `totalElements`, and `totalPages`. Never let a client supply an arbitrary `operatorId` for self-management endpoints.
+
+## Frontend contract
+Use Node.js 24 LTS with npm and commit `package-lock.json`. The frontend is a Vite React+TypeScript SPA with strict TypeScript, ESLint, and Prettier. Routing uses React Router Data Mode rather than Framework/SSR mode. Forms use React Hook Form with Zod; browser validation improves usability but never replaces backend validation. Tests use Vitest, React Testing Library, and MSW.
+
+Production browser calls use the relative same-origin `/api/v1` path, and production serves the SPA and API from the same browser origin. Local Vite development proxies `/api` to Spring Boot so session cookies and CSRF behavior remain same-origin; do not enable permissive credentialed CORS as a shortcut. Browser-visible `VITE_*` values contain no secrets, database credentials, service-role keys, session secrets, or admin tokens.
 
 ## LinkedIn-Clone adaptation
 Past security review identified risks: mutable token in singleton JwtService; broad/misordered matchers; direct User serialization; stale/disabled-user token behavior; unsafe localStorage JWT; overly broad CORS. Since ServisimiBul uses sessions, do NOT copy JwtService/JwtAuthFilter; reuse carefully reviewed password/identity/email patterns only. Independently inspect versions and source if attempting reuse; nothing from legacy repository is production-ready by assumption.
