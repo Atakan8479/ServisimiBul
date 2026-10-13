@@ -24,26 +24,27 @@ Approval state is important: never turn a proposal into a settled decision witho
 | D017 | Adopt Flyway through a controlled drop and recreation of the four existing empty geography tables | Read-only inspection on 2026-10-12 verified `province`, `district`, `neighborhood`, and `school` have zero rows and no Flyway or Supabase migration history. Destructive execution still requires a separately reviewed plan and explicit approval. |
 | D018 | Gate 2 schema/security contract: V1 retains `province.created_at`, reproduces the inspected geography schema, keeps RLS enabled, removes `anon`/`authenticated` table and sequence access (including Flyway-owner defaults), and leaves `service_role` unchanged | `postgres` is used only for controlled migrations/administration. A separately provisioned `servisimibul_app` login receives only explicit object grants and table-scoped backend RLS policies; it is not a Data API role and does not receive `BYPASSRLS`. Approved 2026-10-12. |
 | D019 | Pilot school catalog is curated manually through admin CRUD and initially contains only schools the team is actively testing with | Do not scrape, synchronize, bulk import, or attempt to preload all Istanbul schools now. Bulk CSV import is deferred, not permanently rejected, and requires a new explicit decision before implementation. Approved 2026-10-12. |
+| D020 | Public registration accepts email, password, business name, and contact phone; it creates only an `OPERATOR` in `DRAFT` | Email verification is required before login. Registration, resend, and password-recovery responses must not reveal whether an account exists. Passwords are 12–64 characters and at most 72 UTF-8 bytes, without composition rules. Approved 2026-10-13. |
+| D021 | Verification and password-reset links are finalized by a frontend GET page that POSTs the token to the API | Verification tokens are hashed, single-use, expire after 24 hours, and a resend invalidates earlier tokens. Resend has a 60-second cooldown and limits of 5/account/hour and 20/IP/hour. Password-reset tokens are hashed, single-use, expire after 30 minutes, and a successful reset revokes every session. Approved 2026-10-13. |
+| D022 | Spring Session JDBC stores server-side sessions; production frontend and `/api/v1` are same-origin | Normal login uses a 30-minute inactivity session. “Remember me” is optional and gives a persistent session with a non-sliding 90-day absolute lifetime. At most two sessions may exist per account; a third login removes the oldest. Password/primary-email changes, password reset, account disablement, suspension, or role change revoke all sessions. Approved 2026-10-13. |
+| D023 | Session cookie contract: `SBSESSION`, HttpOnly, `SameSite=Lax`, path `/`, and no `Domain` attribute | `Secure=true` everywhere except explicit local HTTP development. CSRF applies to every state-changing browser request, including authentication endpoints. No JWT or browser token storage. Approved 2026-10-13. |
+| D024 | Operator application states are `DRAFT`, `PENDING`, `CHANGES_REQUESTED`, and `APPROVED`; suspension is separate | Verified operators may use a limited dashboard. Submit/resubmit moves to `PENDING`; correction requests require a reason. There is no permanent `REJECTED` state in MVP. Approved operators' validated profile edits take effect immediately without renewed admin approval; moderation/re-review may be reconsidered later. Approved 2026-10-13. |
+| D025 | Two admins are created only through an explicitly enabled, one-shot backend bootstrap command | It reads temporary environment credentials, is unavailable over HTTP, requires exactly two admin identities, never logs secrets, and does not change existing admin passwords on rerun. Approved 2026-10-13. |
+| D026 | APIs use RFC Problem Details plus stable application error codes; pagination is zero-based with default size 20 and maximum size 50 | Validation may include field errors; sensitive details are omitted. Use 400/401/403/404/409/429 consistently and `Retry-After` for explicit rate-limit responses. Results require stable ordering. Approved 2026-10-13. |
+| D027 | Public contact email is excluded from MVP | Mandatory public contact phone is the sole public contact channel. Authentication email remains private. Approved 2026-10-13. |
+| D028 | New operator profiles default `is_publicly_visible` to `true` | This does not bypass publication rules: the operator appears only when every derived publication condition is satisfied. The operator may hide the profile at any time. Approved 2026-10-13. |
 
 ## PROPOSED (not yet approved)
-- Spring Session JDBC implementation for production-like server sessions (chosen design direction, assess compatibility and resource budget).
-- Initial operator `is_publicly_visible` defaults to `false` until explicitly enabled.
-- Verified-but-not-approved operators may access a limited dashboard to prepare/correct applications; email not verified still cannot log in.
-- Application status details: `PENDING`, `CHANGES_REQUESTED`, `REVISION_IN_PROGRESS`, `APPROVED`; whether permanent `REJECTED`/suspension is a separate state is unresolved.
 - `ServiceOfferingCoverage` referencing `OperatorSchoolCoverage` plus transactional consistency validation.
-- Same-origin production frontend/API deployment to simplify cookies/CORS.
 
 ## DEFERRED (not current scope)
 - School CSV import, full-catalog ingestion, and automated school synchronization. Revisit only after pilot usage demonstrates a need; approve the source, duplicate rules, preview/commit behavior, and error policy before implementation.
 
 ## OPEN questions requiring explicit resolution before relevant implementation
-1. Session timeout, session revocation rules on suspension, frontend/API hosting origin and cookie deployment policy.
-2. Email token TTL, resend rate limit, verification link finalization (GET view + POST consume proposed).
-3. Final operator application states, effects of post-approval profile changes, whether admin has to review profile changes.
-4. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
-5. Where admin-editable tariff JSON is persistently stored (volume/object storage), backup, concurrency, versioning, UKOME source and effective-date rules.
-6. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
-7. Whether fields such as public contact email are optional and how displayed.
+1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
+2. Where admin-editable tariff JSON is persistently stored (volume/object storage), backup, concurrency, versioning, UKOME source and effective-date rules.
+3. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
+4. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
 
 ## Decision change procedure
 When an approved decision changes: update this document, related domain/API/roadmap files, acceptance tests and task scope in the same reviewed PR. Never silently overwrite the old rule.
