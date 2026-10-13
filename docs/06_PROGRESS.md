@@ -20,7 +20,7 @@ Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask
 | Task | Status | Evidence | Human approval |
 |---|---|---|---|
 | J-01 Authentication and API contract | in review | GitHub issue #7; branch `codex/j-01-auth-api-contract`; decisions D020–D028 | Contract approved by Onat on 2026-10-13; mutual PR review pending |
-| A-10 Backend deployment and observability | implemented; review/CI pending | GitHub issue #27; branch `codex/a-10-backend-deployment-observability`; 7 focused tests pass; Java 21-targeted package succeeds | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
+| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; Backend workflow run #9 passed; 7 focused local tests pass | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -82,5 +82,6 @@ Never mark tasks done because code was generated: verification and review requir
 - `ObservabilityEndpointTests` and `ProductionConfigurationTests`: 7 tests, 0 failures, 0 errors, 0 skipped.
 - Production startup in the focused test emitted ECS JSON, exposed only the health endpoint, omitted configured database/SMTP secret values, and did not create/log Spring Boot's temporary generated user password.
 - `/livez`, `/readyz`, and Actuator health groups returned only aggregate status/probe-group information; sensitive Actuator endpoints and the discovery page were unavailable; cross-origin requests received no Actuator CORS header.
-- A full `./mvnw --batch-mode verify` was attempted without database environment variables. The 7 A-10 tests passed, while the 2 pre-existing geography integration tests could not create a datasource because no disposable PostgreSQL 17 service is installed locally. Shared Supabase was deliberately not used; GitHub CI must run the full suite with its isolated PostgreSQL service.
+- A full local `./mvnw --batch-mode verify` was attempted without database environment variables. The 7 A-10 tests passed, while the 2 pre-existing geography integration tests could not create a datasource because no disposable PostgreSQL 17 service is installed locally. Shared Supabase was deliberately not used.
+- PR #30 Backend workflow run #9 then passed the complete Maven verification against its isolated PostgreSQL 17 service.
 - No migration or shared database operation was performed.
