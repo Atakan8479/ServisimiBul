@@ -1,15 +1,23 @@
-# Verified starting state — snapshot 2026-10-12
+# Verified repository and database state
+
+Repository snapshot: 2026-10-13. Latest shared Supabase audit: 2026-10-12.
 
 ## GitHub repository
-`https://github.com/Atakan8479/ServisimiBul`; branch `main` has `servisimibul-backend/`, Maven wrapper, `pom.xml`, source and test directories, nearly empty `README.md`. `pom.xml` explicitly declares Java 21, Spring Boot parent `4.1.1`, Spring JPA, security, validation, WebMVC, PostgreSQL runtime and test starter dependencies. Flyway is NOT in the inspected `pom.xml`. `.gitignore` within backend excludes `.env`, `application-local.*`, `.idea`. A root `.idea` directory exists in repo; review hygiene later, don't remove without request. Check repo again at execution time.
+`https://github.com/Atakan8479/ServisimiBul`; `main` contains the existing `servisimibul-backend` Spring Boot project, Maven wrapper, geography entities/repositories, Flyway configuration, backend CI, and the approved J-01 contract. Preserve this project; do not generate a second Spring application.
 
-## Supabase state (read-only JDBC inspection on 2026-10-12)
-Project `ServisimiBul` uses PostgreSQL 17.11. The public schema has four **manually created** tables: `province`, `district`, `neighborhood`, and `school`; all had exactly zero rows. Three direct geography FKs exist: district→province, neighborhood→district, and school→neighborhood, all with `ON DELETE RESTRICT`. The documented unique and school-source check constraints were present. `province`, `district`, and `neighborhood` use `GENERATED ALWAYS AS IDENTITY`; `school.id` defaults to `gen_random_uuid()`.
+`pom.xml` declares Java 21 compatibility with Spring Boot 4.1.1, JPA, Security, Validation, WebMVC, PostgreSQL, Spring Boot Flyway, and Flyway PostgreSQL support. `application.properties` uses environment-driven runtime/migration credentials, disables Flyway by default, and keeps Hibernate at `ddl-auto=validate`. V1 creates the geography schema; A-01 adds V2 to remove application-role access to Flyway history without modifying V1.
 
-All four tables have RLS enabled, `FORCE ROW LEVEL SECURITY` disabled, and no policies. `anon`, `authenticated`, `service_role`, and `postgres` have broad table grants. The inspected `postgres` role has `BYPASSRLS`; use it for controlled administration, not as an assumed production runtime role. Neither `public.flyway_schema_history` nor `supabase_migrations.schema_migrations` exists.
+The backend `.gitignore` excludes `.env`, `application-local.*`, and local IDE files while retaining the safe `.env.example`. The root `.idea` directory and unrelated local Node files remain outside current cleanup scope.
 
-## Approved reconciliation direction and remaining constraint
-Decision D017 approves controlled drop/recreation so Flyway V1 can own the geography schema from a clean state. This approval does **not** authorize executing destructive SQL. Before execution, review and approve the exact V1 DDL, treatment of the live-only `province.created_at` field, RLS/grants, database roles, rollback/recovery steps, and the exact four-table drop scope. Never use automatic destructive fallback, `spring.flyway.baseline-on-migrate=true`, or Flyway `repair` as a workaround.
+## Shared Supabase state — last verified 2026-10-12
+The controlled D017 cutover is complete on PostgreSQL 17.11. Flyway V1 owns the public geography schema, and `public.flyway_schema_history` contained one successful V1 row at the final audit. `province`, `district`, `neighborhood`, and `school` were empty, matched the approved constraints/defaults, and had RLS enabled with `servisimibul_app`-scoped backend policies.
 
-## Known repo gaps
-`AGENTS.md` and the multi-document project context are committed, but the root `README.md` remains nearly empty. Gate 2 now adds Flyway dependencies, environment-driven datasource configuration, a locally verified V1 migration, and backend CI; verification evidence is recorded in `docs/06_PROGRESS.md`. The shared Supabase schema has not been changed and still awaits the separately approved cutover. There is no verified frontend or implemented product feature beyond the generated application entry point. Preserve `servisimibul-backend` (don't generate a second Spring project).
+The separately provisioned `servisimibul_app` login has no superuser, database-creation, role-creation, or RLS-bypass capability. It has only the approved geography object privileges. `anon` and `authenticated` had no geography table access. `postgres` remains a controlled migration/administration identity, not the runtime login.
+
+A-01 V2 has not been applied to shared Supabase during pull-request development. Applying it there remains a separate operation requiring a merged/reviewed migration, a fresh read-only state check, the confirmed target/command, and explicit human approval.
+
+## Reconciliation history
+D017's controlled drop/recreation was executed only after the four legacy geography tables were rechecked as empty. The exact four tables were dropped in one transaction without `CASCADE`, V1 migrated successfully, and Hibernate validation then succeeded through the restricted runtime connection. Automatic baseline, Flyway repair, schema reset, and destructive fallback remain forbidden.
+
+## Known gaps
+The root `README.md` remains minimal. There is no merged frontend or implemented auth/operator/public-discovery feature yet. B-02 identity/security implementation remains blocked until A-01 is reviewed and merged. The A-10 deployment/observability work is in a separate unmerged PR and is not part of this repository snapshot.

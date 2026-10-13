@@ -12,6 +12,7 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,8 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("1");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
+        assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
         assertThat(jdbcTemplate.queryForObject("""
@@ -72,6 +74,17 @@ class ServisimibulBackendApplicationTests {
     }
 
     @Test
+    void applicationRolesCannotAccessFlywayHistory() {
+        assertThat(hasAnyFlywayHistoryPrivilege("anon")).isFalse();
+        assertThat(hasAnyFlywayHistoryPrivilege("authenticated")).isFalse();
+        assertThat(hasAnyFlywayHistoryPrivilege("servisimibul_app")).isFalse();
+
+        assertThatThrownBy(() -> jdbcTemplate.queryForObject(
+                "select count(*) from public.flyway_schema_history", Integer.class
+        )).isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
     @Transactional
     void repositoriesPersistGeographyAndEnforceSchoolSourceIdentity() {
         Province province = provinceRepository.save(new Province("34", "Istanbul"));
@@ -90,4 +103,13 @@ class ServisimibulBackendApplicationTests {
         )).isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    private boolean hasAnyFlywayHistoryPrivilege(String role) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject("""
+                select bool_or(has_table_privilege(?, 'public.flyway_schema_history', privilege_name))
+                from unnest(array[
+                    'SELECT', 'INSERT', 'UPDATE', 'DELETE',
+                    'TRUNCATE', 'REFERENCES', 'TRIGGER'
+                ]) as privilege_name
+                """, Boolean.class, role));
+    }
 }

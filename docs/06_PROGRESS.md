@@ -1,14 +1,14 @@
 # Progress ledger (update only after verification)
 
-## Current gate: 3 — Geography entity model
-Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask is implemented and verified in PR #3; review is pending. The separate school CSV import strategy has not started.
+## Current stage: Phase 0 — Flyway security reconciliation
+Status: Gates 0–3 and J-01 are complete. A-01 passed isolated PostgreSQL 17 CI and is awaiting mutual review. B-02 must wait for A-01 review and merge.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
 | 0 Context + repo read-only review | complete | Repository/docs/backend review, 2026-10-11 | Workflow continued to Gate 1 |
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
-| 3 Geography entity model | in review | PR #3; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved 2026-10-12; review pending |
+| 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
 | 4 Auth/session/email/admin review | pending | — | — |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
@@ -19,9 +19,12 @@ Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask
 
 | Task | Status | Evidence | Human approval |
 |---|---|---|---|
-| J-01 Authentication and API contract | in review | GitHub issue #7; branch `codex/j-01-auth-api-contract`; decisions D020–D028 | Contract approved by Onat on 2026-10-13; mutual PR review pending |
+| J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
+| A-01 Flyway security and repository reconciliation | in review | GitHub issue #6; PR #31; JDK 25/Java 21 package and PostgreSQL 17 Backend workflow run `38443338668` passed | Scope reassigned to Onat on 2026-10-13; mutual PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
+
+A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation is part of the pull request.
 
 ## Session handoff template
 Date:
@@ -71,3 +74,12 @@ Never mark tasks done because code was generated: verification and review requir
 - On the inspected Windows workstation, Microsoft OpenJDK 25.0.4.1 is registered in IntelliJ, and new PowerShell sessions resolve both `java` and Maven to that JDK.
 - `.\mvnw.cmd --batch-mode -DskipTests package` succeeded with JDK 25; Maven compiled main and test sources with `release 21`, and the application class has class-file major version 65 (Java 21).
 - Database-backed tests were intentionally skipped because this toolchain task did not provision the required disposable PostgreSQL database and must not run tests against shared Supabase.
+
+## Verified A-01 evidence — 2026-10-13
+
+- Branch: `codex/a-01-flyway-security-reconciliation`; GitHub issue #6; PR #31.
+- V1 was left unchanged; V2 contains only privilege revocations for `public.flyway_schema_history`.
+- The integration test expects Flyway schema version 2, verifies a repeated migration executes zero migrations, verifies `anon`, `authenticated`, and `servisimibul_app` have no Flyway-history privileges, and verifies the runtime connection cannot read the history table.
+- `.\mvnw.cmd --batch-mode -DskipTests package` passed with JDK 25 and Java 21 release compilation.
+- Backend workflow run `38443338668` passed the full Maven verification against isolated PostgreSQL 17, including clean V1→V2 migration, repeat no-op, Hibernate validation, and Flyway-history access denial.
+- No shared Supabase read/write, migration, or schema operation was performed.
