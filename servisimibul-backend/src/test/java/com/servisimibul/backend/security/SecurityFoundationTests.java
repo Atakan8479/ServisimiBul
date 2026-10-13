@@ -20,7 +20,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.OffsetDateTime;
@@ -30,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -90,8 +90,12 @@ class SecurityFoundationTests {
     void publicStateChangingRouteStillRequiresCsrf() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register"))
                 .andExpect(status().isForbidden());
-        mockMvc.perform(post("/api/v1/auth/register").with(csrf()))
-                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"));
     }
 
     @Test
@@ -155,9 +159,5 @@ class SecurityFoundationTests {
             return ResponseEntity.ok().build();
         }
 
-        @PostMapping("/api/v1/auth/register")
-        ResponseEntity<Void> register() {
-            return ResponseEntity.ok().build();
-        }
     }
 }
