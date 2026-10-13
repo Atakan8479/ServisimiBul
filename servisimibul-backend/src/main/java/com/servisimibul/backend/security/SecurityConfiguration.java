@@ -34,6 +34,7 @@ public class SecurityConfiguration {
                                 "/api/v1/districts",
                                 "/api/v1/neighborhoods",
                                 "/api/v1/schools",
+                                "/api/v1/schools/*",
                                 "/api/v1/operators",
                                 "/api/v1/operators/*",
                                 "/api/v1/tariffs",

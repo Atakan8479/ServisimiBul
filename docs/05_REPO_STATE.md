@@ -3,7 +3,7 @@
 Repository snapshot: 2026-10-14. Latest shared Supabase audit: 2026-10-12.
 
 ## GitHub repository
-`https://github.com/Atakan8479/ServisimiBul`; `main` contains the existing `servisimibul-backend` Spring Boot project, Maven wrapper, geography entities/repositories, Flyway configuration, backend CI, and the approved J-01 contract. Preserve this project; do not generate a second Spring application.
+`https://github.com/Atakan8479/ServisimiBul`; `main` contains the existing `servisimibul-backend` Spring Boot project, Maven wrapper, geography entities/repositories, Flyway configuration, backend CI, and the approved J-01/J-02 contracts. Preserve this project; do not generate a second Spring application.
 
 `pom.xml` declares Java 21 compatibility with Spring Boot 4.1.1, JPA, Security, Validation, WebMVC, PostgreSQL, Spring Boot Flyway, and Flyway PostgreSQL support. `application.properties` uses environment-driven runtime/migration credentials, disables Flyway by default, and keeps Hibernate at `ddl-auto=validate`. V1 creates the geography schema; V2 removes application-role access to Flyway history without modifying V1. Merged B-02 PR #32 adds the verified V3 identity schema and its JPA/security foundation; it has not been applied to shared Supabase.
 
