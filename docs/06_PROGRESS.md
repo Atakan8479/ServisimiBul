@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1/2 — Authentication foundation and pilot catalog complete
-Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. A-10 deployment/observability remains in review after an explicitly approved sequencing override; J-02 implementation remains pending.
+## Current stage: Phase 1/2 — Frontend foundation in review
+Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are complete. B-01 frontend foundation is implemented and locally verified on its review branch; later feature UI remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -26,7 +26,8 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. 
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; PostgreSQL 17 workflow `38610241315` passed all 50 tests after B-04 integration | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
+| A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; PostgreSQL 17 workflow `38610515064` passed | Reviewed and merged 2026-10-14; A-08/A-09/B-10 remain separate tasks |
+| B-01 Frontend foundation | in review | GitHub issue #12; branch `codex/b-01-frontend-foundation`; Node 24 local formatting, lint, type-check, 7 tests, and production build passed | Scope approved 2026-10-14; review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -174,3 +175,13 @@ Never mark tasks done because code was generated: verification and review requir
 - Structure-only follow-up commit `b413a4a` moved the geography API into `controller`, `dto`, `service`, and `exception` subpackages. The JDK 25 package build and backend workflow run `38562568666` passed without changing behavior.
 - After B-03 integration, the JDK 25 package build and 5 focused non-database authentication tests passed locally. Backend workflow run `38594885240` then passed all 36 tests against isolated PostgreSQL 17.11, including all 5 A-02 API tests: 0 failures, 0 errors, 0 skipped.
 - No dependency, Flyway migration, runtime property/deployment configuration, shared Supabase, or production-setting change was made.
+
+## Verified B-01 local evidence — 2026-10-14
+
+- Branch: `codex/b-01-frontend-foundation`; GitHub issue #12.
+- Added the approved Node.js 24/npm Vite React+TypeScript foundation with strict TypeScript, ESLint, Prettier, React Router Data Mode, React Hook Form, Zod, Vitest, React Testing Library, and MSW. The lockfile is committed and npm reported zero known vulnerabilities at installation time.
+- Public, operator, and admin route shells are accessible and responsive navigation only; Spring Security and backend ownership checks remain authoritative.
+- The shared API client always uses same-origin credentials, obtains Spring's CSRF header/token for state-changing requests, normalizes both existing backend field-error shapes, validates successful payloads with Zod, and marks only authenticated 401 responses as expired sessions.
+- Node.js 24.22.0 checks passed: Prettier check, ESLint, strict TypeScript project build, 7 Vitest/Testing Library/MSW tests, and the Vite production build.
+- The local Vite server started successfully. Browser automation could not attach because the installed computer-control helper failed to initialize after its allowed retry; visual route inspection remains the reviewer check.
+- No backend source, migration, shared Supabase state, production setting, or secret was changed.

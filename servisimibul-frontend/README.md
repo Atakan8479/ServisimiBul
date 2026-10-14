@@ -1,0 +1,22 @@
+# ServisimiBul frontend
+
+Node.js 24 and npm are required. The browser always calls the same-origin `/api/v1` path; during local development Vite proxies `/api` to Spring Boot.
+
+```powershell
+npm ci
+npm run dev
+```
+
+Copy `.env.example` to an ignored `.env.local` only when the backend does not run at `http://localhost:8080`. `BACKEND_PROXY_TARGET` is read by Vite's local server and is not exposed to browser code. Never put database credentials, session secrets, admin credentials, or Supabase service keys in frontend environment files.
+
+The operator and admin route shells improve navigation only. They never replace Spring Security authorization or backend ownership checks.
+
+Before opening a pull request, run:
+
+```powershell
+npm run format:check
+npm run lint
+npm run typecheck
+npm test
+npm run build
+```
