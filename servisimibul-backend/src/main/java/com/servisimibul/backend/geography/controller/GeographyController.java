@@ -1,11 +1,11 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.controller;
 
-import com.servisimibul.backend.geography.GeographyCatalogService;
-import com.servisimibul.backend.geography.api.GeographyDtos.DistrictResponse;
-import com.servisimibul.backend.geography.api.GeographyDtos.NeighborhoodResponse;
-import com.servisimibul.backend.geography.api.GeographyDtos.PageResponse;
-import com.servisimibul.backend.geography.api.GeographyDtos.ProvinceResponse;
-import com.servisimibul.backend.geography.api.GeographyDtos.SchoolResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.DistrictResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.NeighborhoodResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.PageResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.ProvinceResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.SchoolResponse;
+import com.servisimibul.backend.geography.service.GeographyCatalogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;

@@ -1,7 +1,9 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.controller;
 
-import com.servisimibul.backend.geography.GeographyCatalogService;
-import com.servisimibul.backend.geography.api.GeographyDtos.SchoolResponse;
+import com.servisimibul.backend.geography.dto.GeographyDtos.SchoolResponse;
+import com.servisimibul.backend.geography.dto.SchoolCreateRequest;
+import com.servisimibul.backend.geography.dto.SchoolPatchRequest;
+import com.servisimibul.backend.geography.service.GeographyCatalogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

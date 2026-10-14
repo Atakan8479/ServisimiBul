@@ -1,4 +1,4 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.dto;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.validation.constraints.Positive;

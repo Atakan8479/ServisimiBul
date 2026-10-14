@@ -1,4 +1,4 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

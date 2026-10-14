@@ -2,6 +2,22 @@
 
 The backend uses Supabase PostgreSQL as its shared development database. Flyway owns the schema and Hibernate only validates it.
 
+## Code map
+
+Production code is grouped by feature first, then by technical responsibility:
+
+| Package/path | Responsibility |
+|---|---|
+| `geography` | Province, district, neighborhood, and school entities/repositories |
+| `geography/controller` | Public geography and admin school HTTP endpoints |
+| `geography/dto` | Geography and school API request/response types |
+| `geography/service` | Geography lookup and pilot school catalog workflows |
+| `geography/exception` | Geography API exceptions and Problem Details responses |
+| `identity` | User/operator JPA entities, repositories, and database-backed user loading |
+| `security` | Spring Security configuration, authenticated principal/current user, and token hashing |
+| `resources/db/migration` | Ordered Flyway migrations; never edit an applied migration |
+| `src/test/...` | Tests mirror the production feature packages where visibility permits |
+
 ## Java toolchain
 
 Use JDK 25 to run IntelliJ IDEA and Maven. The application remains Java 21 source/bytecode compatible through `<java.version>21</java.version>` in `pom.xml`; do not enable Java 22+ language features or preview features.

@@ -1,4 +1,4 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.dto;
 
 import java.util.List;
 import java.util.UUID;

@@ -1,5 +1,7 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.exception;
 
+import com.servisimibul.backend.geography.controller.AdminSchoolController;
+import com.servisimibul.backend.geography.controller.GeographyController;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

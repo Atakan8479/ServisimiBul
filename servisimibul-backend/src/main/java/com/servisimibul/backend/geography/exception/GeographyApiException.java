@@ -1,4 +1,4 @@
-package com.servisimibul.backend.geography.api;
+package com.servisimibul.backend.geography.exception;
 
 import org.springframework.http.HttpStatus;
 
@@ -39,15 +39,15 @@ public final class GeographyApiException extends RuntimeException {
         );
     }
 
-    HttpStatus status() {
+    public HttpStatus status() {
         return status;
     }
 
-    String code() {
+    public String code() {
         return code;
     }
 
-    Map<String, String> fieldErrors() {
+    public Map<String, String> fieldErrors() {
         return fieldErrors;
     }
 }
