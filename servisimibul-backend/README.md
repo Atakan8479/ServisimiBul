@@ -2,6 +2,32 @@
 
 The backend uses Supabase PostgreSQL as its shared development database. Flyway owns the schema and Hibernate only validates it.
 
+## Code map
+
+Production code is grouped by feature first, then by technical responsibility:
+
+| Package/path | Responsibility |
+|---|---|
+| `auth/controller` | Authentication HTTP endpoints |
+| `auth/dto` | Authentication request and response records |
+| `auth/service` | Registration, verification, recovery, validation, token, rate-limit, and email workflows |
+| `auth/exception` | Authentication exceptions and safe API error responses |
+| `auth/config` | Authentication beans and email configuration properties |
+| `identity` | User/operator JPA entities, lifecycle enums, repositories, and database-backed user loading; keeping the loader here preserves package-private password-hash access |
+| `security` | Spring Security configuration, authenticated principal/current user, token hashing, and session-revocation contract |
+| `geography` | Province, district, neighborhood, and school entities/repositories |
+| `resources/db/migration` | Ordered Flyway migrations; never edit an applied migration |
+| `src/test/...` | Tests mirror the production feature packages |
+
+For authentication, read files in this order:
+
+1. `auth/controller/AuthController` and `auth/dto` — HTTP endpoints and request shapes.
+2. `auth/service/AuthService` — workflow orchestration and non-enumerating behavior.
+3. `auth/service/AuthPersistenceService` — transaction boundaries and database state changes.
+4. `auth/service/AuthInputValidator`, `AuthRateLimiter`, and `TokenGenerator` — focused security helpers.
+5. `auth/service/AuthEmailSender` — email contract plus disabled/SMTP implementations.
+6. `auth/exception` — safe exceptions and API error responses.
+
 ## Java toolchain
 
 Use JDK 25 to run IntelliJ IDEA and Maven. The application remains Java 21 source/bytecode compatible through `<java.version>21</java.version>` in `pom.xml`; do not enable Java 22+ language features or preview features.

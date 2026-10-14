@@ -86,6 +86,10 @@ public class AppUser {
         enabled = false;
     }
 
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = Objects.requireNonNull(passwordHash);
+    }
+
     private static String normalizeEmail(String email) {
         return Objects.requireNonNull(email).strip().toLowerCase(Locale.ROOT);
     }
