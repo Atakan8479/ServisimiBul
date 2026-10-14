@@ -180,7 +180,7 @@ class SecurityFoundationTests {
     @RestController
     static class TestEndpoints {
 
-        @GetMapping({"/api/v1/provinces", "/api/v1/operator/test", "/api/v1/admin/test", "/internal-test"})
+        @GetMapping({"/api/v1/operator/test", "/api/v1/admin/test", "/internal-test"})
         ResponseEntity<Void> getEndpoint() {
             return ResponseEntity.ok().build();
         }

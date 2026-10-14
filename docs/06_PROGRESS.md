@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1 — Contract and identity/security sequencing
-Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. B-03 passed isolated PostgreSQL 17 CI and is awaiting review in PR #33; J-02 implementation remains pending.
+## Current stage: Phase 2 — Geography and pilot school catalog API
+Status: Gates 0–3, J-01, A-01, B-02, B-03, and J-02 are complete. A-02 passed updated post-B-03 verification and is awaiting review in PR #35; B-04 and J-02 implementation remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,10 +9,10 @@ Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. B-03 passed isolat
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged; B-03 PR #33, structure workflow `38458744022` passed | B-02 scope and D029–D030 approved 2026-10-13; B-03 follows approved J-01 contract and awaits review |
-| 5 Operator school coverage + catalog | pending | — | — |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 and B-03 PR #33 merged; latest B-03 workflow `38562354608` passed 31 tests | B-03 reviewed and merged 2026-10-14; B-04 sessions/admin bootstrap remain pending |
+| 5 Operator school coverage + catalog | in progress | A-02 issue #13; PR #35; post-B-03 workflow `38594885240` passed 36 tests | A-02 scope approved by Atakan 2026-10-14; PR review pending |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | contract complete | J-02 issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14; implementation pending |
+| 7 Optional offerings/tariff JSON | contract complete; implementation pending | J-02 issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -22,16 +22,19 @@ Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. B-03 passed isolat
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
-| B-03 Registration, verification, and recovery | in review | GitHub issue #10; PR #33; PostgreSQL 17 workflow `38458744022` passed after structure cleanup | Implements the approved J-01 authentication contract; mutual PR review pending |
-| J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
+| B-03 Registration, verification, and recovery | complete | GitHub issue #10; PR #33 merged as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf`; PostgreSQL 17 workflow `38562354608` passed | Reviewed and merged 2026-10-14 |
+| J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
+| A-02 Geography and pilot school catalog API | in review | GitHub issue #13; PR #35; post-B-03 workflow `38594885240` passed 36 tests | Scope approved by Atakan 2026-10-14; PR review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
-B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. Registration/recovery controllers, email delivery, Spring Session lifecycle, and admin bootstrap remain assigned to B-03/B-04. No shared Supabase operation is part of PR #32.
+B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 now supplies registration, verification/recovery controllers, and email delivery; Spring Session lifecycle and admin bootstrap remain assigned to B-04. No shared Supabase operation is part of PR #32.
 
 J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
+
+A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school create, partial update, activation, and deactivation. It reuses the existing V1 geography schema, keeps bulk CSV import out of scope, and adds no migration or shared Supabase operation.
 
 ## Session handoff template
 Date:
@@ -117,6 +120,7 @@ Never mark tasks done because code was generated: verification and review requir
 - Review fixes added the public CSRF-token endpoint, stable malformed-JSON errors, asynchronous SMTP delivery, duplicate-registration timing normalization, and serialized token replacement. The rate limiter now uses the simpler FIFO `Queue` interface without changing behavior.
 - JDK 25 packaging and 5 focused non-database tests passed locally. Backend workflow `38559593205` then passed all 31 tests against isolated PostgreSQL 17, including browser-style CSRF and concurrent token-issuance coverage: 0 failures, 0 errors, 0 skipped.
 - Structure-only follow-up commit `14da1c2` moved authentication code into `config`, `controller`, `dto`, `exception`, and `service` subpackages while retaining package-private password-hash access in `identity`. The JDK 25 package build, 5 focused tests, and backend workflow run `38562354608` passed without changing behavior.
+- PR #33 was reviewed and merged to `main` as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf` on 2026-10-14.
 - No migration was added and shared Supabase was not read, migrated, or otherwise modified.
 
 ## Verified J-02 contract evidence — 2026-10-14
@@ -127,3 +131,15 @@ Never mark tasks done because code was generated: verification and review requir
 - `git diff --check` passed. Targeted repository searches found no remaining nullable offering-to-vehicle rule, unresolved tariff-storage placeholder, or obsolete tariff query parameter in the scoped documents.
 - Maven and frontend tests were not run because J-02 changes documentation only and introduces no application source, dependency, configuration, or migration.
 - No shared Supabase operation, production-setting change, migration, or database mutation was performed.
+
+## Verified A-02 evidence — 2026-10-14
+
+- GitHub issue #13; PR #35 from branch `codex/a-02-geography-school-catalog-api`; `origin/main` through merged B-03 commit `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf` was integrated as merge commit `71bdf0b0383fc984f4e364c72b6738d561a525e2`.
+- Public province/district/neighborhood reads, active-school list/detail with J-01 pagination and filters, and ADMIN create/partial-patch/activate/deactivate endpoints are implemented with DTOs and scoped RFC Problem Details.
+- Tests cover anonymous sessionless reads, deterministic filtering/pagination, inactive-school exclusion, admin authorization, operator/anonymous denial, source identity conflicts, missing geography, optional-field clearing, and lifecycle visibility.
+- `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
+- Full tests were not run locally because no disposable PostgreSQL instance is available: Docker is installed but its daemon is unavailable, and no local PostgreSQL client/service could be used. The shared Supabase database was intentionally not used.
+- Backend workflow run `38476050909` passed clean V1→V2→V3 migration, Hibernate validation, existing security/persistence coverage, and all five A-02 API tests against isolated PostgreSQL 17.11: 19 tests, 0 failures, 0 errors, 0 skipped.
+- Structure-only follow-up commit `b413a4a` moved the geography API into `controller`, `dto`, `service`, and `exception` subpackages. The JDK 25 package build and backend workflow run `38562568666` passed without changing behavior.
+- After B-03 integration, the JDK 25 package build and 5 focused non-database authentication tests passed locally. Backend workflow run `38594885240` then passed all 36 tests against isolated PostgreSQL 17.11, including all 5 A-02 API tests: 0 failures, 0 errors, 0 skipped.
+- No dependency, Flyway migration, runtime property/deployment configuration, shared Supabase, or production-setting change was made.

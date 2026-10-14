@@ -35,7 +35,8 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 - `GET /api/v1/provinces`
 - `GET /api/v1/districts?provinceId=...`
 - `GET /api/v1/neighborhoods?districtId=...`
-- `GET /api/v1/schools?query=...`
+- `GET /api/v1/schools?query=...&provinceId=...&districtId=...&page=0&size=20`
+- `GET /api/v1/schools/{id}`
 - `GET /api/v1/operators?schoolId=...&neighborhoodId=...&page=0&size=20`
 - `GET /api/v1/operators/{id}`
 - `GET /api/v1/tariffs?provinceCode=...` (official JSON only)
@@ -71,10 +72,13 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 - `POST /api/v1/admin/operators/{id}/approve`
 - `POST /api/v1/admin/operators/{id}/request-revision`
 - `POST /api/v1/admin/operators/{id}/suspend`
-- `GET/POST/PATCH /api/v1/admin/schools[/{id}]`
+- `POST /api/v1/admin/schools`
+- `PATCH /api/v1/admin/schools/{id}`
+- `POST /api/v1/admin/schools/{id}/activate`
+- `POST /api/v1/admin/schools/{id}/deactivate`
 - `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON; request includes expected current version)
 
-School CSV import is deferred by D019 and is not part of the current pilot API.
+Public school list/detail responses expose only active schools. Geography lists and school results use deterministic name/id ordering. School create/patch fields are `neighborhoodId`, `name`, optional `address`, optional `sourceName`, optional `sourceCode`, and `active`; supplying `sourceCode` requires `sourceName`, and the source pair remains unique. PATCH is partial and explicit `null` clears optional fields. School CSV import is deferred by D019 and is not part of the current pilot API.
 
 ## Tariff storage and write contract
 Only the backend reads or writes the persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the deployment mounts it on a writable persistent volume. Tariff content is never a classpath/JAR/frontend asset or a PostgreSQL fare table, and Supabase Storage is excluded for MVP. Do not expose storage credentials or filesystem paths to the browser.

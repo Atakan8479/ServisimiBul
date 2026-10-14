@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AccessLevel;
@@ -55,7 +56,7 @@ public class School {
     @Column(name = "created_at", nullable = false, insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false)
+    @Column(name = "updated_at", nullable = false, insertable = false)
     private OffsetDateTime updatedAt;
 
     public School(
@@ -70,5 +71,34 @@ public class School {
         this.address = address;
         this.sourceName = sourceName;
         this.sourceCode = sourceCode;
+    }
+
+    public void update(
+            Neighborhood neighborhood,
+            String name,
+            String address,
+            String sourceName,
+            String sourceCode,
+            boolean active
+    ) {
+        this.neighborhood = neighborhood;
+        this.name = name;
+        this.address = address;
+        this.sourceName = sourceName;
+        this.sourceCode = sourceCode;
+        this.active = active;
+    }
+
+    public void activate() {
+        active = true;
+    }
+
+    public void deactivate() {
+        active = false;
+    }
+
+    @PreUpdate
+    void updateTimestamp() {
+        updatedAt = OffsetDateTime.now();
     }
 }
