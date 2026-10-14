@@ -20,6 +20,12 @@ Production code is grouped by feature first, then by technical responsibility:
 | `geography/dto` | Geography and school API request/response types |
 | `geography/service` | Geography lookup and pilot school catalog workflows |
 | `geography/exception` | Geography API exceptions and Problem Details responses |
+| `tariff/controller` | Anonymous current-tariff read and ADMIN replacement endpoints |
+| `tariff/dto` | Official tariff document, band, and optimistic-update records |
+| `tariff/service` | Tariff validation, normalization, and workflow orchestration |
+| `tariff/storage` | Immutable filesystem versions and atomic `current.json` replacement |
+| `tariff/config` | `SB_TARIFF_STORAGE_DIR` configuration binding |
+| `tariff/exception` | Tariff-specific safe Problem Details responses |
 | `resources/db/migration` | Ordered Flyway migrations; never edit an applied migration |
 | `src/test/...` | Tests mirror the production feature packages where visibility permits |
 
@@ -48,6 +54,8 @@ Each developer must configure JDK 25 on their own computer:
 Copy `.env.example` to an ignored `.env` and replace the example values. Spring Boot does not read `.env` itself, so load it through the IntelliJ run configuration or export the variables before starting the application.
 
 `SB_DB_USER` must be the least-privilege `servisimibul_app` login, not `postgres`. Migration credentials are separate and should only be present during an approved migration run. Keep `SB_FLYWAY_ENABLED=false` for the normal application runtime.
+
+Set `SB_TARIFF_STORAGE_DIR` to a backend-only persistent writable directory before using the tariff API. The application may start without it for development tasks unrelated to tariffs, but tariff endpoints then return `tariff_storage_unavailable`. Never point it at the packaged JAR, classpath, frontend, or a temporary deployment filesystem. Each province receives its own directory containing atomic `current.json` and immutable version files.
 
 Before V1 runs, an administrator must provision the runtime login outside Flyway. Use a newly generated password and never commit the executed statement:
 
