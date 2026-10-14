@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.net.URI;
 import java.util.List;
@@ -15,6 +16,19 @@ import java.util.Map;
 
 @RestControllerAdvice
 class ApiExceptionHandler {
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ProblemDetail> handleMalformedJson(
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.badRequest().body(problem(
+                HttpStatus.BAD_REQUEST,
+                "Malformed JSON",
+                "Request body is not valid JSON",
+                "MALFORMED_JSON",
+                request
+        ));
+    }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> handleBeanValidation(

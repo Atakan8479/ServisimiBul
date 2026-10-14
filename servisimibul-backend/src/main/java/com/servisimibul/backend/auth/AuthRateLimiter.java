@@ -5,35 +5,35 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Queue;
 
 @Component
 class AuthRateLimiter {
 
     private static final int MAX_KEYS = 10_000;
-    private final Map<String, Deque<Instant>> attempts = new LinkedHashMap<>(128, 0.75f, true);
+    private final Map<String, Queue<Instant>> attempts = new LinkedHashMap<>(128, 0.75f, true);
 
     synchronized void requireAllowance(String key, int limit, Duration window, Instant now) {
         if (!tryAcquire(key, limit, window, now)) {
-            Deque<Instant> timestamps = attempts.get(key);
-            long seconds = Duration.between(now, timestamps.getFirst().plus(window)).toSeconds();
+            Queue<Instant> timestamps = attempts.get(key);
+            long seconds = Duration.between(now, timestamps.element().plus(window)).toSeconds();
             throw new RateLimitExceededException(Math.max(1, seconds));
         }
     }
 
     synchronized boolean tryAcquire(String key, int limit, Duration window, Instant now) {
         // shortcut: limits are per application instance, replace with shared storage before running multiple instances.
-        Deque<Instant> timestamps = attempts.computeIfAbsent(key, ignored -> new ArrayDeque<>());
+        Queue<Instant> timestamps = attempts.computeIfAbsent(key, ignored -> new ArrayDeque<>());
         Instant cutoff = now.minus(window);
-        while (!timestamps.isEmpty() && !timestamps.getFirst().isAfter(cutoff)) {
-            timestamps.removeFirst();
+        while (!timestamps.isEmpty() && !timestamps.element().isAfter(cutoff)) {
+            timestamps.remove();
         }
         if (timestamps.size() >= limit) {
             return false;
         }
-        timestamps.addLast(now);
+        timestamps.add(now);
         if (attempts.size() > MAX_KEYS) {
             attempts.remove(attempts.keySet().iterator().next());
         }

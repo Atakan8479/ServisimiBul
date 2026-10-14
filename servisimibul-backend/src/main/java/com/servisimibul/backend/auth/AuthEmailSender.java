@@ -2,9 +2,11 @@ package com.servisimibul.backend.auth;
 
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -42,6 +44,7 @@ class DisabledAuthEmailSender implements AuthEmailSender {
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 @ConditionalOnProperty(name = "servisimibul.email.enabled", havingValue = "true")
 class SmtpAuthEmailSender implements AuthEmailSender {
 
@@ -65,8 +68,9 @@ class SmtpAuthEmailSender implements AuthEmailSender {
     }
 
     @Override
+    @Async
     public void sendVerification(String email, String rawToken) {
-        send(
+        safelySend(
                 email,
                 "Verify your ServisimiBul email",
                 "Verify your email: " + link("verify-email", rawToken)
@@ -74,21 +78,26 @@ class SmtpAuthEmailSender implements AuthEmailSender {
     }
 
     @Override
+    @Async
     public void sendPasswordReset(String email, String rawToken) {
-        send(
+        safelySend(
                 email,
                 "Reset your ServisimiBul password",
                 "Reset your password: " + link("reset-password", rawToken)
         );
     }
 
-    private void send(String recipient, String subject, String body) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom(properties.from());
-        message.setTo(recipient);
-        message.setSubject(subject);
-        message.setText(body);
-        mailSender.send(message);
+    private void safelySend(String recipient, String subject, String body) {
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(properties.from());
+            message.setTo(recipient);
+            message.setSubject(subject);
+            message.setText(body);
+            mailSender.send(message);
+        } catch (RuntimeException deliveryFailure) {
+            log.error("Authentication email delivery failed: {}", deliveryFailure.getClass().getSimpleName());
+        }
     }
 
     private String link(String path, String rawToken) {

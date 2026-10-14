@@ -4,6 +4,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 class AuthController {
 
     private final AuthService authService;
+
+    @GetMapping("/csrf")
+    CsrfResponse csrf(CsrfToken token) {
+        return new CsrfResponse(token.getHeaderName(), token.getParameterName(), token.getToken());
+    }
 
     @PostMapping("/register")
     ResponseEntity<Void> register(

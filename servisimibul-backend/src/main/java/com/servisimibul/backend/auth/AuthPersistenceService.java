@@ -42,11 +42,12 @@ class AuthPersistenceService {
             String tokenHash,
             OffsetDateTime now
     ) {
+        String passwordHash = passwordEncoder.encode(password);
         if (userRepository.findByEmail(email).isPresent()) {
             return false;
         }
 
-        AppUser user = userRepository.save(AppUser.newOperator(email, passwordEncoder.encode(password)));
+        AppUser user = userRepository.save(AppUser.newOperator(email, passwordHash));
         profileRepository.save(new OperatorProfile(user, businessName, contactPhone));
         verificationTokenRepository.saveAndFlush(
                 new EmailVerificationToken(user, tokenHash, now.plusHours(24))
@@ -55,7 +56,7 @@ class AuthPersistenceService {
     }
 
     Optional<String> issueVerificationToken(String email, String tokenHash, OffsetDateTime now) {
-        Optional<AppUser> candidate = userRepository.findByEmail(email)
+        Optional<AppUser> candidate = userRepository.findByEmailForUpdate(email)
                 .filter(user -> !user.isEmailVerified());
         if (candidate.isEmpty()) {
             return Optional.empty();
@@ -80,7 +81,7 @@ class AuthPersistenceService {
     }
 
     Optional<String> issuePasswordResetToken(String email, String tokenHash, OffsetDateTime now) {
-        Optional<AppUser> candidate = userRepository.findByEmail(email)
+        Optional<AppUser> candidate = userRepository.findByEmailForUpdate(email)
                 .filter(AppUser::isEmailVerified)
                 .filter(AppUser::isEnabled);
         if (candidate.isEmpty()) {

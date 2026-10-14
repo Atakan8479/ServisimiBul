@@ -21,7 +21,9 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
+import java.time.OffsetDateTime;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,12 +32,20 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -64,6 +74,8 @@ class AuthWorkflowTests {
     private RecordingSessionRevoker sessionRevoker;
     @Autowired
     private MutableClock clock;
+    @Autowired
+    private AuthPersistenceService persistence;
 
     @BeforeEach
     void resetTestState() {
@@ -116,6 +128,14 @@ class AuthWorkflowTests {
 
         assertThat(userRepository.findByEmail("weak@example.com")).isEmpty();
         assertThat(userRepository.findByEmail("phone@example.com")).isEmpty();
+    }
+
+    @Test
+    void malformedJsonReturnsStableProblemDetails() throws Exception {
+        postJson("/api/v1/auth/register", "{", "10.0.0.3")
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"))
+                .andExpect(jsonPath("$.code").value("MALFORMED_JSON"));
     }
 
     @Test
@@ -220,6 +240,56 @@ class AuthWorkflowTests {
         postJson("/api/v1/auth/forgot-password", "{\"email\":\"last@example.com\"}", "10.0.0.9")
                 .andExpect(status().isTooManyRequests())
                 .andExpect(header().exists("Retry-After"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void concurrentVerificationRequestsIssueOnlyOneReplacementToken() throws Exception {
+        String email = "concurrent-" + UUID.randomUUID() + "@example.com";
+        OffsetDateTime registeredAt = OffsetDateTime.now(ZoneOffset.UTC);
+        assertThat(persistence.register(
+                email,
+                INITIAL_PASSWORD,
+                "Concurrent Service",
+                "+905321234567",
+                tokenHasher.hash("initial-token"),
+                registeredAt
+        )).isTrue();
+
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            OffsetDateTime replacementTime = registeredAt.plusSeconds(61);
+            Future<Optional<String>> first = executor.submit(() -> {
+                start.await();
+                return persistence.issueVerificationToken(
+                        email,
+                        tokenHasher.hash("first-replacement"),
+                        replacementTime
+                );
+            });
+            Future<Optional<String>> second = executor.submit(() -> {
+                start.await();
+                return persistence.issueVerificationToken(
+                        email,
+                        tokenHasher.hash("second-replacement"),
+                        replacementTime
+                );
+            });
+
+            start.countDown();
+            long issued = List.of(
+                            first.get(10, TimeUnit.SECONDS),
+                            second.get(10, TimeUnit.SECONDS)
+                    ).stream()
+                    .filter(Optional::isPresent)
+                    .count();
+
+            assertThat(issued).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+            userRepository.findByEmail(email).ifPresent(userRepository::delete);
+        }
     }
 
     private org.springframework.test.web.servlet.ResultActions register(

@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,6 +32,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -92,6 +95,29 @@ class SecurityFoundationTests {
                 .andExpect(status().isForbidden());
         mockMvc.perform(post("/api/v1/auth/register")
                         .with(csrf())
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentType("application/problem+json"));
+    }
+
+    @Test
+    void csrfEndpointSuppliesATokenForStateChangingRequests() throws Exception {
+        var csrfResult = mockMvc.perform(get("/api/v1/auth/csrf"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.headerName").value("X-CSRF-TOKEN"))
+                .andExpect(jsonPath("$.parameterName").value("_csrf"))
+                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andReturn();
+
+        CsrfToken token = (CsrfToken) csrfResult.getRequest().getAttribute(CsrfToken.class.getName());
+        MockHttpSession session = (MockHttpSession) csrfResult.getRequest().getSession(false);
+        assertThat(token).isNotNull();
+        assertThat(session).isNotNull();
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .session(session)
+                        .header(token.getHeaderName(), token.getToken())
                         .contentType("application/json")
                         .content("{}"))
                 .andExpect(status().isBadRequest())
