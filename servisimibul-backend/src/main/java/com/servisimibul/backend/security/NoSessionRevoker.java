@@ -1,14 +1,16 @@
 package com.servisimibul.backend.security;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnNotWebApplication;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
 @Component
+@ConditionalOnNotWebApplication
 class NoSessionRevoker implements SessionRevoker {
 
     @Override
     public void revokeAll(UUID userId) {
-        // shortcut: B-04 owns session persistence; replace this no-op when Spring Session is added.
+        // The one-shot non-web admin command cannot have browser sessions.
     }
 }

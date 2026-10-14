@@ -115,6 +115,20 @@ class ApiExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ResponseEntity<ProblemDetail> handleInvalidCredentials(
+            InvalidCredentialsException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(problem(
+                HttpStatus.UNAUTHORIZED,
+                "Authentication failed",
+                exception.getMessage(),
+                "INVALID_CREDENTIALS",
+                request
+        ));
+    }
+
     private ProblemDetail problem(
             HttpStatus status,
             String title,
