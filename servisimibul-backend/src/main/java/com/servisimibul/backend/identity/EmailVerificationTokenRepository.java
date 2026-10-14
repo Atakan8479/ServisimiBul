@@ -7,9 +7,29 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface EmailVerificationTokenRepository extends JpaRepository<EmailVerificationToken, UUID> {
+
+    @Query("select max(token.createdAt) from EmailVerificationToken token where token.user.id = :userId")
+    Optional<OffsetDateTime> findLatestCreatedAtByUserId(@Param("userId") UUID userId);
+
+    @Query("select token.user.id from EmailVerificationToken token where token.tokenHash = :tokenHash")
+    Optional<UUID> findUserIdByTokenHash(@Param("tokenHash") String tokenHash);
+
+    @Transactional
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            update EmailVerificationToken token
+            set token.consumedAt = :consumedAt
+            where token.user.id = :userId
+              and token.consumedAt is null
+            """)
+    int invalidateUnconsumedByUserId(
+            @Param("userId") UUID userId,
+            @Param("consumedAt") OffsetDateTime consumedAt
+    );
 
     @Transactional
     @Modifying(clearAutomatically = true, flushAutomatically = true)

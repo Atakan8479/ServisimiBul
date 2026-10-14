@@ -16,9 +16,12 @@ class ProductionConfigurationTests {
 
         assertThat(properties)
                 .containsEntry("logging.structured.format.console", "ecs")
-                .containsEntry("spring.mail.password", "${SB_SMTP_PASSWORD}")
+                .containsEntry("servisimibul.email.enabled", "${SB_MAIL_ENABLED}")
+                .containsEntry("servisimibul.email.from", "${SB_MAIL_FROM}")
+                .containsEntry("servisimibul.email.frontend-base-url", "${SB_FRONTEND_BASE_URL}")
+                .containsEntry("spring.mail.password", "${SB_MAIL_PASSWORD}")
                 .containsEntry("spring.mail.properties[mail.smtp.connectiontimeout]",
-                        "${SB_SMTP_CONNECTION_TIMEOUT_MS:5000}")
+                        "${SB_MAIL_CONNECTION_TIMEOUT_MS:5000}")
                 .containsEntry("server.servlet.session.cookie.secure", "true")
                 .containsEntry("spring.autoconfigure.exclude",
                         "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration")

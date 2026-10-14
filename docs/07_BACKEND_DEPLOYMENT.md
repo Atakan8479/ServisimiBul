@@ -33,13 +33,19 @@ The deployable artifact is `target/servisimibul-backend-0.0.1-SNAPSHOT.jar`. A r
 | `SB_DB_USER=servisimibul_app` | yes | Least-privilege runtime login. Never use `postgres` or the migration identity. |
 | `SB_DB_PASSWORD` | yes, secret | Runtime database password. |
 | `SB_FLYWAY_ENABLED=false` | yes | Prevents normal instances from applying migrations. |
-| `SB_SMTP_HOST` | yes | SMTP host used by the future verification/recovery mail sender. |
-| `SB_SMTP_PORT` | no | Defaults to `587`. |
-| `SB_SMTP_USERNAME` | yes, secret | SMTP login. |
-| `SB_SMTP_PASSWORD` | yes, secret | SMTP password. |
-| `SB_SMTP_AUTH` | no | Defaults to `true`. |
-| `SB_SMTP_STARTTLS_ENABLED` | no | Defaults to `true`. |
-| `SB_SMTP_STARTTLS_REQUIRED` | no | Defaults to `true`. |
+| `SB_MAIL_ENABLED=true` | yes | Enables the B-03 verification/recovery mail sender after the remaining mail settings are configured. |
+| `SB_MAIL_HOST` | yes | SMTP host. |
+| `SB_MAIL_PORT` | no | Defaults to `587`. |
+| `SB_MAIL_USERNAME` | yes, secret | SMTP login. |
+| `SB_MAIL_PASSWORD` | yes, secret | SMTP password. |
+| `SB_MAIL_FROM` | yes | Verified sender address. |
+| `SB_FRONTEND_BASE_URL` | yes | HTTPS frontend origin used to build verification/reset links. |
+| `SB_MAIL_SMTP_AUTH` | no | Defaults to `true`. |
+| `SB_MAIL_STARTTLS` | no | Defaults to `true`. |
+| `SB_MAIL_STARTTLS_REQUIRED` | no | Defaults to `true` in the production profile. |
+| `SB_MAIL_CONNECTION_TIMEOUT_MS` | no | SMTP connect timeout; defaults to `5000`. |
+| `SB_MAIL_READ_TIMEOUT_MS` | no | SMTP read timeout; defaults to `5000`. |
+| `SB_MAIL_WRITE_TIMEOUT_MS` | no | SMTP write timeout; defaults to `5000`. |
 | `SB_SERVER_PORT` | no | Defaults to `8080`. |
 | `SB_LOG_LEVEL` | no | Root log level, default `INFO`. Do not use `DEBUG` or `TRACE` routinely in production. |
 | `SB_SHUTDOWN_TIMEOUT` | no | Graceful shutdown window, default `30s`. |
@@ -47,9 +53,9 @@ The deployable artifact is `target/servisimibul-backend-0.0.1-SNAPSHOT.jar`. A r
 
 Do not provide `SB_DB_MIGRATION_USER` or `SB_DB_MIGRATION_PASSWORD` to the normal runtime. The production profile always marks `SBSESSION` Secure; the common configuration also makes it HttpOnly, `SameSite=Lax`, path `/`, with no Domain attribute.
 
-The email sender itself belongs to B-03. A-10 provides the production-safe connection contract and finite connect/read/write timeouts; it does not send test email or log SMTP credentials.
+B-03 supplies the email sender. A-10 reuses its `SB_MAIL_*` contract and adds production-safe TLS requirements plus finite connect/read/write timeouts; it does not send test email or log SMTP credentials.
 
-Until B-02 supplies the real identity service, the production profile disables Spring Boot's temporary generated-user auto-configuration so that no generated password is written to production logs. This does not disable a future application-owned `UserDetailsService`.
+The production profile disables Spring Boot's temporary generated-user auto-configuration so that no fallback password is written to production logs. This does not disable the application-owned database-backed `UserDetailsService`.
 
 ### Controlled migration job
 
@@ -112,17 +118,11 @@ Production uses one browser origin for the frontend and `/api/v1`, so no applica
 
 Forwarded headers are ignored by default. If a platform requires them for HTTPS redirects or absolute links, enable only the platform-supported strategy and ensure the application port is reachable solely through trusted proxies; otherwise clients could spoof scheme or host information.
 
-## Tariff persistence gate
+## Tariff persistence contract
 
-The admin-editable UKOME JSON store is not implemented and its persistent store is still an open architecture decision in `docs/01_DECISIONS.md`. A-10 does not choose a local volume or object-storage provider. Before the tariff endpoint is deployable, approve and implement all of the following:
+D033–D035 approve a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the tariff feature itself is not implemented yet. The deployment must mount that directory on a durable writable volume outside the packaged JAR. It must never point at the classpath, frontend, PostgreSQL fare tables, or Supabase Storage.
 
-- a durable writable store outside the packaged JAR;
-- atomic/concurrency-safe replacement and validation;
-- version/effective-date handling and the official source record;
-- backup, restore, and last-known-good rollback;
-- deployment credentials and a non-sensitive readiness policy.
-
-Do not create a production `SB_TARIFF_*` secret contract until that decision is approved. This avoids making an unapproved storage choice look permanent.
+Implementation must use immutable version files and same-filesystem atomic replacement of `current.json`, reject stale expected versions with 409, retain source/effective-date metadata, validate contiguous non-overlapping bands, and keep history immutable. Rollback creates a new version from prior content. MVP supports one tariff-writer instance; A-09 still owns off-volume backup and verified restoration. Do not put storage paths in browser-visible configuration or treat the approved contract as evidence that the tariff feature is already deployable.
 
 ## Deployment sequence
 
@@ -146,4 +146,4 @@ Application rollback and database recovery are separate decisions:
 5. Use the backup/restore procedure from A-09 only after confirming the exact target, recovery point, data-loss window, and receiving fresh destructive-operation approval.
 6. Record the incident, applied migration versions, final artifact digest, validation evidence, and follow-up actions.
 
-Until A-08, A-09, B-10, the tariff-store decision, and the relevant feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
+Until A-08, A-09, B-10, the tariff-store implementation, and the relevant feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
