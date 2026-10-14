@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Phase 2 — Geography and pilot school catalog API
-Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. A-02 passed isolated PostgreSQL 17 CI and is awaiting review in PR #35.
+Status: Gates 0–3, J-01, A-01, B-02, B-03, and J-02 are complete. A-02 is awaiting updated post-B-03 verification in PR #35; B-04 and J-02 implementation remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,8 +9,8 @@ Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. A-02 passed isolat
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 workflow run `38445768813` | B-02 reviewed and merged 2026-10-13; later B-03/B-04 work pending |
-| 5 Operator school coverage + catalog | in progress | A-02 issue #13; PR #35; PostgreSQL 17 workflow run `38476050909` passed 19 tests | A-02 scope approved by Atakan 2026-10-14; PR review pending |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 and B-03 PR #33 merged; latest B-03 workflow `38562354608` passed 31 tests | B-03 reviewed and merged 2026-10-14; B-04 sessions/admin bootstrap remain pending |
+| 5 Operator school coverage + catalog | in progress | A-02 issue #13; PR #35; pre-integration workflow `38562735895` passed | A-02 scope approved by Atakan 2026-10-14; updated post-B-03 verification pending |
 | 6 Parent public search | pending | — | — |
 | 7 Optional offerings/tariff JSON | contract complete; implementation pending | J-02 issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
@@ -22,14 +22,15 @@ Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. A-02 passed isolat
 | J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
+| B-03 Registration, verification, and recovery | complete | GitHub issue #10; PR #33 merged as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf`; PostgreSQL 17 workflow `38562354608` passed | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
-| A-02 Geography and pilot school catalog API | in review | GitHub issue #13; PR #35; PostgreSQL 17 workflow run `38476050909` passed 19 tests | Scope approved by Atakan 2026-10-14; PR review pending |
+| A-02 Geography and pilot school catalog API | in review | GitHub issue #13; PR #35; pre-integration workflow `38562735895` passed | Scope approved by Atakan 2026-10-14; post-B-03 verification pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
-B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. Registration/recovery controllers, email delivery, Spring Session lifecycle, and admin bootstrap remain assigned to B-03/B-04. No shared Supabase operation is part of PR #32.
+B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 now supplies registration, verification/recovery controllers, and email delivery; Spring Session lifecycle and admin bootstrap remain assigned to B-04. No shared Supabase operation is part of PR #32.
 
 J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
@@ -104,6 +105,23 @@ Never mark tasks done because code was generated: verification and review requir
 - `.\mvnw.cmd --batch-mode -DskipTests package` passed locally on JDK 25 with Java 21 release compilation.
 - Backend workflow run `38445768813` passed V1→V2→V3 migration, Hibernate validation, migration repeat no-op, RLS/grant checks, persistence, token replay/expiry, disabled/unverified authentication, ownership identity, route authorization, anonymous-session, and CSRF coverage on isolated PostgreSQL 17: 14 tests, 0 failures, 0 errors, 0 skipped.
 - Shared Supabase was not read, migrated, or otherwise modified.
+
+## Verified B-03 evidence — 2026-10-13
+
+- Branch: `codex/b-03-registration-verification-recovery`; GitHub issue #10; PR #33.
+- Registration atomically creates an `OPERATOR` user and `DRAFT`, active, publicly visible profile with normalized email and E.164 phone data. Duplicate registration returns the same generic response.
+- Verification and reset tokens are random, stored only as SHA-256 hashes, expire after 24 hours and 30 minutes respectively, are single-use, and are invalidated when replaced.
+- Resend and recovery responses do not reveal account existence. Verification uses the approved 60-second account cooldown and rolling 5/account/hour and 20/IP/hour limits; equivalent bounded controls protect other email-producing public endpoints.
+- Email delivery uses Spring Mail with environment-only SMTP configuration and finite connection/write/read timeouts. Email stays disabled unless explicitly configured.
+- Password reset preserves verification/application state and calls the session-revocation boundary. B-04 must replace its current no-op implementation when it adds Spring Session; no login session can exist before B-04.
+- `AuthInputValidatorTests` and `AuthRateLimiterTests` passed locally on Java 21: 4 tests, 0 failures.
+- Backend workflow `38450980182` passed V1→V2→V3 migration, Hibernate validation, and all 27 tests on isolated PostgreSQL 17, including 9 B-03 workflow tests: 0 failures, 0 errors, 0 skipped.
+- A readability follow-up consolidated related request/email types, reducing the `auth` production package from 17 files to 11, and added repository/backend code maps. Workflow `38458744022` passed after the structure-only change.
+- Review fixes added the public CSRF-token endpoint, stable malformed-JSON errors, asynchronous SMTP delivery, duplicate-registration timing normalization, and serialized token replacement. The rate limiter now uses the simpler FIFO `Queue` interface without changing behavior.
+- JDK 25 packaging and 5 focused non-database tests passed locally. Backend workflow `38559593205` then passed all 31 tests against isolated PostgreSQL 17, including browser-style CSRF and concurrent token-issuance coverage: 0 failures, 0 errors, 0 skipped.
+- Structure-only follow-up commit `14da1c2` moved authentication code into `config`, `controller`, `dto`, `exception`, and `service` subpackages while retaining package-private password-hash access in `identity`. The JDK 25 package build, 5 focused tests, and backend workflow run `38562354608` passed without changing behavior.
+- PR #33 was reviewed and merged to `main` as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf` on 2026-10-14.
+- No migration was added and shared Supabase was not read, migrated, or otherwise modified.
 
 ## Verified J-02 contract evidence — 2026-10-14
 
