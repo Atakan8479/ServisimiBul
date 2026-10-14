@@ -16,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -76,6 +77,8 @@ class AuthWorkflowTests {
     private MutableClock clock;
     @Autowired
     private AuthPersistenceService persistence;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void resetTestState() {
@@ -255,6 +258,7 @@ class AuthWorkflowTests {
                 tokenHasher.hash("initial-token"),
                 registeredAt
         )).isTrue();
+        UUID userId = userRepository.findByEmail(email).orElseThrow().getId();
 
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
@@ -288,7 +292,9 @@ class AuthWorkflowTests {
             assertThat(issued).isEqualTo(1);
         } finally {
             executor.shutdownNow();
-            userRepository.findByEmail(email).ifPresent(userRepository::delete);
+            jdbcTemplate.update("delete from email_verification_token where user_id = ?", userId);
+            jdbcTemplate.update("delete from operator_profile where user_id = ?", userId);
+            jdbcTemplate.update("delete from app_user where id = ?", userId);
         }
     }
 
