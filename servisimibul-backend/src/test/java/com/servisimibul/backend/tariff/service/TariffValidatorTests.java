@@ -32,6 +32,7 @@ class TariffValidatorTests {
         assertThat(normalized.currency()).isEqualTo("TRY");
         assertThat(normalized.bands().getFirst().minDistanceKm()).isEqualByComparingTo("0");
         assertThat(normalized.bands().getLast().amountKurus()).isEqualByComparingTo("150000");
+        assertThat(normalized.bands().getLast().amountKurus().scale()).isZero();
     }
 
     @Test

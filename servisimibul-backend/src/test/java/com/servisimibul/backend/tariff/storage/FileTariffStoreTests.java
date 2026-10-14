@@ -41,7 +41,9 @@ class FileTariffStoreTests {
         assertThat(storageDirectory.resolve("34/versions/version-v1.json")).isRegularFile();
         assertThat(storageDirectory.resolve("34/versions/version-v2.json")).isRegularFile();
         assertThat(Files.readString(storageDirectory.resolve("34/versions/version-v1.json")))
-                .contains("\"version\" : \"v1\"");
+                .contains("\"version\" : \"v1\"")
+                .contains("\"amountKurus\" : 120000")
+                .doesNotContain("1.2E+5");
     }
 
     @Test

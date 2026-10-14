@@ -175,14 +175,19 @@ public class TariffValidator {
             if (amount == null) {
                 errors.put(prefix + ".amountKurus", "is required");
             } else {
+                boolean integral = amount.stripTrailingZeros().scale() <= 0;
+                boolean withinLongRange = amount.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) <= 0;
                 if (amount.signum() < 0) {
                     errors.put(prefix + ".amountKurus", "must be nonnegative");
                 }
-                if (amount.stripTrailingZeros().scale() > 0) {
+                if (!integral) {
                     errors.put(prefix + ".amountKurus", "must be an integer kuruş amount");
                 }
-                if (amount.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) > 0) {
+                if (!withinLongRange) {
                     errors.put(prefix + ".amountKurus", "is too large");
+                }
+                if (amount.signum() >= 0 && integral && withinLongRange) {
+                    amount = BigDecimal.valueOf(amount.longValueExact());
                 }
             }
 
