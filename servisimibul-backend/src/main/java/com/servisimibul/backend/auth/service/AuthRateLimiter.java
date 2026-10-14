@@ -1,5 +1,6 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.exception.RateLimitExceededException;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;

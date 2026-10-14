@@ -1,5 +1,6 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.config.AuthEmailProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;

@@ -1,5 +1,6 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.exception.AuthValidationException;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;

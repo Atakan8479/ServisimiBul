@@ -1,5 +1,11 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.controller;
 
+import com.servisimibul.backend.auth.dto.CsrfResponse;
+import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.RegisterRequest;
+import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
+import com.servisimibul.backend.auth.dto.TokenRequest;
+import com.servisimibul.backend.auth.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-class AuthController {
+public class AuthController {
 
     private final AuthService authService;
 

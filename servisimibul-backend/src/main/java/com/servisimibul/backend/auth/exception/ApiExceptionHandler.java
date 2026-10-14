@@ -1,4 +1,4 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpHeaders;

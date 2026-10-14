@@ -1,5 +1,6 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.exception.InvalidAuthTokenException;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.EmailVerificationToken;

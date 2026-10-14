@@ -1,7 +1,6 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.config;
 
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -17,8 +16,4 @@ class AuthConfiguration {
     Clock clock() {
         return Clock.systemUTC();
     }
-}
-
-@ConfigurationProperties("servisimibul.email")
-record AuthEmailProperties(String from, String frontendBaseUrl) {
 }

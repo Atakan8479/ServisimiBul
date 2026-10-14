@@ -1,4 +1,4 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;

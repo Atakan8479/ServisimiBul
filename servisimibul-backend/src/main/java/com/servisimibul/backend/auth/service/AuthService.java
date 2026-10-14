@@ -1,5 +1,10 @@
-package com.servisimibul.backend.auth;
+package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.RegisterRequest;
+import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
+import com.servisimibul.backend.auth.dto.TokenRequest;
+import com.servisimibul.backend.auth.exception.EmailUnavailableException;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
 import lombok.RequiredArgsConstructor;
@@ -16,7 +21,7 @@ import java.util.UUID;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-class AuthService {
+public class AuthService {
 
     private static final Duration IP_LIMIT_WINDOW = Duration.ofHours(1);
     private static final int IP_LIMIT = 20;
@@ -30,7 +35,7 @@ class AuthService {
     private final SessionRevoker sessionRevoker;
     private final Clock clock;
 
-    void register(RegisterRequest request, String remoteAddress) {
+    public void register(RegisterRequest request, String remoteAddress) {
         requireEmail();
         String email = validator.email(request.email());
         String password = validator.password(request.password(), "password");
@@ -57,7 +62,7 @@ class AuthService {
         }
     }
 
-    void resendVerification(EmailRequest request, String remoteAddress) {
+    public void resendVerification(EmailRequest request, String remoteAddress) {
         requireEmail();
         String email = validator.email(request.email());
         requireIpAllowance("resend", remoteAddress);
@@ -69,11 +74,11 @@ class AuthService {
                 ));
     }
 
-    void verifyEmail(TokenRequest request) {
+    public void verifyEmail(TokenRequest request) {
         persistence.verifyEmail(tokenHasher.hash(request.token().strip()), now());
     }
 
-    void forgotPassword(EmailRequest request, String remoteAddress) {
+    public void forgotPassword(EmailRequest request, String remoteAddress) {
         requireEmail();
         String email = validator.email(request.email());
         requireIpAllowance("forgot", remoteAddress);
@@ -85,7 +90,7 @@ class AuthService {
                 ));
     }
 
-    void resetPassword(ResetPasswordRequest request) {
+    public void resetPassword(ResetPasswordRequest request) {
         String password = validator.password(request.newPassword(), "newPassword");
         UUID userId = persistence.resetPassword(
                 tokenHasher.hash(request.token().strip()),
