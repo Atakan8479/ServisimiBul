@@ -4,6 +4,7 @@ import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.EmailVerificationTokenRepository;
 import com.servisimibul.backend.identity.OperatorApprovalStatus;
+import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
@@ -249,21 +250,14 @@ class AuthWorkflowTests {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void concurrentVerificationRequestsIssueOnlyOneReplacementToken() throws Exception {
         String email = "concurrent-" + UUID.randomUUID() + "@example.com";
-        OffsetDateTime registeredAt = OffsetDateTime.now(ZoneOffset.UTC);
-        assertThat(persistence.register(
-                email,
-                INITIAL_PASSWORD,
-                "Concurrent Service",
-                "+905321234567",
-                tokenHasher.hash("initial-token"),
-                registeredAt
-        )).isTrue();
-        UUID userId = userRepository.findByEmail(email).orElseThrow().getId();
+        AppUser user = userRepository.saveAndFlush(AppUser.newOperator(email, "test-only-hash"));
+        profileRepository.saveAndFlush(new OperatorProfile(user, "Concurrent Service", "+905321234567"));
+        UUID userId = user.getId();
 
         CountDownLatch start = new CountDownLatch(1);
         ExecutorService executor = Executors.newFixedThreadPool(2);
         try {
-            OffsetDateTime replacementTime = registeredAt.plusSeconds(61);
+            OffsetDateTime replacementTime = OffsetDateTime.now(ZoneOffset.UTC);
             Future<Optional<String>> first = executor.submit(() -> {
                 start.await();
                 return persistence.issueVerificationToken(
