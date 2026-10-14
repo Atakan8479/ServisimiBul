@@ -4,7 +4,6 @@ import com.servisimibul.backend.identity.AppUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.session.Session;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
@@ -15,7 +14,7 @@ import java.util.UUID;
 class JdbcSessionRevoker implements SessionRevoker {
 
     private final AppUserRepository userRepository;
-    private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+    private final FindByIndexNameSessionRepository<?> sessionRepository;
 
     @Override
     public void revokeAll(UUID userId) {

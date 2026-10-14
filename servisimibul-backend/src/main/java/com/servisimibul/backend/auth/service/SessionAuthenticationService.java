@@ -18,7 +18,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.session.FindByIndexNameSessionRepository;
-import org.springframework.session.Session;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -37,7 +36,7 @@ public class SessionAuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
-    private final FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+    private final FindByIndexNameSessionRepository<?> sessionRepository;
     private final AuthRateLimiter rateLimiter;
     private final Clock clock;
 

@@ -43,7 +43,7 @@ class SessionAuthenticationApiTests {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private FindByIndexNameSessionRepository<? extends Session> sessionRepository;
+    private FindByIndexNameSessionRepository<?> sessionRepository;
 
     @Autowired
     private SessionRevoker sessionRevoker;
