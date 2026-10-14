@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — UKOME tariff backend in review
-Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are complete. A-05 is in review in PR #37; A-03 is now unblocked by merged B-04 but remains queued behind the current single-task gate.
+## Current stage: Phase 2 — Operator-school coverage in review
+Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-05, and A-10 are complete. A-03 is implemented and verified in PR #39; review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -10,9 +10,9 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are comp
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
-| 5 Operator school coverage + catalog | in progress | A-02 issue #13 and PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; workflow `38594885240` passed 36 tests | A-02 reviewed and merged 2026-10-14; operator coverage remains pending |
+| 5 Operator school coverage + catalog | in progress | A-02 PR #35 merged; A-03 issue #15 and PR #39; workflow `38634143068` passed all 68 tests | A-02 merged; A-03 implementation approved by Atakan and awaits review |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | tariff implementation in review | J-02 issue #8 completed; A-05 issue #20; PR #37; workflow `38613779518` passed all 62 tests | A-05 implementation contract approved by Atakan 2026-10-14 |
+| 7 Optional offerings/tariff JSON | tariff backend complete; offerings pending | J-02 issue #8 completed; A-05 issue #20 and PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; workflow `38613779518` passed all 62 tests | A-05 reviewed and merged 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -26,7 +26,8 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are comp
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-05 UKOME tariff backend | in review | GitHub issue #20; PR #37; 17 focused post-integration tests and Java 21 package passed; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Implementation contract approved by Atakan 2026-10-14 |
+| A-03 Operator-school relationships and general coverage | in review | GitHub issue #15; PR #39; PostgreSQL 17 workflow `38634143068` passed all 68 tests | Implementation approved by Atakan 2026-10-14; review pending |
+| A-05 UKOME tariff backend | complete | GitHub issue #20 closed; PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Reviewed and merged 2026-10-14 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
@@ -38,6 +39,8 @@ B-02 adds V3 identity persistence, default-deny security, database-backed authen
 J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
 A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school create, partial update, activation, and deactivation. It reuses the existing V1 geography schema, keeps bulk CSV import out of scope, and adds no migration or shared Supabase operation.
+
+A-03 PR #39 adds V5 plus session-owned operator-school and same-province general-coverage APIs. It serializes lifecycle and coverage mutations with an owned relationship row lock, replaces coverage transactionally, and exposes another operator's relationship only as not found. V5 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
 
@@ -187,4 +190,17 @@ Never mark tasks done because code was generated: verification and review requir
 - After B-04 and A-10 merged, `.\mvnw.cmd --batch-mode "-Dtest=TariffValidatorTests,FileTariffStoreTests,ProductionConfigurationTests,SessionLifetimeFilterTests,AuthEmailSenderTests,AuthInputValidatorTests,AuthRateLimiterTests" test` passed 17 focused tariff/configuration/session/authentication tests: 0 failures, 0 errors, 0 skipped.
 - `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
 - Isolated PostgreSQL 17 Backend workflow `38613779518` passed the final application head after canonical integer-kuruş serialization: clean V1→V2→V3→V4 migration, Hibernate validation, five tariff API tests, four tariff storage tests, three tariff validation tests, and all existing regressions; 62 tests, 0 failures, 0 errors, 0 skipped.
+- PR #37 was reviewed and merged to `main` as `9d7a2c29cb50977ce19898fedbcf02252d482642`; GitHub issue #20 closed as completed.
 - Shared Supabase was not read, migrated, or modified.
+
+## Verified A-03 evidence — 2026-10-14
+
+- Branch: `codex/a-03-operator-school-coverage`; GitHub issue #15; PR #39; based on merged `main` commit `9d7a2c29cb50977ce19898fedbcf02252d482642`.
+- V5 creates `operator_school` and `operator_school_coverage` with approved foreign keys and unique pairs, coverage cascade on relationship deletion, explicit `servisimibul_app` grants, role-scoped RLS policies, and no `anon`/`authenticated` access.
+- Operator identity is derived only from the authenticated session. List/create/active-state patch/delete and full coverage replacement use DTOs, ownership-scoped lookups, CSRF/role protection, and safe Problem Details.
+- Only active schools can be attached. Same-province neighborhoods in another district are accepted, cross-province and duplicate coverage are rejected, and invalid replacement leaves the earlier complete coverage set unchanged.
+- PATCH, DELETE, and coverage replacement lock the owned `operator_school` row. Coverage replacement deletes and reinserts within one transaction; the concurrent test proves the final set is one complete submitted replacement rather than a mixed set.
+- The initial isolated workflow `38633575254` found one delete-path persistence-context error after coverage had been replaced earlier in the same test transaction. The fix explicitly deletes and clears managed coverage before removing the relationship while retaining the database cascade as an integrity backstop.
+- `git diff --check` passed. The Java 21-targeted package build, including all test sources, passed locally on JDK 25.
+- Final isolated PostgreSQL 17 workflow `38634143068` passed clean V1→V2→V3→V4→V5 migration, Hibernate validation, migration/RLS/grant checks, all A-03 API and concurrency tests, and all regressions: 68 tests, 0 failures, 0 errors, 0 skipped.
+- No shared Supabase read, migration, or mutation was performed. Applying V2–V5 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
