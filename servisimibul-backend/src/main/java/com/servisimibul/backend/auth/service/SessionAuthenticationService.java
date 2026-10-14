@@ -95,6 +95,7 @@ public class SessionAuthenticationService {
     }
 
     private void removeOldestExcessSessions(String email, String currentSessionId) {
+        // shortcut: eviction is per app instance; add shared locking before running multiple backend instances.
         var otherSessions = sessionRepository.findByPrincipalName(email).values().stream()
                 .filter(session -> !session.getId().equals(currentSessionId))
                 .sorted(Comparator.comparing(session -> session.getCreationTime()))
