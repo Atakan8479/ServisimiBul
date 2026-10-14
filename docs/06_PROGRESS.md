@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1/2 — Authentication foundation and pilot catalog complete
-Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. A-10 deployment/observability remains in review after an explicitly approved sequencing override; J-02 implementation remains pending.
+## Current stage: Phase 2 — UKOME tariff backend in review
+Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are complete. A-05 is in review in PR #37; A-03 is now unblocked by merged B-04 but remains queued behind the current single-task gate.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -12,7 +12,7 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. 
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
 | 5 Operator school coverage + catalog | in progress | A-02 issue #13 and PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; workflow `38594885240` passed 36 tests | A-02 reviewed and merged 2026-10-14; operator coverage remains pending |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | contract complete; implementation pending | J-02 issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14 |
+| 7 Optional offerings/tariff JSON | tariff implementation in review | J-02 issue #8 completed; A-05 issue #20; PR #37; workflow `38613779518` passed all 62 tests | A-05 implementation contract approved by Atakan 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -26,7 +26,8 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. 
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; PostgreSQL 17 workflow `38610241315` passed all 50 tests after B-04 integration | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
+| A-05 UKOME tariff backend | in review | GitHub issue #20; PR #37; 17 focused post-integration tests and Java 21 package passed; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Implementation contract approved by Atakan 2026-10-14 |
+| A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -38,7 +39,7 @@ J-02 is documentation-only: it fixes the vehicle-backed offering constraints and
 
 A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school create, partial update, activation, and deactivation. It reuses the existing V1 geography schema, keeps bulk CSV import out of scope, and adds no migration or shared Supabase operation.
 
-A-10 was intentionally started before its planned Phase 4 dependencies at human request. The branch adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, feature implementation, and the approved tariff-store implementation are still required.
+A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
 
 ## Session handoff template
 Date:
@@ -101,6 +102,7 @@ Never mark tasks done because code was generated: verification and review requir
 - After B-03 merged, the A-10 branch was reconciled with `main`: the production mail contract now uses B-03's `SB_MAIL_*` names, and the runbook reflects J-02's approved tariff-volume decision. Twelve focused A-10/B-03 tests and the Java 21-targeted package build passed locally on 2026-10-14. PostgreSQL 17 workflow `38592108976` then passed all 38 tests: 0 failures, 0 errors, 0 skipped.
 - After B-04 merged, A-10 was reconciled with `main`: duplicate session properties were reduced to one `spring.session.timeout` and one `SB_COOKIE_SECURE` contract. The 9 focused configuration, observability, and absolute-session-lifetime tests passed locally on JDK 25.
 - PostgreSQL 17 workflow `38610241315` then passed the complete post-integration Maven verification: 50 tests, 0 failures, 0 errors, 0 skipped.
+- PR #30 was reviewed and merged to `main` as `b98e74246ab382908ee01410f7f251378ac1908e`; the subsequent main push workflow `38610717696` succeeded.
 - No migration or shared database operation was performed.
 
 ## Verified A-01 evidence — 2026-10-13
@@ -174,3 +176,15 @@ Never mark tasks done because code was generated: verification and review requir
 - Structure-only follow-up commit `b413a4a` moved the geography API into `controller`, `dto`, `service`, and `exception` subpackages. The JDK 25 package build and backend workflow run `38562568666` passed without changing behavior.
 - After B-03 integration, the JDK 25 package build and 5 focused non-database authentication tests passed locally. Backend workflow run `38594885240` then passed all 36 tests against isolated PostgreSQL 17.11, including all 5 A-02 API tests: 0 failures, 0 errors, 0 skipped.
 - No dependency, Flyway migration, runtime property/deployment configuration, shared Supabase, or production-setting change was made.
+
+## Verified A-05 local evidence — 2026-10-14
+
+- Branch: `codex/a-05-ukome-tariff-backend`; GitHub issue #20; PR #37. The branch started from merged A-02 and then integrated current `main` through merged B-04 and A-10.
+- The public endpoint reads the current official tariff by province code without requiring authentication. The ADMIN endpoint accepts an explicit expected version, validates the complete document, preserves immutable versions, and atomically replaces `current.json` on the configured backend-only filesystem.
+- Validation covers province identity, required provenance/effective dates, absolute HTTPS source URL, `TRY`, safe immutable version identifiers, contiguous sorted half-open bands, a zero first boundary, an open final boundary, and nonnegative integer-kuruş amounts.
+- Per-province in-process locking plus expected-version comparison permits one concurrent winner and returns stable `tariff_version_conflict` Problem Details to stale writers. Rejected writes preserve the previous complete current document.
+- `.\mvnw.cmd --batch-mode "-Dtest=TariffValidatorTests,FileTariffStoreTests" test` passed 7 focused validation, filesystem, failure, and concurrency tests: 0 failures, 0 errors, 0 skipped.
+- After B-04 and A-10 merged, `.\mvnw.cmd --batch-mode "-Dtest=TariffValidatorTests,FileTariffStoreTests,ProductionConfigurationTests,SessionLifetimeFilterTests,AuthEmailSenderTests,AuthInputValidatorTests,AuthRateLimiterTests" test` passed 17 focused tariff/configuration/session/authentication tests: 0 failures, 0 errors, 0 skipped.
+- `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
+- Isolated PostgreSQL 17 Backend workflow `38613779518` passed the final application head after canonical integer-kuruş serialization: clean V1→V2→V3→V4 migration, Hibernate validation, five tariff API tests, four tariff storage tests, three tariff validation tests, and all existing regressions; 62 tests, 0 failures, 0 errors, 0 skipped.
+- Shared Supabase was not read, migrated, or modified.

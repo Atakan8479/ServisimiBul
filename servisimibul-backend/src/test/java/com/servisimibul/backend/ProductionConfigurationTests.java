@@ -20,6 +20,7 @@ class ProductionConfigurationTests {
                 .containsEntry("servisimibul.email.from", "${SB_MAIL_FROM}")
                 .containsEntry("servisimibul.email.frontend-base-url", "${SB_FRONTEND_BASE_URL}")
                 .containsEntry("spring.mail.password", "${SB_MAIL_PASSWORD}")
+                .containsEntry("servisimibul.tariff.storage-dir", "${SB_TARIFF_STORAGE_DIR}")
                 .containsEntry("spring.mail.properties[mail.smtp.connectiontimeout]",
                         "${SB_MAIL_CONNECTION_TIMEOUT_MS:5000}")
                 .containsEntry("server.servlet.session.cookie.secure", "true")

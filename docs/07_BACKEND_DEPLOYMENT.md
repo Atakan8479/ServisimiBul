@@ -120,9 +120,9 @@ Forwarded headers are ignored by default. If a platform requires them for HTTPS 
 
 ## Tariff persistence contract
 
-D033–D035 approve a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the tariff feature itself is not implemented yet. The deployment must mount that directory on a durable writable volume outside the packaged JAR. It must never point at the classpath, frontend, PostgreSQL fare tables, or Supabase Storage.
+D033–D035 approve a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; A-05 implements that contract. The production profile requires the variable, and deployment must mount the directory on a durable writable volume outside the packaged JAR. It must never point at the classpath, frontend, PostgreSQL fare tables, or Supabase Storage.
 
-Implementation must use immutable version files and same-filesystem atomic replacement of `current.json`, reject stale expected versions with 409, retain source/effective-date metadata, validate contiguous non-overlapping bands, and keep history immutable. Rollback creates a new version from prior content. MVP supports one tariff-writer instance; A-09 still owns off-volume backup and verified restoration. Do not put storage paths in browser-visible configuration or treat the approved contract as evidence that the tariff feature is already deployable.
+The implementation uses immutable version files and same-filesystem atomic replacement of `current.json`, rejects stale expected versions with 409, retains source/effective-date metadata, validates contiguous non-overlapping bands, and keeps history immutable. Rollback creates a new version from prior content. MVP supports one tariff-writer instance; A-09 still owns off-volume backup and verified restoration. Do not put storage paths in browser-visible configuration or treat application support alone as evidence that the volume is durable and recoverable.
 
 ## Deployment sequence
 
@@ -146,4 +146,4 @@ Application rollback and database recovery are separate decisions:
 5. Use the backup/restore procedure from A-09 only after confirming the exact target, recovery point, data-loss window, and receiving fresh destructive-operation approval.
 6. Record the incident, applied migration versions, final artifact digest, validation evidence, and follow-up actions.
 
-Until A-08, A-09, B-10, the tariff-store implementation, and the relevant feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
+Until A-08, A-09, B-10, and the remaining feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
