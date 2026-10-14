@@ -26,7 +26,7 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. 
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; PostgreSQL 17 workflow `38592108976` passed 38 tests before B-04 integration; 9 post-integration focused tests pass | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
+| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; PostgreSQL 17 workflow `38610241315` passed all 50 tests after B-04 integration | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -100,6 +100,7 @@ Never mark tasks done because code was generated: verification and review requir
 - PR #30 Backend workflow run #9 then passed the complete Maven verification against its isolated PostgreSQL 17 service.
 - After B-03 merged, the A-10 branch was reconciled with `main`: the production mail contract now uses B-03's `SB_MAIL_*` names, and the runbook reflects J-02's approved tariff-volume decision. Twelve focused A-10/B-03 tests and the Java 21-targeted package build passed locally on 2026-10-14. PostgreSQL 17 workflow `38592108976` then passed all 38 tests: 0 failures, 0 errors, 0 skipped.
 - After B-04 merged, A-10 was reconciled with `main`: duplicate session properties were reduced to one `spring.session.timeout` and one `SB_COOKIE_SECURE` contract. The 9 focused configuration, observability, and absolute-session-lifetime tests passed locally on JDK 25.
+- PostgreSQL 17 workflow `38610241315` then passed the complete post-integration Maven verification: 50 tests, 0 failures, 0 errors, 0 skipped.
 - No migration or shared database operation was performed.
 
 ## Verified A-01 evidence — 2026-10-13
