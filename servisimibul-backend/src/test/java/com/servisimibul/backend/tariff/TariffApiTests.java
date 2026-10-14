@@ -1,7 +1,6 @@
 package com.servisimibul.backend.tariff;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -11,6 +10,7 @@ import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.file.Path;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -25,12 +25,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class TariffApiTests {
 
-    @TempDir
-    static Path tariffDirectory;
+    private static final Path TARIFF_DIRECTORY = Path.of(
+            System.getProperty("java.io.tmpdir"),
+            "servisimibul-tariff-api-" + UUID.randomUUID()
+    );
 
     @DynamicPropertySource
     static void tariffProperties(DynamicPropertyRegistry registry) {
-        registry.add("servisimibul.tariff.storage-dir", tariffDirectory::toString);
+        registry.add("servisimibul.tariff.storage-dir", TARIFF_DIRECTORY::toString);
     }
 
     private final MockMvc mockMvc;
