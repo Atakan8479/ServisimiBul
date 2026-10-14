@@ -105,6 +105,7 @@ public class OperatorSchoolService {
     @Transactional
     public void delete(UUID id) {
         OperatorSchool relationship = ownedForUpdate(id);
+        coverageRepository.deleteAllByOperatorSchoolIdAndClear(relationship.getId());
         operatorSchoolRepository.delete(relationship);
         operatorSchoolRepository.flush();
     }

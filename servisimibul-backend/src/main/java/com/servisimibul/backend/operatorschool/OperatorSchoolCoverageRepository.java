@@ -37,4 +37,8 @@ public interface OperatorSchoolCoverageRepository extends JpaRepository<Operator
     @Modifying
     @Query("delete from OperatorSchoolCoverage coverage where coverage.operatorSchool.id = :operatorSchoolId")
     int deleteAllByOperatorSchoolId(@Param("operatorSchoolId") UUID operatorSchoolId);
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("delete from OperatorSchoolCoverage coverage where coverage.operatorSchool.id = :operatorSchoolId")
+    int deleteAllByOperatorSchoolIdAndClear(@Param("operatorSchoolId") UUID operatorSchoolId);
 }
