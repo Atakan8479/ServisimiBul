@@ -5,6 +5,11 @@ export function LoadingPage() {
   return (
     <main className="state-page" aria-live="polite" aria-busy="true">
       <p className="eyebrow">ServisimiBul</p>
+      <div className="loading-indicator" aria-hidden="true">
+        <span />
+        <span />
+        <span />
+      </div>
       <h1>Yükleniyor</h1>
       <p>İçerik hazırlanıyor.</p>
     </main>
