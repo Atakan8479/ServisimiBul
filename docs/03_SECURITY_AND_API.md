@@ -55,6 +55,7 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 ## Operator endpoints (draft)
 - `GET/PATCH /api/v1/operator/profile`
 - `GET/POST /api/v1/operator/schools`
+- `PATCH/DELETE /api/v1/operator/schools/{id}`
 - `PUT /api/v1/operator/schools/{id}/coverage`
 - `GET/POST /api/v1/operator/vehicles`
 - `GET/PATCH /api/v1/operator/vehicles/{id}`
@@ -79,6 +80,10 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 - `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON; request includes expected current version)
 
 Public school list/detail responses expose only active schools. Geography lists and school results use deterministic name/id ordering. School create/patch fields are `neighborhoodId`, `name`, optional `address`, optional `sourceName`, optional `sourceCode`, and `active`; supplying `sourceCode` requires `sourceName`, and the source pair remains unique. PATCH is partial and explicit `null` clears optional fields. School CSV import is deferred by D019 and is not part of the current pilot API.
+
+Operator-school self-management never accepts an `operatorId`; ownership comes from the authenticated session. Create accepts `{schoolId,active?}` with `active` defaulting to `true`, and the school must currently be active. PATCH accepts exactly the mutable lifecycle field `{active}`. DELETE removes the owned relationship and its general coverage; future offering migrations must preserve their own integrity when they begin referencing this relationship.
+
+General coverage replacement accepts `{neighborhoodIds:[...]}`. An empty list clears coverage, repeated neighborhood IDs are rejected, and every referenced neighborhood must exist in the attached school's province; another district in that province is valid. The backend locks the owned operator-school row and replaces the entire set in one transaction. Another operator's relationship is returned as not found rather than disclosed.
 
 ## Tariff storage and write contract
 Only the backend reads or writes the persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the deployment mounts it on a writable persistent volume. Tariff content is never a classpath/JAR/frontend asset or a PostgreSQL fare table, and Supabase Storage is excluded for MVP. Do not expose storage credentials or filesystem paths to the browser.

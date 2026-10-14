@@ -20,6 +20,11 @@ Production code is grouped by feature first, then by technical responsibility:
 | `geography/dto` | Geography and school API request/response types |
 | `geography/service` | Geography lookup and pilot school catalog workflows |
 | `geography/exception` | Geography API exceptions and Problem Details responses |
+| `operatorschool` | Operator-school and general-coverage JPA entities/repositories |
+| `operatorschool/controller` | Session-owned operator school and coverage endpoints |
+| `operatorschool/dto` | Operator school create/patch/coverage request and safe response types |
+| `operatorschool/service` | Ownership, active-school, same-province, transactional replacement, and lifecycle workflows |
+| `operatorschool/exception` | Operator-school-specific safe Problem Details responses |
 | `tariff/controller` | Anonymous current-tariff read and ADMIN replacement endpoints |
 | `tariff/dto` | Official tariff document, band, and optimistic-update records |
 | `tariff/service` | Tariff validation, normalization, and workflow orchestration |
