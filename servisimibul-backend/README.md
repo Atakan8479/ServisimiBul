@@ -13,11 +13,15 @@ Production code is grouped by feature first, then by technical responsibility:
 | `auth/service` | Registration, verification, recovery, validation, token, rate-limit, and email workflows |
 | `auth/exception` | Authentication exceptions and safe API error responses |
 | `auth/config` | Authentication beans and email configuration properties |
-| `identity` | User/operator JPA entities, lifecycle enums, repositories, and database-backed user loading; keeping the loader here preserves package-private password-hash access |
-| `security` | Spring Security configuration, authenticated principal/current user, token hashing, and session-revocation contract |
+| `identity` | User/operator JPA entities, lifecycle enums, repositories, database-backed user loading, and the non-HTTP admin bootstrap; keeping credential access here preserves package-private password hashes |
+| `security` | Spring Security configuration, authenticated principal/current user, token hashing, JDBC session revocation, cookie policy, and remembered-session lifetime enforcement |
 | `geography` | Province, district, neighborhood, and school entities/repositories |
+| `geography/controller` | Public geography and admin school HTTP endpoints |
+| `geography/dto` | Geography and school API request/response types |
+| `geography/service` | Geography lookup and pilot school catalog workflows |
+| `geography/exception` | Geography API exceptions and Problem Details responses |
 | `resources/db/migration` | Ordered Flyway migrations; never edit an applied migration |
-| `src/test/...` | Tests mirror the production feature packages |
+| `src/test/...` | Tests mirror the production feature packages where visibility permits |
 
 For authentication, read files in this order:
 
@@ -27,6 +31,16 @@ For authentication, read files in this order:
 4. `auth/service/AuthInputValidator`, `AuthRateLimiter`, and `TokenGenerator` — focused security helpers.
 5. `auth/service/AuthEmailSender` — email contract plus disabled/SMTP implementations.
 6. `auth/exception` — safe exceptions and API error responses.
+
+## Initial admin bootstrap
+
+After V4 is reviewed, merged, and applied, configure the four temporary `SB_ADMIN_*` credential variables and set `SB_ADMIN_BOOTSTRAP_ENABLED=true`. Run the backend once without a web server:
+
+```powershell
+.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--spring.main.web-application-type=none"
+```
+
+The command requires two distinct admin emails, creates only missing accounts, verifies them, refuses a database that would not contain exactly two admins, and never replaces existing admin passwords. After it exits successfully, remove the four credentials and disable the bootstrap flag before starting the normal web application. It exposes no HTTP endpoint.
 
 ## Java toolchain
 

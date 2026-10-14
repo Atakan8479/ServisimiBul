@@ -18,7 +18,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -111,12 +110,12 @@ class SecurityFoundationTests {
                 .andReturn();
 
         CsrfToken token = (CsrfToken) csrfResult.getRequest().getAttribute(CsrfToken.class.getName());
-        MockHttpSession session = (MockHttpSession) csrfResult.getRequest().getSession(false);
+        var sessionCookie = csrfResult.getResponse().getCookie("SBSESSION");
         assertThat(token).isNotNull();
-        assertThat(session).isNotNull();
+        assertThat(sessionCookie).isNotNull();
 
         mockMvc.perform(post("/api/v1/auth/register")
-                        .session(session)
+                        .cookie(sessionCookie)
                         .header(token.getHeaderName(), token.getToken())
                         .contentType("application/json")
                         .content("{}"))
@@ -180,7 +179,7 @@ class SecurityFoundationTests {
     @RestController
     static class TestEndpoints {
 
-        @GetMapping({"/api/v1/provinces", "/api/v1/operator/test", "/api/v1/admin/test", "/internal-test"})
+        @GetMapping({"/api/v1/operator/test", "/api/v1/admin/test", "/internal-test"})
         ResponseEntity<Void> getEndpoint() {
             return ResponseEntity.ok().build();
         }
