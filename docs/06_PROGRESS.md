@@ -12,7 +12,7 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are comp
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
 | 5 Operator school coverage + catalog | in progress | A-02 issue #13 and PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; workflow `38594885240` passed 36 tests | A-02 reviewed and merged 2026-10-14; operator coverage remains pending |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | tariff implementation in review | J-02 issue #8 completed; A-05 issue #20; PR #37; workflow `38612634949` passed all 62 tests | A-05 implementation contract approved by Atakan 2026-10-14 |
+| 7 Optional offerings/tariff JSON | tariff implementation in review | J-02 issue #8 completed; A-05 issue #20; PR #37; workflow `38613779518` passed all 62 tests | A-05 implementation contract approved by Atakan 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -26,7 +26,7 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are comp
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-05 UKOME tariff backend | in review | GitHub issue #20; PR #37; 17 focused post-integration tests and Java 21 package passed; PostgreSQL 17 workflow `38612634949` passed all 62 tests | Implementation contract approved by Atakan 2026-10-14 |
+| A-05 UKOME tariff backend | in review | GitHub issue #20; PR #37; 17 focused post-integration tests and Java 21 package passed; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Implementation contract approved by Atakan 2026-10-14 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
@@ -186,5 +186,5 @@ Never mark tasks done because code was generated: verification and review requir
 - `.\mvnw.cmd --batch-mode "-Dtest=TariffValidatorTests,FileTariffStoreTests" test` passed 7 focused validation, filesystem, failure, and concurrency tests: 0 failures, 0 errors, 0 skipped.
 - After B-04 and A-10 merged, `.\mvnw.cmd --batch-mode "-Dtest=TariffValidatorTests,FileTariffStoreTests,ProductionConfigurationTests,SessionLifetimeFilterTests,AuthEmailSenderTests,AuthInputValidatorTests,AuthRateLimiterTests" test` passed 17 focused tariff/configuration/session/authentication tests: 0 failures, 0 errors, 0 skipped.
 - `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
-- Isolated PostgreSQL 17 Backend workflow `38612634949` passed clean V1→V2→V3→V4 migration, Hibernate validation, five tariff API tests, four tariff storage tests, three tariff validation tests, and all existing regressions: 62 tests, 0 failures, 0 errors, 0 skipped.
+- Isolated PostgreSQL 17 Backend workflow `38613779518` passed the final application head after canonical integer-kuruş serialization: clean V1→V2→V3→V4 migration, Hibernate validation, five tariff API tests, four tariff storage tests, three tariff validation tests, and all existing regressions; 62 tests, 0 failures, 0 errors, 0 skipped.
 - Shared Supabase was not read, migrated, or modified.
