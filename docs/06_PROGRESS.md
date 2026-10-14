@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1 — Identity/security foundation
-Status: Gates 0–3, J-01, A-01, and B-02 are complete. B-03 passed isolated PostgreSQL 17 CI and is awaiting review in PR #33.
+## Current stage: Phase 1 — Contract and identity/security sequencing
+Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. B-03 passed isolated PostgreSQL 17 CI and is awaiting review in PR #33; J-02 implementation remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -12,7 +12,7 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. B-03 passed isolated Pos
 | 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged; B-03 PR #33, structure workflow `38458744022` passed | B-02 scope and D029–D030 approved 2026-10-13; B-03 follows approved J-01 contract and awaits review |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | pending | — | — |
+| 7 Optional offerings/tariff JSON | contract complete | J-02 issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14; implementation pending |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -23,12 +23,15 @@ Status: Gates 0–3, J-01, A-01, and B-02 are complete. B-03 passed isolated Pos
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
 | B-03 Registration, verification, and recovery | in review | GitHub issue #10; PR #33; PostgreSQL 17 workflow `38458744022` passed after structure cleanup | Implements the approved J-01 authentication contract; mutual PR review pending |
+| J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
 B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. Registration/recovery controllers, email delivery, Spring Session lifecycle, and admin bootstrap remain assigned to B-03/B-04. No shared Supabase operation is part of PR #32.
+
+J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
 ## Session handoff template
 Date:
@@ -112,3 +115,12 @@ Never mark tasks done because code was generated: verification and review requir
 - Backend workflow `38450980182` passed V1→V2→V3 migration, Hibernate validation, and all 27 tests on isolated PostgreSQL 17, including 9 B-03 workflow tests: 0 failures, 0 errors, 0 skipped.
 - A readability follow-up consolidated related request/email types, reducing the `auth` production package from 17 files to 11, and added repository/backend code maps. Workflow `38458744022` passed after the structure-only change.
 - No migration was added and shared Supabase was not read, migrated, or otherwise modified.
+
+## Verified J-02 contract evidence — 2026-10-14
+
+- GitHub issue #8; PR #34 from branch `codex/j-02-offering-tariff-frontend-contract`; based on merged `origin/main` commit `3f064b856af546f73afe0132736fccd47006c52e`.
+- Human-approved decisions D031–D036 define the optional-but-vehicle-backed offering model, vehicle lifecycle and constraints, persistent filesystem tariff store, immutable/atomic optimistic-concurrency writes, tariff metadata/band validation, and frontend baseline.
+- Project brief, decision register, domain/data, security/API, roadmap, repository-state, and progress documents were reconciled to the same contract; superseded nullable-vehicle and unresolved-tariff-storage language was removed.
+- `git diff --check` passed. Targeted repository searches found no remaining nullable offering-to-vehicle rule, unresolved tariff-storage placeholder, or obsolete tariff query parameter in the scoped documents.
+- Maven and frontend tests were not run because J-02 changes documentation only and introduces no application source, dependency, configuration, or migration.
+- No shared Supabase operation, production-setting change, migration, or database mutation was performed.

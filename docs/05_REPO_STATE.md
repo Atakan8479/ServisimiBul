@@ -1,6 +1,6 @@
 # Verified repository and database state
 
-Repository snapshot: 2026-10-13. Latest shared Supabase audit: 2026-10-12.
+Repository snapshot: 2026-10-14. Latest shared Supabase audit: 2026-10-12.
 
 ## GitHub repository
 `https://github.com/Atakan8479/ServisimiBul`; `main` contains the existing `servisimibul-backend` Spring Boot project, Maven wrapper, geography entities/repositories, Flyway configuration, backend CI, and the approved J-01 contract. Preserve this project; do not generate a second Spring application.
@@ -20,4 +20,4 @@ V2 and V3 have not been applied to shared Supabase during pull-request developme
 D017's controlled drop/recreation was executed only after the four legacy geography tables were rechecked as empty. The exact four tables were dropped in one transaction without `CASCADE`, V1 migrated successfully, and Hibernate validation then succeeded through the restricted runtime connection. Automatic baseline, Flyway repair, schema reset, and destructive fallback remain forbidden.
 
 ## Known gaps
-The root `README.md` remains minimal. There is no merged frontend, session lifecycle, admin bootstrap, operator workflow, or public-discovery feature yet. B-03 registration, email verification, and password-recovery work is in progress on its feature branch; B-04 remains responsible for login, persisted sessions, and admin bootstrap. The A-10 deployment/observability work is in a separate unmerged PR and is not part of this repository snapshot.
+The root `README.md` now maps the repository and backend code. There is no merged frontend, registration/email-delivery, session lifecycle, admin bootstrap, operator workflow, or public-discovery feature yet. B-03 implements registration, email verification, and password recovery on its review branch; B-04 remains responsible for login, persisted sessions, and admin bootstrap. Merged J-02 records the approved offering, tariff-storage, and frontend contracts but adds no implementation. The A-10 deployment/observability work remains in a separate unmerged PR.
