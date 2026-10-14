@@ -24,10 +24,10 @@ OperatorSchool & OperatorSchoolCoverage API and operator profile edits; review/n
 Search by school + neighborhood; deterministic operator pagination; publication predicate; contact phone visible for a public profile; offerings NOT required. Responsive UI flow can be parallel only after API contract. Success = empty-offering case, wrong-school coverage, inactive/underapproved tests.
 
 ## Gate 7 — Optional offering/vehicle coverage and official tariff UI
-Optional Vehicle/ServiceOffering, own ServiceOfferingCoverage subset, never mislabel fee or seat data. JSON tariff admin write storage strategy must be explicitly chosen and tested. Official UKOME bands displayed with period/source, no automatic exact km estimate. Success = integrity + JSON validation + unauthorized write tests.
+Optional Vehicle/ServiceOffering remains independent of discovery, while each offering requires an active vehicle owned by the same operator and its own coverage subset. Test plate normalization/uniqueness, capacity and available-seat bounds, draft-to-published requirements, ownership, deactivation-driven unpublishing, and no automatic republishing. Store official UKOME JSON on the `SB_TARIFF_STORAGE_DIR` persistent backend volume with immutable versions, atomic `current.json` replacement, expected-version conflicts, provenance/effective dates, and validated contiguous bands. Never mislabel tariff or seat data and never infer exact distance from neighborhood. Success = integrity, lifecycle, JSON validation/versioning, conflict, recovery, and unauthorized-write tests.
 
 ## Gate 8 — Pilot readiness
-Frontend admin/operator UI, complete responsive public path, performance/page loads, data privacy review, rate limiting, backup and operational instructions, session expiry/cleanup test, manual Supabase cost checks, staging→pilot smoke tests.
+Build the approved Node.js 24/npm Vite React+TypeScript SPA baseline with strict TypeScript, React Router Data Mode, React Hook Form + Zod, Vitest + React Testing Library + MSW, and same-origin `/api/v1` deployment. Complete the responsive public/admin/operator paths, performance/page loads, data privacy review, rate limiting, tariff-volume backup and restore instructions, session expiry/cleanup test, manual Supabase cost checks, and staging→pilot smoke tests.
 
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.

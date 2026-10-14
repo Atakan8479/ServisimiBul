@@ -1,30 +1,39 @@
 # Progress ledger (update only after verification)
 
-## Current gate: 3 — Geography entity model
-Status: Gates 0–2 are complete. The Gate 3 geography entity/repository subtask is implemented and verified in PR #3; review is pending. The separate school CSV import strategy has not started.
+## Current stage: Phase 1 — Contract and identity/security sequencing
+Status: Gates 0–3, J-01, A-01, B-02, and J-02 are complete. A-10 deployment/observability remains in review after an explicitly approved sequencing override; J-02 implementation remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
 | 0 Context + repo read-only review | complete | Repository/docs/backend review, 2026-10-11 | Workflow continued to Gate 1 |
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
-| 3 Geography entity model | in review | PR #3; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved 2026-10-12; review pending |
-| 4 Auth/session/email/admin review | pending | — | — |
+| 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 workflow run `38445768813` | B-02 reviewed and merged 2026-10-13; later B-03/B-04 work pending |
 | 5 Operator school coverage + catalog | pending | — | — |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | pending | — | — |
+| 7 Optional offerings/tariff JSON | contract complete | J-02 issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14; implementation pending |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
 
 | Task | Status | Evidence | Human approval |
 |---|---|---|---|
-| J-01 Authentication and API contract | in review | GitHub issue #7; branch `codex/j-01-auth-api-contract`; decisions D020–D028 | Contract approved by Onat on 2026-10-13; mutual PR review pending |
+| J-01 Authentication and API contract | complete | GitHub issue #7; PR #29 merged; decisions D020–D028 | Contract approved by Onat and reviewed by Atakan, 2026-10-13 |
+| A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
+| B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
+| J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; Backend workflow run #9 passed; 7 focused local tests pass | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
-A-10 was intentionally started before its planned Phase 4 dependencies at human request. The branch adds production and migration profiles, status-only health/readiness, ECS JSON logging, SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, feature implementation, and the approved tariff-storage decision are still required.
+A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
+
+B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. Registration/recovery controllers, email delivery, Spring Session lifecycle, and admin bootstrap remain assigned to B-03/B-04. No shared Supabase operation is part of PR #32.
+
+J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
+
+A-10 was intentionally started before its planned Phase 4 dependencies at human request. The branch adds production and migration profiles, status-only health/readiness, ECS JSON logging, SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, feature implementation, and tariff-store implementation are still required.
 
 ## Session handoff template
 Date:
@@ -85,3 +94,33 @@ Never mark tasks done because code was generated: verification and review requir
 - A full local `./mvnw --batch-mode verify` was attempted without database environment variables. The 7 A-10 tests passed, while the 2 pre-existing geography integration tests could not create a datasource because no disposable PostgreSQL 17 service is installed locally. Shared Supabase was deliberately not used.
 - PR #30 Backend workflow run #9 then passed the complete Maven verification against its isolated PostgreSQL 17 service.
 - No migration or shared database operation was performed.
+
+## Verified A-01 evidence — 2026-10-13
+
+- Branch: `codex/a-01-flyway-security-reconciliation`; GitHub issue #6; PR #31.
+- V1 was left unchanged; V2 contains only privilege revocations for `public.flyway_schema_history`.
+- The integration test expects Flyway schema version 2, verifies a repeated migration executes zero migrations, verifies `anon`, `authenticated`, and `servisimibul_app` have no Flyway-history privileges, and verifies the runtime connection cannot read the history table.
+- `.\mvnw.cmd --batch-mode -DskipTests package` passed with JDK 25 and Java 21 release compilation.
+- Backend workflow run `38443338668` passed the full Maven verification against isolated PostgreSQL 17, including clean V1→V2 migration, repeat no-op, Hibernate validation, and Flyway-history access denial.
+- No shared Supabase read/write, migration, or schema operation was performed.
+
+## Verified B-02 evidence — 2026-10-13
+
+- Branch: `codex/b-02-identity-security-foundation`; GitHub issue #9; PR #32.
+- Human-approved D029 fixes the SQL identity table name as `app_user`; D030 limits review decisions to `APPROVED` and `CHANGES_REQUESTED`, with suspension separate.
+- V3 creates `app_user`, `operator_profile`, verification/reset token, and application-review tables with checks, foreign keys, indexes, explicit backend grants, RLS, and no `anon`/`authenticated` access.
+- JPA entities/repositories preserve operator-only public creation, `DRAFT`/active/public defaults, private password and token hashes, and atomic single-use token consumption.
+- Spring Security uses BCrypt, database-backed user details, verified-and-enabled authentication, CSRF, explicit public/role route matchers, and deny-by-default fallback. Current user identity comes only from the authenticated database principal.
+- Repository Java conventions now prefer Lombok constructor injection and safe entity getters/no-argument constructors, while credential access and security behavior remain explicit; the convention is recorded in `AGENTS.md`.
+- `.\mvnw.cmd --batch-mode -DskipTests package` passed locally on JDK 25 with Java 21 release compilation.
+- Backend workflow run `38445768813` passed V1→V2→V3 migration, Hibernate validation, migration repeat no-op, RLS/grant checks, persistence, token replay/expiry, disabled/unverified authentication, ownership identity, route authorization, anonymous-session, and CSRF coverage on isolated PostgreSQL 17: 14 tests, 0 failures, 0 errors, 0 skipped.
+- Shared Supabase was not read, migrated, or otherwise modified.
+
+## Verified J-02 contract evidence — 2026-10-14
+
+- GitHub issue #8; PR #34 from branch `codex/j-02-offering-tariff-frontend-contract`; based on merged `origin/main` commit `3f064b856af546f73afe0132736fccd47006c52e`.
+- Human-approved decisions D031–D036 define the optional-but-vehicle-backed offering model, vehicle lifecycle and constraints, persistent filesystem tariff store, immutable/atomic optimistic-concurrency writes, tariff metadata/band validation, and frontend baseline.
+- Project brief, decision register, domain/data, security/API, roadmap, repository-state, and progress documents were reconciled to the same contract; superseded nullable-vehicle and unresolved-tariff-storage language was removed.
+- `git diff --check` passed. Targeted repository searches found no remaining nullable offering-to-vehicle rule, unresolved tariff-storage placeholder, or obsolete tariff query parameter in the scoped documents.
+- Maven and frontend tests were not run because J-02 changes documentation only and introduces no application source, dependency, configuration, or migration.
+- No shared Supabase operation, production-setting change, migration, or database mutation was performed.
