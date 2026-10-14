@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 1/2 — Session authentication review and pilot catalog complete
-Status: Gates 0–3, J-01, A-01, B-02, B-03, J-02, and A-02 are complete. B-04 passed isolated PostgreSQL verification and is awaiting review in PR #36; J-02 implementation remains pending.
+## Current stage: Phase 1/2 — Authentication foundation and pilot catalog complete
+Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, and A-02 are complete. A-10 deployment/observability remains in review after an explicitly approved sequencing override; J-02 implementation remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,7 +9,7 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, J-02, and A-02 are complete. B-04 p
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32 and B-03 PR #33 merged; B-04 PR #36 workflow `38607834839` passed 43 tests | B-03 merged; B-04 awaits review |
+| 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
 | 5 Operator school coverage + catalog | in progress | A-02 issue #13 and PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; workflow `38594885240` passed 36 tests | A-02 reviewed and merged 2026-10-14; operator coverage remains pending |
 | 6 Parent public search | pending | — | — |
 | 7 Optional offerings/tariff JSON | contract complete; implementation pending | J-02 issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14 |
@@ -23,19 +23,22 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, J-02, and A-02 are complete. B-04 p
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
 | B-03 Registration, verification, and recovery | complete | GitHub issue #10; PR #33 merged as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf`; PostgreSQL 17 workflow `38562354608` passed | Reviewed and merged 2026-10-14 |
-| B-04 Session authentication and admin bootstrap | in review | GitHub issue #11; PR #36; PostgreSQL 17 workflow `38607834839` passed all 43 tests | Scope approved by Onat; review pending |
+| B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
+| A-10 Backend deployment and observability | in review | GitHub issue #27; PR #30; PostgreSQL 17 workflow `38610241315` passed all 50 tests after B-04 integration | Sequencing override explicitly requested 2026-10-13; A-08/A-09/B-10 dependencies remain |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
-B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 supplies registration, verification/recovery controllers, and email delivery. B-04 PR #36 now supplies the reviewed-but-unmerged Spring Session lifecycle and admin bootstrap. No shared Supabase operation is part of these pull requests.
+B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 supplies registration, verification/recovery controllers, and email delivery. B-04 supplies the Spring Session lifecycle and admin bootstrap. No shared Supabase operation is part of these pull requests.
 
 J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
 A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school create, partial update, activation, and deactivation. It reuses the existing V1 geography schema, keeps bulk CSV import out of scope, and adds no migration or shared Supabase operation.
+
+A-10 was intentionally started before its planned Phase 4 dependencies at human request. The branch adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, feature implementation, and the approved tariff-store implementation are still required.
 
 ## Session handoff template
 Date:
@@ -86,6 +89,20 @@ Never mark tasks done because code was generated: verification and review requir
 - `.\mvnw.cmd --batch-mode -DskipTests package` succeeded with JDK 25; Maven compiled main and test sources with `release 21`, and the application class has class-file major version 65 (Java 21).
 - Database-backed tests were intentionally skipped because this toolchain task did not provision the required disposable PostgreSQL database and must not run tests against shared Supabase.
 
+## Verified A-10 local evidence — 2026-10-13
+
+- Branch: `codex/a-10-backend-deployment-observability`.
+- Spring Boot Actuator and mail dependencies compile under JDK 25 with Java 21 release compatibility; the repackaged JAR build succeeded.
+- `ObservabilityEndpointTests` and `ProductionConfigurationTests`: 7 tests, 0 failures, 0 errors, 0 skipped.
+- Production startup in the focused test emitted ECS JSON, exposed only the health endpoint, omitted configured database/SMTP secret values, and did not create/log Spring Boot's temporary generated user password.
+- `/livez`, `/readyz`, and Actuator health groups returned only aggregate status/probe-group information; sensitive Actuator endpoints and the discovery page were unavailable; cross-origin requests received no Actuator CORS header.
+- A full local `./mvnw --batch-mode verify` was attempted without database environment variables. The 7 A-10 tests passed, while the 2 pre-existing geography integration tests could not create a datasource because no disposable PostgreSQL 17 service is installed locally. Shared Supabase was deliberately not used.
+- PR #30 Backend workflow run #9 then passed the complete Maven verification against its isolated PostgreSQL 17 service.
+- After B-03 merged, the A-10 branch was reconciled with `main`: the production mail contract now uses B-03's `SB_MAIL_*` names, and the runbook reflects J-02's approved tariff-volume decision. Twelve focused A-10/B-03 tests and the Java 21-targeted package build passed locally on 2026-10-14. PostgreSQL 17 workflow `38592108976` then passed all 38 tests: 0 failures, 0 errors, 0 skipped.
+- After B-04 merged, A-10 was reconciled with `main`: duplicate session properties were reduced to one `spring.session.timeout` and one `SB_COOKIE_SECURE` contract. The 9 focused configuration, observability, and absolute-session-lifetime tests passed locally on JDK 25.
+- PostgreSQL 17 workflow `38610241315` then passed the complete post-integration Maven verification: 50 tests, 0 failures, 0 errors, 0 skipped.
+- No migration or shared database operation was performed.
+
 ## Verified A-01 evidence — 2026-10-13
 
 - Branch: `codex/a-01-flyway-security-reconciliation`; GitHub issue #6; PR #31.
@@ -134,6 +151,7 @@ Never mark tasks done because code was generated: verification and review requir
 - The explicitly enabled bootstrap runs without a web server, requires two distinct temporary admin credentials, creates only missing verified admins, refuses any result other than exactly two ADMIN accounts, exposes no HTTP route, logs no credentials, and preserves existing password hashes on rerun.
 - Java 21 compilation and the two focused absolute-lifetime tests passed locally. The full local suite was not run because its configured datasource may be shared Supabase.
 - Backend workflow run `38607834839` passed clean V1→V2→V3→V4 migration, Hibernate validation, all new session/bootstrap tests, and all existing regressions against isolated PostgreSQL 17: 43 tests, 0 failures, 0 errors, 0 skipped.
+- PR #36 was reviewed and merged to `main` as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; final workflow `38608426669` passed all 43 tests.
 - Shared Supabase was not read, migrated, or otherwise modified. Applying V2–V4 and running the admin bootstrap remain separate post-merge operations requiring the normal approval gates.
 
 ## Verified J-02 contract evidence — 2026-10-14
