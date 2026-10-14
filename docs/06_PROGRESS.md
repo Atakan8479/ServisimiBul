@@ -27,7 +27,7 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, B-04, J-02, A-02, and A-10 are comp
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; PostgreSQL 17 workflow `38610515064` passed | Reviewed and merged 2026-10-14; A-08/A-09/B-10 remain separate tasks |
-| B-01 Frontend foundation | in review | GitHub issue #12; branch `codex/b-01-frontend-foundation`; Node 24 local formatting, lint, type-check, 7 tests, and production build passed | Scope approved 2026-10-14; review pending |
+| B-01 Frontend foundation | in review | GitHub issue #12; PR #38; Node 24 workflow `38614330741` passed formatting, lint, type-check, 7 tests, and production build | Scope approved 2026-10-14; review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -183,5 +183,6 @@ Never mark tasks done because code was generated: verification and review requir
 - Public, operator, and admin route shells are accessible and responsive navigation only; Spring Security and backend ownership checks remain authoritative.
 - The shared API client always uses same-origin credentials, obtains Spring's CSRF header/token for state-changing requests, normalizes both existing backend field-error shapes, validates successful payloads with Zod, and marks only authenticated 401 responses as expired sessions.
 - Node.js 24.22.0 checks passed: Prettier check, ESLint, strict TypeScript project build, 7 Vitest/Testing Library/MSW tests, and the Vite production build.
+- PR #38 frontend workflow `38614330741` repeated the clean npm install and all five frontend gates successfully on Node.js 24.
 - The local Vite server started successfully. Browser automation could not attach because the installed computer-control helper failed to initialize after its allowed retry; visual route inspection remains the reviewer check.
 - No backend source, migration, shared Supabase state, production setting, or secret was changed.
