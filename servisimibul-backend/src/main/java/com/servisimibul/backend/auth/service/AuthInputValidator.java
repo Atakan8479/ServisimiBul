@@ -8,12 +8,12 @@ import java.util.Locale;
 import java.util.regex.Pattern;
 
 @Component
-class AuthInputValidator {
+public class AuthInputValidator {
 
     private static final Pattern EMAIL = Pattern.compile("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     private static final Pattern E164_PHONE = Pattern.compile("^\\+[0-9]{8,15}$");
 
-    String email(String value) {
+    public String email(String value) {
         String normalized = value == null ? "" : value.strip().toLowerCase(Locale.ROOT);
         if (normalized.length() > 254 || !EMAIL.matcher(normalized).matches()) {
             throw new AuthValidationException("email", "Enter a valid email address");
@@ -21,7 +21,7 @@ class AuthInputValidator {
         return normalized;
     }
 
-    String password(String value, String field) {
+    public String password(String value, String field) {
         int characters = value == null ? 0 : value.codePointCount(0, value.length());
         int bytes = value == null ? 0 : value.getBytes(StandardCharsets.UTF_8).length;
         if (characters < 12 || characters > 64 || bytes > 72) {

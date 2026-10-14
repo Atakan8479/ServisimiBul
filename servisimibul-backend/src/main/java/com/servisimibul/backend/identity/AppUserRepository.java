@@ -13,6 +13,8 @@ public interface AppUserRepository extends JpaRepository<AppUser, UUID> {
 
     Optional<AppUser> findByEmail(String email);
 
+    long countByRole(UserRole role);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select user from AppUser user where user.email = :email")
     Optional<AppUser> findByEmailForUpdate(@Param("email") String email);

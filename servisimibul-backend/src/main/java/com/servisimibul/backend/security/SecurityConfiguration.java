@@ -1,6 +1,8 @@
 package com.servisimibul.backend.security;
 
 import jakarta.servlet.DispatcherType;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -10,6 +12,14 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
+import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.session.web.http.CookieSerializer;
+import org.springframework.session.web.http.DefaultCookieSerializer;
+
+import java.time.Clock;
+import java.util.List;
 
 @Configuration
 public class SecurityConfiguration {
@@ -20,13 +30,45 @@ public class SecurityConfiguration {
     }
 
     @Bean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
     AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
         return configuration.getAuthenticationManager();
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    SecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    CookieSerializer sessionCookieSerializer(
+            Clock clock,
+            @Value("${server.servlet.session.cookie.secure:true}") boolean secure
+    ) {
+        DefaultCookieSerializer delegate = new DefaultCookieSerializer();
+        delegate.setCookieName("SBSESSION");
+        delegate.setCookiePath("/");
+        delegate.setUseHttpOnlyCookie(true);
+        delegate.setUseSecureCookie(secure);
+        delegate.setSameSite("Lax");
+        return new RememberMeCookieSerializer(delegate, clock);
+    }
+
+    @Bean
+    @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.SERVLET)
+    SecurityFilterChain securityFilterChain(
+            HttpSecurity http,
+            SecurityContextRepository securityContextRepository,
+            Clock clock
+    ) throws Exception {
+        SessionLifetimeFilter sessionLifetimeFilter = new SessionLifetimeFilter(clock);
         http
+                .securityContext(context -> context
+                        .securityContextRepository(securityContextRepository)
+                        .requireExplicitSave(true)
+                )
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(HttpMethod.GET,
@@ -54,9 +96,29 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()
                 )
+                .addFilterAfter(sessionLifetimeFilter, SecurityContextHolderFilter.class)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 
         return http.build();
+    }
+
+    private record RememberMeCookieSerializer(DefaultCookieSerializer delegate, Clock clock)
+            implements CookieSerializer {
+
+        @Override
+        public void writeCookieValue(CookieValue cookieValue) {
+            Object value = cookieValue.getRequest().getAttribute(SessionLifetimeFilter.REMEMBER_UNTIL_ATTRIBUTE);
+            if (cookieValue.getCookieMaxAge() < 0 && value instanceof Long rememberUntil) {
+                long remainingSeconds = Math.max(0, (rememberUntil - clock.millis() + 999) / 1_000);
+                cookieValue.setCookieMaxAge(Math.toIntExact(remainingSeconds));
+            }
+            delegate.writeCookieValue(cookieValue);
+        }
+
+        @Override
+        public List<String> readCookieValues(jakarta.servlet.http.HttpServletRequest request) {
+            return delegate.readCookieValues(request);
+        }
     }
 }

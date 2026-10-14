@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — Geography and pilot school catalog API
-Status: Gates 0–3, J-01, A-01, B-02, B-03, and J-02 are complete. A-02 passed updated post-B-03 verification and is awaiting review in PR #35; B-04 and J-02 implementation remain pending.
+## Current stage: Phase 1/2 — Session authentication review and pilot catalog complete
+Status: Gates 0–3, J-01, A-01, B-02, B-03, J-02, and A-02 are complete. B-04 passed isolated PostgreSQL verification and is awaiting review in PR #36; J-02 implementation remains pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,8 +9,8 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, and J-02 are complete. A-02 passed 
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in progress | B-02 PR #32 and B-03 PR #33 merged; latest B-03 workflow `38562354608` passed 31 tests | B-03 reviewed and merged 2026-10-14; B-04 sessions/admin bootstrap remain pending |
-| 5 Operator school coverage + catalog | in progress | A-02 issue #13; PR #35; post-B-03 workflow `38594885240` passed 36 tests | A-02 scope approved by Atakan 2026-10-14; PR review pending |
+| 4 Auth/session/email/admin review | in progress | B-02 PR #32 and B-03 PR #33 merged; B-04 PR #36 workflow `38607834839` passed 43 tests | B-03 merged; B-04 awaits review |
+| 5 Operator school coverage + catalog | in progress | A-02 issue #13 and PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; workflow `38594885240` passed 36 tests | A-02 reviewed and merged 2026-10-14; operator coverage remains pending |
 | 6 Parent public search | pending | — | — |
 | 7 Optional offerings/tariff JSON | contract complete; implementation pending | J-02 issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; D031–D036 | Contract approved and merged 2026-10-14 |
 | 8 Pilot QA and UI | pending | — | — |
@@ -23,14 +23,15 @@ Status: Gates 0–3, J-01, A-01, B-02, B-03, and J-02 are complete. A-02 passed 
 | A-01 Flyway security and repository reconciliation | complete | GitHub issue #6; PR #31 merged as `3133dbb7dc6689cb0e2fb644ebffaf8df435e485`; PostgreSQL 17 workflows passed | Reviewed and merged 2026-10-13 |
 | B-02 Identity persistence and security foundation | complete | GitHub issue #9; PR #32 merged as `3f064b856af546f73afe0132736fccd47006c52e`; PostgreSQL 17 Backend workflow run `38445768813` passed 14 tests | Scope and D029–D030 approved by Onat; reviewed and merged 2026-10-13 |
 | B-03 Registration, verification, and recovery | complete | GitHub issue #10; PR #33 merged as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf`; PostgreSQL 17 workflow `38562354608` passed | Reviewed and merged 2026-10-14 |
+| B-04 Session authentication and admin bootstrap | in review | GitHub issue #11; PR #36; PostgreSQL 17 workflow `38607834839` passed all 43 tests | Scope approved by Onat; review pending |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
-| A-02 Geography and pilot school catalog API | in review | GitHub issue #13; PR #35; post-B-03 workflow `38594885240` passed 36 tests | Scope approved by Atakan 2026-10-14; PR review pending |
+| A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
 A-01 adds V2 without changing V1, removes application-role access to Flyway history, extends the PostgreSQL integration test, and reconciles the stale repository snapshot. No shared Supabase operation was part of the pull request.
 
-B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 now supplies registration, verification/recovery controllers, and email delivery; Spring Session lifecycle and admin bootstrap remain assigned to B-04. No shared Supabase operation is part of PR #32.
+B-02 adds V3 identity persistence, default-deny security, database-backed authentication prerequisites, BCrypt password hashing, SHA-256 token hashing, atomic token consumption, and authenticated-principal-derived current-user identity. B-03 supplies registration, verification/recovery controllers, and email delivery. B-04 PR #36 now supplies the reviewed-but-unmerged Spring Session lifecycle and admin bootstrap. No shared Supabase operation is part of these pull requests.
 
 J-02 is documentation-only: it fixes the vehicle-backed offering constraints and lifecycle, tariff JSON persistence/version/concurrency/interval contract, and frontend toolchain/deployment contract before implementation. It changes no Java or frontend source, dependency, Flyway migration, application configuration, production setting, or shared database state.
 
@@ -122,6 +123,18 @@ Never mark tasks done because code was generated: verification and review requir
 - Structure-only follow-up commit `14da1c2` moved authentication code into `config`, `controller`, `dto`, `exception`, and `service` subpackages while retaining package-private password-hash access in `identity`. The JDK 25 package build, 5 focused tests, and backend workflow run `38562354608` passed without changing behavior.
 - PR #33 was reviewed and merged to `main` as `0e5fc7d77f7ac259c38477e415a64e5a01e94ecf` on 2026-10-14.
 - No migration was added and shared Supabase was not read, migrated, or otherwise modified.
+
+## Verified B-04 evidence — 2026-10-14
+
+- Branch: `codex/b-04-session-auth-admin-bootstrap`; GitHub issue #11; PR #36.
+- V4 adds the standard Spring Session JDBC tables with Flyway ownership, explicit `servisimibul_app` grants and RLS policies, and no `anon`/`authenticated` access. Spring Session's own schema initializer is disabled.
+- `POST /api/v1/auth/login`, `GET /api/v1/auth/me`, and `POST /api/v1/auth/logout` use server-side sessions, CSRF, session-ID rotation, safe Problem Details for rejected credentials, and no JWT or browser token storage.
+- Normal sessions expire after 30 minutes of inactivity. Optional remember-me sessions use a persistent `SBSESSION` HttpOnly, `SameSite=Lax`, path `/`, no-Domain cookie and a non-sliding 90-day absolute server deadline. `Secure` defaults to true and can be disabled only through the explicit local-development environment setting.
+- At most two sessions are retained per account; a third login removes the oldest. The B-03 password-reset path now revokes real JDBC sessions through the completed `SessionRevoker` implementation.
+- The explicitly enabled bootstrap runs without a web server, requires two distinct temporary admin credentials, creates only missing verified admins, refuses any result other than exactly two ADMIN accounts, exposes no HTTP route, logs no credentials, and preserves existing password hashes on rerun.
+- Java 21 compilation and the two focused absolute-lifetime tests passed locally. The full local suite was not run because its configured datasource may be shared Supabase.
+- Backend workflow run `38607834839` passed clean V1→V2→V3→V4 migration, Hibernate validation, all new session/bootstrap tests, and all existing regressions against isolated PostgreSQL 17: 43 tests, 0 failures, 0 errors, 0 skipped.
+- Shared Supabase was not read, migrated, or otherwise modified. Applying V2–V4 and running the admin bootstrap remain separate post-merge operations requiring the normal approval gates.
 
 ## Verified J-02 contract evidence — 2026-10-14
 
