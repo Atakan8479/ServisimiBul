@@ -244,7 +244,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard eyebrow="İşletmeci girişi" title="Tekrar hoş geldiniz">
+    <AuthCard eyebrow="Giriş" title="Hoş geldiniz">
       {searchParams.get('reason') === 'session' && (
         <div className="status-banner warning" role="status">
           Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.
@@ -271,10 +271,7 @@ export function LoginPage() {
         />
         <label className="checkbox-row">
           <input type="checkbox" {...register('rememberMe')} />
-          <span>
-            <strong>Beni hatırla</strong>
-            <small>Bu cihazda en fazla 90 gün oturum açık kalır.</small>
-          </span>
+          <strong>Beni hatırla</strong>
         </label>
         <FormError message={formError} />
         <button

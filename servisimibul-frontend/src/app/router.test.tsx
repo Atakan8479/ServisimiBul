@@ -96,10 +96,13 @@ describe('application routes', () => {
         />,
       )
 
-      fireEvent.click(screen.getByRole('link', { name: 'İşletmeci girişi' }))
+      expect(
+        screen.queryByRole('link', { name: 'Yönetim' }),
+      ).not.toBeInTheDocument()
+      fireEvent.click(screen.getByRole('link', { name: 'Giriş' }))
 
       expect(
-        await screen.findByRole('heading', { name: 'Tekrar hoş geldiniz' }),
+        await screen.findByRole('heading', { name: 'Hoş geldiniz' }),
       ).toBeInTheDocument()
       expect(startViewTransition).toHaveBeenCalledOnce()
     } finally {

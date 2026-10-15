@@ -15,10 +15,7 @@ export function PublicLayout() {
             Ana sayfa
           </NavLink>
           <NavLink to="/operator/login" viewTransition>
-            İşletmeci girişi
-          </NavLink>
-          <NavLink to="/admin" viewTransition>
-            Yönetim
+            Giriş
           </NavLink>
         </nav>
       </header>

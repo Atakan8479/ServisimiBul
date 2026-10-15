@@ -218,7 +218,6 @@ h1 {
 
 .foundation-card h1,
 .state-page h1,
-.auth-card h1,
 .workspace-page > h1 {
   font-size: clamp(2rem, 6vw, 3.75rem);
 }
@@ -227,6 +226,10 @@ h1 {
   width: min(34rem, 100%);
   margin: 0 auto;
   padding: clamp(1.5rem, 5vw, 2.5rem);
+}
+
+.auth-card h1 {
+  font-size: clamp(2rem, 5vw, 2.75rem);
 }
 
 .auth-card > p {
