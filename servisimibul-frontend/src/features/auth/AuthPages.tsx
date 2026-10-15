@@ -332,21 +332,11 @@ function AuthCard({
   children: ReactNode
 }) {
   return (
-    <div className="auth-scene">
-      <div className="auth-backdrop" aria-hidden="true">
-        <span className="auth-road auth-road-one">
-          <span className="auth-minibus auth-minibus-one" />
-        </span>
-        <span className="auth-road auth-road-two">
-          <span className="auth-minibus auth-minibus-two" />
-        </span>
-      </div>
-      <section className="auth-card">
-        <p className="eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        {children}
-      </section>
-    </div>
+    <section className="auth-card">
+      <p className="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      {children}
+    </section>
   )
 }
 

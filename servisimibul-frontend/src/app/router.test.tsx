@@ -96,6 +96,7 @@ describe('application routes', () => {
         />,
       )
 
+      expect(document.querySelector('.road-backdrop')).toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'Yönetim' }),
       ).not.toBeInTheDocument()

@@ -1,8 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
+import { RoadBackdrop } from './RoadBackdrop'
 
 export function PublicLayout() {
   return (
     <div className="app-shell">
+      <RoadBackdrop />
       <a className="skip-link" href="#main-content">
         İçeriğe geç
       </a>
