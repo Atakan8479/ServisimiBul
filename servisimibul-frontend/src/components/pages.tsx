@@ -2,7 +2,7 @@ export function HomePage() {
   return (
     <section className="hero">
       <div className="hero-card">
-        <h1>ServisimiBul.</h1>
+        <h1>ServisimiBul</h1>
         <p className="hero-copy">Servis bulmanın yeni yolu.</p>
       </div>
       <div className="notice" role="note">

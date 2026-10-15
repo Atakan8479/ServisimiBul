@@ -98,7 +98,7 @@ describe('application routes', () => {
 
       expect(document.querySelector('.road-backdrop')).toBeInTheDocument()
       expect(
-        screen.getByRole('heading', { name: 'ServisimiBul.' }),
+        screen.getByRole('heading', { name: 'ServisimiBul' }),
       ).toBeInTheDocument()
       expect(screen.getByText('Servis bulmanın yeni yolu.')).toBeInTheDocument()
       expect(
