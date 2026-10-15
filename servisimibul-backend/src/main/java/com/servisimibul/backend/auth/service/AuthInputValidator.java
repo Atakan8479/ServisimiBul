@@ -33,7 +33,7 @@ public class AuthInputValidator {
         return value;
     }
 
-    String businessName(String value) {
+    public String businessName(String value) {
         String normalized = value == null ? "" : value.strip();
         int characters = normalized.codePointCount(0, normalized.length());
         if (characters < 2 || characters > 120) {
@@ -42,7 +42,7 @@ public class AuthInputValidator {
         return normalized;
     }
 
-    String phone(String value) {
+    public String phone(String value) {
         String normalized = value == null ? "" : value.strip().replaceAll("[\\s().-]", "");
         if (normalized.startsWith("00")) {
             normalized = "+" + normalized.substring(2);

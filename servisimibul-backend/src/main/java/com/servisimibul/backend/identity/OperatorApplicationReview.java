@@ -66,4 +66,12 @@ public class OperatorApplicationReview {
         this.reason = reason == null ? null : reason.strip();
     }
 
+    public UUID getReviewedById() {
+        return reviewedBy.getId();
+    }
+
+    public OffsetDateTime getReviewedAt() {
+        return reviewedAt;
+    }
+
 }
