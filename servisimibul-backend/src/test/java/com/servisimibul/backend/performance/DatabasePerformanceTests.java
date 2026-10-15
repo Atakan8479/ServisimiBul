@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
 @Transactional
 @Sql("/db/performance/a08_pilot_dataset.sql")
-class DatabasePerformanceBaselineTests {
+class DatabasePerformanceTests {
 
     private static final UUID TARGET_SCHOOL_ID = UUID.fromString(
             "a07da0b7-5fa9-b70e-3ece-f452e7abbd36"
@@ -89,20 +89,11 @@ class DatabasePerformanceBaselineTests {
                       join operator_school relationship
                         on relationship.id = coverage.operator_school_id
                       join school matched_school on matched_school.id = relationship.school_id
-                      join neighborhood coverage_neighborhood
-                        on coverage_neighborhood.id = coverage.neighborhood_id
-                      join district coverage_district
-                        on coverage_district.id = coverage_neighborhood.district_id
-                      join neighborhood school_neighborhood
-                        on school_neighborhood.id = matched_school.neighborhood_id
-                      join district school_district
-                        on school_district.id = school_neighborhood.district_id
                       where relationship.operator_id = profile.id
                         and relationship.is_active = true
                         and matched_school.is_active = true
                         and matched_school.id = ?
                         and coverage.neighborhood_id = ?
-                        and coverage_district.province_id = school_district.province_id
                   )
                 order by profile.business_name nulls last, profile.id
                 limit 50 offset 0
@@ -124,20 +115,11 @@ class DatabasePerformanceBaselineTests {
                       join operator_school relationship
                         on relationship.id = coverage.operator_school_id
                       join school matched_school on matched_school.id = relationship.school_id
-                      join neighborhood coverage_neighborhood
-                        on coverage_neighborhood.id = coverage.neighborhood_id
-                      join district coverage_district
-                        on coverage_district.id = coverage_neighborhood.district_id
-                      join neighborhood school_neighborhood
-                        on school_neighborhood.id = matched_school.neighborhood_id
-                      join district school_district
-                        on school_district.id = school_neighborhood.district_id
                       where relationship.operator_id = profile.id
                         and relationship.is_active = true
                         and matched_school.is_active = true
                         and matched_school.id = ?
                         and coverage.neighborhood_id = ?
-                        and coverage_district.province_id = school_district.province_id
                   )
                 """, TARGET_SCHOOL_ID, TARGET_NEIGHBORHOOD_ID);
 

@@ -7,6 +7,7 @@ import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.OperatorRespons
 import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.PageResponse;
 import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.PublishedOfferingResponse;
 import com.servisimibul.backend.discovery.exception.PublicOperatorDiscoveryApiException;
+import com.servisimibul.backend.geography.Neighborhood;
 import com.servisimibul.backend.geography.NeighborhoodRepository;
 import com.servisimibul.backend.geography.School;
 import com.servisimibul.backend.geography.SchoolRepository;
@@ -49,11 +50,15 @@ public class PublicOperatorDiscoveryService {
                         "school_not_found",
                         "Active school was not found"
                 ));
-        if (!neighborhoodRepository.existsById(neighborhoodId)) {
-            throw PublicOperatorDiscoveryApiException.notFound(
-                    "neighborhood_not_found",
-                    "Neighborhood was not found"
-            );
+        Neighborhood neighborhood = neighborhoodRepository.findDetailedById(neighborhoodId)
+                .orElseThrow(() -> PublicOperatorDiscoveryApiException.notFound(
+                        "neighborhood_not_found",
+                        "Neighborhood was not found"
+                ));
+        if (!school.getNeighborhood().getDistrict().getProvince().getId().equals(
+                neighborhood.getDistrict().getProvince().getId()
+        )) {
+            return emptyPage(page, size);
         }
 
         Page<OperatorProfile> operators = discoveryRepository.findPublishedOperators(
@@ -85,6 +90,10 @@ public class PublicOperatorDiscoveryService {
                 operators.getTotalElements(),
                 operators.getTotalPages()
         );
+    }
+
+    private PageResponse<OperatorResponse> emptyPage(int page, int size) {
+        return new PageResponse<>(List.of(), page, size, 0, 0);
     }
 
     private OperatorResponse toResponse(
