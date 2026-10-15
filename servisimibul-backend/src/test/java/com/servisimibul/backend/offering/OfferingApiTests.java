@@ -13,6 +13,8 @@ import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchool;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import jakarta.persistence.EntityManager;
@@ -26,6 +28,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -33,6 +37,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -71,6 +76,12 @@ class OfferingApiTests {
 
     @Autowired
     private ServiceOfferingRepository offeringRepository;
+
+    @Autowired
+    private ServiceOfferingCoverageRepository offeringCoverageRepository;
+
+    @Autowired
+    private OperatorSchoolCoverageRepository generalCoverageRepository;
 
     @Autowired
     private EntityManager entityManager;
@@ -150,6 +161,44 @@ class OfferingApiTests {
                         .with(csrf()))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("offering_coverage_required"));
+
+        mockMvc.perform(put("/api/v1/operator/offerings/{id}/coverage", offering.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[%d]}".formatted(
+                                fixture.neighborhood().getId()
+                        )))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.coverage.length()").value(1))
+                .andExpect(jsonPath("$.coverage[0].neighborhoodId")
+                        .value(fixture.neighborhood().getId()));
+
+        mockMvc.perform(post("/api/v1/operator/offerings/{id}/publish", offering.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.published").value(true));
+
+        mockMvc.perform(patch("/api/v1/operator/schools/{id}", fixture.operatorSchool().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"active\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+        entityManager.clear();
+        assertThat(offeringRepository.findById(offering.getId()).orElseThrow().isPublished())
+                .isFalse();
+
+        mockMvc.perform(put("/api/v1/operator/offerings/{id}/coverage", offering.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.published").value(false))
+                .andExpect(jsonPath("$.coverage").isEmpty());
 
         mockMvc.perform(post("/api/v1/operator/offerings/{id}/unpublish", offering.getId())
                         .with(asOperator(fixture.user()))
@@ -253,6 +302,96 @@ class OfferingApiTests {
         mockMvc.perform(get("/api/v1/operator/vehicles/{id}", owner.vehicle().getId())
                         .with(asOperator(other.user())))
                 .andExpect(status().isNotFound());
+
+        ServiceOffering offering = offeringRepository.saveAndFlush(new ServiceOffering(
+                owner.operatorSchool(),
+                owner.vehicle(),
+                null,
+                null
+        ));
+        mockMvc.perform(put("/api/v1/operator/offerings/{id}/coverage", offering.getId())
+                        .with(asOperator(owner.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[%d]}".formatted(
+                                other.neighborhood().getId()
+                        )))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.neighborhoodIds").exists());
+
+        mockMvc.perform(put("/api/v1/operator/offerings/{id}/coverage", offering.getId())
+                        .with(asOperator(owner.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[%d,%d]}".formatted(
+                                owner.neighborhood().getId(),
+                                owner.neighborhood().getId()
+                        )))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("offering_coverage_duplicate"));
+        assertThat(offeringCoverageRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void generalCoverageReplacementPreservesRetainedLinksAndUnpublishesOnlyWhenEmpty()
+            throws Exception {
+        Fixture fixture = createFixture("reconcile@example.com", "Reconcile", "34RCN006");
+        Province province = fixture.neighborhood().getDistrict().getProvince();
+        District secondDistrict = districtRepository.save(new District(province, "Second District"));
+        Neighborhood secondNeighborhood = neighborhoodRepository.saveAndFlush(
+                new Neighborhood(secondDistrict, "Second Neighborhood")
+        );
+        OperatorSchoolCoverage retainedCoverage = generalCoverageRepository.saveAndFlush(
+                new OperatorSchoolCoverage(fixture.operatorSchool(), secondNeighborhood)
+        );
+        ServiceOffering offering = offeringRepository.saveAndFlush(new ServiceOffering(
+                fixture.operatorSchool(),
+                fixture.vehicle(),
+                3,
+                "Published route"
+        ));
+
+        mockMvc.perform(put("/api/v1/operator/offerings/{id}/coverage", offering.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[%d,%d]}".formatted(
+                                fixture.neighborhood().getId(),
+                                secondNeighborhood.getId()
+                        )))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/v1/operator/offerings/{id}/publish", offering.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.published").value(true));
+
+        mockMvc.perform(put("/api/v1/operator/schools/{id}/coverage", fixture.operatorSchool().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[%d]}".formatted(
+                                secondNeighborhood.getId()
+                        )))
+                .andExpect(status().isOk());
+
+        entityManager.clear();
+        assertThat(generalCoverageRepository.findById(retainedCoverage.getId())).isPresent();
+        assertThat(offeringRepository.findById(offering.getId()).orElseThrow().isPublished()).isTrue();
+        assertThat(offeringCoverageRepository.findAllDetailedByOfferingIds(List.of(offering.getId())))
+                .extracting(coverage -> coverage.getOperatorSchoolCoverage().getId())
+                .containsExactly(retainedCoverage.getId());
+
+        mockMvc.perform(put("/api/v1/operator/schools/{id}/coverage", fixture.operatorSchool().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"neighborhoodIds\":[]}"))
+                .andExpect(status().isOk());
+
+        entityManager.clear();
+        assertThat(offeringCoverageRepository.findAll()).isEmpty();
+        assertThat(offeringRepository.findById(offering.getId()).orElseThrow().isPublished()).isFalse();
     }
 
     @Test
@@ -349,9 +488,13 @@ class OfferingApiTests {
         OperatorSchool operatorSchool = operatorSchoolRepository.saveAndFlush(
                 new OperatorSchool(profile, school, true)
         );
+        generalCoverageRepository.saveAndFlush(new OperatorSchoolCoverage(
+                operatorSchool,
+                neighborhood
+        ));
         String normalizedPlate = plate.strip().toUpperCase().replace(" ", "").replace("-", "");
         Vehicle vehicle = vehicleRepository.saveAndFlush(new Vehicle(profile, normalizedPlate, 12));
-        return new Fixture(user, operatorSchool, vehicle);
+        return new Fixture(user, operatorSchool, vehicle, neighborhood);
     }
 
     private AppUser createOperator(String email, String businessName) {
@@ -370,6 +513,11 @@ class OfferingApiTests {
         ));
     }
 
-    private record Fixture(AppUser user, OperatorSchool operatorSchool, Vehicle vehicle) {
+    private record Fixture(
+            AppUser user,
+            OperatorSchool operatorSchool,
+            Vehicle vehicle,
+            Neighborhood neighborhood
+    ) {
     }
 }

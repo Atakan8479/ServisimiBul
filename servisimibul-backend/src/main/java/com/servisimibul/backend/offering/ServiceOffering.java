@@ -86,4 +86,8 @@ public class ServiceOffering {
     public void unpublish() {
         published = false;
     }
+
+    public void publish() {
+        published = true;
+    }
 }

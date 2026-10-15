@@ -18,6 +18,8 @@ import com.servisimibul.backend.operatorschool.dto.OperatorSchoolDtos.CreateRequ
 import com.servisimibul.backend.operatorschool.dto.OperatorSchoolDtos.OperatorSchoolResponse;
 import com.servisimibul.backend.operatorschool.dto.OperatorSchoolDtos.PatchRequest;
 import com.servisimibul.backend.operatorschool.exception.OperatorSchoolApiException;
+import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
+import com.servisimibul.backend.offering.ServiceOfferingRepository;
 import com.servisimibul.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,8 @@ public class OperatorSchoolService {
     private final NeighborhoodRepository neighborhoodRepository;
     private final OperatorSchoolRepository operatorSchoolRepository;
     private final OperatorSchoolCoverageRepository coverageRepository;
+    private final ServiceOfferingRepository offeringRepository;
+    private final ServiceOfferingCoverageRepository offeringCoverageRepository;
 
     @Transactional(readOnly = true)
     public List<OperatorSchoolResponse> list() {
@@ -95,6 +99,9 @@ public class OperatorSchoolService {
             );
         }
         relationship.setActive(request.active());
+        if (!request.active()) {
+            offeringRepository.unpublishAllByOperatorSchoolId(relationship.getId());
+        }
         operatorSchoolRepository.flush();
         return toResponse(
                 relationship,
@@ -148,11 +155,28 @@ public class OperatorSchoolService {
             );
         }
 
-        coverageRepository.deleteAllByOperatorSchoolId(relationship.getId());
-        List<OperatorSchoolCoverage> replacements = neighborhoods.stream()
+        List<OperatorSchoolCoverage> existingCoverage = coverageRepository
+                .findAllDetailedByOperatorSchoolId(relationship.getId());
+        Map<Long, OperatorSchoolCoverage> existingByNeighborhood = new HashMap<>();
+        existingCoverage.forEach(coverage -> existingByNeighborhood.put(
+                coverage.getNeighborhood().getId(),
+                coverage
+        ));
+        List<UUID> removedCoverageIds = existingCoverage.stream()
+                .filter(coverage -> !distinctIds.contains(coverage.getNeighborhood().getId()))
+                .map(OperatorSchoolCoverage::getId)
+                .toList();
+        if (!removedCoverageIds.isEmpty()) {
+            offeringCoverageRepository.deleteAllByGeneralCoverageIds(removedCoverageIds);
+            coverageRepository.deleteAllByIds(removedCoverageIds);
+            offeringRepository.unpublishWithoutCoverageByOperatorSchoolId(relationship.getId());
+        }
+
+        List<OperatorSchoolCoverage> additions = neighborhoods.stream()
+                .filter(neighborhood -> !existingByNeighborhood.containsKey(neighborhood.getId()))
                 .map(neighborhood -> new OperatorSchoolCoverage(relationship, neighborhood))
                 .toList();
-        coverageRepository.saveAllAndFlush(replacements);
+        coverageRepository.saveAllAndFlush(additions);
         return toResponse(
                 relationship,
                 coverageRepository.findAllDetailedByOperatorSchoolId(relationship.getId())

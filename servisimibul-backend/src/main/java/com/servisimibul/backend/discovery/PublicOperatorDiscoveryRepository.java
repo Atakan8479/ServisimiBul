@@ -10,8 +10,21 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 import java.util.UUID;
+import java.util.Collection;
+import java.util.List;
 
 public interface PublicOperatorDiscoveryRepository extends Repository<OperatorProfile, UUID> {
+
+    interface PublishedOfferingProjection {
+
+        UUID getOperatorId();
+
+        UUID getOfferingId();
+
+        Integer getAvailableSeats();
+
+        String getDescription();
+    }
 
     @Query(
             value = """
@@ -70,5 +83,33 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             @Param("userRole") UserRole userRole,
             @Param("approvalStatus") OperatorApprovalStatus approvalStatus,
             Pageable pageable
+    );
+
+    @Query("""
+            select operatorSchool.operator.id as operatorId,
+                   offering.id as offeringId,
+                   offering.availableSeats as availableSeats,
+                   offering.description as description
+            from ServiceOfferingCoverage offeringCoverage
+            join offeringCoverage.serviceOffering offering
+            join offering.operatorSchool operatorSchool
+            join operatorSchool.school school
+            join offering.vehicle vehicle
+            join offeringCoverage.operatorSchoolCoverage generalCoverage
+            where operatorSchool.operator.id in :operatorIds
+              and offering.published = true
+              and operatorSchool.active = true
+              and school.active = true
+              and school.id = :schoolId
+              and vehicle.active = true
+              and vehicle.operator = operatorSchool.operator
+              and generalCoverage.operatorSchool = operatorSchool
+              and generalCoverage.neighborhood.id = :neighborhoodId
+            order by operatorSchool.operator.id, offering.createdAt, offering.id
+            """)
+    List<PublishedOfferingProjection> findMatchingPublishedOfferings(
+            @Param("operatorIds") Collection<UUID> operatorIds,
+            @Param("schoolId") UUID schoolId,
+            @Param("neighborhoodId") Long neighborhoodId
     );
 }

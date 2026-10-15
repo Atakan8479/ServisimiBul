@@ -18,6 +18,8 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
         UUID getVehicleId();
 
         UUID getOperatorSchoolId();
+
+        boolean isPublished();
     }
 
     @Query("""
@@ -47,7 +49,8 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
 
     @Query("""
             select offering.vehicle.id as vehicleId,
-                   offering.operatorSchool.id as operatorSchoolId
+                   offering.operatorSchool.id as operatorSchoolId,
+                   offering.published as published
             from ServiceOffering offering
             where offering.id = :id
               and offering.operatorSchool.operator.id = :operatorId
@@ -80,4 +83,31 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
               and offering.published = true
             """)
     int unpublishAllByVehicleId(@Param("vehicleId") UUID vehicleId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update ServiceOffering offering
+            set offering.published = false,
+                offering.updatedAt = CURRENT_TIMESTAMP
+            where offering.operatorSchool.id = :operatorSchoolId
+              and offering.published = true
+            """)
+    int unpublishAllByOperatorSchoolId(@Param("operatorSchoolId") UUID operatorSchoolId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update ServiceOffering offering
+            set offering.published = false,
+                offering.updatedAt = CURRENT_TIMESTAMP
+            where offering.operatorSchool.id = :operatorSchoolId
+              and offering.published = true
+              and not exists (
+                  select offeringCoverage.id
+                  from ServiceOfferingCoverage offeringCoverage
+                  where offeringCoverage.serviceOffering = offering
+              )
+            """)
+    int unpublishWithoutCoverageByOperatorSchoolId(
+            @Param("operatorSchoolId") UUID operatorSchoolId
+    );
 }

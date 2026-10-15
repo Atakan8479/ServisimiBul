@@ -2,8 +2,10 @@ package com.servisimibul.backend.offering.dto;
 
 import com.fasterxml.jackson.annotation.JsonSetter;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 
+import java.util.List;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -17,6 +19,27 @@ public final class ServiceOfferingDtos {
             @NotNull UUID vehicleId,
             @PositiveOrZero Integer availableSeats,
             String description
+    ) {
+    }
+
+    public record CoverageReplaceRequest(
+            @NotNull List<@NotNull @Positive Long> neighborhoodIds
+    ) {
+        public CoverageReplaceRequest {
+            if (neighborhoodIds != null) {
+                neighborhoodIds = List.copyOf(neighborhoodIds);
+            }
+        }
+    }
+
+    public record CoverageResponse(
+            Long neighborhoodId,
+            String neighborhoodName,
+            Long districtId,
+            String districtName,
+            Long provinceId,
+            String provinceCode,
+            String provinceName
     ) {
     }
 
@@ -107,8 +130,12 @@ public final class ServiceOfferingDtos {
             Integer availableSeats,
             String description,
             boolean published,
+            List<CoverageResponse> coverage,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt
     ) {
+        public ServiceOfferingResponse {
+            coverage = List.copyOf(coverage);
+        }
     }
 }

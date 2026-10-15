@@ -1,26 +1,40 @@
 package com.servisimibul.backend.offering.service;
 
+import com.servisimibul.backend.geography.District;
+import com.servisimibul.backend.geography.Neighborhood;
+import com.servisimibul.backend.geography.Province;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.offering.ServiceOffering;
+import com.servisimibul.backend.offering.ServiceOfferingCoverage;
+import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository.OwnedReference;
 import com.servisimibul.backend.offering.Vehicle;
 import com.servisimibul.backend.offering.VehicleRepository;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CreateRequest;
+import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CoverageReplaceRequest;
+import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CoverageResponse;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.PatchRequest;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.ServiceOfferingResponse;
 import com.servisimibul.backend.offering.dto.VehicleDtos.VehicleResponse;
 import com.servisimibul.backend.offering.exception.OfferingApiException;
 import com.servisimibul.backend.operatorschool.OperatorSchool;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -32,6 +46,8 @@ public class OfferingService {
     private final OperatorSchoolRepository operatorSchoolRepository;
     private final VehicleRepository vehicleRepository;
     private final ServiceOfferingRepository offeringRepository;
+    private final OperatorSchoolCoverageRepository generalCoverageRepository;
+    private final ServiceOfferingCoverageRepository offeringCoverageRepository;
 
     @Transactional(readOnly = true)
     public List<VehicleResponse> listVehicles() {
@@ -116,8 +132,15 @@ public class OfferingService {
     @Transactional(readOnly = true)
     public List<ServiceOfferingResponse> listOfferings() {
         OperatorProfile operator = currentOperator();
-        return offeringRepository.findAllDetailedByOperatorId(operator.getId()).stream()
-                .map(this::toOfferingResponse)
+        List<ServiceOffering> offerings = offeringRepository.findAllDetailedByOperatorId(
+                operator.getId()
+        );
+        Map<UUID, List<ServiceOfferingCoverage>> coverageByOffering = coverageByOffering(offerings);
+        return offerings.stream()
+                .map(offering -> toOfferingResponse(
+                        offering,
+                        coverageByOffering.getOrDefault(offering.getId(), List.of())
+                ))
                 .toList();
     }
 
@@ -136,7 +159,7 @@ public class OfferingService {
                 request.availableSeats(),
                 normalizeDescription(request.description())
         ));
-        return toOfferingResponse(offering);
+        return toOfferingResponse(offering, List.of());
     }
 
     @Transactional(readOnly = true)
@@ -144,7 +167,7 @@ public class OfferingService {
         OperatorProfile operator = currentOperator();
         ServiceOffering offering = offeringRepository.findDetailedOwned(id, operator.getId())
                 .orElseThrow(this::offeringNotFound);
-        return toOfferingResponse(offering);
+        return toOfferingResponse(offering, offeringCoverage(offering.getId()));
     }
 
     @Transactional
@@ -186,8 +209,11 @@ public class OfferingService {
                 : offering.getDescription();
 
         validateAvailableSeats(availableSeats, vehicle.getCapacity());
+        boolean operatorSchoolChanged = !operatorSchool.getId().equals(
+                offering.getOperatorSchool().getId()
+        );
         boolean relationshipChanged = !vehicle.getId().equals(offering.getVehicle().getId())
-                || !operatorSchool.getId().equals(offering.getOperatorSchool().getId());
+                || operatorSchoolChanged;
         offering.update(
                 operatorSchool,
                 vehicle,
@@ -195,8 +221,77 @@ public class OfferingService {
                 description,
                 relationshipChanged
         );
+        if (operatorSchoolChanged) {
+            offeringCoverageRepository.deleteAllByOfferingId(offering.getId());
+        }
         offeringRepository.flush();
-        return toOfferingResponse(offering);
+        return toOfferingResponse(
+                offering,
+                operatorSchoolChanged ? List.of() : offeringCoverage(offering.getId())
+        );
+    }
+
+    @Transactional
+    public ServiceOfferingResponse replaceOfferingCoverage(
+            UUID id,
+            CoverageReplaceRequest request
+    ) {
+        OperatorProfile operator = currentOperator();
+        OwnedReference reference = ownedOfferingReference(id, operator.getId());
+        boolean keepingPublished = reference.isPublished() && !request.neighborhoodIds().isEmpty();
+        Vehicle lockedVehicle = keepingPublished
+                ? activeOwnedVehicleForUpdate(reference.getVehicleId(), operator.getId())
+                : null;
+        OperatorSchool operatorSchool = ownedOperatorSchoolForUpdate(
+                reference.getOperatorSchoolId(),
+                operator.getId()
+        );
+        ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
+        rejectStaleReference(false, operatorSchool.getId(), offering.getOperatorSchool().getId());
+
+        List<Long> requestedIds = request.neighborhoodIds();
+        Set<Long> distinctIds = new HashSet<>(requestedIds);
+        if (distinctIds.size() != requestedIds.size()) {
+            throw OfferingApiException.conflict(
+                    "offering_coverage_duplicate",
+                    "Offering coverage cannot contain the same neighborhood more than once"
+            );
+        }
+
+        List<OperatorSchoolCoverage> generalCoverage = generalCoverageRepository
+                .findAllDetailedByOperatorSchoolId(operatorSchool.getId());
+        Map<Long, OperatorSchoolCoverage> generalCoverageByNeighborhood = new HashMap<>();
+        generalCoverage.forEach(coverage -> generalCoverageByNeighborhood.put(
+                coverage.getNeighborhood().getId(),
+                coverage
+        ));
+        if (!generalCoverageByNeighborhood.keySet().containsAll(distinctIds)) {
+            throw OfferingApiException.validation(
+                    "neighborhoodIds",
+                    "must contain only neighborhoods in the offering's general school coverage"
+            );
+        }
+
+        offeringCoverageRepository.deleteAllByOfferingId(offering.getId());
+        List<ServiceOfferingCoverage> replacements = requestedIds.stream()
+                .map(generalCoverageByNeighborhood::get)
+                .map(coverage -> new ServiceOfferingCoverage(offering, coverage))
+                .toList();
+        offeringCoverageRepository.saveAllAndFlush(replacements);
+
+        if (replacements.isEmpty() && offering.isPublished()) {
+            offering.unpublish();
+        } else if (offering.isPublished()) {
+            if (lockedVehicle == null
+                    || !lockedVehicle.getId().equals(offering.getVehicle().getId())) {
+                offering.unpublish();
+            } else {
+                validatePublishableOperatorSchool(operatorSchool);
+                validateAvailableSeats(offering.getAvailableSeats(), lockedVehicle.getCapacity());
+            }
+        }
+        offeringRepository.flush();
+        return toOfferingResponse(offering, offeringCoverage(offering.getId()));
     }
 
     @Transactional
@@ -211,20 +306,29 @@ public class OfferingService {
         ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
         rejectStaleReference(false, vehicle.getId(), offering.getVehicle().getId());
         rejectStaleReference(false, operatorSchool.getId(), offering.getOperatorSchool().getId());
-        if (!operatorSchool.isActive() || !operatorSchool.getSchool().isActive()) {
+        validatePublishableOperatorSchool(operatorSchool);
+        validateAvailableSeats(offering.getAvailableSeats(), vehicle.getCapacity());
+        long coverageCount = offeringCoverageRepository.countByServiceOfferingId(offering.getId());
+        long validCoverageCount = offeringCoverageRepository
+                .countByServiceOfferingIdAndOperatorSchoolCoverageOperatorSchoolId(
+                        offering.getId(),
+                        operatorSchool.getId()
+                );
+        if (coverageCount == 0) {
             throw OfferingApiException.conflict(
-                    "operator_school_inactive",
-                    "An offering requires an active operator-school relationship and school"
+                    "offering_coverage_required",
+                    "At least one valid offering coverage item is required before publication"
             );
         }
-        validateAvailableSeats(offering.getAvailableSeats(), vehicle.getCapacity());
-
-        // A-07 owns ServiceOfferingCoverage. Until it exists, publication must fail closed
-        // rather than temporarily violating J-02's mandatory coverage rule.
-        throw OfferingApiException.conflict(
-                "offering_coverage_required",
-                "At least one valid offering coverage item is required before publication"
-        );
+        if (coverageCount != validCoverageCount) {
+            throw OfferingApiException.conflict(
+                    "offering_coverage_invalid",
+                    "Offering coverage must belong to the offering's operator-school relationship"
+            );
+        }
+        offering.publish();
+        offeringRepository.flush();
+        return toOfferingResponse(offering, offeringCoverage(offering.getId()));
     }
 
     @Transactional
@@ -233,7 +337,7 @@ public class OfferingService {
         ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
         offering.unpublish();
         offeringRepository.flush();
-        return toOfferingResponse(offering);
+        return toOfferingResponse(offering, offeringCoverage(offering.getId()));
     }
 
     private OperatorProfile currentOperator() {
@@ -290,6 +394,15 @@ public class OfferingService {
     private void deactivateVehicleAndOfferings(Vehicle vehicle) {
         vehicle.deactivate();
         offeringRepository.unpublishAllByVehicleId(vehicle.getId());
+    }
+
+    private void validatePublishableOperatorSchool(OperatorSchool operatorSchool) {
+        if (!operatorSchool.isActive() || !operatorSchool.getSchool().isActive()) {
+            throw OfferingApiException.conflict(
+                    "operator_school_inactive",
+                    "An offering requires an active operator-school relationship and school"
+            );
+        }
     }
 
     private String normalizePlate(String rawPlate) {
@@ -372,7 +485,30 @@ public class OfferingService {
         );
     }
 
-    private ServiceOfferingResponse toOfferingResponse(ServiceOffering offering) {
+    private Map<UUID, List<ServiceOfferingCoverage>> coverageByOffering(
+            List<ServiceOffering> offerings
+    ) {
+        if (offerings.isEmpty()) {
+            return Map.of();
+        }
+        Map<UUID, List<ServiceOfferingCoverage>> coverageByOffering = new HashMap<>();
+        offeringCoverageRepository.findAllDetailedByOfferingIds(
+                offerings.stream().map(ServiceOffering::getId).toList()
+        ).forEach(coverage -> coverageByOffering.computeIfAbsent(
+                coverage.getServiceOffering().getId(),
+                ignored -> new ArrayList<>()
+        ).add(coverage));
+        return coverageByOffering;
+    }
+
+    private List<ServiceOfferingCoverage> offeringCoverage(UUID offeringId) {
+        return offeringCoverageRepository.findAllDetailedByOfferingIds(List.of(offeringId));
+    }
+
+    private ServiceOfferingResponse toOfferingResponse(
+            ServiceOffering offering,
+            List<ServiceOfferingCoverage> coverage
+    ) {
         return new ServiceOfferingResponse(
                 offering.getId(),
                 offering.getOperatorSchool().getId(),
@@ -384,8 +520,24 @@ public class OfferingService {
                 offering.getAvailableSeats(),
                 offering.getDescription(),
                 offering.isPublished(),
+                coverage.stream().map(this::toCoverageResponse).toList(),
                 offering.getCreatedAt(),
                 offering.getUpdatedAt()
+        );
+    }
+
+    private CoverageResponse toCoverageResponse(ServiceOfferingCoverage offeringCoverage) {
+        Neighborhood neighborhood = offeringCoverage.getOperatorSchoolCoverage().getNeighborhood();
+        District district = neighborhood.getDistrict();
+        Province province = district.getProvince();
+        return new CoverageResponse(
+                neighborhood.getId(),
+                neighborhood.getName(),
+                district.getId(),
+                district.getName(),
+                province.getId(),
+                province.getCode(),
+                province.getName()
         );
     }
 }
