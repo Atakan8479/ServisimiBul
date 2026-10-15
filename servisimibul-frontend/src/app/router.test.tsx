@@ -38,6 +38,25 @@ describe('application routes', () => {
   })
 
   it('renders the admin workspace shell', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({
+          id: 'd28cc858-ed74-479a-b346-8b9cdccaaab8',
+          email: 'admin@example.com',
+          role: 'ADMIN',
+        }),
+      ),
+      http.get('/api/v1/admin/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
     render(
       <RouterProvider
         router={createMemoryRouter(routes, { initialEntries: ['/admin'] })}
@@ -45,7 +64,10 @@ describe('application routes', () => {
     )
 
     expect(
-      await screen.findByRole('heading', { name: 'Yönetim alanı hazır' }),
+      await screen.findByRole('heading', { name: 'İşletmeci başvuruları' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'Yönetim alanı menüsü' }),
     ).toBeInTheDocument()
   })
 
