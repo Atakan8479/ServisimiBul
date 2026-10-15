@@ -48,6 +48,35 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
             "neighborhood.district",
             "neighborhood.district.province"
     })
+    @Query(
+            value = """
+                    select school
+                    from School school
+                    where (:query is null or lower(school.name) like lower(concat('%', :query, '%')))
+                      and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
+                      and (:districtId is null or school.neighborhood.district.id = :districtId)
+                    order by lower(school.name), school.id
+                    """,
+            countQuery = """
+                    select count(school)
+                    from School school
+                    where (:query is null or lower(school.name) like lower(concat('%', :query, '%')))
+                      and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
+                      and (:districtId is null or school.neighborhood.district.id = :districtId)
+                    """
+    )
+    Page<School> findAdminSchools(
+            @Param("query") String query,
+            @Param("provinceId") Long provinceId,
+            @Param("districtId") Long districtId,
+            Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = {
+            "neighborhood",
+            "neighborhood.district",
+            "neighborhood.district.province"
+    })
     Optional<School> findByIdAndActiveTrue(UUID id);
 
     @EntityGraph(attributePaths = {

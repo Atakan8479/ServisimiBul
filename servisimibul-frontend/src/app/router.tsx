@@ -4,8 +4,8 @@ import {
   type LoaderFunctionArgs,
   type RouteObject,
 } from 'react-router-dom'
-import { AdminLayout, PublicLayout } from '../components/layouts'
-import { FoundationPage, HomePage } from '../components/pages'
+import { PublicLayout } from '../components/layouts'
+import { HomePage } from '../components/pages'
 import { NotFoundPage, RouteErrorPage } from '../components/route-states'
 import { ApiError } from '../api/client'
 import {
@@ -14,6 +14,12 @@ import {
   VerifyEmailPage,
 } from '../features/auth/AuthPages'
 import { currentUser } from '../features/auth/auth-api'
+import {
+  AdminApplicationDetailPage,
+  AdminApplicationsPage,
+} from '../features/admin/AdminApplicationsPage'
+import { AdminSchoolsPage } from '../features/admin/AdminSchoolsPage'
+import { AdminWorkspaceLayout } from '../features/admin/AdminWorkspaceLayout'
 import { OperatorOverviewPage } from '../features/operator/OperatorOverviewPage'
 import { OperatorProfilePage } from '../features/operator/OperatorProfilePage'
 import { OperatorSchoolsPage } from '../features/operator/OperatorSchoolsPage'
@@ -44,20 +50,19 @@ export const routes: RouteObject[] = [
     ],
   },
   {
+    id: 'admin',
     path: '/admin',
-    Component: AdminLayout,
+    loader: adminLoader,
+    Component: AdminWorkspaceLayout,
     ErrorBoundary: RouteErrorPage,
     children: [
+      { index: true, loader: () => redirect('/admin/applications') },
+      { path: 'applications', Component: AdminApplicationsPage },
       {
-        index: true,
-        element: (
-          <FoundationPage
-            eyebrow="Yönetim"
-            title="Yönetim alanı hazır"
-            detail="Okul ve başvuru ekranları sonraki onaylı görevlerde eklenecek."
-          />
-        ),
+        path: 'applications/:applicationId',
+        Component: AdminApplicationDetailPage,
       },
+      { path: 'schools', Component: AdminSchoolsPage },
     ],
   },
   { path: '*', Component: NotFoundPage },
@@ -69,6 +74,29 @@ async function operatorLoader({ request }: LoaderFunctionArgs) {
   try {
     const user = await currentUser()
     if (user.role !== 'OPERATOR') {
+      throw new Response('Forbidden', { status: 403 })
+    }
+    return user
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.problem.status === 401 || error.problem.status === 403)
+    ) {
+      const url = new URL(request.url)
+      const next = `${url.pathname}${url.search}`
+      const reason = error.sessionExpired ? '&reason=session' : ''
+      throw redirect(
+        `/operator/login?next=${encodeURIComponent(next)}${reason}`,
+      )
+    }
+    throw error
+  }
+}
+
+async function adminLoader({ request }: LoaderFunctionArgs) {
+  try {
+    const user = await currentUser()
+    if (user.role !== 'ADMIN') {
       throw new Response('Forbidden', { status: 403 })
     }
     return user

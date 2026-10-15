@@ -148,6 +148,11 @@ class GeographyCatalogApiTests {
                 .andExpect(jsonPath("$.active").value(false));
         mockMvc.perform(get("/api/v1/schools/{id}", schoolId))
                 .andExpect(status().isNotFound());
+        mockMvc.perform(get("/api/v1/admin/schools").param("query", "updated"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(schoolId.toString()))
+                .andExpect(jsonPath("$.content[0].active").value(false));
 
         mockMvc.perform(post("/api/v1/admin/schools/{id}/activate", schoolId).with(csrf()))
                 .andExpect(status().isOk())
@@ -216,7 +221,10 @@ class GeographyCatalogApiTests {
 
     @Test
     @WithMockUser(roles = "OPERATOR")
-    void operatorCannotMutatePilotSchoolCatalog() throws Exception {
+    void operatorCannotManagePilotSchoolCatalog() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/schools"))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(post("/api/v1/admin/schools")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -225,7 +233,10 @@ class GeographyCatalogApiTests {
     }
 
     @Test
-    void anonymousUserCannotMutatePilotSchoolCatalog() throws Exception {
+    void anonymousUserCannotManagePilotSchoolCatalog() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/schools"))
+                .andExpect(status().isForbidden());
+
         mockMvc.perform(post("/api/v1/admin/schools")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)

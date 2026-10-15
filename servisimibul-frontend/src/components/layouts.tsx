@@ -27,33 +27,3 @@ export function PublicLayout() {
     </div>
   )
 }
-
-export function AdminLayout() {
-  return <WorkspaceLayout />
-}
-
-function WorkspaceLayout() {
-  const title = 'Yönetim alanı'
-
-  return (
-    <div className="workspace-shell">
-      <a className="skip-link" href="#workspace-content">
-        İçeriğe geç
-      </a>
-      <aside className="workspace-sidebar">
-        <NavLink className="brand" to="/" viewTransition>
-          ServisimiBul
-        </NavLink>
-        <p>{title}</p>
-        <nav aria-label={`${title} menüsü`}>
-          <NavLink to="/admin" end viewTransition>
-            Genel bakış
-          </NavLink>
-        </nav>
-      </aside>
-      <main id="workspace-content" className="workspace-content">
-        <Outlet />
-      </main>
-    </div>
-  )
-}
