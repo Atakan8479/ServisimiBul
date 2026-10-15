@@ -11,13 +11,21 @@ public final class PublicOperatorDtos {
     public record MatchingSchoolResponse(UUID id, String name) {
     }
 
+    public record PublishedOfferingResponse(
+            UUID offeringId,
+            Integer availableSeats,
+            int vehicleCapacity,
+            String description
+    ) {
+    }
+
     public record OperatorResponse(
             UUID operatorId,
             String businessName,
             String contactPhone,
             String description,
             MatchingSchoolResponse matchingSchool,
-            List<Void> publishedOfferings
+            List<PublishedOfferingResponse> publishedOfferings
     ) {
         public OperatorResponse {
             publishedOfferings = List.copyOf(publishedOfferings);

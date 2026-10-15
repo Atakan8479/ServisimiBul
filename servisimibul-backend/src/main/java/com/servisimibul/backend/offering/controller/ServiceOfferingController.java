@@ -1,6 +1,7 @@
 package com.servisimibul.backend.offering.controller;
 
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CreateRequest;
+import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CoverageReplaceRequest;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.PatchRequest;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.ServiceOfferingResponse;
 import com.servisimibul.backend.offering.service.OfferingService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +50,14 @@ public class ServiceOfferingController {
             @Valid @RequestBody PatchRequest request
     ) {
         return offeringService.patchOffering(id, request);
+    }
+
+    @PutMapping("/{id}/coverage")
+    public ServiceOfferingResponse replaceCoverage(
+            @PathVariable UUID id,
+            @Valid @RequestBody CoverageReplaceRequest request
+    ) {
+        return offeringService.replaceOfferingCoverage(id, request);
     }
 
     @PostMapping("/{id}/publish")
