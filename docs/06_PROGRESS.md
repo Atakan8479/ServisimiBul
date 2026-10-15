@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Phase 3 — Admin workspace implementation
-Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-07 is implemented and locally verified; pull-request and visual review remain pending.
+Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-07 is implemented and locally verified in PR #46; CI and visual review remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -35,7 +35,7 @@ Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the o
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | Operator business-name optionality | complete | PR #44 merged as `6c19040`; decision D037; PostgreSQL 17 workflow `38741191425` passed all 82 tests | Domain-wide optionality explicitly approved, reviewed, and merged 2026-10-15 |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
-| B-07 Admin workspace | in progress | GitHub issue #18; branch `codex/b-07-admin-workspace`; local frontend lint, type-check, 19 tests, and production build passed | Implementation and minimal ADMIN school-list endpoint approved 2026-10-15; visual review pending |
+| B-07 Admin workspace | in review | GitHub issue #18; PR #46; local frontend lint, type-check, 19 tests, and production build passed | Implementation and minimal ADMIN school-list endpoint approved 2026-10-15; CI and visual review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -290,7 +290,7 @@ Never mark tasks done because code was generated: verification and review requir
 
 ## Verified B-07 local evidence — 2026-10-15
 
-- Branch: `codex/b-07-admin-workspace`; GitHub issue #18; based on merged B-06 commit `1aa8683b1999f8d77db97f2a7a4b0533f4ead41a`.
+- Branch: `codex/b-07-admin-workspace`; GitHub issue #18; PR #46; based on merged B-06 commit `1aa8683b1999f8d77db97f2a7a4b0533f4ead41a`.
 - The ADMIN-only route guard and workspace provide application queues, profile/review detail, reason-required correction requests, approval, and confirmed suspension. Spring Security and backend lifecycle checks remain authoritative.
 - The school catalog screen creates and edits schools, uses the existing province/district/neighborhood reference endpoints, and confirms activation changes. A minimal paginated `GET /api/v1/admin/schools` endpoint includes inactive schools so administrators can find and reactivate them; the anonymous catalog remains active-only.
 - Frontend ESLint and strict TypeScript passed. All 19 Vitest/Testing Library/MSW tests passed, including admin-role denial, revision-reason validation, approval/suspension confirmation, school creation, and inactive-school retention. The Vite production build passed.
