@@ -31,6 +31,8 @@ Vehicle and ServiceOffering data are optional details and never gate the base op
 
 Vehicle hard deletion is not available in MVP. Deactivation transactionally unpublishes all dependent offerings, and reactivation does not publish them again. An offering draft may have no coverage, but publication requires at least one coverage item from the same OperatorSchool's general coverage plus an active owned vehicle. Removing general coverage must not leave an invalid published offering.
 
+Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty subset of `{plate,capacity,active}`; either PATCH with `active=false` or the explicit deactivate endpoint performs the same transactional unpublish operation, while `active=true` reactivates only the vehicle. Offering create accepts `{operatorSchoolId,vehicleId,availableSeats?,description?}` and PATCH accepts any non-empty subset of those fields; explicit `null` clears the optional seat/description value. Relationship changes make an offering a draft. A-06 implements publication fail-closed as `offering_coverage_required` until A-07 adds and validates ServiceOfferingCoverage.
+
 ## Public endpoints (draft; refine before coding)
 - `GET /api/v1/provinces`
 - `GET /api/v1/districts?provinceId=...`
@@ -55,6 +57,7 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 ## Operator endpoints (draft)
 - `GET/PATCH /api/v1/operator/profile`
 - `GET/POST /api/v1/operator/schools`
+- `PATCH/DELETE /api/v1/operator/schools/{id}`
 - `PUT /api/v1/operator/schools/{id}/coverage`
 - `GET/POST /api/v1/operator/vehicles`
 - `GET/PATCH /api/v1/operator/vehicles/{id}`
@@ -80,10 +83,18 @@ Vehicle hard deletion is not available in MVP. Deactivation transactionally unpu
 
 Public school list/detail responses expose only active schools. Geography lists and school results use deterministic name/id ordering. School create/patch fields are `neighborhoodId`, `name`, optional `address`, optional `sourceName`, optional `sourceCode`, and `active`; supplying `sourceCode` requires `sourceName`, and the source pair remains unique. PATCH is partial and explicit `null` clears optional fields. School CSV import is deferred by D019 and is not part of the current pilot API.
 
+Operator-school self-management never accepts an `operatorId`; ownership comes from the authenticated session. Create accepts `{schoolId,active?}` with `active` defaulting to `true`, and the school must currently be active. PATCH accepts exactly the mutable lifecycle field `{active}`. DELETE removes the owned relationship and its general coverage; future offering migrations must preserve their own integrity when they begin referencing this relationship.
+
+General coverage replacement accepts `{neighborhoodIds:[...]}`. An empty list clears coverage, repeated neighborhood IDs are rejected, and every referenced neighborhood must exist in the attached school's province; another district in that province is valid. The backend locks the owned operator-school row and replaces the entire set in one transaction. Another operator's relationship is returned as not found rather than disclosed.
+
 ## Tariff storage and write contract
 Only the backend reads or writes the persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; the deployment mounts it on a writable persistent volume. Tariff content is never a classpath/JAR/frontend asset or a PostgreSQL fare table, and Supabase Storage is excluded for MVP. Do not expose storage credentials or filesystem paths to the browser.
 
 An accepted admin update writes a new immutable version file and atomically replaces `current.json` using a temp file on the same filesystem. The client must send the version it read; a stale version returns 409 Problem Details with stable code `tariff_version_conflict` and changes no file. A rollback is another versioned write, not history mutation. Only one tariff-writer backend instance is supported until a distributed concurrency design is approved. Tariff files must satisfy D035's provenance, effective-date, interval, and integer-kuruş rules. A-09 must define and verify off-volume backup and restore.
+
+The A-05 update body is `{expectedVersion, tariff}`. `expectedVersion` is explicitly `null` only for the first tariff of a province; every replacement supplies the current version returned by the public read. The tariff document fields are `provinceCode`, `provinceName`, `authority`, `academicYear`, `currency` (`TRY`), `effectiveFrom`, `effectiveTo`, `sourceTitle`, `officialSourceUrl` (absolute HTTPS), `version`, and `bands`. Each band contains `minDistanceKm`, nullable `maxDistanceKm`, and nonnegative integer `amountKurus`. The path and document province codes must match, versions are immutable, and a new version must differ from the current version. A-05 exposes only the current public read and ADMIN replacement; history selection and rollback endpoints remain outside its scope.
+
+Storage is partitioned below the configured root as `<provinceCode>/current.json` and `<provinceCode>/versions/version-<version>.json`. Missing configuration returns safe `tariff_storage_unavailable` Problem Details without exposing a path. Missing province tariff data returns `tariff_not_found`; an invalid stored current document is never served.
 
 ## API standards
 Use DTOs and never return entities containing password or token hashes. Errors use RFC Problem Details (`application/problem+json`) with `type`, `title`, `status`, `detail`, `instance`, a stable application `code`, optional `fieldErrors`, and an optional safe `traceId`. Never include credentials, tokens, cookie values, stack traces, or account-enumerating details.

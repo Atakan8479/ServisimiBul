@@ -44,7 +44,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
@@ -117,6 +117,52 @@ class ServisimibulBackendApplicationTests {
                 "select has_table_privilege('anon', 'public.spring_session', 'SELECT')", Boolean.class)).isFalse();
         assertThat(jdbcTemplate.queryForObject(
                 "select has_table_privilege('authenticated', 'public.spring_session', 'SELECT')", Boolean.class)).isFalse();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_class table_info
+                join pg_namespace schema_info on schema_info.oid = table_info.relnamespace
+                where schema_info.nspname = 'public'
+                  and table_info.relname in ('operator_school', 'operator_school_coverage')
+                  and table_info.relrowsecurity
+                """, Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename in ('operator_school', 'operator_school_coverage')
+                  and roles = array['servisimibul_app']::name[]
+                """, Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('anon', 'public.operator_school', 'SELECT')", Boolean.class)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('authenticated', 'public.operator_school', 'SELECT')", Boolean.class))
+                .isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('servisimibul_app', 'public.operator_school', 'SELECT')", Boolean.class))
+                .isTrue();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_class table_info
+                join pg_namespace schema_info on schema_info.oid = table_info.relnamespace
+                where schema_info.nspname = 'public'
+                  and table_info.relname in ('vehicle', 'service_offering')
+                  and table_info.relrowsecurity
+                """, Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename in ('vehicle', 'service_offering')
+                  and roles = array['servisimibul_app']::name[]
+                """, Integer.class)).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('anon', 'public.vehicle', 'SELECT')", Boolean.class)).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('authenticated', 'public.service_offering', 'SELECT')", Boolean.class))
+                .isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('servisimibul_app', 'public.vehicle', 'SELECT')", Boolean.class))
+                .isTrue();
 
         jdbcTemplate.update("insert into province (code, name) values ('34', 'Istanbul')");
         assertThat(jdbcTemplate.queryForObject(
