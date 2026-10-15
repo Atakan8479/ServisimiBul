@@ -71,4 +71,46 @@ public class OperatorProfile {
         this.contactPhone = Objects.requireNonNull(contactPhone).strip();
     }
 
+    public void update(
+            String businessName,
+            String contactPhone,
+            String description,
+            boolean publiclyVisible
+    ) {
+        this.businessName = Objects.requireNonNull(businessName).strip();
+        this.contactPhone = Objects.requireNonNull(contactPhone).strip();
+        this.description = description == null ? null : description.strip();
+        this.publiclyVisible = publiclyVisible;
+    }
+
+    public void submit() {
+        requireStatus(OperatorApprovalStatus.DRAFT);
+        approvalStatus = OperatorApprovalStatus.PENDING;
+    }
+
+    public void resubmit() {
+        requireStatus(OperatorApprovalStatus.CHANGES_REQUESTED);
+        approvalStatus = OperatorApprovalStatus.PENDING;
+    }
+
+    public void approve() {
+        requireStatus(OperatorApprovalStatus.PENDING);
+        approvalStatus = OperatorApprovalStatus.APPROVED;
+    }
+
+    public void requestChanges() {
+        requireStatus(OperatorApprovalStatus.PENDING);
+        approvalStatus = OperatorApprovalStatus.CHANGES_REQUESTED;
+    }
+
+    public void suspend() {
+        active = false;
+    }
+
+    private void requireStatus(OperatorApprovalStatus expected) {
+        if (approvalStatus != expected) {
+            throw new IllegalStateException("Expected operator status " + expected);
+        }
+    }
+
 }
