@@ -44,7 +44,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("6");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
@@ -163,6 +163,13 @@ class ServisimibulBackendApplicationTests {
         assertThat(jdbcTemplate.queryForObject(
                 "select has_table_privilege('servisimibul_app', 'public.vehicle', 'SELECT')", Boolean.class))
                 .isTrue();
+        assertThat(jdbcTemplate.queryForObject("""
+                select is_nullable
+                from information_schema.columns
+                where table_schema = 'public'
+                  and table_name = 'operator_profile'
+                  and column_name = 'business_name'
+                """, String.class)).isEqualTo("YES");
 
         jdbcTemplate.update("insert into province (code, name) values ('34', 'Istanbul')");
         assertThat(jdbcTemplate.queryForObject(

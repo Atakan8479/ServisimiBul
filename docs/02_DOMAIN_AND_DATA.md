@@ -7,11 +7,11 @@ Existing manually created schema is described in `05_REPO_STATE.md`; new migrati
 
 ## Identity and operator
 `AppUser(id UUID, email UNIQUE, password_hash, role ADMIN|OPERATOR, is_enabled, email_verified_at, timestamps)` is stored in the approved `app_user` SQL table.
-`OperatorProfile(id UUID, user_id UNIQUE FK, business_name NOT NULL, contact_phone NOT NULL, optional description, approval_status, is_active, is_publicly_visible, timestamps)`.
+`OperatorProfile(id UUID, user_id UNIQUE FK, optional business_name, contact_phone NOT NULL, optional description, approval_status, is_active, is_publicly_visible, timestamps)`.
 A required public phone does NOT mean profile automatically visible; public visibility still needs approval and flags. Keep private authentication email and public contact fields separate.
 `EmailVerificationToken(user_id, token_hash, expires_at, consumed_at)`, `PasswordResetToken(user_id, token_hash, expires_at, consumed_at)`, and `OperatorApplicationReview(operator_id, reviewed_by, decision, reason?, timestamp)` are added during the auth/application stage. Tokens are stored only as hashes and are single-use. Review decisions are exactly `APPROVED` and `CHANGES_REQUESTED`; a correction request requires a reason, and the operator may revise/re-submit. Suspension remains separate.
 
-Authentication email is never public in MVP. The mandatory contact phone is the sole public contact channel. Registration accepts email, password, business name, and contact phone and creates only an operator application in `DRAFT`; ADMIN identities are bootstrap-only.
+Authentication email is never public in MVP. The mandatory contact phone is the sole public contact channel. Registration accepts email, password, optional business name, and contact phone and creates only an operator application in `DRAFT`; ADMIN identities are bootstrap-only.
 
 ## School/coverage relationships
 `OperatorSchool(id UUID, operator_id FK, school_id FK, is_active, UNIQUE(operator_id,school_id))`.

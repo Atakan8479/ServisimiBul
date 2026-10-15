@@ -7,9 +7,9 @@ The cookie is named `SBSESSION`, is HttpOnly, uses `SameSite=Lax`, path `/`, and
 
 Normal login has a 30-minute inactivity timeout and a browser-session cookie. Selecting “Remember me” creates a persistent server-side session and cookie with a non-sliding 90-day absolute lifetime. Remembered activity must not extend that absolute deadline. Allow at most two sessions per account; a third login invalidates the oldest. Password or primary-email changes, password reset, account disablement, operator suspension, and role changes invalidate every session belonging to the identity. Logout invalidates only the current session.
 
-Public registration accepts `email`, `password`, `businessName`, and `contactPhone`, always assigns `OPERATOR`, and creates a `DRAFT` application. Normalize email consistently. Passwords are 12–64 characters and at most 72 UTF-8 bytes; do not require arbitrary character classes. Email verification is required before login. Verified but unapproved operators may log in only to the limited operator workflow allowed by their application state.
+Public registration accepts `email`, `password`, optional `businessName`, and `contactPhone`, always assigns `OPERATOR`, and creates a `DRAFT` application. Normalize email consistently. Passwords are 12–64 characters and at most 72 UTF-8 bytes; do not require arbitrary character classes. Email verification is required before login. Verified but unapproved operators may log in only to the limited operator workflow allowed by their application state.
 
-Registration validation uses a trimmed, case-normalized email of at most 254 characters; a trimmed business name of 2–120 characters; and a contact phone stored in E.164 form (`+` followed by 8–15 digits). The frontend may accept and format familiar Turkish input, but the API persists and returns the canonical phone form.
+Registration validation uses a trimmed, case-normalized email of at most 254 characters; an optional trimmed business name of 2–120 characters when present; and a contact phone stored in E.164 form (`+` followed by 8–15 digits). Missing, explicit `null`, or blank business-name input is stored as `NULL`. The frontend may accept and format familiar Turkish input, but the API persists and returns the canonical phone form.
 
 Verification tokens are random, stored only as hashes, single-use, and valid for 24 hours. Issuing a new token invalidates earlier unconsumed tokens. Resend has a 60-second per-account cooldown and rolling limits of 5/account/hour and 20/IP/hour. The link opens a frontend GET route; that page submits the token to the API with POST. Registration and resend return a generic result that does not disclose account existence.
 
@@ -45,7 +45,7 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
-- `POST /api/v1/auth/register` — `{email,password,businessName,contactPhone}`; generic `202 Accepted`
+- `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`
 - `POST /api/v1/auth/verify-email` — `{token}`
 - `POST /api/v1/auth/resend-verification`
 - `POST /api/v1/auth/forgot-password` — `{email}`; generic `202 Accepted`

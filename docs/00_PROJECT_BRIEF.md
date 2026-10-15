@@ -11,7 +11,7 @@ Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No st
 - Admin school CRUD for a deliberately small pilot catalog containing schools the team is actively testing with. Bulk import and a complete Istanbul catalog are deferred until there is demonstrated need.
 - Operator email registration and verification before login; role-based authentication and server-side sessions; two securely created admins.
 - Admin approval, request-for-revision with explanation, operator edits/resubmission, and account suspension handling.
-- Operator profile includes mandatory business name and publicly reachable phone; operator can control whether entire profile is shown.
+- Operator profile includes an optional business name and a mandatory publicly reachable phone; operator can control whether the entire profile is shown.
 - OperatorSchool linkage and per-school OperatorSchoolCoverage. Different districts of the same province are valid coverage for a school.
 - Anonymous parent search by school + neighborhood; operator contact view; pagination; responsive public and admin/operator UIs.
 - Price reference: official UKOME fee bands from editable persistent JSON; only verified official tariffs, no price estimates based on neighborhood.

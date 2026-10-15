@@ -30,7 +30,7 @@ When sources conflict: stop, explain the conflict, and request a decision. Do no
 - Operator is NOT necessarily driver; operator can serve multiple schools and own multiple vehicles.
 - Operator can appear in searches without any Vehicle or ServiceOffering.
 - Match by exact School + per-school Neighborhood coverage; neighborhood may be in another district of the SAME province, not another province.
-- Operator's business name and public contact phone are mandatory. Active public operator profile exposes a valid contact phone; operator may hide entire profile.
+- Operator business name is optional; public contact phone is mandatory. Active public operator profile exposes a valid contact phone; operator may hide entire profile.
 - Published visibility derived from email verified + enabled account + admin approval + active operator + public profile toggle + active school and matching coverage; do not cache a duplicate operator `isPublished` state.
 - Requesting corrections to a rejected application is NOT a permanent ban; track review reasons and let operator edit/re-submit. Do not assume final state names beyond approved ones.
 - ServiceOffering is optional; each offering has its own coverage and it must be a subset of its OperatorSchoolCoverage.
