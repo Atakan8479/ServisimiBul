@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — Anonymous public discovery backend local verification
-Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. A-04 is implemented on its feature branch; its Java 21 package build and 13 focused non-database regressions pass, while the new database-backed API suite still requires isolated PostgreSQL execution.
+## Current stage: Phase 2 — Anonymous public discovery backend in review
+Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. A-04 is implemented and verified in PR #43; review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -11,7 +11,7 @@ Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and 
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; B-05 workflow `38726002167` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
-| 6 Parent public search | in progress | A-04 feature branch; Java 21 package and 13 focused non-database tests passed; database-backed suite compiled but not run | A-04 scope approved by Atakan 2026-10-15 |
+| 6 Parent public search | in review | A-04 PR #43; PostgreSQL 17 workflow `38735898544` passed all 85 tests | A-04 scope approved by Atakan 2026-10-15; review and merge pending |
 | 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
 | 8 Pilot QA and UI | pending | — | — |
 
@@ -32,7 +32,7 @@ Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and 
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; PostgreSQL 17 workflow `38726002167` passed | Reviewed and merged 2026-10-15 |
-| A-04 Anonymous public discovery backend | in progress | Branch `codex/a-04-anonymous-public-discovery`; package and 13 focused non-database tests passed; isolated PostgreSQL verification pending | Scope approved by Atakan 2026-10-15 |
+| A-04 Anonymous public discovery backend | in review | PR #43; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Scope approved by Atakan 2026-10-15; review and merge pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -249,7 +249,7 @@ Never mark tasks done because code was generated: verification and review requir
 - Isolated PostgreSQL 17 workflow `38726002167` passed the complete Maven verification. Local database tests were not run because Docker/PostgreSQL is unavailable, and shared Supabase was deliberately not used.
 - No dependency, migration, application configuration, frontend source, shared Supabase state, or production setting was changed.
 
-## Partial A-04 local evidence — 2026-10-15
+## Verified A-04 evidence — 2026-10-15
 
 - Branch: `codex/a-04-anonymous-public-discovery`; based on refreshed `origin/main` merge commit `943706428b7c2d90525c4365de82799eac49e987`.
 - The anonymous collection endpoint applies email-verification, enabled-account, approved-profile, active-profile, public-toggle, active-school, active-relationship, exact-school, exact-neighborhood, and same-province predicates in one distinct operator query with stable business-name/UUID ordering.
@@ -257,5 +257,6 @@ Never mark tasks done because code was generated: verification and review requir
 - The database-backed API suite covers empty optional data, wrong school/neighborhood, cross-district same-province matching, cross-province fail-closed behavior, every publication flag, inactive schools/relationships, duplicate related rows, stable pagination, safe parameter errors, and anonymous sessionlessness.
 - `git diff --check` passed. `\.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all 21 test source files.
 - Thirteen focused non-database authentication, session, tariff-validation, and tariff-storage regression tests passed: 0 failures, 0 errors, 0 skipped.
-- The new database-backed suite has not run locally because no PostgreSQL service is available and permission to start Docker Desktop was declined. Shared Supabase was deliberately not used. Isolated PostgreSQL verification is still required before A-04 can be marked complete.
+- PR #43 Backend workflow `38735898544` passed clean V1→V6 migration, Hibernate validation, all five A-04 API tests, and every regression against isolated PostgreSQL 17: 85 tests, 0 failures, 0 errors, 0 skipped.
+- Docker is not an application dependency and was not required for verification; GitHub Actions supplied the isolated PostgreSQL service. Shared Supabase was deliberately not used.
 - No dependency, Flyway migration, application property, frontend source, shared Supabase state, or production setting was changed.
