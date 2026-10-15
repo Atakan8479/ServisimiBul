@@ -4,6 +4,7 @@ import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.offering.ServiceOffering;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
+import com.servisimibul.backend.offering.ServiceOfferingRepository.OwnedReference;
 import com.servisimibul.backend.offering.Vehicle;
 import com.servisimibul.backend.offering.VehicleRepository;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CreateRequest;
@@ -153,19 +154,30 @@ public class OfferingService {
         }
 
         OperatorProfile operator = currentOperator();
-        ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
+        OwnedReference reference = ownedOfferingReference(id, operator.getId());
         Vehicle vehicle = request.hasVehicleId()
                 ? activeOwnedVehicleForUpdate(
                         requiredValue(request.vehicleId(), "vehicleId"),
                         operator.getId()
                 )
-                : activeOwnedVehicleForUpdate(offering.getVehicle().getId(), operator.getId());
+                : activeOwnedVehicleForUpdate(reference.getVehicleId(), operator.getId());
         OperatorSchool operatorSchool = request.hasOperatorSchoolId()
                 ? ownedOperatorSchoolForUpdate(
                         requiredValue(request.operatorSchoolId(), "operatorSchoolId"),
                         operator.getId()
                 )
-                : offering.getOperatorSchool();
+                : ownedOperatorSchoolForUpdate(reference.getOperatorSchoolId(), operator.getId());
+        ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
+        rejectStaleReference(
+                request.hasVehicleId(),
+                vehicle.getId(),
+                offering.getVehicle().getId()
+        );
+        rejectStaleReference(
+                request.hasOperatorSchoolId(),
+                operatorSchool.getId(),
+                offering.getOperatorSchool().getId()
+        );
         Integer availableSeats = request.hasAvailableSeats()
                 ? request.availableSeats()
                 : offering.getAvailableSeats();
@@ -190,12 +202,15 @@ public class OfferingService {
     @Transactional
     public ServiceOfferingResponse publishOffering(UUID id) {
         OperatorProfile operator = currentOperator();
-        ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
-        Vehicle vehicle = activeOwnedVehicleForUpdate(offering.getVehicle().getId(), operator.getId());
+        OwnedReference reference = ownedOfferingReference(id, operator.getId());
+        Vehicle vehicle = activeOwnedVehicleForUpdate(reference.getVehicleId(), operator.getId());
         OperatorSchool operatorSchool = ownedOperatorSchoolForUpdate(
-                offering.getOperatorSchool().getId(),
+                reference.getOperatorSchoolId(),
                 operator.getId()
         );
+        ServiceOffering offering = ownedOfferingForUpdate(id, operator.getId());
+        rejectStaleReference(false, vehicle.getId(), offering.getVehicle().getId());
+        rejectStaleReference(false, operatorSchool.getId(), offering.getOperatorSchool().getId());
         if (!operatorSchool.isActive() || !operatorSchool.getSchool().isActive()) {
             throw OfferingApiException.conflict(
                     "operator_school_inactive",
@@ -256,6 +271,20 @@ public class OfferingService {
     private ServiceOffering ownedOfferingForUpdate(UUID id, UUID operatorId) {
         return offeringRepository.findOwnedForUpdate(id, operatorId)
                 .orElseThrow(() -> offeringNotFound());
+    }
+
+    private OwnedReference ownedOfferingReference(UUID id, UUID operatorId) {
+        return offeringRepository.findOwnedReference(id, operatorId)
+                .orElseThrow(() -> offeringNotFound());
+    }
+
+    private void rejectStaleReference(boolean explicitlyReplaced, UUID lockedId, UUID currentId) {
+        if (!explicitlyReplaced && !lockedId.equals(currentId)) {
+            throw OfferingApiException.conflict(
+                    "offering_update_conflict",
+                    "The offering changed while it was being updated; retry with fresh data"
+            );
+        }
     }
 
     private void deactivateVehicleAndOfferings(Vehicle vehicle) {

@@ -13,6 +13,13 @@ import java.util.UUID;
 
 public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering, UUID> {
 
+    interface OwnedReference {
+
+        UUID getVehicleId();
+
+        UUID getOperatorSchoolId();
+    }
+
     @Query("""
             select offering
             from ServiceOffering offering
@@ -38,15 +45,24 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
             @Param("operatorId") UUID operatorId
     );
 
+    @Query("""
+            select offering.vehicle.id as vehicleId,
+                   offering.operatorSchool.id as operatorSchoolId
+            from ServiceOffering offering
+            where offering.id = :id
+              and offering.operatorSchool.operator.id = :operatorId
+            """)
+    Optional<OwnedReference> findOwnedReference(
+            @Param("id") UUID id,
+            @Param("operatorId") UUID operatorId
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select offering
             from ServiceOffering offering
-            join fetch offering.operatorSchool operatorSchool
-            join fetch operatorSchool.school
-            join fetch offering.vehicle
             where offering.id = :id
-              and operatorSchool.operator.id = :operatorId
+              and offering.operatorSchool.operator.id = :operatorId
             """)
     Optional<ServiceOffering> findOwnedForUpdate(
             @Param("id") UUID id,
