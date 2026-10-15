@@ -9,7 +9,7 @@ import { server } from '../../test/server'
 afterEach(resetCsrfToken)
 
 describe('operator authentication screens', () => {
-  it('registers an operator and shows the non-enumerating confirmation', async () => {
+  it('registers an operator without an optional business name', async () => {
     let requestBody: unknown
     server.use(
       csrfHandler(),
@@ -27,9 +27,6 @@ describe('operator authentication screens', () => {
     fireEvent.change(screen.getByLabelText('Şifre'), {
       target: { value: 'long password value' },
     })
-    fireEvent.change(screen.getByLabelText('İşletme adı'), {
-      target: { value: 'Pilot Servis' },
-    })
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
       target: { value: '0532 123 45 67' },
     })
@@ -41,7 +38,7 @@ describe('operator authentication screens', () => {
     expect(requestBody).toEqual({
       email: 'operator@example.com',
       password: 'long password value',
-      businessName: 'Pilot Servis',
+      businessName: '',
       contactPhone: '0532 123 45 67',
     })
   })
@@ -122,7 +119,7 @@ describe('operator authentication screens', () => {
     fireEvent.change(screen.getByLabelText('Şifre'), {
       target: { value: 'long password value' },
     })
-    fireEvent.change(screen.getByLabelText('İşletme adı'), {
+    fireEvent.change(screen.getByLabelText('İşletme adı (isteğe bağlı)'), {
       target: { value: 'Pilot Servis' },
     })
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {

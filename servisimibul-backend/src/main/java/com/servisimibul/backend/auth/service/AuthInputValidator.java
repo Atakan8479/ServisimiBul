@@ -35,6 +35,9 @@ public class AuthInputValidator {
 
     public String businessName(String value) {
         String normalized = value == null ? "" : value.strip();
+        if (normalized.isEmpty()) {
+            return null;
+        }
         int characters = normalized.codePointCount(0, normalized.length());
         if (characters < 2 || characters > 120) {
             throw new AuthValidationException("businessName", "Business name must be 2-120 characters");

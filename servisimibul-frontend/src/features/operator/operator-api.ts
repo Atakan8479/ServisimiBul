@@ -10,7 +10,7 @@ export const approvalStatusSchema = z.enum([
 
 export const operatorProfileSchema = z.object({
   id: z.string().uuid(),
-  businessName: z.string(),
+  businessName: z.string().nullable(),
   contactPhone: z.string(),
   description: z.string().nullable(),
   approvalStatus: approvalStatusSchema,

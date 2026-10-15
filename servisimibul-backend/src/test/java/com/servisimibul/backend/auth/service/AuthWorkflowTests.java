@@ -110,6 +110,26 @@ class AuthWorkflowTests {
     }
 
     @Test
+    void registrationAllowsBusinessNameToBeOmitted() throws Exception {
+        postJson(
+                "/api/v1/auth/register",
+                """
+                        {
+                          "email":"optional-name@example.com",
+                          "password":"correct horse battery staple",
+                          "contactPhone":"0532 123 45 67"
+                        }
+                        """,
+                "10.0.0.21"
+        ).andExpect(status().isAccepted());
+
+        AppUser user = userRepository.findByEmail("optional-name@example.com").orElseThrow();
+        OperatorProfile profile = profileRepository.findByUserId(user.getId()).orElseThrow();
+        assertThat(profile.getBusinessName()).isNull();
+        assertThat(profile.getContactPhone()).isEqualTo("+905321234567");
+    }
+
+    @Test
     void duplicateRegistrationHasTheSameResponseAndSendsNoSecondEmail() throws Exception {
         register("duplicate@example.com", INITIAL_PASSWORD, "First Service", "+905321234567", "10.0.0.2")
                 .andExpect(status().isAccepted());

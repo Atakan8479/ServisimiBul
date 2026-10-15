@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Phase 3 — Operator workspace in review
-Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. B-06 is implemented and verified in PR #42; visual review and merge remain pending.
+Status: Gates 0–6, J-01, A-01, B-01–B-05, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-06 is implemented and verified in PR #42; visual review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -11,7 +11,7 @@ Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and 
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; final B-05 workflow `38726247161` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
-| 6 Parent public search | pending | — | — |
+| 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
 | 8 Pilot QA and UI | in progress | B-01 merged; B-06 PR #42 Frontend workflow `38730195352` passed | B-06 visual review and merge pending |
 
@@ -32,6 +32,8 @@ Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and 
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
+| A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
+| Operator business-name optionality | complete | PR #44 merged as `6c19040`; decision D037; PostgreSQL 17 workflow `38741191425` passed all 82 tests | Domain-wide optionality explicitly approved, reviewed, and merged 2026-10-15 |
 | B-06 Operator workspace | in review | GitHub issue #17; PR #42; Node 24 Frontend workflow `38730195352` passed all gates | Implementation verified 2026-10-15; visual review and merge pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
@@ -49,6 +51,19 @@ A-03 PR #39 adds V5 plus session-owned operator-school and same-province general
 A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
+
+A-04 adds the anonymous school-and-neighborhood operator search with the full derived publication predicate, distinct stable pagination, public phone exposure, no authentication email, and no vehicle/offering visibility dependency. Its `publishedOfferings` list remains empty until A-07 provides valid offering-specific coverage and publication. No migration or shared Supabase operation is part of A-04.
+
+## Verified operator business-name optionality evidence — 2026-10-15
+
+- Branch: `codex/business-name-optional`; PR #44; based independently on `origin/main` commit `943706428b7c2d90525c4365de82799eac49e987`.
+- Approved decision D037 supersedes the business-name requirement in D009 and D020 while retaining the mandatory public contact phone.
+- V7 drops only the `operator_profile.business_name` NOT NULL requirement and retains the 2–120-character check for non-null values; it does not rewrite or delete existing data.
+- Registration accepts missing, explicit-null, or blank `businessName` as `NULL`; a supplied name remains trimmed and validated. Profile PATCH can clear the value, and response DTOs expose it as nullable.
+- `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
+- `AuthInputValidatorTests` passed locally: 4 tests, 0 failures, 0 errors, 0 skipped.
+- Isolated PostgreSQL 17 Backend workflow `38741191425` passed clean V1→V7 migration, repeat-migration and Hibernate validation, nullable registration/profile lifecycle coverage, and all regressions: 82 tests, 0 failures, 0 errors, 0 skipped.
+- Docker was not required locally; GitHub Actions supplied its own isolated PostgreSQL service. Shared Supabase was not read, migrated, or modified, and applying V7 remains a separate post-merge operation requiring the normal approval gate.
 
 ## Session handoff template
 Date:
@@ -246,6 +261,18 @@ Never mark tasks done because code was generated: verification and review requir
 - `AuthInputValidatorTests` passed locally: 3 tests, 0 failures, 0 errors, 0 skipped. The Java 21-targeted package, including all test-source compilation, passed locally on JDK 25.
 - Isolated PostgreSQL 17 workflow `38726002167` passed the complete Maven verification. Local database tests were not run because Docker/PostgreSQL is unavailable, and shared Supabase was deliberately not used.
 - No dependency, migration, application configuration, frontend source, shared Supabase state, or production setting was changed.
+
+## Verified A-04 evidence — 2026-10-15
+
+- Branch: `codex/a-04-anonymous-public-discovery`; based on refreshed `origin/main` merge commit `943706428b7c2d90525c4365de82799eac49e987`.
+- The anonymous collection endpoint applies email-verification, enabled-account, approved-profile, active-profile, public-toggle, active-school, active-relationship, exact-school, exact-neighborhood, and same-province predicates in one distinct operator query with stable business-name/UUID ordering.
+- Operator pagination occurs before optional details and does not join Vehicle or ServiceOffering. Zero-vehicle, zero-offering, and draft-only operators remain eligible. `publishedOfferings` is intentionally empty until A-07 implements valid offering-specific coverage; authentication email is not exposed.
+- The database-backed API suite covers empty optional data, wrong school/neighborhood, cross-district same-province matching, cross-province fail-closed behavior, every publication flag, inactive schools/relationships, duplicate related rows, stable pagination, safe parameter errors, and anonymous sessionlessness.
+- `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all 21 test source files.
+- Thirteen focused non-database authentication, session, tariff-validation, and tariff-storage regression tests passed: 0 failures, 0 errors, 0 skipped.
+- PR #43 Backend workflow `38735898544` passed clean V1→V6 migration, Hibernate validation, all five A-04 API tests, and every regression against isolated PostgreSQL 17: 85 tests, 0 failures, 0 errors, 0 skipped.
+- Docker is not an application dependency and was not required for verification; GitHub Actions supplied the isolated PostgreSQL service. Shared Supabase was deliberately not used.
+- No dependency, Flyway migration, application property, frontend source, shared Supabase state, or production setting was changed.
 
 ## Verified B-06 evidence — 2026-10-15
 

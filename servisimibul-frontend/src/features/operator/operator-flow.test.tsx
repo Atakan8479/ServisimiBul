@@ -35,7 +35,10 @@ describe('operator workspace flows', () => {
     )
 
     renderRoute('/operator/profile')
-    const businessName = await screen.findByLabelText('İşletme adı')
+    const businessName = await screen.findByLabelText(
+      'İşletme adı (isteğe bağlı)',
+    )
+    expect(businessName).toHaveValue('')
     expect(
       screen.getByText(
         'Profil bilgilerinizi güncelledikten sonra yeniden gönderin.',
@@ -144,7 +147,7 @@ function csrfHandler() {
 function profile(status: string) {
   return {
     id: '99dd588e-2b72-419e-aa29-28fb97f8ad20',
-    businessName: 'Pilot Servis',
+    businessName: null,
     contactPhone: '+905321234567',
     description: 'Açıklama',
     approvalStatus: status,

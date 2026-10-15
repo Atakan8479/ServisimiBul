@@ -35,7 +35,7 @@ public class OperatorProfile {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private AppUser user;
 
-    @Column(name = "business_name", nullable = false, length = 120)
+    @Column(name = "business_name", length = 120)
     private String businessName;
 
     @Column(name = "contact_phone", nullable = false, length = 16)
@@ -67,7 +67,7 @@ public class OperatorProfile {
             throw new IllegalArgumentException("Only an operator can own an operator profile");
         }
         this.user = user;
-        this.businessName = Objects.requireNonNull(businessName).strip();
+        this.businessName = normalizeOptional(businessName);
         this.contactPhone = Objects.requireNonNull(contactPhone).strip();
     }
 
@@ -77,7 +77,7 @@ public class OperatorProfile {
             String description,
             boolean publiclyVisible
     ) {
-        this.businessName = Objects.requireNonNull(businessName).strip();
+        this.businessName = normalizeOptional(businessName);
         this.contactPhone = Objects.requireNonNull(contactPhone).strip();
         this.description = description == null ? null : description.strip();
         this.publiclyVisible = publiclyVisible;
@@ -111,6 +111,13 @@ public class OperatorProfile {
         if (approvalStatus != expected) {
             throw new IllegalStateException("Expected operator status " + expected);
         }
+    }
+
+    private String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.strip();
     }
 
 }

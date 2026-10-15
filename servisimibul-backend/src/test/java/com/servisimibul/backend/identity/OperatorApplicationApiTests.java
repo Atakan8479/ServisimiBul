@@ -96,6 +96,18 @@ class OperatorApplicationApiTests {
                         .with(asUser(operator))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"businessName\":null}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.businessName").doesNotExist())
+                .andExpect(jsonPath("$.contactPhone").value("+905551112233"));
+
+        assertThat(profileRepository.findByUserId(operator.getId()).orElseThrow().getBusinessName())
+                .isNull();
+
+        mockMvc.perform(patch("/api/v1/operator/profile")
+                        .with(asUser(operator))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"approvalStatus\":\"APPROVED\",\"active\":false}"))
                 .andExpect(status().isBadRequest());
 

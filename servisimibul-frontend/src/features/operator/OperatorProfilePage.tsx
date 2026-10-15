@@ -17,8 +17,11 @@ const profileFormSchema = z.object({
   businessName: z
     .string()
     .trim()
-    .min(2, 'İşletme adı en az 2 karakter olmalıdır.')
-    .max(120, 'İşletme adı en fazla 120 karakter olabilir.'),
+    .max(120, 'İşletme adı en fazla 120 karakter olabilir.')
+    .refine(
+      (value) => value.length === 0 || value.length >= 2,
+      'İşletme adı en az 2 karakter olmalıdır.',
+    ),
   contactPhone: z.string().trim().min(1, 'İletişim telefonu zorunludur.'),
   description: z.string(),
   publiclyVisible: z.boolean(),
@@ -192,7 +195,7 @@ export function OperatorProfilePage() {
           noValidate
         >
           <label className="form-field">
-            <span>İşletme adı</span>
+            <span>İşletme adı (isteğe bağlı)</span>
             <input
               aria-invalid={Boolean(errors.businessName)}
               autoComplete="organization"
@@ -270,7 +273,7 @@ export function OperatorProfilePage() {
 
 function toForm(profile: OperatorProfile): ProfileForm {
   return {
-    businessName: profile.businessName,
+    businessName: profile.businessName ?? '',
     contactPhone: profile.contactPhone,
     description: profile.description ?? '',
     publiclyVisible: profile.publiclyVisible,
