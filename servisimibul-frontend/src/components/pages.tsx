@@ -1,7 +1,9 @@
 export function HomePage() {
   return (
     <section className="hero">
-      <h1>Okul servisi aramanın daha açık yolu.</h1>
+      <h1>
+        Okul servisi aramanın <span>daha açık yolu.</span>
+      </h1>
       <p className="hero-copy">
         ServisimiBul, velilerin okula ve mahalleye göre uygun servis
         işletmecilerini bulup doğrudan iletişime geçmesine yardımcı olur.

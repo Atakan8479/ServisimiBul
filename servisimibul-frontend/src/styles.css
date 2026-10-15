@@ -146,6 +146,16 @@ nav a.active {
   max-width: 48rem;
 }
 
+.hero h1 {
+  color: var(--color-accent-strong);
+  text-wrap: balance;
+}
+
+.hero h1 span {
+  display: block;
+  color: var(--color-focus);
+}
+
 .eyebrow {
   margin: 0 0 0.75rem;
   color: var(--color-accent);
@@ -292,57 +302,17 @@ h1 {
   position: absolute;
   top: 50%;
   display: block;
-  width: clamp(6.5rem, 10vw, 9rem);
+  width: clamp(2.6rem, 4vw, 3.6rem);
+  height: clamp(6.5rem, 10vw, 9rem);
   filter: drop-shadow(0 0.35rem 0.4rem rgba(0, 0, 0, 0.25));
-  transform: translateY(-50%);
+  transform: translateY(-50%) rotate(90deg);
   z-index: 1;
 }
 
-.road-minibus svg {
+.road-minibus img {
   display: block;
   width: 100%;
-  overflow: visible;
-}
-
-.minibus-wheel {
-  fill: #1f2b25;
-}
-
-.minibus-body {
-  fill: #efc54a;
-  stroke: #26372e;
-  stroke-width: 4;
-}
-
-.minibus-windshield,
-.minibus-rear-window {
-  fill: #b8d8e6;
-  stroke: #315063;
-  stroke-width: 2;
-}
-
-.minibus-roof {
-  fill: #f7d66f;
-  stroke: #a57e16;
-  stroke-width: 2;
-}
-
-.minibus-window {
-  fill: #405c68;
-}
-
-.minibus-door,
-.minibus-mirror {
-  fill: none;
-  stroke: #26372e;
-  stroke-linecap: round;
-  stroke-width: 3;
-}
-
-.minibus-light {
-  fill: #fff2a8;
-  stroke: #9f7411;
-  stroke-width: 1.5;
+  height: 100%;
 }
 
 .road-minibus-one {
@@ -351,7 +321,7 @@ h1 {
 
 .road-minibus-two {
   right: -9rem;
-  transform: translateY(-50%) rotate(180deg);
+  transform: translateY(-50%) rotate(-90deg);
   animation: drive-left 23s 4s linear infinite;
 }
 
