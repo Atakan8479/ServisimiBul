@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — Vehicle and ServiceOffering CRUD in review
-Status: Gates 0–5, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-03, A-05, and A-10 are complete. A-06 is implemented and verified in PR #40; review and merge remain pending.
+## Current stage: Phase 2 — Operator profile and application lifecycle in review
+Status: Gates 0–3 and 5, J-01, A-01, B-01–B-04, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. B-05 is implemented and verified in PR #41; review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,10 +9,10 @@ Status: Gates 0–5, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-03, A-05, and A
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
+| 4 Auth/session/email/admin review | in review | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; B-05 PR #41 workflow `38726002167` passed | B-05 review and merge pending |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | in progress | A-05 merged; A-06 issue #21 and PR #40; workflow `38707204509` passed all 74 tests | A-06 scope and fail-closed pre-A-07 publication behavior approved by Atakan 2026-10-15 |
+| 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -28,9 +28,10 @@ Status: Gates 0–5, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-03, A-05, and A
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
 | A-03 Operator-school relationships and general coverage | complete | GitHub issue #15; PR #39 merged as `c3b6a7035c14184acc3a0d2f27fd4e88f036a502`; PostgreSQL 17 workflow `38634143068` passed all 68 tests | Reviewed and merged 2026-10-14 |
 | A-05 UKOME tariff backend | complete | GitHub issue #20 closed; PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Reviewed and merged 2026-10-14 |
-| A-06 Vehicle and ServiceOffering CRUD | in review | GitHub issue #21; PR #40; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Implementation scope approved by Atakan 2026-10-15; review pending |
+| A-06 Vehicle and ServiceOffering CRUD | complete | GitHub issue #21; PR #40 merged as `ac4a499ef9cbbede81ffc19be10cb711576fb66b`; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Reviewed and merged 2026-10-15 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
-| B-01 Frontend foundation | in review | GitHub issue #12; PR #38; Node 24 workflow `38614330741` passed formatting, lint, type-check, 7 tests, and production build | Scope approved 2026-10-14; review pending |
+| B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
+| B-05 Operator profile and application lifecycle | in review | GitHub issue #14; PR #41; PostgreSQL 17 workflow `38726002167` passed | Implementation verified 2026-10-15; review and merge pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -233,3 +234,14 @@ Never mark tasks done because code was generated: verification and review requir
 - `git diff --check` passed. The Java 21-targeted package, including all test-source compilation, passed locally on JDK 25. Full local database tests were not run because Docker/PostgreSQL was unavailable, and shared Supabase was deliberately not used.
 - Isolated PostgreSQL 17 workflow `38707204509` passed clean V1→V2→V3→V4→V5→V6 migration, repeat migration, Hibernate validation, migration/RLS/grant checks, all six A-06 API tests, and all regressions: 74 tests, 0 failures, 0 errors, 0 skipped.
 - No shared Supabase read, migration, or mutation was performed. Applying V2–V6 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
+
+## Verified B-05 evidence — 2026-10-15
+
+- Branch: `codex/b-05-operator-profile-lifecycle`; GitHub issue #14; PR #41; based on merged B-01 commit `1d7c5993328173e64e5cd725094f53b3aa76bd20`.
+- Operator endpoints read and patch the four approved profile fields and move only `DRAFT` applications to `PENDING` or `CHANGES_REQUESTED` applications back to `PENDING`; protected account, approval, and review state is not client-settable.
+- Admin endpoints provide a stable, bounded application queue plus detail, approval, reason-required revision requests, and suspension. Review history is append-only, self-review is rejected, and row locks serialize lifecycle decisions.
+- Approved profile edits retain approval. Suspension deactivates the profile, disables the account, and revokes all server-side sessions; no duplicate publication flag was added.
+- Existing role-based route rules and CSRF protection secure all mutations. Stable RFC Problem Details cover validation, state, not-found, and concurrent-update failures.
+- `AuthInputValidatorTests` passed locally: 3 tests, 0 failures, 0 errors, 0 skipped. The Java 21-targeted package, including all test-source compilation, passed locally on JDK 25.
+- Isolated PostgreSQL 17 workflow `38726002167` passed the complete Maven verification. Local database tests were not run because Docker/PostgreSQL is unavailable, and shared Supabase was deliberately not used.
+- No dependency, migration, application configuration, frontend source, shared Supabase state, or production setting was changed.
