@@ -58,7 +58,7 @@ public class OfferingService {
     public VehicleResponse getVehicle(UUID id) {
         OperatorProfile operator = currentOperator();
         Vehicle vehicle = vehicleRepository.findByIdAndOperatorId(id, operator.getId())
-                .orElseThrow(() -> vehicleNotFound());
+                .orElseThrow(this::vehicleNotFound);
         return toVehicleResponse(vehicle);
     }
 
@@ -143,7 +143,7 @@ public class OfferingService {
     public ServiceOfferingResponse getOffering(UUID id) {
         OperatorProfile operator = currentOperator();
         ServiceOffering offering = offeringRepository.findDetailedOwned(id, operator.getId())
-                .orElseThrow(() -> offeringNotFound());
+                .orElseThrow(this::offeringNotFound);
         return toOfferingResponse(offering);
     }
 
@@ -246,7 +246,7 @@ public class OfferingService {
 
     private Vehicle ownedVehicleForUpdate(UUID id, UUID operatorId) {
         return vehicleRepository.findOwnedForUpdate(id, operatorId)
-                .orElseThrow(() -> vehicleNotFound());
+                .orElseThrow(this::vehicleNotFound);
     }
 
     private Vehicle activeOwnedVehicleForUpdate(UUID id, UUID operatorId) {
@@ -270,12 +270,12 @@ public class OfferingService {
 
     private ServiceOffering ownedOfferingForUpdate(UUID id, UUID operatorId) {
         return offeringRepository.findOwnedForUpdate(id, operatorId)
-                .orElseThrow(() -> offeringNotFound());
+                .orElseThrow(this::offeringNotFound);
     }
 
     private OwnedReference ownedOfferingReference(UUID id, UUID operatorId) {
         return offeringRepository.findOwnedReference(id, operatorId)
-                .orElseThrow(() -> offeringNotFound());
+                .orElseThrow(this::offeringNotFound);
     }
 
     private void rejectStaleReference(boolean explicitlyReplaced, UUID lockedId, UUID currentId) {
