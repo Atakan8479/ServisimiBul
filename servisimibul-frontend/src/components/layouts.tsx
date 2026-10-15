@@ -1,10 +1,10 @@
 import { NavLink, Outlet } from 'react-router-dom'
-
-type WorkspaceKind = 'operator' | 'admin'
+import { RoadBackdrop } from './RoadBackdrop'
 
 export function PublicLayout() {
   return (
     <div className="app-shell">
+      <RoadBackdrop />
       <a className="skip-link" href="#main-content">
         İçeriğe geç
       </a>
@@ -16,11 +16,8 @@ export function PublicLayout() {
           <NavLink to="/" viewTransition>
             Ana sayfa
           </NavLink>
-          <NavLink to="/operator" viewTransition>
-            İşletmeci
-          </NavLink>
-          <NavLink to="/admin" viewTransition>
-            Yönetim
+          <NavLink to="/operator/login" viewTransition>
+            Giriş
           </NavLink>
         </nav>
       </header>
@@ -31,16 +28,12 @@ export function PublicLayout() {
   )
 }
 
-export function OperatorLayout() {
-  return <WorkspaceLayout kind="operator" />
-}
-
 export function AdminLayout() {
-  return <WorkspaceLayout kind="admin" />
+  return <WorkspaceLayout />
 }
 
-function WorkspaceLayout({ kind }: { kind: WorkspaceKind }) {
-  const title = kind === 'admin' ? 'Yönetim alanı' : 'İşletmeci alanı'
+function WorkspaceLayout() {
+  const title = 'Yönetim alanı'
 
   return (
     <div className="workspace-shell">
@@ -53,7 +46,7 @@ function WorkspaceLayout({ kind }: { kind: WorkspaceKind }) {
         </NavLink>
         <p>{title}</p>
         <nav aria-label={`${title} menüsü`}>
-          <NavLink to={`/${kind}`} end viewTransition>
+          <NavLink to="/admin" end viewTransition>
             Genel bakış
           </NavLink>
         </nav>
