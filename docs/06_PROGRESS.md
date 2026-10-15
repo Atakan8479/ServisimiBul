@@ -32,6 +32,7 @@ Status: Gates 0–3 and 5, J-01, A-01, B-01–B-04, J-02, A-02, A-03, A-05, A-06
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
 | B-05 Operator profile and application lifecycle | in review | GitHub issue #14; PR #41; PostgreSQL 17 workflow `38726002167` passed | Implementation verified 2026-10-15; review and merge pending |
+| Operator business-name optionality | in review | PR #44; decision D037; PostgreSQL 17 workflow `38741191425` passed all 82 tests | Domain-wide optionality explicitly approved 2026-10-15; review and merge pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -48,6 +49,17 @@ A-03 PR #39 adds V5 plus session-owned operator-school and same-province general
 A-06 proposes V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
+
+## Verified operator business-name optionality evidence — 2026-10-15
+
+- Branch: `codex/business-name-optional`; PR #44; based independently on `origin/main` commit `943706428b7c2d90525c4365de82799eac49e987`.
+- Approved decision D037 supersedes the business-name requirement in D009 and D020 while retaining the mandatory public contact phone.
+- V7 drops only the `operator_profile.business_name` NOT NULL requirement and retains the 2–120-character check for non-null values; it does not rewrite or delete existing data.
+- Registration accepts missing, explicit-null, or blank `businessName` as `NULL`; a supplied name remains trimmed and validated. Profile PATCH can clear the value, and response DTOs expose it as nullable.
+- `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
+- `AuthInputValidatorTests` passed locally: 4 tests, 0 failures, 0 errors, 0 skipped.
+- Isolated PostgreSQL 17 Backend workflow `38741191425` passed clean V1→V7 migration, repeat-migration and Hibernate validation, nullable registration/profile lifecycle coverage, and all regressions: 82 tests, 0 failures, 0 errors, 0 skipped.
+- Docker was not required locally; GitHub Actions supplied its own isolated PostgreSQL service. Shared Supabase was not read, migrated, or modified, and applying V7 remains a separate post-merge operation requiring the normal approval gate.
 
 ## Session handoff template
 Date:
