@@ -1,0 +1,33 @@
+export function HomePage() {
+  return (
+    <section className="hero">
+      <p className="eyebrow">İstanbul pilotu</p>
+      <h1>Okul servisi aramanın daha açık yolu.</h1>
+      <p className="hero-copy">
+        ServisimiBul, velilerin okula ve mahalleye göre uygun servis
+        işletmecilerini bulup doğrudan iletişime geçmesine yardımcı olur.
+      </p>
+      <div className="notice" role="note">
+        Pilot okul arama ekranı bir sonraki ilgili görevde eklenecek.
+      </div>
+    </section>
+  )
+}
+
+export function FoundationPage({
+  eyebrow,
+  title,
+  detail,
+}: {
+  eyebrow: string
+  title: string
+  detail: string
+}) {
+  return (
+    <section className="foundation-card">
+      <p className="eyebrow">{eyebrow}</p>
+      <h1>{title}</h1>
+      <p>{detail}</p>
+    </section>
+  )
+}

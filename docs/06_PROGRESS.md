@@ -30,6 +30,7 @@ Status: Gates 0–5, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-03, A-05, and A
 | A-05 UKOME tariff backend | complete | GitHub issue #20 closed; PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Reviewed and merged 2026-10-14 |
 | A-06 Vehicle and ServiceOffering CRUD | in review | GitHub issue #21; PR #40; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Implementation scope approved by Atakan 2026-10-15; review pending |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
+| B-01 Frontend foundation | in review | GitHub issue #12; PR #38; Node 24 workflow `38614330741` passed formatting, lint, type-check, 7 tests, and production build | Scope approved 2026-10-14; review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -182,6 +183,19 @@ Never mark tasks done because code was generated: verification and review requir
 - Structure-only follow-up commit `b413a4a` moved the geography API into `controller`, `dto`, `service`, and `exception` subpackages. The JDK 25 package build and backend workflow run `38562568666` passed without changing behavior.
 - After B-03 integration, the JDK 25 package build and 5 focused non-database authentication tests passed locally. Backend workflow run `38594885240` then passed all 36 tests against isolated PostgreSQL 17.11, including all 5 A-02 API tests: 0 failures, 0 errors, 0 skipped.
 - No dependency, Flyway migration, runtime property/deployment configuration, shared Supabase, or production-setting change was made.
+
+## Verified B-01 local evidence — 2026-10-14
+
+- Branch: `codex/b-01-frontend-foundation`; GitHub issue #12.
+- Added the approved Node.js 24/npm Vite React+TypeScript foundation with strict TypeScript, ESLint, Prettier, React Router Data Mode, React Hook Form, Zod, Vitest, React Testing Library, and MSW. The lockfile is committed and npm reported zero known vulnerabilities at installation time.
+- Public, operator, and admin route shells are accessible and responsive navigation only; Spring Security and backend ownership checks remain authoritative.
+- The shared API client always uses same-origin credentials, obtains Spring's CSRF header/token for state-changing requests, normalizes both existing backend field-error shapes, validates successful payloads with Zod, and marks only authenticated 401 responses as expired sessions.
+- Node.js 24.22.0 checks passed: Prettier check, ESLint, strict TypeScript project build, 7 Vitest/Testing Library/MSW tests, and the Vite production build.
+- PR #38 frontend workflow `38614330741` repeated the clean npm install and all five frontend gates successfully on Node.js 24.
+- Onat manually accepted the initial route-shell baseline, then approved a shared polish pass. CSS-only motion/design tokens now provide short content entrances, interactive feedback, a pulsing loading indicator, clearer compact navigation, and a complete `prefers-reduced-motion` fallback; all five local gates and 7 tests still pass.
+- Onat then requested actual page-to-page animation. Every internal navigation link now uses React Router's built-in View Transitions integration, with short exit/entry motion, a CSS fallback for unsupported browsers, and an explicit reduced-motion override. Formatting, lint, strict type-check, 8 tests, and the production build pass locally on Node.js 24.
+- The local Vite server started successfully. Browser automation could not attach because the installed computer-control helper failed to initialize after its allowed retry; visual route inspection remains the reviewer check.
+- No backend source, migration, shared Supabase state, production setting, or secret was changed.
 
 ## Verified A-05 local evidence — 2026-10-14
 
