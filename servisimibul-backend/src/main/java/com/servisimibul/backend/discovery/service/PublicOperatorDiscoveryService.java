@@ -123,6 +123,7 @@ public class PublicOperatorDiscoveryService {
         ).add(new PublishedOfferingResponse(
                 match.getOfferingId(),
                 match.getAvailableSeats(),
+                match.getVehicleCapacity(),
                 match.getDescription()
         )));
         return offeringsByOperator;

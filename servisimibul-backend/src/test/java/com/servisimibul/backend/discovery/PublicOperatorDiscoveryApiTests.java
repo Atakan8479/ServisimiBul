@@ -234,6 +234,7 @@ class PublicOperatorDiscoveryApiTests {
                 .andExpect(jsonPath("$.content[0].publishedOfferings[0].offeringId")
                         .value(matching.getId().toString()))
                 .andExpect(jsonPath("$.content[0].publishedOfferings[0].availableSeats").value(5))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehicleCapacity").value(12))
                 .andExpect(jsonPath("$.content[0].publishedOfferings[0].description")
                         .value("Matching morning service"))
                 .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehiclePlate")
@@ -242,6 +243,51 @@ class PublicOperatorDiscoveryApiTests {
                 .andReturn();
 
         assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    void publishedOfferingOmitsUnknownAvailableSeatsButStillExposesVehicleCapacity()
+            throws Exception {
+        SearchContext context = createSearchContext();
+        OperatorFixture operator = createMatchingOperator(
+                context,
+                "optional-seats@example.com",
+                "Optional Seats Transport",
+                State.PUBLISHED
+        );
+        OperatorSchoolCoverage matchingGeneralCoverage = coverageRepository
+                .findAllDetailedByOperatorSchoolId(operator.operatorSchool().getId())
+                .getFirst();
+        Vehicle activeVehicle = vehicleRepository.saveAndFlush(new Vehicle(
+                operator.profile(),
+                "34OPT016",
+                16
+        ));
+        ServiceOffering offering = new ServiceOffering(
+                operator.operatorSchool(),
+                activeVehicle,
+                null,
+                "Call for seat availability"
+        );
+        offering.publish();
+        offeringRepository.saveAndFlush(offering);
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                offering,
+                matchingGeneralCoverage
+        ));
+
+        mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", context.school().getId().toString())
+                        .param("neighborhoodId", context.coverageNeighborhood().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].publishedOfferings.length()").value(1))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].offeringId")
+                        .value(offering.getId().toString()))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].availableSeats")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehicleCapacity")
+                        .value(16));
     }
 
     @Test

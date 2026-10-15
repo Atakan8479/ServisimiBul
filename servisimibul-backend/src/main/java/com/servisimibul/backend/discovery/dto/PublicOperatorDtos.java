@@ -14,6 +14,7 @@ public final class PublicOperatorDtos {
     public record PublishedOfferingResponse(
             UUID offeringId,
             Integer availableSeats,
+            int vehicleCapacity,
             String description
     ) {
     }

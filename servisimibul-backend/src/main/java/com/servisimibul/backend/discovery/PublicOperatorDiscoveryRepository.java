@@ -23,6 +23,8 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
 
         Integer getAvailableSeats();
 
+        int getVehicleCapacity();
+
         String getDescription();
     }
 
@@ -89,6 +91,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             select operatorSchool.operator.id as operatorId,
                    offering.id as offeringId,
                    offering.availableSeats as availableSeats,
+                   vehicle.capacity as vehicleCapacity,
                    offering.description as description
             from ServiceOfferingCoverage offeringCoverage
             join offeringCoverage.serviceOffering offering
