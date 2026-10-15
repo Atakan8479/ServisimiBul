@@ -12,7 +12,7 @@ Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the o
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; final B-05 workflow `38726247161` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
-| 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-07 PR #45 workflow `38754276561` passed all 89 tests | A-07 scope and API defaults approved 2026-10-15; review pending |
+| 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-07 PR #45 merged-head workflow `38777568115` passed all 89 tests | A-07 scope and API defaults approved 2026-10-15; review pending |
 | 8 Pilot QA and UI | in progress | B-01 and B-06 merged; B-06 Frontend workflow `38730195352` passed | B-06 reviewed and merged 2026-10-15 |
 
 ## Active work-package progress
@@ -34,7 +34,7 @@ Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the o
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
-| A-07 Offering-specific coverage and discovery enrichment | in review | GitHub issue #22; PR #45; PostgreSQL 17 workflow `38754276561` passed all 89 tests | Scope, safe reconciliation, neighborhood-ID request, and public DTO approved 2026-10-15; review pending |
+| A-07 Offering-specific coverage and discovery enrichment | in review | GitHub issue #22; PR #45; merged-head PostgreSQL 17 workflow `38777568115` passed all 89 tests | Scope, safe reconciliation, neighborhood-ID request, and public DTO approved 2026-10-15; review pending |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
@@ -75,7 +75,7 @@ A-04 adds the anonymous school-and-neighborhood operator search with the full de
 - Anonymous discovery still paginates distinct operators first and then performs one page-scoped offering query. Only matching published offerings with an active owned vehicle are returned; absence of a matching offering never removes the operator.
 - Public offering details are limited to `offeringId`, nullable `availableSeats`, and nullable `description`; vehicle identifiers and plates remain private.
 - `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation for 106 production sources and 21 test sources. The 14 focused non-database validation, rate-limit, session, and tariff regressions passed with 0 failures/errors/skips.
-- PR #45 PostgreSQL 17 workflow `38754276561` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, public discovery enrichment tests, and every regression: 89 tests, 0 failures, 0 errors, 0 skipped.
+- After merging current `main` through B-06, PR #45 merged-head PostgreSQL 17 workflow `38777568115` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, public discovery enrichment tests, and every regression: 89 tests, 0 failures, 0 errors, 0 skipped.
 - Docker and shared Supabase were not used. Applying V8 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
 
 ## Session handoff template
