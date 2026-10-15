@@ -332,3 +332,12 @@ Never mark tasks done because code was generated: verification and review requir
 - After the password was corrected, the transactional bootstrap completed successfully on Java 21 without logging either identity or password.
 - A rolled-back read-only audit confirmed exactly two users: both have role `ADMIN`, distinct emails, enabled accounts, and verified email timestamps. No operator profile or session row was created.
 - The bootstrap enablement was process-only. The ignored local `.env` and credential values were not modified or committed.
+
+## Verified combined local launcher evidence — 2026-10-16
+
+- Root `dev.ps1` starts the Spring Boot backend and Vite frontend together without adding a dependency. It auto-selects Java 21+ and NVM-installed Node 24, loads the ignored backend `.env` only into the backend child process, and forces Flyway and ADMIN bootstrap off for ordinary local runs.
+- Local HTTP startup explicitly uses the `local` profile and an insecure localhost-only session cookie; the frontend receives no newly loaded backend database or ADMIN credential variables.
+- The launcher was first exercised on the B-07 head from Windows PowerShell 5 with Java 25 and Node 24.22.0. Its Java probe avoids native stderr handling, and environment-name validation is case-sensitive so Turkish locale casing does not reject valid names containing `I`. `http://localhost:5173`, `http://localhost:8080/api/v1/provinces`, and the same API request through Vite's `/api` proxy returned 200. One Ctrl+C stopped both process trees cleanly and released ports 5173 and 8080.
+- After A-07 merged, the launcher was rerun from current `main`: Vite became ready, the backend connected through the restricted runtime datasource, and Hibernate correctly stopped on the missing V8 `service_offering_coverage` table because shared Supabase remains at V7 and the launcher keeps Flyway disabled. The launcher then stopped the frontend. A fully successful current-main run requires separate approval and application of V8.
+- Windows PowerShell 5 syntax validation and `git diff --check` passed.
+- An independent existing issue was exposed by the smoke check: `/readyz` returns 403 because the application security rules do not currently permit the configured probe path. The launcher does not alter backend authorization; probe authorization requires a separate reviewed fix.
