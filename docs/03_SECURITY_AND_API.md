@@ -31,6 +31,8 @@ Vehicle and ServiceOffering data are optional details and never gate the base op
 
 Vehicle hard deletion is not available in MVP. Deactivation transactionally unpublishes all dependent offerings, and reactivation does not publish them again. An offering draft may have no coverage, but publication requires at least one coverage item from the same OperatorSchool's general coverage plus an active owned vehicle. Removing general coverage must not leave an invalid published offering.
 
+Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty subset of `{plate,capacity,active}`; either PATCH with `active=false` or the explicit deactivate endpoint performs the same transactional unpublish operation, while `active=true` reactivates only the vehicle. Offering create accepts `{operatorSchoolId,vehicleId,availableSeats?,description?}` and PATCH accepts any non-empty subset of those fields; explicit `null` clears the optional seat/description value. Relationship changes make an offering a draft. A-06 implements publication fail-closed as `offering_coverage_required` until A-07 adds and validates ServiceOfferingCoverage.
+
 ## Public endpoints (draft; refine before coding)
 - `GET /api/v1/provinces`
 - `GET /api/v1/districts?provinceId=...`
