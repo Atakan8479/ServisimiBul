@@ -5,25 +5,78 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import { ApiError } from '../api/client'
 import { LoadingPage, RouteErrorPage } from '../components/route-states'
+import { server } from '../test/server'
 import { routes } from './router'
 
 describe('application routes', () => {
-  it.each([
-    ['/operator', 'İşletmeci alanı hazır'],
-    ['/admin', 'Yönetim alanı hazır'],
-  ])('renders the %s workspace shell', async (path, heading) => {
+  it('renders the authenticated operator workspace shell', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({
+          id: '6e2973ac-0302-49a8-b519-563ec9861272',
+          email: 'operator@example.com',
+          role: 'OPERATOR',
+        }),
+      ),
+    )
+
     render(
       <RouterProvider
-        router={createMemoryRouter(routes, { initialEntries: [path] })}
+        router={createMemoryRouter(routes, { initialEntries: ['/operator'] })}
       />,
     )
 
     expect(
-      await screen.findByRole('heading', { name: heading }),
+      await screen.findByRole('heading', { name: 'İşletmeci alanı' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('navigation')).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders the admin workspace shell', async () => {
+    render(
+      <RouterProvider
+        router={createMemoryRouter(routes, { initialEntries: ['/admin'] })}
+      />,
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Yönetim alanı hazır' }),
+    ).toBeInTheDocument()
+  })
+
+  it('redirects an expired operator session to a clear login message', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Authentication is required',
+            code: 'UNAUTHENTICATED',
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    render(
+      <RouterProvider
+        router={createMemoryRouter(routes, {
+          initialEntries: ['/operator/profile'],
+        })}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('uses a view transition when navigating between pages', async () => {
@@ -43,10 +96,10 @@ describe('application routes', () => {
         />,
       )
 
-      fireEvent.click(screen.getByRole('link', { name: 'İşletmeci' }))
+      fireEvent.click(screen.getByRole('link', { name: 'İşletmeci girişi' }))
 
       expect(
-        await screen.findByRole('heading', { name: 'İşletmeci alanı hazır' }),
+        await screen.findByRole('heading', { name: 'Tekrar hoş geldiniz' }),
       ).toBeInTheDocument()
       expect(startViewTransition).toHaveBeenCalledOnce()
     } finally {

@@ -1,7 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
 
-type WorkspaceKind = 'operator' | 'admin'
-
 export function PublicLayout() {
   return (
     <div className="app-shell">
@@ -16,8 +14,8 @@ export function PublicLayout() {
           <NavLink to="/" viewTransition>
             Ana sayfa
           </NavLink>
-          <NavLink to="/operator" viewTransition>
-            İşletmeci
+          <NavLink to="/operator/login" viewTransition>
+            İşletmeci girişi
           </NavLink>
           <NavLink to="/admin" viewTransition>
             Yönetim
@@ -31,16 +29,12 @@ export function PublicLayout() {
   )
 }
 
-export function OperatorLayout() {
-  return <WorkspaceLayout kind="operator" />
-}
-
 export function AdminLayout() {
-  return <WorkspaceLayout kind="admin" />
+  return <WorkspaceLayout />
 }
 
-function WorkspaceLayout({ kind }: { kind: WorkspaceKind }) {
-  const title = kind === 'admin' ? 'Yönetim alanı' : 'İşletmeci alanı'
+function WorkspaceLayout() {
+  const title = 'Yönetim alanı'
 
   return (
     <div className="workspace-shell">
@@ -53,7 +47,7 @@ function WorkspaceLayout({ kind }: { kind: WorkspaceKind }) {
         </NavLink>
         <p>{title}</p>
         <nav aria-label={`${title} menüsü`}>
-          <NavLink to={`/${kind}`} end viewTransition>
+          <NavLink to="/admin" end viewTransition>
             Genel bakış
           </NavLink>
         </nav>
