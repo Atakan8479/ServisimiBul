@@ -127,9 +127,11 @@ nav a.active {
   padding: clamp(3rem, 10vw, 8rem) clamp(1rem, 5vw, 4rem);
 }
 
-.page-content > *,
-.workspace-content > * {
-  animation: content-enter var(--motion-page) var(--ease-out) both;
+@supports not (view-transition-name: root) {
+  .page-content > *,
+  .workspace-content > * {
+    animation: content-enter var(--motion-page) var(--ease-out) both;
+  }
 }
 
 .hero {
@@ -311,6 +313,28 @@ h1 {
   }
 }
 
+@keyframes page-exit {
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.65rem);
+  }
+}
+
+::view-transition-old(root) {
+  animation: page-exit var(--motion-fast) ease-in both;
+}
+
+::view-transition-new(root) {
+  animation: page-enter var(--motion-page) var(--ease-out) both;
+}
+
 @keyframes loading-pulse {
   from {
     opacity: 0.35;
@@ -370,5 +394,10 @@ h1 {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none !important;
   }
 }

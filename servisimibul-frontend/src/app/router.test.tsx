@@ -1,10 +1,10 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import {
   RouterProvider,
   createMemoryRouter,
   type RouteObject,
 } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/client'
 import { LoadingPage, RouteErrorPage } from '../components/route-states'
 import { routes } from './router'
@@ -24,6 +24,34 @@ describe('application routes', () => {
       await screen.findByRole('heading', { name: heading }),
     ).toBeInTheDocument()
     expect(screen.getByRole('navigation')).toBeInTheDocument()
+  })
+
+  it('uses a view transition when navigating between pages', async () => {
+    const startViewTransition = vi.fn((update: () => void) => {
+      update()
+      return { finished: Promise.resolve() }
+    })
+    Object.defineProperty(document, 'startViewTransition', {
+      configurable: true,
+      value: startViewTransition,
+    })
+
+    try {
+      render(
+        <RouterProvider
+          router={createMemoryRouter(routes, { initialEntries: ['/'] })}
+        />,
+      )
+
+      fireEvent.click(screen.getByRole('link', { name: 'İşletmeci' }))
+
+      expect(
+        await screen.findByRole('heading', { name: 'İşletmeci alanı hazır' }),
+      ).toBeInTheDocument()
+      expect(startViewTransition).toHaveBeenCalledOnce()
+    } finally {
+      Reflect.deleteProperty(document, 'startViewTransition')
+    }
   })
 
   it('shows a recoverable message when an authenticated session expires', async () => {

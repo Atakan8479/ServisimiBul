@@ -9,13 +9,19 @@ export function PublicLayout() {
         İçeriğe geç
       </a>
       <header className="site-header">
-        <NavLink className="brand" to="/">
+        <NavLink className="brand" to="/" viewTransition>
           ServisimiBul
         </NavLink>
         <nav aria-label="Ana menü">
-          <NavLink to="/">Ana sayfa</NavLink>
-          <NavLink to="/operator">İşletmeci</NavLink>
-          <NavLink to="/admin">Yönetim</NavLink>
+          <NavLink to="/" viewTransition>
+            Ana sayfa
+          </NavLink>
+          <NavLink to="/operator" viewTransition>
+            İşletmeci
+          </NavLink>
+          <NavLink to="/admin" viewTransition>
+            Yönetim
+          </NavLink>
         </nav>
       </header>
       <main id="main-content" className="page-content">
@@ -42,12 +48,12 @@ function WorkspaceLayout({ kind }: { kind: WorkspaceKind }) {
         İçeriğe geç
       </a>
       <aside className="workspace-sidebar">
-        <NavLink className="brand" to="/">
+        <NavLink className="brand" to="/" viewTransition>
           ServisimiBul
         </NavLink>
         <p>{title}</p>
         <nav aria-label={`${title} menüsü`}>
-          <NavLink to={`/${kind}`} end>
+          <NavLink to={`/${kind}`} end viewTransition>
             Genel bakış
           </NavLink>
         </nav>

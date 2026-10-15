@@ -66,7 +66,7 @@ function StatePage({ title, detail }: { title: string; detail: string }) {
       <p className="eyebrow">ServisimiBul</p>
       <h1>{title}</h1>
       <p>{detail}</p>
-      <Link className="button-link" to="/">
+      <Link className="button-link" to="/" viewTransition>
         Ana sayfaya dön
       </Link>
     </main>

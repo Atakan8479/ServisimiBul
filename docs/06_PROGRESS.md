@@ -193,6 +193,7 @@ Never mark tasks done because code was generated: verification and review requir
 - Node.js 24.22.0 checks passed: Prettier check, ESLint, strict TypeScript project build, 7 Vitest/Testing Library/MSW tests, and the Vite production build.
 - PR #38 frontend workflow `38614330741` repeated the clean npm install and all five frontend gates successfully on Node.js 24.
 - Onat manually accepted the initial route-shell baseline, then approved a shared polish pass. CSS-only motion/design tokens now provide short content entrances, interactive feedback, a pulsing loading indicator, clearer compact navigation, and a complete `prefers-reduced-motion` fallback; all five local gates and 7 tests still pass.
+- Onat then requested actual page-to-page animation. Every internal navigation link now uses React Router's built-in View Transitions integration, with short exit/entry motion, a CSS fallback for unsupported browsers, and an explicit reduced-motion override. Formatting, lint, strict type-check, 8 tests, and the production build pass locally on Node.js 24.
 - The local Vite server started successfully. Browser automation could not attach because the installed computer-control helper failed to initialize after its allowed retry; visual route inspection remains the reviewer check.
 - No backend source, migration, shared Supabase state, production setting, or secret was changed.
 
