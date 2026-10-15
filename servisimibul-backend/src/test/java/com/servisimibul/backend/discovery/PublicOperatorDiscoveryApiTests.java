@@ -13,6 +13,8 @@ import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.offering.ServiceOffering;
+import com.servisimibul.backend.offering.ServiceOfferingCoverage;
+import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
 import com.servisimibul.backend.offering.Vehicle;
 import com.servisimibul.backend.offering.VehicleRepository;
@@ -74,6 +76,9 @@ class PublicOperatorDiscoveryApiTests {
 
     @Autowired
     private ServiceOfferingRepository offeringRepository;
+
+    @Autowired
+    private ServiceOfferingCoverageRepository offeringCoverageRepository;
 
     private int sequence;
 
@@ -137,6 +142,152 @@ class PublicOperatorDiscoveryApiTests {
                 .andReturn();
 
         assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    void onlyMatchingPublishedOfferingsEnrichTheAlreadyPaginatedOperatorResult()
+            throws Exception {
+        SearchContext context = createSearchContext();
+        OperatorFixture operator = createMatchingOperator(
+                context,
+                "enriched@example.com",
+                "Enriched Transport",
+                State.PUBLISHED
+        );
+        OperatorSchoolCoverage matchingGeneralCoverage = coverageRepository
+                .findAllDetailedByOperatorSchoolId(operator.operatorSchool().getId())
+                .getFirst();
+        OperatorSchoolCoverage nonMatchingGeneralCoverage = coverageRepository.saveAndFlush(
+                new OperatorSchoolCoverage(
+                        operator.operatorSchool(),
+                        context.wrongNeighborhood()
+                )
+        );
+        Vehicle activeVehicle = vehicleRepository.saveAndFlush(new Vehicle(
+                operator.profile(),
+                "34ENR007",
+                12
+        ));
+
+        ServiceOffering matching = new ServiceOffering(
+                operator.operatorSchool(),
+                activeVehicle,
+                5,
+                "Matching morning service"
+        );
+        matching.publish();
+        offeringRepository.saveAndFlush(matching);
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                matching,
+                matchingGeneralCoverage
+        ));
+
+        ServiceOffering draft = offeringRepository.saveAndFlush(new ServiceOffering(
+                operator.operatorSchool(),
+                activeVehicle,
+                4,
+                "Draft service"
+        ));
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                draft,
+                matchingGeneralCoverage
+        ));
+
+        ServiceOffering wrongNeighborhood = new ServiceOffering(
+                operator.operatorSchool(),
+                activeVehicle,
+                3,
+                "Other neighborhood"
+        );
+        wrongNeighborhood.publish();
+        offeringRepository.saveAndFlush(wrongNeighborhood);
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                wrongNeighborhood,
+                nonMatchingGeneralCoverage
+        ));
+
+        Vehicle inactiveVehicle = new Vehicle(operator.profile(), "34INA008", 9);
+        inactiveVehicle.deactivate();
+        vehicleRepository.saveAndFlush(inactiveVehicle);
+        ServiceOffering inactiveVehicleOffering = new ServiceOffering(
+                operator.operatorSchool(),
+                inactiveVehicle,
+                2,
+                "Inactive vehicle"
+        );
+        inactiveVehicleOffering.publish();
+        offeringRepository.saveAndFlush(inactiveVehicleOffering);
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                inactiveVehicleOffering,
+                matchingGeneralCoverage
+        ));
+
+        var result = mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", context.school().getId().toString())
+                        .param("neighborhoodId", context.coverageNeighborhood().getId().toString())
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].operatorId")
+                        .value(operator.profile().getId().toString()))
+                .andExpect(jsonPath("$.content[0].publishedOfferings.length()").value(1))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].offeringId")
+                        .value(matching.getId().toString()))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].availableSeats").value(5))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehicleCapacity").value(12))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].description")
+                        .value("Matching morning service"))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehiclePlate")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andReturn();
+
+        assertThat(result.getRequest().getSession(false)).isNull();
+    }
+
+    @Test
+    void publishedOfferingOmitsUnknownAvailableSeatsButStillExposesVehicleCapacity()
+            throws Exception {
+        SearchContext context = createSearchContext();
+        OperatorFixture operator = createMatchingOperator(
+                context,
+                "optional-seats@example.com",
+                "Optional Seats Transport",
+                State.PUBLISHED
+        );
+        OperatorSchoolCoverage matchingGeneralCoverage = coverageRepository
+                .findAllDetailedByOperatorSchoolId(operator.operatorSchool().getId())
+                .getFirst();
+        Vehicle activeVehicle = vehicleRepository.saveAndFlush(new Vehicle(
+                operator.profile(),
+                "34OPT016",
+                16
+        ));
+        ServiceOffering offering = new ServiceOffering(
+                operator.operatorSchool(),
+                activeVehicle,
+                null,
+                "Call for seat availability"
+        );
+        offering.publish();
+        offeringRepository.saveAndFlush(offering);
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                offering,
+                matchingGeneralCoverage
+        ));
+
+        mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", context.school().getId().toString())
+                        .param("neighborhoodId", context.coverageNeighborhood().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].publishedOfferings.length()").value(1))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].offeringId")
+                        .value(offering.getId().toString()))
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].availableSeats")
+                        .doesNotExist())
+                .andExpect(jsonPath("$.content[0].publishedOfferings[0].vehicleCapacity")
+                        .value(16));
     }
 
     @Test

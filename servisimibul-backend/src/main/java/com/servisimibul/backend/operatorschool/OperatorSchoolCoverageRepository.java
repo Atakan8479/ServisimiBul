@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Collection;
 import java.util.UUID;
 
 public interface OperatorSchoolCoverageRepository extends JpaRepository<OperatorSchoolCoverage, UUID> {
@@ -41,4 +42,8 @@ public interface OperatorSchoolCoverageRepository extends JpaRepository<Operator
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("delete from OperatorSchoolCoverage coverage where coverage.operatorSchool.id = :operatorSchoolId")
     int deleteAllByOperatorSchoolIdAndClear(@Param("operatorSchoolId") UUID operatorSchoolId);
+
+    @Modifying(flushAutomatically = true)
+    @Query("delete from OperatorSchoolCoverage coverage where coverage.id in :ids")
+    int deleteAllByIds(@Param("ids") Collection<UUID> ids);
 }

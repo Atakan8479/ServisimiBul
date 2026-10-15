@@ -1,9 +1,11 @@
 package com.servisimibul.backend.discovery.service;
 
 import com.servisimibul.backend.discovery.PublicOperatorDiscoveryRepository;
+import com.servisimibul.backend.discovery.PublicOperatorDiscoveryRepository.PublishedOfferingProjection;
 import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.MatchingSchoolResponse;
 import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.OperatorResponse;
 import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.PageResponse;
+import com.servisimibul.backend.discovery.dto.PublicOperatorDtos.PublishedOfferingResponse;
 import com.servisimibul.backend.discovery.exception.PublicOperatorDiscoveryApiException;
 import com.servisimibul.backend.geography.NeighborhoodRepository;
 import com.servisimibul.backend.geography.School;
@@ -17,7 +19,10 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -62,9 +67,18 @@ public class PublicOperatorDiscoveryService {
                 school.getId(),
                 school.getName()
         );
+        Map<UUID, List<PublishedOfferingResponse>> offeringsByOperator = offeringsByOperator(
+                operators.getContent(),
+                school.getId(),
+                neighborhoodId
+        );
         return new PageResponse<>(
                 operators.getContent().stream()
-                        .map(operator -> toResponse(operator, matchingSchool))
+                        .map(operator -> toResponse(
+                                operator,
+                                matchingSchool,
+                                offeringsByOperator.getOrDefault(operator.getId(), List.of())
+                        ))
                         .toList(),
                 operators.getNumber(),
                 operators.getSize(),
@@ -75,7 +89,8 @@ public class PublicOperatorDiscoveryService {
 
     private OperatorResponse toResponse(
             OperatorProfile operator,
-            MatchingSchoolResponse matchingSchool
+            MatchingSchoolResponse matchingSchool,
+            List<PublishedOfferingResponse> publishedOfferings
     ) {
         return new OperatorResponse(
                 operator.getId(),
@@ -83,8 +98,35 @@ public class PublicOperatorDiscoveryService {
                 operator.getContactPhone(),
                 operator.getDescription(),
                 matchingSchool,
-                List.of()
+                publishedOfferings
         );
+    }
+
+    private Map<UUID, List<PublishedOfferingResponse>> offeringsByOperator(
+            List<OperatorProfile> operators,
+            UUID schoolId,
+            Long neighborhoodId
+    ) {
+        if (operators.isEmpty()) {
+            return Map.of();
+        }
+        List<PublishedOfferingProjection> matches = discoveryRepository
+                .findMatchingPublishedOfferings(
+                        operators.stream().map(OperatorProfile::getId).toList(),
+                        schoolId,
+                        neighborhoodId
+                );
+        Map<UUID, List<PublishedOfferingResponse>> offeringsByOperator = new HashMap<>();
+        matches.forEach(match -> offeringsByOperator.computeIfAbsent(
+                match.getOperatorId(),
+                ignored -> new ArrayList<>()
+        ).add(new PublishedOfferingResponse(
+                match.getOfferingId(),
+                match.getAvailableSeats(),
+                match.getVehicleCapacity(),
+                match.getDescription()
+        )));
+        return offeringsByOperator;
     }
 
     private void validatePage(int page, int size) {

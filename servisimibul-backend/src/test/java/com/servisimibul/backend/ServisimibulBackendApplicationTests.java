@@ -44,7 +44,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("7");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("8");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
@@ -163,6 +163,32 @@ class ServisimibulBackendApplicationTests {
         assertThat(jdbcTemplate.queryForObject(
                 "select has_table_privilege('servisimibul_app', 'public.vehicle', 'SELECT')", Boolean.class))
                 .isTrue();
+        assertThat(jdbcTemplate.queryForObject("""
+                select relrowsecurity
+                from pg_class table_info
+                join pg_namespace schema_info on schema_info.oid = table_info.relnamespace
+                where schema_info.nspname = 'public'
+                  and table_info.relname = 'service_offering_coverage'
+                """, Boolean.class)).isTrue();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_policies
+                where schemaname = 'public'
+                  and tablename = 'service_offering_coverage'
+                  and roles = array['servisimibul_app']::name[]
+                """, Integer.class)).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('anon', 'public.service_offering_coverage', 'SELECT')",
+                Boolean.class
+        )).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('authenticated', 'public.service_offering_coverage', 'SELECT')",
+                Boolean.class
+        )).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_table_privilege('servisimibul_app', 'public.service_offering_coverage', 'SELECT')",
+                Boolean.class
+        )).isTrue();
         assertThat(jdbcTemplate.queryForObject("""
                 select is_nullable
                 from information_schema.columns

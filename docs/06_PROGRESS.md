@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 3 — Operator workspace in review
-Status: Gates 0–6, J-01, A-01, B-01–B-05, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-06 is implemented and verified in PR #42; visual review and merge remain pending.
+## Current stage: Gate 7 — A-07 offering-specific coverage in review
+Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. A-07 is implemented and verified in PR #45; review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -12,8 +12,8 @@ Status: Gates 0–6, J-01, A-01, B-01–B-05, J-02, A-02–A-06, A-10, and the o
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; final B-05 workflow `38726247161` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
-| 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
-| 8 Pilot QA and UI | in progress | B-01 merged; B-06 PR #42 Frontend workflow `38730195352` passed | B-06 visual review and merge pending |
+| 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-07 PR #45 merged-head workflow `38777568115` passed all 89 tests | A-07 scope and API defaults approved 2026-10-15; review pending |
+| 8 Pilot QA and UI | in progress | B-01 and B-06 merged; B-06 Frontend workflow `38730195352` passed | B-06 reviewed and merged 2026-10-15 |
 
 ## Active work-package progress
 
@@ -33,8 +33,9 @@ Status: Gates 0–6, J-01, A-01, B-01–B-05, J-02, A-02–A-06, A-10, and the o
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
-| Operator business-name optionality | complete | PR #44 merged as `6c19040`; decision D037; PostgreSQL 17 workflow `38741191425` passed all 82 tests | Domain-wide optionality explicitly approved, reviewed, and merged 2026-10-15 |
-| B-06 Operator workspace | in review | GitHub issue #17; PR #42; Node 24 Frontend workflow `38730195352` passed all gates | Implementation verified 2026-10-15; visual review and merge pending |
+| Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
+| A-07 Offering-specific coverage and discovery enrichment | in review | GitHub issue #22; PR #45; merged-head PostgreSQL 17 workflow `38777568115` passed all 89 tests | Scope, safe reconciliation, neighborhood-ID request, and public DTO approved 2026-10-15; review pending |
+| B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -48,11 +49,11 @@ A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school cr
 
 A-03 PR #39 adds V5 plus session-owned operator-school and same-province general-coverage APIs. It serializes lifecycle and coverage mutations with an owned relationship row lock, replaces coverage transactionally, and exposes another operator's relationship only as not found. V5 has not been applied to shared Supabase.
 
-A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
+A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. A-07 now supplies the per-offering coverage and publication checks on its feature branch. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
 
-A-04 adds the anonymous school-and-neighborhood operator search with the full derived publication predicate, distinct stable pagination, public phone exposure, no authentication email, and no vehicle/offering visibility dependency. Its `publishedOfferings` list remains empty until A-07 provides valid offering-specific coverage and publication. No migration or shared Supabase operation is part of A-04.
+A-04 adds the anonymous school-and-neighborhood operator search with the full derived publication predicate, distinct stable pagination, public phone exposure, no authentication email, and no vehicle/offering visibility dependency. A-07 enriches each already-paginated operator with matching published offerings without changing base eligibility. No migration or shared Supabase operation is part of A-04.
 
 ## Verified operator business-name optionality evidence — 2026-10-15
 
@@ -62,8 +63,20 @@ A-04 adds the anonymous school-and-neighborhood operator search with the full de
 - Registration accepts missing, explicit-null, or blank `businessName` as `NULL`; a supplied name remains trimmed and validated. Profile PATCH can clear the value, and response DTOs expose it as nullable.
 - `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation, including all test sources.
 - `AuthInputValidatorTests` passed locally: 4 tests, 0 failures, 0 errors, 0 skipped.
-- Isolated PostgreSQL 17 Backend workflow `38741191425` passed clean V1→V7 migration, repeat-migration and Hibernate validation, nullable registration/profile lifecycle coverage, and all regressions: 82 tests, 0 failures, 0 errors, 0 skipped.
+- Merged-head PostgreSQL 17 Backend workflow `38749758044` passed clean V1→V7 migration, repeat-migration and Hibernate validation, nullable registration/profile lifecycle coverage, A-04 discovery coverage, and all regressions: 87 tests, 0 failures, 0 errors, 0 skipped.
 - Docker was not required locally; GitHub Actions supplied its own isolated PostgreSQL service. Shared Supabase was not read, migrated, or modified, and applying V7 remains a separate post-merge operation requiring the normal approval gate.
+
+## Verified A-07 evidence — 2026-10-15
+
+- Branch: `codex/a-07-offering-coverage`; GitHub issue #22; PR #45; based on merged `main` commit `6c19040643983bc35ace85c594c2e2c2d064dc83`.
+- V8 adds the protected `service_offering_coverage` table with unique offering/general-coverage pairs, cascading foreign keys, backend-only grants, and RLS.
+- The owner API replaces offering coverage by neighborhood ID, validates the exact parent OperatorSchool subset, permits empty draft coverage, and enforces valid coverage plus an active owned vehicle before publication.
+- General coverage replacement is diff-based: unchanged IDs survive, removed dependent links are reconciled, and only published offerings left with zero coverage are unpublished. OperatorSchool deactivation also unpublishes dependent offerings.
+- Anonymous discovery still paginates distinct operators first and then performs one page-scoped offering query. Only matching published offerings with an active owned vehicle are returned; absence of a matching offering never removes the operator.
+- Public offering details include `offeringId`, mandatory `vehicleCapacity`, nullable `availableSeats`, and nullable `description`; vehicle identifiers and plates remain private. Clients can display `availableSeats/vehicleCapacity` only when the operator supplies `availableSeats`.
+- `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation for 106 production sources and 21 test sources. The 14 focused non-database validation, rate-limit, session, and tariff regressions passed with 0 failures/errors/skips.
+- After merging current `main` through B-06, PR #45 PostgreSQL 17 workflow `38781566742` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, optional-seat public discovery enrichment tests, and every regression: 90 tests, 0 failures, 0 errors, 0 skipped.
+- Docker and shared Supabase were not used. Applying V8 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
 
 ## Session handoff template
 Date:
