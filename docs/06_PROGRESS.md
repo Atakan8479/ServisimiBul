@@ -75,7 +75,7 @@ A-04 adds the anonymous school-and-neighborhood operator search with the full de
 - Anonymous discovery still paginates distinct operators first and then performs one page-scoped offering query. Only matching published offerings with an active owned vehicle are returned; absence of a matching offering never removes the operator.
 - Public offering details include `offeringId`, mandatory `vehicleCapacity`, nullable `availableSeats`, and nullable `description`; vehicle identifiers and plates remain private. Clients can display `availableSeats/vehicleCapacity` only when the operator supplies `availableSeats`.
 - `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation for 106 production sources and 21 test sources. The 14 focused non-database validation, rate-limit, session, and tariff regressions passed with 0 failures/errors/skips.
-- After merging current `main` through B-06, PR #45 merged-head PostgreSQL 17 workflow `38777568115` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, public discovery enrichment tests, and every regression: 89 tests, 0 failures, 0 errors, 0 skipped.
+- After merging current `main` through B-06, PR #45 PostgreSQL 17 workflow `38781566742` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, optional-seat public discovery enrichment tests, and every regression: 90 tests, 0 failures, 0 errors, 0 skipped.
 - Docker and shared Supabase were not used. Applying V8 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
 
 ## Session handoff template
