@@ -25,6 +25,11 @@ Production code is grouped by feature first, then by technical responsibility:
 | `operatorschool/dto` | Operator school create/patch/coverage request and safe response types |
 | `operatorschool/service` | Ownership, active-school, same-province, transactional replacement, and lifecycle workflows |
 | `operatorschool/exception` | Operator-school-specific safe Problem Details responses |
+| `offering` | Vehicle and ServiceOffering JPA entities/repositories |
+| `offering/controller` | Session-owned vehicle and offering lifecycle endpoints |
+| `offering/dto` | Vehicle and offering create/patch requests and safe responses |
+| `offering/service` | Ownership, normalization, capacity, seat, draft/publication, and deactivation workflows |
+| `offering/exception` | Vehicle/offering-specific safe Problem Details responses |
 | `tariff/controller` | Anonymous current-tariff read and ADMIN replacement endpoints |
 | `tariff/dto` | Official tariff document, band, and optimistic-update records |
 | `tariff/service` | Tariff validation, normalization, and workflow orchestration |

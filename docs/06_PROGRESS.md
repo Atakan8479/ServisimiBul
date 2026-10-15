@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — Operator-school coverage in review
-Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-05, and A-10 are complete. A-03 is implemented and verified in PR #39; review and merge remain pending.
+## Current stage: Phase 2 — Vehicle and ServiceOffering CRUD in review
+Status: Gates 0–5, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-03, A-05, and A-10 are complete. A-06 is implemented and verified in PR #40; review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -10,9 +10,9 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-05, and A-10 ar
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; latest B-04 workflow `38608426669` passed 43 tests | B-04 reviewed and merged 2026-10-14 |
-| 5 Operator school coverage + catalog | in progress | A-02 PR #35 merged; A-03 issue #15 and PR #39; workflow `38634143068` passed all 68 tests | A-02 merged; A-03 implementation approved by Atakan and awaits review |
+| 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | pending | — | — |
-| 7 Optional offerings/tariff JSON | tariff backend complete; offerings pending | J-02 issue #8 completed; A-05 issue #20 and PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; workflow `38613779518` passed all 62 tests | A-05 reviewed and merged 2026-10-14 |
+| 7 Optional offerings/tariff JSON | in progress | A-05 merged; A-06 issue #21 and PR #40; workflow `38707204509` passed all 74 tests | A-06 scope and fail-closed pre-A-07 publication behavior approved by Atakan 2026-10-15 |
 | 8 Pilot QA and UI | pending | — | — |
 
 ## Active work-package progress
@@ -26,8 +26,9 @@ Status: Gates 0–4, J-01, A-01, B-02, B-03, B-04, J-02, A-02, A-05, and A-10 ar
 | B-04 Session authentication and admin bootstrap | complete | GitHub issue #11; PR #36 merged as `db4927de0747ebbb9c7a88644d9fd5b26456f199`; PostgreSQL 17 workflow `38608426669` passed all 43 tests | Reviewed and merged 2026-10-14 |
 | J-02 Offering, tariff, and frontend contract | complete | GitHub issue #8 completed; PR #34 merged as `7249cc622df20efba5e730f140d62b8da6f65ce0`; decisions D031–D036 | Decision bundle approved and merged 2026-10-14 |
 | A-02 Geography and pilot school catalog API | complete | GitHub issue #13; PR #35 merged as `26e2677db815abfe36ff6ae3cd14bbe75f35b69a`; post-B-03 workflow `38594885240` passed 36 tests | Reviewed and merged 2026-10-14 |
-| A-03 Operator-school relationships and general coverage | in review | GitHub issue #15; PR #39; PostgreSQL 17 workflow `38634143068` passed all 68 tests | Implementation approved by Atakan 2026-10-14; review pending |
+| A-03 Operator-school relationships and general coverage | complete | GitHub issue #15; PR #39 merged as `c3b6a7035c14184acc3a0d2f27fd4e88f036a502`; PostgreSQL 17 workflow `38634143068` passed all 68 tests | Reviewed and merged 2026-10-14 |
 | A-05 UKOME tariff backend | complete | GitHub issue #20 closed; PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Reviewed and merged 2026-10-14 |
+| A-06 Vehicle and ServiceOffering CRUD | in review | GitHub issue #21; PR #40; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Implementation scope approved by Atakan 2026-10-15; review pending |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
@@ -41,6 +42,8 @@ J-02 is documentation-only: it fixes the vehicle-backed offering constraints and
 A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school create, partial update, activation, and deactivation. It reuses the existing V1 geography schema, keeps bulk CSV import out of scope, and adds no migration or shared Supabase operation.
 
 A-03 PR #39 adds V5 plus session-owned operator-school and same-province general-coverage APIs. It serializes lifecycle and coverage mutations with an owned relationship row lock, replaces coverage transactionally, and exposes another operator's relationship only as not found. V5 has not been applied to shared Supabase.
+
+A-06 proposes V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
 
@@ -203,4 +206,16 @@ Never mark tasks done because code was generated: verification and review requir
 - The initial isolated workflow `38633575254` found one delete-path persistence-context error after coverage had been replaced earlier in the same test transaction. The fix explicitly deletes and clears managed coverage before removing the relationship while retaining the database cascade as an integrity backstop.
 - `git diff --check` passed. The Java 21-targeted package build, including all test sources, passed locally on JDK 25.
 - Final isolated PostgreSQL 17 workflow `38634143068` passed clean V1→V2→V3→V4→V5 migration, Hibernate validation, migration/RLS/grant checks, all A-03 API and concurrency tests, and all regressions: 68 tests, 0 failures, 0 errors, 0 skipped.
+- PR #39 was reviewed and merged to `main` as `c3b6a7035c14184acc3a0d2f27fd4e88f036a502`; GitHub issue #15 closed as completed.
 - No shared Supabase read, migration, or mutation was performed. Applying V2–V5 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
+
+## Verified A-06 evidence — 2026-10-15
+
+- Branch: `codex/a-06-vehicle-service-offering-crud`; GitHub issue #21; PR #40; based on merged A-03 commit `c3b6a7035c14184acc3a0d2f27fd4e88f036a502`.
+- V6 creates `vehicle` and `service_offering` with ownership foreign keys, canonical globally unique plates, positive capacity and nonnegative-seat checks, timestamps, indexes, explicit `servisimibul_app` grants, role-scoped RLS policies, and no `anon`/`authenticated` access.
+- Session-owned vehicle and offering endpoints enforce active owned vehicles, owned OperatorSchool references, seat-to-capacity limits, not-found ownership isolation, CSRF, and safe Problem Details. No monthly price was introduced.
+- Vehicle deactivation transactionally unpublishes dependent offerings; reactivation never republishes them. Capacity cannot be reduced below an existing offering's available seats, and deleting an OperatorSchool cascades only its offerings while retaining vehicles.
+- Offering publication fails closed as `offering_coverage_required` until A-07 adds valid per-offering coverage; vehicles and offerings remain optional and empty lists are supported.
+- `git diff --check` passed. The Java 21-targeted package, including all test-source compilation, passed locally on JDK 25. Full local database tests were not run because Docker/PostgreSQL was unavailable, and shared Supabase was deliberately not used.
+- Isolated PostgreSQL 17 workflow `38707204509` passed clean V1→V2→V3→V4→V5→V6 migration, repeat migration, Hibernate validation, migration/RLS/grant checks, all six A-06 API tests, and all regressions: 74 tests, 0 failures, 0 errors, 0 skipped.
+- No shared Supabase read, migration, or mutation was performed. Applying V2–V6 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
