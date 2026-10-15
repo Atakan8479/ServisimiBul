@@ -32,4 +32,14 @@ class AuthInputValidatorTests {
         assertThatThrownBy(() -> validator.password("too-short", "password"))
                 .isInstanceOf(AuthValidationException.class);
     }
+
+    @Test
+    void normalizesOptionalBusinessNameAndRejectsInvalidPresentValue() {
+        assertThat(validator.businessName(null)).isNull();
+        assertThat(validator.businessName("   ")).isNull();
+        assertThat(validator.businessName("  Test Service  ")).isEqualTo("Test Service");
+        assertThatThrownBy(() -> validator.businessName("A"))
+                .isInstanceOf(AuthValidationException.class)
+                .hasMessageContaining("2-120 characters");
+    }
 }
