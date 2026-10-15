@@ -20,6 +20,11 @@ Production code is grouped by feature first, then by technical responsibility:
 | `geography/dto` | Geography and school API request/response types |
 | `geography/service` | Geography lookup and pilot school catalog workflows |
 | `geography/exception` | Geography API exceptions and Problem Details responses |
+| `discovery` | Distinct, publication-filtered operator search repository |
+| `discovery/controller` | Anonymous public operator discovery endpoint |
+| `discovery/dto` | Public operator, matching-school, and page response types |
+| `discovery/service` | Publication predicate, input validation, and response assembly |
+| `discovery/exception` | Discovery-specific safe Problem Details responses |
 | `operatorschool` | Operator-school and general-coverage JPA entities/repositories |
 | `operatorschool/controller` | Session-owned operator school and coverage endpoints |
 | `operatorschool/dto` | Operator school create/patch/coverage request and safe response types |
