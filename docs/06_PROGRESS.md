@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Phase 2 — Operator profile and application lifecycle in review
-Status: Gates 0–3 and 5, J-01, A-01, B-01–B-04, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. B-05 is implemented and verified in PR #41; review and merge remain pending.
+## Current stage: Phase 3 — Operator workspace in review
+Status: Gates 0–5, J-01, A-01, B-01–B-05, J-02, A-02, A-03, A-05, A-06, and A-10 are complete. B-06 is implemented and verified in PR #42; visual review and merge remain pending.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -9,11 +9,11 @@ Status: Gates 0–3 and 5, J-01, A-01, B-01–B-04, J-02, A-02, A-03, A-05, A-06
 | 1 Decide Supabase/Flyway existing-table strategy | complete | Read-only catalog inspection, 2026-10-12; D017 | Option A approved 2026-10-12 |
 | 2 Build Flyway-backed backend foundation | complete | PR #1; disposable PostgreSQL checks; controlled Supabase cutover and read-only contract audit, 2026-10-12 | D018 and Option A cutover approved 2026-10-12 |
 | 3 Geography entity model | complete | PR #3 merged; Java 21 package and disposable PostgreSQL 17 CI passed, 2026-10-12 | Geography persistence scope approved and reviewed 2026-10-12 |
-| 4 Auth/session/email/admin review | in review | B-02 PR #32, B-03 PR #33, and B-04 PR #36 merged; B-05 PR #41 workflow `38726002167` passed | B-05 review and merge pending |
+| 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; final B-05 workflow `38726247161` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | pending | — | — |
 | 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
-| 8 Pilot QA and UI | pending | — | — |
+| 8 Pilot QA and UI | in progress | B-01 merged; B-06 PR #42 Frontend workflow `38730195352` passed | B-06 visual review and merge pending |
 
 ## Active work-package progress
 
@@ -31,7 +31,8 @@ Status: Gates 0–3 and 5, J-01, A-01, B-01–B-04, J-02, A-02, A-03, A-05, A-06
 | A-06 Vehicle and ServiceOffering CRUD | complete | GitHub issue #21; PR #40 merged as `ac4a499ef9cbbede81ffc19be10cb711576fb66b`; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Reviewed and merged 2026-10-15 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
-| B-05 Operator profile and application lifecycle | in review | GitHub issue #14; PR #41; PostgreSQL 17 workflow `38726002167` passed | Implementation verified 2026-10-15; review and merge pending |
+| B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
+| B-06 Operator workspace | in review | GitHub issue #17; PR #42; Node 24 Frontend workflow `38730195352` passed all gates | Implementation verified 2026-10-15; visual review and merge pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -45,7 +46,7 @@ A-02 adds anonymous geography/active-school reads and ADMIN-only pilot-school cr
 
 A-03 PR #39 adds V5 plus session-owned operator-school and same-province general-coverage APIs. It serializes lifecycle and coverage mutations with an owned relationship row lock, replaces coverage transactionally, and exposes another operator's relationship only as not found. V5 has not been applied to shared Supabase.
 
-A-06 proposes V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
+A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. Publication remains fail-closed until A-07 supplies valid per-offering coverage. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
 
@@ -245,3 +246,15 @@ Never mark tasks done because code was generated: verification and review requir
 - `AuthInputValidatorTests` passed locally: 3 tests, 0 failures, 0 errors, 0 skipped. The Java 21-targeted package, including all test-source compilation, passed locally on JDK 25.
 - Isolated PostgreSQL 17 workflow `38726002167` passed the complete Maven verification. Local database tests were not run because Docker/PostgreSQL is unavailable, and shared Supabase was deliberately not used.
 - No dependency, migration, application configuration, frontend source, shared Supabase state, or production setting was changed.
+
+## Verified B-06 evidence — 2026-10-15
+
+- Branch: `codex/b-06-operator-workspace`; GitHub issue #17; PR #42; based on merged B-05 commit `943706428b7c2d90525c4365de82799eac49e987`.
+- Public operator screens cover registration, email-link verification, login, and the optional 90-day Remember Me choice using the existing same-origin session and CSRF client. API responses are validated before use and server field errors are associated with their matching controls.
+- The authenticated operator workspace guards routes through `/auth/me`, handles expired sessions, supports logout, and provides responsive profile/application and school/general-coverage flows. Native labeled inputs, checkboxes, fieldsets, status regions, skip links, visible focus, and reduced-motion behavior preserve keyboard and accessibility support.
+- Profile editing preserves the approved lifecycle and supports draft submission plus correction editing/resubmission. B-05 exposes `CHANGES_REQUESTED` but does not expose the admin's written reason to the operator; the UI therefore explains the required edit/resubmit step without inventing or leaking a reason. A later backend contract change is required to display it.
+- School management uses only active pilot-school search results. Coverage options are fetched from every district in the attached school's province, grouped by district, and may span districts; selected identifiers remain untrusted and backend ownership/province validation stays authoritative.
+- Local Node 24 checks passed in one sequential run: Prettier, ESLint, strict TypeScript, 15 Vitest/Testing Library/MSW tests, and the Vite production build.
+- Frontend workflow `38730195352` repeated clean npm installation, formatting, lint, type-check, all tests, and the production build successfully.
+- The local Vite server started successfully, but the in-app browser could not reach localhost and Chrome/Edge controls were unavailable. Visual and real backend-session verification remains the reviewer gate.
+- No dependency, lockfile, backend source, migration, application configuration, shared Supabase state, production setting, or secret was changed.
