@@ -144,8 +144,8 @@ export function OperatorSchoolsPage() {
       <p className="eyebrow">Okullar ve kapsam</p>
       <h1>Hizmet ağınız</h1>
       <p className="page-lead">
-        Pilot okulları ekleyin; her okul için aynı ildeki hizmet mahallelerini
-        seçin.
+        Hizmet verdiğiniz okulları ekleyin; her okul için aynı ildeki
+        mahalleleri seçin.
       </p>
 
       {error && (
@@ -189,7 +189,7 @@ export function OperatorSchoolsPage() {
         </form>
         <form className="search-row" onSubmit={addSchool}>
           <label className="form-field grow">
-            <span>Aktif pilot okul</span>
+            <span>Aktif okul</span>
             <select
               onChange={(event) => setSelectedSchoolId(event.target.value)}
               value={selectedSchoolId}
@@ -221,7 +221,7 @@ export function OperatorSchoolsPage() {
         {relationships.length === 0 ? (
           <div className="empty-state">
             <h2>Henüz okul eklenmedi</h2>
-            <p>Yukarıdaki listeden ilk pilot okulunuzu seçebilirsiniz.</p>
+            <p>Yukarıdaki listeden ilk okulunuzu seçebilirsiniz.</p>
           </div>
         ) : (
           relationships.map((relationship) => (
@@ -307,7 +307,7 @@ function CoverageEditor({
 
   useEffect(() => {
     let active = true
-    // shortcut: the pilot loads one request per district; use a province endpoint if catalog scale makes this costly.
+    // shortcut: this loads one request per district; use a province endpoint if catalog scale makes this costly.
     void getDistricts(relationship.schoolProvinceId)
       .then((districts) =>
         Promise.all(

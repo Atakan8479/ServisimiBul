@@ -54,7 +54,7 @@ export const routes: RouteObject[] = [
           <FoundationPage
             eyebrow="Yönetim"
             title="Yönetim alanı hazır"
-            detail="Pilot okul ve başvuru ekranları sonraki onaylı görevlerde eklenecek."
+            detail="Okul ve başvuru ekranları sonraki onaylı görevlerde eklenecek."
           />
         ),
       },

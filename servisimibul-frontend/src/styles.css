@@ -160,7 +160,7 @@ h1 {
 .foundation-card > p:last-child,
 .state-page > p,
 .page-lead,
-.auth-card > p {
+.auth-card > p:not(.eyebrow):not(.auth-switch) {
   max-width: 42rem;
   color: var(--color-muted);
   font-size: 1.1rem;
@@ -223,16 +223,103 @@ h1 {
 }
 
 .auth-card {
+  position: relative;
+  z-index: 1;
   width: min(34rem, 100%);
   margin: 0 auto;
   padding: clamp(1.5rem, 5vw, 2.5rem);
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .auth-card h1 {
+  margin-bottom: clamp(1.75rem, 4vw, 2.5rem);
   font-size: clamp(2rem, 5vw, 2.75rem);
 }
 
-.auth-card > p {
+.auth-card > .eyebrow {
+  margin-bottom: 1rem;
+}
+
+.auth-scene {
+  position: relative;
+}
+
+.auth-backdrop {
+  position: fixed;
+  z-index: 0;
+  inset: 4.75rem 0 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-road {
+  position: absolute;
+  left: -15vw;
+  display: block;
+  width: 130vw;
+  height: clamp(5.5rem, 9vw, 7.5rem);
+  overflow: hidden;
+  border-block: 0.35rem solid rgba(23, 33, 27, 0.24);
+  background: #667169;
+  box-shadow: 0 1.25rem 2.5rem rgba(33, 66, 47, 0.1);
+  opacity: 0.3;
+}
+
+.auth-road::after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 0.22rem dashed rgba(247, 248, 244, 0.85);
+  content: '';
+}
+
+.auth-road-one {
+  top: 13%;
+  transform: rotate(-9deg);
+}
+
+.auth-road-two {
+  bottom: 7%;
+  transform: rotate(8deg);
+}
+
+.auth-minibus {
+  position: absolute;
+  top: 50%;
+  display: block;
+  width: clamp(5.5rem, 8vw, 7.5rem);
+  height: clamp(2.4rem, 3.4vw, 3.2rem);
+  border: 0.18rem solid #23342a;
+  border-radius: 30% 18% 18% 30%;
+  background: linear-gradient(
+    90deg,
+    #b7d7e4 0 18%,
+    #f0c64f 18% 28%,
+    #364b41 28% 35%,
+    #f0c64f 35% 65%,
+    #364b41 65% 72%,
+    #f0c64f 72%
+  );
+  box-shadow:
+    0 -0.28rem 0 -0.08rem #1f2b25,
+    0 0.28rem 0 -0.08rem #1f2b25,
+    0 0.35rem 0.7rem rgba(0, 0, 0, 0.22);
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+.auth-minibus-one {
+  animation: drive-right 19s linear infinite;
+}
+
+.auth-minibus-two {
+  right: -9rem;
+  transform: translateY(-50%) rotate(180deg);
+  animation: drive-left 23s 4s linear infinite;
+}
+
+.auth-card > p:not(.eyebrow):not(.auth-switch) {
   margin: 1rem 0 1.5rem;
 }
 
@@ -438,7 +525,7 @@ button:disabled {
 
 .auth-switch {
   margin-top: 1.5rem;
-  text-align: center;
+  text-align: left;
 }
 
 .auth-switch a,
@@ -799,6 +886,26 @@ button:disabled {
   }
 }
 
+@keyframes drive-right {
+  from {
+    left: -9rem;
+  }
+
+  to {
+    left: calc(100% + 9rem);
+  }
+}
+
+@keyframes drive-left {
+  from {
+    right: -9rem;
+  }
+
+  to {
+    right: calc(100% + 9rem);
+  }
+}
+
 @media (max-width: 44rem) {
   .site-header {
     align-items: flex-start;
@@ -849,6 +956,10 @@ button:disabled {
     display: grid;
   }
 
+  .auth-road {
+    opacity: 0.2;
+  }
+
   .search-row > button,
   .button-row > button {
     flex: 1 1 auto;
@@ -867,6 +978,10 @@ button:disabled {
 
   ::view-transition-old(root),
   ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .auth-minibus {
     animation: none !important;
   }
 }

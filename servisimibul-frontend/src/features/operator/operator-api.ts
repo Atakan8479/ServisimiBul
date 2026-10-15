@@ -133,7 +133,7 @@ export function getOperatorSchools(): Promise<OperatorSchool[]> {
 }
 
 export function searchSchools(query: string): Promise<School[]> {
-  // shortcut: the curated pilot catalog fits one API page; add paging when it grows past 50 schools.
+  // shortcut: the curated catalog fits one API page; add paging when it grows past 50 schools.
   const parameters = new URLSearchParams({ page: '0', size: '50' })
   if (query.trim()) {
     parameters.set('query', query.trim())

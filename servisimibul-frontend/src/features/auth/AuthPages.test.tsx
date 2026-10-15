@@ -120,7 +120,7 @@ describe('operator authentication screens', () => {
       target: { value: 'long password value' },
     })
     fireEvent.change(screen.getByLabelText('İşletme adı (isteğe bağlı)'), {
-      target: { value: 'Pilot Servis' },
+      target: { value: 'Örnek Servis' },
     })
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
       target: { value: '12345' },

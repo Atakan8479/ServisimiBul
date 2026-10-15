@@ -162,7 +162,7 @@ function operatorSchool(items: ReturnType<typeof coverage>[]) {
   return {
     id: '75ef6bb0-e313-43fb-a01c-c935774434b4',
     schoolId: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
-    schoolName: 'Pilot Okulu',
+    schoolName: 'Örnek Okulu',
     schoolNeighborhoodId: 100,
     schoolDistrictId: 10,
     schoolProvinceId: 34,

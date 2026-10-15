@@ -87,8 +87,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard eyebrow="İşletmeci kaydı" title="Pilot ağa katılın">
-      <p>Hesabınız e-posta doğrulamasından sonra kullanıma açılır.</p>
+    <AuthCard eyebrow="İşletmeci kaydı" title="Hesap oluşturun">
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -333,11 +332,21 @@ function AuthCard({
   children: ReactNode
 }) {
   return (
-    <section className="auth-card">
-      <p className="eyebrow">{eyebrow}</p>
-      <h1>{title}</h1>
-      {children}
-    </section>
+    <div className="auth-scene">
+      <div className="auth-backdrop" aria-hidden="true">
+        <span className="auth-road auth-road-one">
+          <span className="auth-minibus auth-minibus-one" />
+        </span>
+        <span className="auth-road auth-road-two">
+          <span className="auth-minibus auth-minibus-two" />
+        </span>
+      </div>
+      <section className="auth-card">
+        <p className="eyebrow">{eyebrow}</p>
+        <h1>{title}</h1>
+        {children}
+      </section>
+    </div>
   )
 }
 
