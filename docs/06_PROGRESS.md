@@ -1,7 +1,9 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Phase 3 — Admin workspace implementation
-Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-07 is implemented and verified in PR #46; visual review remains pending.
+Status: Gates 0–6, J-01, A-01, B-01–B-07, J-02, A-02–A-06, A-10, and the operator business-name optionality change are complete. B-07 is implemented, verified, and approved for merge in PR #46.
+
+Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V2–V7 migration and post-migration security audit passed.
 
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
@@ -13,7 +15,7 @@ Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the o
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | in progress | A-05 and A-06 merged; A-06 workflow `38707204509` passed all 74 tests | A-06 reviewed and merged 2026-10-15; A-07 remains pending |
-| 8 Pilot QA and UI | in progress | B-01 and B-06 merged; B-07 PR #46 Backend workflow `38775737560` and Frontend workflow `38775737657` passed | B-06 reviewed and merged 2026-10-15; B-07 implementation approved 2026-10-15 |
+| 8 Pilot QA and UI | in progress | B-01 and B-06 merged; B-07 PR #46 Backend workflow `38775737560` and Frontend workflow `38775737657` passed | B-06 reviewed and merged 2026-10-15; B-07 reviewed and approved for merge 2026-10-16 |
 
 ## Active work-package progress
 
@@ -35,7 +37,7 @@ Status: Gates 0–6, J-01, A-01, B-01–B-06, J-02, A-02–A-06, A-10, and the o
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | Operator business-name optionality | complete | PR #44 merged as `6c19040`; decision D037; PostgreSQL 17 workflow `38741191425` passed all 82 tests | Domain-wide optionality explicitly approved, reviewed, and merged 2026-10-15 |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
-| B-07 Admin workspace | in review | GitHub issue #18; PR #46; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Implementation and minimal ADMIN school-list endpoint approved 2026-10-15; visual review pending |
+| B-07 Admin workspace | complete | GitHub issue #18; PR #46; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Implementation and minimal ADMIN school-list endpoint approved 2026-10-15; visual review completed and merge approved 2026-10-16 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -297,4 +299,23 @@ Never mark tasks done because code was generated: verification and review requir
 - The touched frontend files pass Prettier. The repository-wide local Prettier check reports 12 pre-existing CRLF worktree files under Windows `core.autocrlf=true`; those tracked blobs remain LF and are outside the B-07 diff.
 - The Java 21-targeted Maven package passed and compiled all 104 main and 21 test source files. The focused database-backed test could not start because no JDBC URL was supplied; it failed before executing tests with `'url' must start with "jdbc"`. Shared Supabase and the ignored `.env` were deliberately not used.
 - PR #46 Backend workflow `38775737560` passed clean isolated PostgreSQL verification and all 87 tests. Frontend workflow `38775737657` passed formatting, lint, strict TypeScript, all 19 tests, and the production build.
+- Onat completed the visual review and approved PR #46 for merge on 2026-10-16.
 - No dependency, lockfile, migration, application configuration, shared Supabase state, production setting, or secret was changed.
+
+## Verified shared Supabase V2–V7 migration evidence — 2026-10-16
+
+- An approved read-only preflight found exactly one successful Flyway row at V1, the four empty geography tables, no V2–V7 target-table conflicts, and the required non-privileged `anon`, `authenticated`, and `servisimibul_app` roles.
+- With admin bootstrap explicitly disabled, Flyway validated all seven repository migrations and successfully applied V2, V3, V4, V5, V6, and V7 to Supabase PostgreSQL 17.11. The schema finished at V7.
+- The same no-web startup then completed Hibernate `ddl-auto=validate` through the restricted runtime datasource and exited successfully on Java 21.
+- A rolled-back read-only audit confirmed successful history rows V1–V7, RLS enabled on all 15 application tables, and 15 table-scoped policies.
+- `anon` and `authenticated` cannot read `app_user`; `servisimibul_app` can read application data but cannot read `flyway_schema_history`; `operator_profile.business_name` is nullable.
+- `app_user` remained empty, confirming that the migration did not create either ADMIN account. Admin bootstrap remains a separate explicitly enabled operation.
+- The ignored local `.env` and all credential values were left unchanged; no credentials were printed or committed.
+
+## Verified Supabase ADMIN bootstrap evidence — 2026-10-16
+
+- After the approved V2–V7 migration, the one-shot no-web bootstrap ran against the restricted runtime datasource with Flyway explicitly disabled for that process.
+- The first attempt rejected an invalid first password before any write. A read-only check confirmed zero users afterward.
+- After the password was corrected, the transactional bootstrap completed successfully on Java 21 without logging either identity or password.
+- A rolled-back read-only audit confirmed exactly two users: both have role `ADMIN`, distinct emails, enabled accounts, and verified email timestamps. No operator profile or session row was created.
+- The bootstrap enablement was process-only. The ignored local `.env` and credential values were not modified or committed.
