@@ -86,13 +86,26 @@ public class GeographyCatalogService {
                 districtId,
                 PageRequest.of(page, size)
         );
-        return new PageResponse<>(
-                schools.getContent().stream().map(this::toResponse).toList(),
-                schools.getNumber(),
-                schools.getSize(),
-                schools.getTotalElements(),
-                schools.getTotalPages()
-        );
+        return toPageResponse(schools);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<SchoolResponse> adminSchools(
+            String query,
+            Long provinceId,
+            Long districtId,
+            int page,
+            int size
+    ) {
+        validatePage(page, size);
+        requirePositiveIfPresent(provinceId, "provinceId");
+        requirePositiveIfPresent(districtId, "districtId");
+        return toPageResponse(schoolRepository.findAdminSchools(
+                normalizeQuery(query),
+                provinceId,
+                districtId,
+                PageRequest.of(page, size)
+        ));
     }
 
     @Transactional(readOnly = true)
@@ -223,6 +236,16 @@ public class GeographyCatalogService {
                 school.getSourceName(),
                 school.getSourceCode(),
                 school.isActive()
+        );
+    }
+
+    private PageResponse<SchoolResponse> toPageResponse(Page<School> schools) {
+        return new PageResponse<>(
+                schools.getContent().stream().map(this::toResponse).toList(),
+                schools.getNumber(),
+                schools.getSize(),
+                schools.getTotalElements(),
+                schools.getTotalPages()
         );
     }
 

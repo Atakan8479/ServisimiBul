@@ -75,6 +75,7 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `POST /api/v1/admin/operators/{id}/approve`
 - `POST /api/v1/admin/operators/{id}/request-revision`
 - `POST /api/v1/admin/operators/{id}/suspend`
+- `GET /api/v1/admin/schools` (paginated active and inactive pilot catalog)
 - `POST /api/v1/admin/schools`
 - `PATCH /api/v1/admin/schools/{id}`
 - `POST /api/v1/admin/schools/{id}/activate`
