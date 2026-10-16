@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — B-07 admin workspace approved for merge
-Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-07, A-10, and the operator business-name optionality change are complete. B-07 is implemented, verified, and approved for merge in PR #46.
+## Current stage: Gate 8 — A-08 database and performance hardening in review
+Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-07, A-10, and the operator business-name optionality change are complete. B-07 and the combined local launcher are merged. A-08 is implemented, verified, and ready for review in PR #47; review and merge remain pending.
 
 Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V2–V7 migration and post-migration security audit passed. Repository migration V8 from merged A-07 has not been applied to the shared database.
 
@@ -14,8 +14,8 @@ Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V
 | 4 Auth/session/email/admin review | complete | B-02 PR #32, B-03 PR #33, B-04 PR #36, and B-05 PR #41 merged; final B-05 workflow `38726247161` passed | B-05 reviewed and merged 2026-10-15 |
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
-| 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b21165`; merged-head workflow `38777568115` passed all 89 tests | A-07 reviewed and merged 2026-10-16 |
-| 8 Pilot QA and UI | in progress | B-01 and B-06 merged; B-07 PR #46 Backend workflow `38775737560` and Frontend workflow `38775737657` passed | B-06 reviewed and merged 2026-10-15; B-07 reviewed and approved for merge 2026-10-16 |
+| 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
+| 8 Pilot QA and UI | in progress | B-01, B-06, and B-07 merged; A-08 PR #47 post-`main`-merge PostgreSQL 17 workflow `38880661526` passed all 93 tests | B-07 reviewed and merged 2026-10-16; A-08 execution approved 2026-10-15 and review pending |
 
 ## Active work-package progress
 
@@ -36,9 +36,10 @@ Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
-| A-07 Offering-specific coverage and discovery enrichment | complete | GitHub issue #22; PR #45 merged as `9b21165`; merged-head PostgreSQL 17 workflow `38777568115` passed all 89 tests | Scope, safe reconciliation, neighborhood-ID request, and public DTO approved 2026-10-15; reviewed and merged 2026-10-16 |
+| A-07 Offering-specific coverage and discovery enrichment | complete | GitHub issue #22 closed; PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | Reviewed and merged 2026-10-15 |
+| A-08 Database and performance hardening | in review | GitHub issue #24; PR #47; measured PostgreSQL 17 workflow `38788568472` and post-`main`-merge workflow `38880661526` passed all 93 tests; detailed evidence in `docs/08_DATABASE_PERFORMANCE.md` | Execution approved 2026-10-15; review pending |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
-| B-07 Admin workspace | complete | GitHub issue #18; PR #46; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Implementation and minimal ADMIN school-list endpoint approved 2026-10-15; visual review completed and merge approved 2026-10-16 |
+| B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -80,6 +81,20 @@ A-04 adds the anonymous school-and-neighborhood operator search with the full de
 - `git diff --check` passed. `.\mvnw.cmd --batch-mode -DskipTests package` passed on JDK 25 with Java 21 release compilation for 106 production sources and 21 test sources. The 14 focused non-database validation, rate-limit, session, and tariff regressions passed with 0 failures/errors/skips.
 - After merging current `main` through B-06, PR #45 PostgreSQL 17 workflow `38781566742` passed clean V1→V8 migration, repeat migration, Hibernate validation, RLS/grant checks, offering-coverage lifecycle/reconciliation tests, optional-seat public discovery enrichment tests, and every regression: 90 tests, 0 failures, 0 errors, 0 skipped.
 - Docker and shared Supabase were not used. Applying V8 remains a separate post-merge operation requiring a fresh read-only audit and explicit approval.
+
+## Verified A-08 evidence — 2026-10-15
+
+- Branch: `codex/a-08-database-performance-hardening`; GitHub issue #24; PR #47; based on merged A-07 commit `9b2116521edd5b320807d71879ce57db49182d77` and reconciled with `main` at `bf1562ecf4221f950744195d2c36cfe04a334f42`.
+- The deterministic, test-only pilot fixture contains 2,000 operators, 4,000 operator-school relationships, 20,000 general coverage rows, 2,000 vehicles, 4,000 offerings, and 12,000 offering-coverage rows. It runs transactionally and is rolled back; it is not a Flyway migration or production seed.
+- The baseline workflow `38786531568` intentionally failed the 500 ms plan ceiling: discovery-page execution was 944.482 ms because the same-province comparison caused repeated geography traversal inside the correlated operator predicate.
+- The optimized service validates the school/neighborhood province once and retains exact school/neighborhood membership in the paginated query. Same-province cross-district matching and cross-province exclusion remain covered by the A-04 API regression suite.
+- PostgreSQL 17 workflow `38788568472` measured discovery page 5.575 ms, discovery count 4.724 ms, offering enrichment 1.184 ms, admin page 0.548 ms, and admin count 0.205 ms. The discovery page improved about 169 times and every measured plan passed the 500 ms regression ceiling.
+- Existing V3/V5/V6/V8 indexes serve every measured query. Small in-memory sorts peak at 35 kB, so no speculative index and no V9 migration were added.
+- Hibernate statistics enforce five SQL statements for a populated public discovery request and two for the admin queue, guarding against N+1 regressions. Two complete pagination passes return the same 120 unique operator IDs.
+- The security suite enumerates all 16 application tables and three sequences, then verifies RLS, exact runtime policies/grants, absence of `anon`/`authenticated`/`PUBLIC` direct privileges, non-owner runtime access, no grant options, no RLS bypass, and protected Flyway history.
+- Empty PostgreSQL 17 CI replay applied V1–V8 successfully, Hibernate validation passed through the restricted runtime role, and a second Flyway migration executed zero migrations.
+- `git diff --check` and the Java 21-targeted package/test-source compilation passed locally on JDK 25. Measured workflow `38788568472` and post-`main`-merge workflow `38880661526` each passed all 93 tests with 0 failures, 0 errors, and 0 skipped. Detailed targets and plans are recorded in `docs/08_DATABASE_PERFORMANCE.md`.
+- Docker and shared Supabase were not used locally. GitHub Actions supplied and destroyed its isolated PostgreSQL 17 service. Applying V2–V8 to shared Supabase remains a separate operation requiring a fresh read-only audit and explicit approval.
 
 ## Session handoff template
 Date:
