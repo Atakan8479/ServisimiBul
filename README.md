@@ -11,6 +11,8 @@ ServisimiBul is a school transportation operator discovery platform. The reposit
 
 For the Java package map and the recommended reading order, see the [backend README](servisimibul-backend/README.md#code-map).
 
+For shared Impeccable skills and each developer's personal 21st/Playwright MCP setup, see the [Windows frontend tooling guide](docs/09_FRONTEND_TOOLING.md).
+
 ## Run the application locally
 
 After configuring `servisimibul-backend/.env` and installing the frontend packages with `npm ci`, start the backend and frontend together from the repository root:
