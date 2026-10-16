@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — A-08 database and performance hardening in review
-Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-07, A-10, and the operator business-name optionality change are complete. B-07 and the combined local launcher are merged. A-08 is implemented, verified, and ready for review in PR #47; review and merge remain pending.
+## Current stage: Gate 8 — A-09 database and backup operations in review
+Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-08, A-10, the combined local launcher, frontend design tooling, and the operator business-name optionality change are complete. A-09 is implemented and verified in PR #50; review and merge remain pending.
 
 Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V2–V7 migration and post-migration security audit passed. Repository migration V8 from merged A-07 has not been applied to the shared database.
 
@@ -15,7 +15,7 @@ Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
-| 8 Pilot QA and UI | in progress | B-01, B-06, and B-07 merged; A-08 PR #47 post-`main`-merge PostgreSQL 17 workflow `38880661526` passed all 93 tests | B-07 reviewed and merged 2026-10-16; A-08 execution approved 2026-10-15 and review pending |
+| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, and A-08 merged; A-09 issue #26 is in progress | A-08 reviewed and merged 2026-10-16; A-09 execution approved 2026-10-16 |
 
 ## Active work-package progress
 
@@ -37,7 +37,8 @@ Shared Supabase is at Flyway schema version 7 as of 2026-10-16; the controlled V
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
 | A-07 Offering-specific coverage and discovery enrichment | complete | GitHub issue #22 closed; PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | Reviewed and merged 2026-10-15 |
-| A-08 Database and performance hardening | in review | GitHub issue #24; PR #47; measured PostgreSQL 17 workflow `38788568472` and post-`main`-merge workflow `38880661526` passed all 93 tests; detailed evidence in `docs/08_DATABASE_PERFORMANCE.md` | Execution approved 2026-10-15; review pending |
+| A-08 Database and performance hardening | complete | GitHub issue #24; PR #47 merged as `0054118`; measured PostgreSQL 17 workflow `38788568472` and post-`main`-merge workflow `38880661526` passed all 93 tests; detailed evidence in `docs/08_DATABASE_PERFORMANCE.md` | Reviewed and merged 2026-10-16 |
+| A-09 Database and backup operations | in review | GitHub issue #26; PR #50; PostgreSQL 17 workflow `38943652242` passed all 95 tests and all 13 operational verification checks | Execution approved 2026-10-16; review pending |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 
@@ -94,7 +95,17 @@ A-04 adds the anonymous school-and-neighborhood operator search with the full de
 - The security suite enumerates all 16 application tables and three sequences, then verifies RLS, exact runtime policies/grants, absence of `anon`/`authenticated`/`PUBLIC` direct privileges, non-owner runtime access, no grant options, no RLS bypass, and protected Flyway history.
 - Empty PostgreSQL 17 CI replay applied V1–V8 successfully, Hibernate validation passed through the restricted runtime role, and a second Flyway migration executed zero migrations.
 - `git diff --check` and the Java 21-targeted package/test-source compilation passed locally on JDK 25. Measured workflow `38788568472` and post-`main`-merge workflow `38880661526` each passed all 93 tests with 0 failures, 0 errors, and 0 skipped. Detailed targets and plans are recorded in `docs/08_DATABASE_PERFORMANCE.md`.
-- Docker and shared Supabase were not used locally. GitHub Actions supplied and destroyed its isolated PostgreSQL 17 service. Applying V2–V8 to shared Supabase remains a separate operation requiring a fresh read-only audit and explicit approval.
+- Docker and shared Supabase were not used locally. GitHub Actions supplied and destroyed its isolated PostgreSQL 17 service. Applying V8 to shared Supabase remains a separate operation requiring a fresh read-only audit, verified backup, and explicit approval.
+
+## Verified A-09 evidence — 2026-10-16
+
+- Branch: `codex/a-09-database-backup-operations`; GitHub issue #26; PR #50; based on `origin/main` commit `f2ec9ea` after A-08 and frontend tooling merged.
+- A metadata-only shared Supabase preflight verified a healthy PostgreSQL 17.11 primary, Free organization plan, successful Flyway V1–V7 history, 15 RLS-enabled application tables/policies, three protected sequences, nullable `operator_profile.business_name`, restricted `servisimibul_app`, no direct `PUBLIC`/`anon`/`authenticated` object privileges, and protected Flyway history. Geography remains empty; V8 and `service_offering_coverage` remain absent.
+- `docs/10_DATABASE_AND_BACKUP_OPERATIONS.md` documents gated migration, Docker-free PostgreSQL 17 logical backup, Supabase managed restore limitations, tariff off-volume backup/new-version rollback, manual pilot-school loading, expired-session cleanup, Free-plan cost monitoring, and incident recovery. Real restores and production-like destructive actions remain separately approved operations.
+- The checked-in read-only verification SQL executed against the shared V7 database. Nine current-state checks passed; the four intended target-state checks failed for V8 history, the missing 16th table, its RLS, and its policy. The transaction rolled back and made no database change.
+- The tariff store regression suite passed locally on JDK 25 with Java 21 release compilation: 5 tests, 0 failures, 0 errors, 0 skipped. It verifies rollback creates a new immutable version without rewriting history. The Java 21-targeted package build also passed.
+- PR workflow `38943652242` applied V1–V8 to an empty disposable PostgreSQL 17.11 service, passed the new database-backed session cleanup test and the complete suite (95 tests, 0 failures, 0 errors, 0 skipped), then reported `PASS` for all 13 checked-in migration verification checks. The workflow destroyed its database service afterward.
+- No application source, dependency, migration, frontend file, production setting, credential, live row, tariff volume, or backup artifact was changed. No migration, restore, pilot-data load, session deletion, or paid Supabase action was performed.
 
 ## Session handoff template
 Date:

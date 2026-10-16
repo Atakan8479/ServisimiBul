@@ -64,6 +64,27 @@ class FileTariffStoreTests {
     }
 
     @Test
+    void rollbackCreatesANewVersionWithoutRewritingHistory() throws Exception {
+        FileTariffStore store = store();
+        store.replace("34", null, document("34", "v1", 120_000));
+        String originalV1 = Files.readString(storageDirectory.resolve("34/versions/version-v1.json"));
+
+        store.replace("34", "v1", document("34", "v2", 130_000));
+        String originalV2 = Files.readString(storageDirectory.resolve("34/versions/version-v2.json"));
+        store.replace("34", "v2", document("34", "rollback-v1", 120_000));
+
+        assertThat(store.current("34").version()).isEqualTo("rollback-v1");
+        assertThat(store.current("34").bands().getFirst().amountKurus())
+                .isEqualByComparingTo("120000");
+        assertThat(Files.readString(storageDirectory.resolve("34/versions/version-v1.json")))
+                .isEqualTo(originalV1);
+        assertThat(Files.readString(storageDirectory.resolve("34/versions/version-v2.json")))
+                .isEqualTo(originalV2);
+        assertThat(storageDirectory.resolve("34/versions/version-rollback-v1.json"))
+                .isRegularFile();
+    }
+
+    @Test
     void missingStorageConfigurationFailsWithoutExposingAPath() {
         FileTariffStore store = new FileTariffStore(
                 new TariffProperties(" "),
