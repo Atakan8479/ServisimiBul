@@ -50,6 +50,7 @@ The deployable artifact is `target/servisimibul-backend-0.0.1-SNAPSHOT.jar`. A r
 | `SB_LOG_LEVEL` | no | Root log level, default `INFO`. Do not use `DEBUG` or `TRACE` routinely in production. |
 | `SB_SHUTDOWN_TIMEOUT` | no | Graceful shutdown window, default `30s`. |
 | `SB_FORWARD_HEADERS_STRATEGY` | no | Defaults to `none`; set only for a reviewed trusted-proxy topology. |
+| `SB_TARIFF_STORAGE_DIR` | yes | Backend-only durable writable tariff volume; never the repository, classpath, or packaged JAR. |
 
 Do not provide `SB_DB_MIGRATION_USER` or `SB_DB_MIGRATION_PASSWORD` to the normal runtime. The production profile always marks `SBSESSION` Secure; the common configuration also makes it HttpOnly, `SameSite=Lax`, path `/`, with no Domain attribute.
 
@@ -122,7 +123,7 @@ Forwarded headers are ignored by default. If a platform requires them for HTTPS 
 
 D033–D035 approve a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; A-05 implements that contract. The production profile requires the variable, and deployment must mount the directory on a durable writable volume outside the packaged JAR. It must never point at the classpath, frontend, PostgreSQL fare tables, or Supabase Storage.
 
-The implementation uses immutable version files and same-filesystem atomic replacement of `current.json`, rejects stale expected versions with 409, retains source/effective-date metadata, validates contiguous non-overlapping bands, and keeps history immutable. Rollback creates a new version from prior content. MVP supports one tariff-writer instance; A-09 still owns off-volume backup and verified restoration. Do not put storage paths in browser-visible configuration or treat application support alone as evidence that the volume is durable and recoverable.
+The implementation uses immutable version files and same-filesystem atomic replacement of `current.json`, rejects stale expected versions with 409, retains source/effective-date metadata, validates contiguous non-overlapping bands, and keeps history immutable. Rollback creates a new version from prior content. MVP supports one tariff-writer instance. The off-volume backup, restoration, and rollback procedure is in [`10_DATABASE_AND_BACKUP_OPERATIONS.md`](10_DATABASE_AND_BACKUP_OPERATIONS.md). Do not put storage paths in browser-visible configuration or treat application support alone as evidence that the volume is durable and recoverable.
 
 ## Deployment sequence
 
@@ -143,7 +144,7 @@ Application rollback and database recovery are separate decisions:
 2. If the schema remains backward compatible, redeploy the previous immutable application artifact and repeat liveness/readiness plus feature smoke checks.
 3. Do not run an automatic down migration, `Flyway repair`, table drop, or database restore.
 4. If the previous application is not compatible with the migrated schema, keep traffic stopped or in maintenance mode and prepare a reviewed forward-fix migration.
-5. Use the backup/restore procedure from A-09 only after confirming the exact target, recovery point, data-loss window, and receiving fresh destructive-operation approval.
+5. Use [`10_DATABASE_AND_BACKUP_OPERATIONS.md`](10_DATABASE_AND_BACKUP_OPERATIONS.md) only after confirming the exact target, recovery point, data-loss window, and receiving fresh destructive-operation approval.
 6. Record the incident, applied migration versions, final artifact digest, validation evidence, and follow-up actions.
 
-Until A-08, A-09, B-10, and the remaining feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
+Until B-10 and the remaining feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.

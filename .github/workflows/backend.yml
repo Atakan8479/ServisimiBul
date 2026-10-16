@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - "servisimibul-backend/**"
+      - "docs/10_MIGRATION_VERIFICATION.sql"
       - ".github/workflows/backend.yml"
   push:
     branches: [main]
     paths:
       - "servisimibul-backend/**"
+      - "docs/10_MIGRATION_VERIFICATION.sql"
       - ".github/workflows/backend.yml"
 
 permissions:
@@ -57,3 +59,18 @@ jobs:
           SB_DB_MIGRATION_USER: postgres
           SB_DB_MIGRATION_PASSWORD: postgres
         run: ./mvnw --batch-mode verify
+      - name: Verify migration operations query
+        env:
+          PGPASSWORD: postgres
+        run: |
+          output="$(psql -h localhost -U postgres -d postgres -v ON_ERROR_STOP=1 --file docs/10_MIGRATION_VERIFICATION.sql)"
+          printf '%s\n' "$output"
+          if printf '%s\n' "$output" | grep -Eq '\|[[:space:]]*FAIL[[:space:]]*\|'; then
+            echo 'Migration verification reported a failed check.' >&2
+            exit 1
+          fi
+          pass_count="$(printf '%s\n' "$output" | grep -Ec '\|[[:space:]]*PASS[[:space:]]*\|')"
+          if [ "$pass_count" -ne 13 ]; then
+            echo "Expected 13 passing migration checks, found $pass_count." >&2
+            exit 1
+          fi
