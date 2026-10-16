@@ -88,6 +88,13 @@ class GeographyCatalogApiTests {
                 .andExpect(jsonPath("$.totalElements").value(1))
                 .andExpect(jsonPath("$.totalPages").value(1));
 
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(active.getId().toString()));
+
         mockMvc.perform(get("/api/v1/schools/{id}", active.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Pilot Academy"));
@@ -153,6 +160,11 @@ class GeographyCatalogApiTests {
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].id").value(schoolId.toString()))
                 .andExpect(jsonPath("$.content[0].active").value(false));
+
+        mockMvc.perform(get("/api/v1/admin/schools"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(schoolId.toString()));
 
         mockMvc.perform(post("/api/v1/admin/schools/{id}/activate", schoolId).with(csrf()))
                 .andExpect(status().isOk())

@@ -1,0 +1,205 @@
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { http, HttpResponse } from 'msw'
+import { RouterProvider, createMemoryRouter } from 'react-router-dom'
+import { describe, expect, it } from 'vitest'
+import { routes } from '../../app/router'
+import { server } from '../../test/server'
+
+describe('public operator discovery', () => {
+  it('finds operators across districts and exposes only the public phone', async () => {
+    const requestedPages: string[] = []
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/operators', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requestedPages.push(parameters.get('page') ?? '')
+        expect(parameters.get('schoolId')).toBe(school.id)
+        expect(parameters.get('neighborhoodId')).toBe('201')
+
+        const page = Number(parameters.get('page'))
+        return HttpResponse.json({
+          content: [operator(page === 0 ? 'Acıbadem Servis' : 'İkinci Servis')],
+          page,
+          size: 10,
+          totalElements: 2,
+          totalPages: 2,
+        })
+      }),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '+905321234567' })).toHaveAttribute(
+      'href',
+      'tel:+905321234567',
+    )
+    expect(screen.getByText('Uygun koltuk: 3/16')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Koltuk bilgisi rezervasyon değildir/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/UKOME tarifeleri yalnızca resmi referanstır/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    expect(
+      await screen.findByRole('heading', { name: 'İkinci Servis' }),
+    ).toBeInTheDocument()
+    expect(requestedPages).toEqual(['0', '1'])
+  })
+
+  it('explains an empty result without treating it as an error', async () => {
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Bu seçim için görünür bir işletmeci bulunamadı.'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows a Turkish recovery message when discovery fails', async () => {
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json(
+          {
+            title: 'Service Unavailable',
+            status: 503,
+            detail: 'Temporary failure',
+            code: 'temporary_failure',
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    const message = await screen.findByText(
+      'Servis işletmecileri yüklenemedi. Lütfen tekrar deneyin.',
+    )
+    expect(message).toHaveAttribute('role', 'alert')
+  })
+})
+
+const school = {
+  id: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
+  neighborhoodId: 101,
+  neighborhoodName: 'Moda',
+  districtId: 10,
+  districtName: 'Kadıköy',
+  provinceId: 34,
+  provinceCode: '34',
+  provinceName: 'İstanbul',
+  name: 'Örnek İlkokulu',
+  address: null,
+  sourceName: null,
+  sourceCode: null,
+  active: true,
+}
+
+function locationHandlers() {
+  return [
+    http.get('/api/v1/schools', () =>
+      HttpResponse.json({
+        content: [school],
+        page: 0,
+        size: 50,
+        totalElements: 1,
+        totalPages: 1,
+      }),
+    ),
+    http.get('/api/v1/districts', () =>
+      HttpResponse.json([
+        { id: 10, provinceId: 34, name: 'Kadıköy' },
+        { id: 11, provinceId: 34, name: 'Üsküdar' },
+      ]),
+    ),
+    http.get('/api/v1/neighborhoods', () =>
+      HttpResponse.json([{ id: 201, districtId: 11, name: 'Acıbadem' }]),
+    ),
+  ]
+}
+
+function operator(businessName: string) {
+  return {
+    operatorId:
+      businessName === 'Acıbadem Servis'
+        ? '99dd588e-2b72-419e-aa29-28fb97f8ad20'
+        : 'aac30fa1-bfe3-4f09-929c-dc0b4216c579',
+    businessName,
+    contactPhone: '+905321234567',
+    description: 'Okul servis taşımacılığı',
+    matchingSchool: { id: school.id, name: school.name },
+    publishedOfferings: [
+      {
+        offeringId: '74414637-56b7-4bf1-ab74-33b454353690',
+        availableSeats: 3,
+        vehicleCapacity: 16,
+        description: 'Sabah ve akşam servisi',
+      },
+    ],
+  }
+}
+
+async function selectLocation() {
+  await screen.findByRole('option', { name: 'Örnek İlkokulu — Kadıköy' })
+  fireEvent.change(screen.getByLabelText('Okul'), {
+    target: { value: school.id },
+  })
+
+  await screen.findByRole('option', { name: 'Üsküdar' })
+  fireEvent.change(screen.getByLabelText('İlçe'), {
+    target: { value: '11' },
+  })
+
+  await screen.findByRole('option', { name: 'Acıbadem' })
+  fireEvent.change(screen.getByLabelText('Mahalle'), {
+    target: { value: '201' },
+  })
+
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    ).toBeEnabled(),
+  )
+}
+
+function renderHome() {
+  return render(
+    <RouterProvider
+      router={createMemoryRouter(routes, { initialEntries: ['/'] })}
+    />,
+  )
+}

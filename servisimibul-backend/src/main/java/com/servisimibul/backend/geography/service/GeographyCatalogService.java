@@ -260,7 +260,8 @@ public class GeographyCatalogService {
 
     private String normalizeQuery(String query) {
         String normalized = normalizeOptional(query, 255, "query");
-        return normalized == null ? null : normalized;
+        // Keep the optional filter typed as text when Hibernate binds it for PostgreSQL.
+        return normalized == null ? "" : normalized;
     }
 
     private String normalizeRequired(String value, String field, int maxLength) {

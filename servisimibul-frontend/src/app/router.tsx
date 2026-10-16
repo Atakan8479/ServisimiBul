@@ -5,9 +5,9 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { PublicLayout } from '../components/layouts'
-import { HomePage } from '../components/pages'
 import { NotFoundPage, RouteErrorPage } from '../components/route-states'
 import { ApiError } from '../api/client'
+import { PublicDiscoveryPage } from '../features/discovery/PublicDiscoveryPage'
 import {
   LoginPage,
   RegisterPage,
@@ -31,7 +31,7 @@ export const routes: RouteObject[] = [
     Component: PublicLayout,
     ErrorBoundary: RouteErrorPage,
     children: [
-      { index: true, Component: HomePage },
+      { index: true, Component: PublicDiscoveryPage },
       { path: 'operator/register', Component: RegisterPage },
       { path: 'operator/verify-email', Component: VerifyEmailPage },
       { path: 'operator/login', Component: LoginPage },
