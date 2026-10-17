@@ -9,6 +9,8 @@ import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.identity.PasswordResetToken;
 import com.servisimibul.backend.identity.PasswordResetTokenRepository;
+import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
+import com.servisimibul.backend.ratelimit.RateLimitRule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,15 +27,12 @@ import java.util.UUID;
 class AuthPersistenceService {
 
     private static final Duration TOKEN_COOLDOWN = Duration.ofSeconds(60);
-    private static final Duration ACCOUNT_LIMIT_WINDOW = Duration.ofHours(1);
-    private static final int ACCOUNT_LIMIT = 5;
-
     private final AppUserRepository userRepository;
     private final OperatorProfileRepository profileRepository;
     private final EmailVerificationTokenRepository verificationTokenRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthRateLimiter rateLimiter;
+    private final InMemoryRateLimiter rateLimiter;
 
     boolean register(
             String email,
@@ -66,10 +65,8 @@ class AuthPersistenceService {
         AppUser user = candidate.get();
         if (withinCooldown(verificationTokenRepository.findLatestCreatedAtByUserId(user.getId()), now)
                 || !rateLimiter.tryAcquire(
-                        "verification-account:" + user.getId(),
-                        ACCOUNT_LIMIT,
-                        ACCOUNT_LIMIT_WINDOW,
-                        now.toInstant()
+                        RateLimitRule.VERIFICATION_RESEND_ACCOUNT,
+                        user.getId().toString()
                 )) {
             return Optional.empty();
         }
@@ -92,10 +89,8 @@ class AuthPersistenceService {
         AppUser user = candidate.get();
         if (withinCooldown(resetTokenRepository.findLatestCreatedAtByUserId(user.getId()), now)
                 || !rateLimiter.tryAcquire(
-                        "reset-account:" + user.getId(),
-                        ACCOUNT_LIMIT,
-                        ACCOUNT_LIMIT_WINDOW,
-                        now.toInstant()
+                        RateLimitRule.PASSWORD_RECOVERY_ACCOUNT,
+                        user.getId().toString()
                 )) {
             return Optional.empty();
         }

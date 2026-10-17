@@ -7,13 +7,14 @@ import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.exception.EmailUnavailableException;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
+import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
+import com.servisimibul.backend.ratelimit.RateLimitRule;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.UUID;
@@ -23,13 +24,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final Duration IP_LIMIT_WINDOW = Duration.ofHours(1);
-    private static final int IP_LIMIT = 20;
-
     private final AuthInputValidator validator;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
-    private final AuthRateLimiter rateLimiter;
+    private final InMemoryRateLimiter rateLimiter;
     private final TokenGenerator tokenGenerator;
     private final TokenHasher tokenHasher;
     private final SessionRevoker sessionRevoker;
@@ -41,7 +39,7 @@ public class AuthService {
         String password = validator.password(request.password(), "password");
         String businessName = validator.businessName(request.businessName());
         String contactPhone = validator.phone(request.contactPhone());
-        requireIpAllowance("register", remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.REGISTRATION_IP, remoteAddress);
 
         String rawToken = tokenGenerator.generate();
         boolean created;
@@ -65,7 +63,7 @@ public class AuthService {
     public void resendVerification(EmailRequest request, String remoteAddress) {
         requireEmail();
         String email = validator.email(request.email());
-        requireIpAllowance("resend", remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.VERIFICATION_RESEND_IP, remoteAddress);
 
         String rawToken = tokenGenerator.generate();
         persistence.issueVerificationToken(email, tokenHasher.hash(rawToken), now())
@@ -74,14 +72,17 @@ public class AuthService {
                 ));
     }
 
-    public void verifyEmail(TokenRequest request) {
-        persistence.verifyEmail(tokenHasher.hash(request.token().strip()), now());
+    public void verifyEmail(TokenRequest request, String remoteAddress) {
+        String token = request.token().strip();
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_VERIFICATION_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_VERIFICATION_TOKEN, token);
+        persistence.verifyEmail(tokenHasher.hash(token), now());
     }
 
     public void forgotPassword(EmailRequest request, String remoteAddress) {
         requireEmail();
         String email = validator.email(request.email());
-        requireIpAllowance("forgot", remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.PASSWORD_RECOVERY_IP, remoteAddress);
 
         String rawToken = tokenGenerator.generate();
         persistence.issuePasswordResetToken(email, tokenHasher.hash(rawToken), now())
@@ -90,10 +91,13 @@ public class AuthService {
                 ));
     }
 
-    public void resetPassword(ResetPasswordRequest request) {
+    public void resetPassword(ResetPasswordRequest request, String remoteAddress) {
         String password = validator.password(request.newPassword(), "newPassword");
+        String token = request.token().strip();
+        rateLimiter.requireAllowance(RateLimitRule.PASSWORD_RESET_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.PASSWORD_RESET_TOKEN, token);
         UUID userId = persistence.resetPassword(
-                tokenHasher.hash(request.token().strip()),
+                tokenHasher.hash(token),
                 password,
                 now()
         );
@@ -104,15 +108,6 @@ public class AuthService {
         if (!emailSender.isAvailable()) {
             throw new EmailUnavailableException();
         }
-    }
-
-    private void requireIpAllowance(String action, String remoteAddress) {
-        rateLimiter.requireAllowance(
-                action + ":ip:" + remoteAddress,
-                IP_LIMIT,
-                IP_LIMIT_WINDOW,
-                clock.instant()
-        );
     }
 
     private OffsetDateTime now() {

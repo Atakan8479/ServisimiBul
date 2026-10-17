@@ -5,6 +5,8 @@ import com.servisimibul.backend.auth.dto.LoginRequest;
 import com.servisimibul.backend.auth.exception.InvalidCredentialsException;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import com.servisimibul.backend.security.SessionLifetimeFilter;
+import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
+import com.servisimibul.backend.ratelimit.RateLimitRule;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -32,13 +34,12 @@ public class SessionAuthenticationService {
 
     private static final Duration NORMAL_SESSION = Duration.ofMinutes(30);
     private static final Duration REMEMBERED_SESSION = Duration.ofDays(90);
-    private static final Duration LOGIN_LIMIT_WINDOW = Duration.ofMinutes(15);
-
     private final AuthenticationManager authenticationManager;
     private final SecurityContextRepository securityContextRepository;
     private final FindByIndexNameSessionRepository<?> sessionRepository;
-    private final AuthRateLimiter rateLimiter;
+    private final InMemoryRateLimiter rateLimiter;
     private final Clock clock;
+    private final CurrentUserResponseFactory currentUserResponseFactory;
 
     public CurrentUserResponse login(
             LoginRequest request,
@@ -47,8 +48,9 @@ public class SessionAuthenticationService {
             HttpServletResponse httpResponse
     ) {
         String email = request.email().strip().toLowerCase(Locale.ROOT);
-        rateLimiter.requireAllowance("login:account:" + email, 10, LOGIN_LIMIT_WINDOW, clock.instant());
-        rateLimiter.requireAllowance("login:ip:" + remoteAddress, 100, LOGIN_LIMIT_WINDOW, clock.instant());
+        // Apply the peer limit first so account-key churn cannot fill exact storage.
+        rateLimiter.requireAllowance(RateLimitRule.LOGIN_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.LOGIN_ACCOUNT, email);
 
         Authentication authentication;
         try {
@@ -73,7 +75,7 @@ public class SessionAuthenticationService {
         SecurityContextHolder.setContext(context);
         securityContextRepository.saveContext(context, httpRequest, httpResponse);
 
-        return new CurrentUserResponse(user.id(), user.getUsername(), user.role());
+        return currentUserResponseFactory.create(user);
     }
 
     private HttpSession rotateSession(HttpServletRequest request) {

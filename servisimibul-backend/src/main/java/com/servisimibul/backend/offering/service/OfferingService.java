@@ -23,6 +23,7 @@ import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
+import com.servisimibul.backend.operatorapproval.OperatorApprovalPolicy;
 import com.servisimibul.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -48,6 +49,7 @@ public class OfferingService {
     private final ServiceOfferingRepository offeringRepository;
     private final OperatorSchoolCoverageRepository generalCoverageRepository;
     private final ServiceOfferingCoverageRepository offeringCoverageRepository;
+    private final OperatorApprovalPolicy approvalPolicy;
 
     @Transactional(readOnly = true)
     public List<VehicleResponse> listVehicles() {
@@ -341,11 +343,13 @@ public class OfferingService {
     }
 
     private OperatorProfile currentOperator() {
-        return operatorProfileRepository.findByUserId(currentUser.id())
+        OperatorProfile profile = operatorProfileRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> OfferingApiException.notFound(
                         "operator_profile_not_found",
                         "Operator profile was not found"
                 ));
+        approvalPolicy.requireResourceManagement(profile);
+        return profile;
     }
 
     private Vehicle ownedVehicleForUpdate(UUID id, UUID operatorId) {
