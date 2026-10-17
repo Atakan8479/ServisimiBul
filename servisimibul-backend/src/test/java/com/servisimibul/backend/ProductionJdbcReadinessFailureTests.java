@@ -1,18 +1,19 @@
 package com.servisimibul.backend;
 
 import com.servisimibul.backend.support.IsolatedPostgresMigrationInitializer;
+import com.servisimibul.backend.support.IsolatedPostgresTestDatabase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.core.env.Environment;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import java.sql.DriverManager;
+import java.sql.Connection;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -26,12 +27,17 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
         "spring.mail.host=localhost",
         "spring.mail.username=test",
         "spring.mail.password=test-only",
+        "spring.flyway.enabled=false",
+        "spring.flyway.url=",
+        "spring.flyway.user=",
+        "spring.flyway.password=",
         "servisimibul.tariff.storage-dir=${java.io.tmpdir}/servisimibul-prod-jdbc-health-test",
         "management.health.mail.enabled=false",
         "spring.datasource.hikari.maximum-pool-size=1",
         "spring.datasource.hikari.minimum-idle=0",
         "spring.datasource.hikari.connection-timeout=1000",
-        "spring.datasource.hikari.validation-timeout=500"
+        "spring.datasource.hikari.validation-timeout=500",
+        "spring.datasource.hikari.data-source-properties.ApplicationName=servisimibul-readiness-failure"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("prod")
@@ -40,26 +46,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 class ProductionJdbcReadinessFailureTests {
 
     private static final Duration STATE_CHANGE_TIMEOUT = Duration.ofSeconds(10);
+    private static final String APPLICATION_NAME = "servisimibul-readiness-failure";
 
     private final MockMvc mockMvc;
-    private final String migrationJdbcUrl;
-    private final String migrationUser;
-    private final String migrationPassword;
-    private final String runtimeUser;
+    private final Environment environment;
 
     @Autowired
     ProductionJdbcReadinessFailureTests(
             MockMvc mockMvc,
-            @Value("${SB_DB_MIGRATION_JDBC_URL}") String migrationJdbcUrl,
-            @Value("${SB_DB_MIGRATION_USER}") String migrationUser,
-            @Value("${SB_DB_MIGRATION_PASSWORD}") String migrationPassword,
-            @Value("${spring.datasource.username}") String runtimeUser
+            Environment environment
     ) {
         this.mockMvc = mockMvc;
-        this.migrationJdbcUrl = migrationJdbcUrl;
-        this.migrationUser = migrationUser;
-        this.migrationPassword = migrationPassword;
-        this.runtimeUser = runtimeUser;
+        this.environment = environment;
     }
 
     @Test
@@ -67,49 +65,68 @@ class ProductionJdbcReadinessFailureTests {
         assertStatusOnly("/readyz", 200, "UP");
         assertStatusOnly("/livez", 200, "UP");
 
-        setRuntimeLogin(false);
+        setRuntimeConnect(false);
         try {
-            terminateRuntimeConnections();
+            assertThat(terminateReadinessPoolConnections()).isGreaterThan(0);
             awaitStatusOnly("/readyz", 503, "DOWN");
             assertStatusOnly("/livez", 200, "UP");
         } finally {
-            setRuntimeLogin(true);
+            setRuntimeConnect(true);
         }
 
         awaitStatusOnly("/readyz", 200, "UP");
     }
 
-    private void setRuntimeLogin(boolean enabled) throws Exception {
-        try (var connection = DriverManager.getConnection(
-                migrationJdbcUrl,
-                migrationUser,
-                migrationPassword
-        ); var statement = connection.createStatement()) {
-            statement.execute("alter role " + quotedRuntimeUser() + (enabled ? " login" : " nologin"));
+    private void setRuntimeConnect(boolean enabled) throws Exception {
+        String database = IsolatedPostgresTestDatabase.requiredSafeIdentifier(
+                environment,
+                "SB_TEST_DATABASE_NAME"
+        );
+        String runtimeUser = IsolatedPostgresTestDatabase.requiredSafeIdentifier(
+                environment,
+                "SB_DB_USER"
+        );
+        try (Connection connection =
+                     IsolatedPostgresTestDatabase.openVerifiedAdministratorConnection(environment);
+             var statement = connection.createStatement()) {
+            statement.execute((enabled ? "grant" : "revoke")
+                    + " connect on database \"" + database + "\" "
+                    + (enabled ? "to" : "from") + " \"" + runtimeUser + "\"");
         }
     }
 
-    private void terminateRuntimeConnections() throws Exception {
-        try (var connection = DriverManager.getConnection(
-                migrationJdbcUrl,
-                migrationUser,
-                migrationPassword
-        ); var statement = connection.prepareStatement("""
+    private int terminateReadinessPoolConnections() throws Exception {
+        String database = IsolatedPostgresTestDatabase.requiredSafeIdentifier(
+                environment,
+                "SB_TEST_DATABASE_NAME"
+        );
+        String runtimeUser = IsolatedPostgresTestDatabase.requiredSafeIdentifier(
+                environment,
+                "SB_DB_USER"
+        );
+        try (Connection connection =
+                     IsolatedPostgresTestDatabase.openVerifiedAdministratorConnection(environment);
+             var statement = connection.prepareStatement("""
                 select pg_terminate_backend(pid)
                 from pg_stat_activity
-                where usename = ?
+                where datname = ?
+                  and usename = ?
+                  and application_name = ?
                   and pid <> pg_backend_pid()
                 """)) {
-            statement.setString(1, runtimeUser);
-            statement.execute();
+            statement.setString(1, database);
+            statement.setString(2, runtimeUser);
+            statement.setString(3, APPLICATION_NAME);
+            try (var result = statement.executeQuery()) {
+                int terminated = 0;
+                while (result.next()) {
+                    if (result.getBoolean(1)) {
+                        terminated++;
+                    }
+                }
+                return terminated;
+            }
         }
-    }
-
-    private String quotedRuntimeUser() {
-        if (!runtimeUser.matches("[A-Za-z_][A-Za-z0-9_]*")) {
-            throw new IllegalStateException("Test runtime database role has an unsafe identifier");
-        }
-        return '"' + runtimeUser + '"';
     }
 
     private void awaitStatusOnly(String path, int status, String health) throws Exception {

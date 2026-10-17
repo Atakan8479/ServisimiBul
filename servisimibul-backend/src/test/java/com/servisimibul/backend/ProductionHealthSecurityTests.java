@@ -24,6 +24,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.mail.host=localhost",
         "spring.mail.username=test",
         "spring.mail.password=test-only",
+        "spring.flyway.enabled=false",
+        "spring.flyway.url=",
+        "spring.flyway.user=",
+        "spring.flyway.password=",
         "servisimibul.tariff.storage-dir=${java.io.tmpdir}/servisimibul-prod-health-test",
         "management.health.mail.enabled=false"
 })

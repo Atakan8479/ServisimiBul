@@ -76,6 +76,16 @@ class ProductionConfigurationTests {
                 .containsEntry("logging.structured.format.console", "ecs");
     }
 
+    @Test
+    void productionSafetyValidatorIsRegisteredBeforeAutoConfiguration() throws IOException {
+        Properties properties = load("META-INF/spring.factories");
+
+        assertThat(properties).containsEntry(
+                "org.springframework.boot.EnvironmentPostProcessor",
+                "com.servisimibul.backend.deployment.ProductionRuntimeSafetyValidator"
+        );
+    }
+
     private Properties load(String resourceName) throws IOException {
         Properties properties = new Properties();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream(resourceName)) {
