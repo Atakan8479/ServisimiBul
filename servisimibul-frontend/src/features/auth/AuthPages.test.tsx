@@ -9,6 +9,24 @@ import { server } from '../../test/server'
 afterEach(resetCsrfToken)
 
 describe('operator authentication screens', () => {
+  it('explains public profile visibility without requiring consent', () => {
+    renderRoute('/operator/register')
+
+    expect(
+      screen.getByText('İşletme profilinizin görünürlüğü'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/işletme profiliniz herkese açık arama sonuçlarında/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/İletişim telefonunuz.*ziyaretçiler tarafından/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Hesap oluştur' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
   it('registers an operator without an optional business name', async () => {
     let requestBody: unknown
     server.use(

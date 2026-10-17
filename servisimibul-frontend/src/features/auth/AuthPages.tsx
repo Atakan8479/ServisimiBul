@@ -127,6 +127,25 @@ export function RegisterPage() {
             />
           }
         />
+        <aside
+          aria-labelledby="public-profile-disclosure-title"
+          className="status-banner neutral registration-disclosure"
+        >
+          <strong id="public-profile-disclosure-title">
+            İşletme profilinizin görünürlüğü
+          </strong>
+          <p>
+            E-posta doğrulamanız tamamlandığında ve hizmet verdiğiniz okul ile
+            mahalle bilgilerini eklediğinizde, diğer yayın koşulları da
+            sağlanıyorsa işletme profiliniz herkese açık arama sonuçlarında
+            görüntülenebilir.
+          </p>
+          <p>
+            İletişim telefonunuz ve profilinizde paylaştığınız işletme bilgileri
+            ziyaretçiler tarafından görülebilir. Profil görünürlüğünüzü
+            işletmeci panelinden istediğiniz zaman kapatabilirsiniz.
+          </p>
+        </aside>
         <FormError message={formError} />
         <button
           className="primary-button"

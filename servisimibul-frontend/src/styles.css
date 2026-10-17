@@ -668,6 +668,21 @@ button:disabled {
   color: var(--color-muted);
 }
 
+.registration-disclosure {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.registration-disclosure strong {
+  color: var(--color-text);
+  white-space: normal;
+}
+
+.registration-disclosure p {
+  margin: 0;
+}
+
 .auth-switch {
   margin-top: 1.5rem;
   text-align: left;
