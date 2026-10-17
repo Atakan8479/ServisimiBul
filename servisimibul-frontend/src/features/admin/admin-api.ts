@@ -89,10 +89,11 @@ export interface SchoolWriteRequest {
 export type SchoolPatchRequest = Omit<SchoolWriteRequest, 'active'>
 
 export function getApplications(
-  status: ApplicationStatus,
+  status: ApplicationStatus | undefined,
   page: number,
 ): Promise<ApplicationPage> {
-  const query = new URLSearchParams({ status, page: String(page), size: '20' })
+  const query = new URLSearchParams({ page: String(page), size: '20' })
+  if (status) query.set('status', status)
   return apiRequest(`/admin/operators?${query.toString()}`, {
     requiresSession: true,
     schema: applicationPageSchema,

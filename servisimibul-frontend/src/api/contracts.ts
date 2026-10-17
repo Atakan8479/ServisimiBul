@@ -27,6 +27,8 @@ export interface AuthUser {
   id: string
   email: string
   role: UserRole
+  operatorApprovalRequired: boolean
+  approvalStatus: 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED' | null
 }
 
 export interface CsrfToken {

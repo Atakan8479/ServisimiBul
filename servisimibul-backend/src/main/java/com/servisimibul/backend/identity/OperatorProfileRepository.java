@@ -13,7 +13,8 @@ import java.util.UUID;
 
 public interface OperatorProfileRepository extends JpaRepository<OperatorProfile, UUID> {
 
-    Optional<OperatorProfile> findByUserId(UUID userId);
+    @Query("select profile from OperatorProfile profile join fetch profile.user where profile.user.id = :userId")
+    Optional<OperatorProfile> findByUserId(@Param("userId") UUID userId);
 
     Page<OperatorProfile> findAllByApprovalStatus(
             OperatorApprovalStatus approvalStatus,
@@ -28,6 +29,6 @@ public interface OperatorProfileRepository extends JpaRepository<OperatorProfile
     Optional<OperatorProfile> findDetailedByIdForUpdate(@Param("id") UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select profile from OperatorProfile profile where profile.user.id = :userId")
+    @Query("select profile from OperatorProfile profile join fetch profile.user where profile.user.id = :userId")
     Optional<OperatorProfile> findByUserIdForUpdate(@Param("userId") UUID userId);
 }

@@ -19,6 +19,8 @@ describe('application routes', () => {
           id: '6e2973ac-0302-49a8-b519-563ec9861272',
           email: 'operator@example.com',
           role: 'OPERATOR',
+          operatorApprovalRequired: true,
+          approvalStatus: 'APPROVED',
         }),
       ),
     )
@@ -44,6 +46,8 @@ describe('application routes', () => {
           id: 'd28cc858-ed74-479a-b346-8b9cdccaaab8',
           email: 'admin@example.com',
           role: 'ADMIN',
+          operatorApprovalRequired: true,
+          approvalStatus: null,
         }),
       ),
       http.get('/api/v1/admin/operators', () =>

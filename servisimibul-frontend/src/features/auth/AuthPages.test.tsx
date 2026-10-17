@@ -140,6 +140,8 @@ const operatorUser = {
   id: '6e2973ac-0302-49a8-b519-563ec9861272',
   email: 'operator@example.com',
   role: 'OPERATOR',
+  operatorApprovalRequired: true,
+  approvalStatus: 'APPROVED',
 }
 
 function csrfHandler() {

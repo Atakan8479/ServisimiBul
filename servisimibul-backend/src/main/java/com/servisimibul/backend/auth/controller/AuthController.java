@@ -9,7 +9,9 @@ import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.service.AuthService;
 import com.servisimibul.backend.auth.service.SessionAuthenticationService;
+import com.servisimibul.backend.auth.service.CurrentUserResponseFactory;
 import com.servisimibul.backend.security.AuthenticatedUser;
+import com.servisimibul.backend.security.ClientIdentityResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -33,6 +35,8 @@ public class AuthController {
 
     private final AuthService authService;
     private final SessionAuthenticationService sessionAuthenticationService;
+    private final CurrentUserResponseFactory currentUserResponseFactory;
+    private final ClientIdentityResolver clientIdentityResolver;
 
     @GetMapping("/csrf")
     CsrfResponse csrf(CsrfToken token) {
@@ -44,13 +48,16 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest
     ) {
-        authService.register(request, remoteAddress(httpRequest));
+        authService.register(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/verify-email")
-    ResponseEntity<Void> verifyEmail(@Valid @RequestBody TokenRequest request) {
-        authService.verifyEmail(request);
+    ResponseEntity<Void> verifyEmail(
+            @Valid @RequestBody TokenRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        authService.verifyEmail(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.noContent().build();
     }
 
@@ -59,7 +66,7 @@ public class AuthController {
             @Valid @RequestBody EmailRequest request,
             HttpServletRequest httpRequest
     ) {
-        authService.resendVerification(request, remoteAddress(httpRequest));
+        authService.resendVerification(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.accepted().build();
     }
 
@@ -68,13 +75,16 @@ public class AuthController {
             @Valid @RequestBody EmailRequest request,
             HttpServletRequest httpRequest
     ) {
-        authService.forgotPassword(request, remoteAddress(httpRequest));
+        authService.forgotPassword(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.accepted().build();
     }
 
     @PostMapping("/reset-password")
-    ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
+    ResponseEntity<Void> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        authService.resetPassword(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.noContent().build();
     }
 
@@ -86,7 +96,7 @@ public class AuthController {
     ) {
         return sessionAuthenticationService.login(
                 request,
-                remoteAddress(httpRequest),
+                clientIdentityResolver.resolve(httpRequest),
                 httpRequest,
                 httpResponse
         );
@@ -94,7 +104,7 @@ public class AuthController {
 
     @GetMapping("/me")
     CurrentUserResponse me(@AuthenticationPrincipal AuthenticatedUser user) {
-        return new CurrentUserResponse(user.id(), user.getUsername(), user.role());
+        return currentUserResponseFactory.create(user);
     }
 
     @PostMapping("/logout")
@@ -106,8 +116,4 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
-    private String remoteAddress(HttpServletRequest request) {
-        // shortcut: use the servlet peer address until a trusted reverse-proxy policy is configured.
-        return request.getRemoteAddr() == null ? "unknown" : request.getRemoteAddr();
-    }
 }

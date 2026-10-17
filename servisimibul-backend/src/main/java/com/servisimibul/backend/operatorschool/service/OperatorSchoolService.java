@@ -20,6 +20,7 @@ import com.servisimibul.backend.operatorschool.dto.OperatorSchoolDtos.PatchReque
 import com.servisimibul.backend.operatorschool.exception.OperatorSchoolApiException;
 import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
+import com.servisimibul.backend.operatorapproval.OperatorApprovalPolicy;
 import com.servisimibul.backend.security.CurrentUser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class OperatorSchoolService {
     private final OperatorSchoolCoverageRepository coverageRepository;
     private final ServiceOfferingRepository offeringRepository;
     private final ServiceOfferingCoverageRepository offeringCoverageRepository;
+    private final OperatorApprovalPolicy approvalPolicy;
 
     @Transactional(readOnly = true)
     public List<OperatorSchoolResponse> list() {
@@ -184,11 +186,13 @@ public class OperatorSchoolService {
     }
 
     private OperatorProfile currentOperator() {
-        return operatorProfileRepository.findByUserId(currentUser.id())
+        OperatorProfile profile = operatorProfileRepository.findByUserId(currentUser.id())
                 .orElseThrow(() -> OperatorSchoolApiException.notFound(
                         "operator_profile_not_found",
                         "Operator profile was not found"
                 ));
+        approvalPolicy.requireResourceManagement(profile);
+        return profile;
     }
 
     private School detailedSchool(UUID id) {

@@ -247,13 +247,13 @@ class GeographyCatalogApiTests {
     @Test
     void anonymousUserCannotManagePilotSchoolCatalog() throws Exception {
         mockMvc.perform(get("/api/v1/admin/schools"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         mockMvc.perform(post("/api/v1/admin/schools")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private Neighborhood createNeighborhood() {

@@ -29,6 +29,8 @@ Optional Vehicle/ServiceOffering remains independent of discovery, while each of
 ## Gate 8 — Pilot readiness
 Build the approved Node.js 24/npm Vite React+TypeScript SPA baseline with strict TypeScript, React Router Data Mode, React Hook Form + Zod, Vitest + React Testing Library + MSW, and same-origin `/api/v1` deployment. Complete the responsive public/admin/operator paths, performance/page loads, data privacy review, rate limiting, tariff-volume backup and restore instructions, session expiry/cleanup test, manual Supabase cost checks, and staging→pilot smoke tests.
 
+B-10 completes the conditional operator-approval policy, persona/ownership/CSRF/session/header/CORS/logging regressions, anonymous health-probe authorization, and bounded endpoint-specific single-instance rate limiting. Production launch remains gated on isolated PostgreSQL CI, selected-host topology validation, staging measurements for provisional limits, monitoring/alerts, and a smoke test; implementation alone is not production approval.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.

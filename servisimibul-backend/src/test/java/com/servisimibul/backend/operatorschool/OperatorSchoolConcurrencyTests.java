@@ -150,12 +150,20 @@ class OperatorSchoolConcurrencyTests {
 
     private void createCommittedFixture() {
         transactionTemplate.executeWithoutResult(status -> {
-            AppUser user = userRepository.saveAndFlush(
-                    AppUser.newOperator("concurrent-coverage@example.com", "test-password-hash")
+            AppUser user = AppUser.newOperator(
+                    "concurrent-coverage@example.com",
+                    "test-password-hash"
             );
-            OperatorProfile profile = profileRepository.saveAndFlush(
-                    new OperatorProfile(user, "Concurrent Coverage", "+905551112233")
+            user.verifyEmail(java.time.OffsetDateTime.now());
+            userRepository.saveAndFlush(user);
+            OperatorProfile profile = new OperatorProfile(
+                    user,
+                    "Concurrent Coverage",
+                    "+905551112233"
             );
+            profile.submit();
+            profile.approve();
+            profileRepository.saveAndFlush(profile);
             Province province = provinceRepository.save(new Province("34", "Istanbul"));
             District district = districtRepository.save(new District(province, "Kadikoy"));
             Neighborhood first = neighborhoodRepository.save(new Neighborhood(district, "Caferaga"));

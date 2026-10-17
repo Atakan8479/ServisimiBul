@@ -49,7 +49,7 @@ export function AdminWorkspaceLayout() {
         </div>
         <nav aria-label="Yönetim alanı menüsü">
           <NavLink to="/admin/applications" viewTransition>
-            Başvurular
+            {user.operatorApprovalRequired ? 'Başvurular' : 'İşletmeciler'}
           </NavLink>
           <NavLink to="/admin/schools" viewTransition>
             Okullar

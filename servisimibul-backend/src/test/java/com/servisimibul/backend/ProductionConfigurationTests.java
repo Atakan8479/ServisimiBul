@@ -46,7 +46,19 @@ class ProductionConfigurationTests {
                 .containsEntry("server.servlet.session.cookie.http-only", "true")
                 .containsEntry("server.servlet.session.cookie.same-site", "lax")
                 .containsEntry("spring.datasource.username", "${SB_DB_USER}")
-                .containsEntry("spring.flyway.user", "${SB_DB_MIGRATION_USER:}");
+                .containsEntry("spring.flyway.user", "${SB_DB_MIGRATION_USER:}")
+                .containsEntry("app.operator-approval.required",
+                        "${OPERATOR_APPROVAL_REQUIRED:true}")
+                .containsEntry("app.rate-limit.login-account.requests",
+                        "${SB_RATE_LIMIT_LOGIN_ACCOUNT_REQUESTS:10}")
+                .containsEntry("app.rate-limit.login-account.window",
+                        "${SB_RATE_LIMIT_LOGIN_ACCOUNT_WINDOW:15m}")
+                .containsEntry("app.rate-limit.login-ip.requests",
+                        "${SB_RATE_LIMIT_LOGIN_IP_REQUESTS:100}")
+                .containsEntry("app.rate-limit.registration-ip.requests",
+                        "${SB_RATE_LIMIT_REGISTRATION_IP_REQUESTS:20}")
+                .containsEntry("app.rate-limit.public-search-ip.requests",
+                        "${SB_RATE_LIMIT_PUBLIC_SEARCH_IP_REQUESTS:120}");
     }
 
     @Test

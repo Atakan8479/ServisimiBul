@@ -15,6 +15,8 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
+import org.springframework.security.web.header.writers.StaticHeadersWriter;
 import org.springframework.session.web.http.CookieSerializer;
 import org.springframework.session.web.http.DefaultCookieSerializer;
 
@@ -61,7 +63,8 @@ public class SecurityConfiguration {
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
-            Clock clock
+            Clock clock,
+            RestSecurityErrorHandler securityErrorHandler
     ) throws Exception {
         SessionLifetimeFilter sessionLifetimeFilter = new SessionLifetimeFilter(clock);
         http
@@ -71,6 +74,13 @@ public class SecurityConfiguration {
                 )
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/livez",
+                                "/readyz",
+                                "/actuator/health",
+                                "/actuator/health/liveness",
+                                "/actuator/health/readiness"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.GET,
                                 "/api/v1/provinces",
                                 "/api/v1/districts",
@@ -96,6 +106,22 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()
                 )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(securityErrorHandler)
+                        .accessDeniedHandler(securityErrorHandler)
+                )
+                .headers(headers -> {
+                    headers.frameOptions(frame -> frame.deny());
+                    headers.referrerPolicy(referrer -> referrer
+                            .policy(ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN));
+                    headers.addHeaderWriter(new StaticHeadersWriter(
+                            "Permissions-Policy",
+                            "camera=(), geolocation=(), microphone=()"
+                    ));
+                    headers.httpStrictTransportSecurity(hsts -> hsts
+                            .includeSubDomains(true)
+                            .maxAgeInSeconds(31_536_000));
+                })
                 .addFilterAfter(sessionLifetimeFilter, SecurityContextHolderFilter.class)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());

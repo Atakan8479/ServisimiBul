@@ -5,6 +5,10 @@ export const authUserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
   role: z.enum(['ADMIN', 'OPERATOR']),
+  operatorApprovalRequired: z.boolean(),
+  approvalStatus: z
+    .enum(['DRAFT', 'PENDING', 'CHANGES_REQUESTED', 'APPROVED'])
+    .nullable(),
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>
