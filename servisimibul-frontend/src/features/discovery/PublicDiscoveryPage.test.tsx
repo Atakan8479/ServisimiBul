@@ -10,6 +10,7 @@ describe('public operator discovery', () => {
     const requestedPages: string[] = []
     server.use(
       ...locationHandlers(),
+      tariffHandler(),
       http.get('/api/v1/operators', ({ request }) => {
         const parameters = new URL(request.url).searchParams
         requestedPages.push(parameters.get('page') ?? '')
@@ -48,6 +49,15 @@ describe('public operator discovery', () => {
       screen.getByText(/UKOME tarifeleri yalnızca resmi referanstır/),
     ).toBeInTheDocument()
     expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: 'Resmî tarife referansı' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Bu tarife kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
+      ),
+    ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
     expect(
@@ -59,6 +69,7 @@ describe('public operator discovery', () => {
   it('explains an empty result without treating it as an error', async () => {
     server.use(
       ...locationHandlers(),
+      tariffHandler(),
       http.get('/api/v1/operators', () =>
         HttpResponse.json({
           content: [],
@@ -87,6 +98,7 @@ describe('public operator discovery', () => {
   it('shows a Turkish recovery message when discovery fails', async () => {
     server.use(
       ...locationHandlers(),
+      tariffHandler(),
       http.get('/api/v1/operators', () =>
         HttpResponse.json(
           {
@@ -110,6 +122,47 @@ describe('public operator discovery', () => {
       'Servis işletmecileri yüklenemedi. Lütfen tekrar deneyin.',
     )
     expect(message).toHaveAttribute('role', 'alert')
+  })
+
+  it('keeps discovery results usable when the tariff cannot load', async () => {
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/tariffs', () =>
+        HttpResponse.json(
+          {
+            title: 'Service Unavailable',
+            status: 503,
+            detail: 'Tariff storage unavailable',
+            code: 'tariff_storage_unavailable',
+          },
+          { status: 503 },
+        ),
+      ),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json({
+          content: [operator('Acıbadem Servis')],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'Resmî tarife şu anda yüklenemedi. Arama sonuçları etkilenmedi.',
+      ),
+    ).toHaveAttribute('role', 'alert')
   })
 })
 
@@ -150,6 +203,27 @@ function locationHandlers() {
       HttpResponse.json([{ id: 201, districtId: 11, name: 'Acıbadem' }]),
     ),
   ]
+}
+
+function tariffHandler() {
+  return http.get('/api/v1/tariffs', () =>
+    HttpResponse.json({
+      provinceCode: '34',
+      provinceName: 'İstanbul',
+      authority: 'İBB UKOME',
+      academicYear: '2026–2027',
+      currency: 'TRY',
+      effectiveFrom: '2026-09-01',
+      effectiveTo: '2027-08-31',
+      sourceTitle: 'UKOME kararı',
+      officialSourceUrl: 'https://example.com/ukome',
+      version: 'v1',
+      bands: [
+        { minDistanceKm: 0, maxDistanceKm: 3, amountKurus: 130_000 },
+        { minDistanceKm: 3, maxDistanceKm: null, amountKurus: 150_000 },
+      ],
+    }),
+  )
 }
 
 function operator(businessName: string) {

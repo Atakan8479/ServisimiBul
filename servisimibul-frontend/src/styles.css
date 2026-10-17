@@ -876,6 +876,81 @@ button:disabled {
   margin-top: 1.5rem;
 }
 
+.form-grid,
+.management-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.form-grid.two-columns,
+.management-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+}
+
+.management-section {
+  margin-top: 3rem;
+}
+
+.management-section > .section-heading {
+  margin-bottom: 1rem;
+}
+
+.management-card > p {
+  margin-top: 0;
+}
+
+.management-card {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+}
+
+.management-card > button {
+  margin-top: auto;
+}
+
+.inline-editor {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.75rem;
+}
+
+.inline-editor summary {
+  width: fit-content;
+  cursor: pointer;
+  color: var(--color-accent);
+  font-weight: 750;
+}
+
+.inline-editor > form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.offering-coverage {
+  border-top: 1px solid var(--color-border);
+  padding-top: 1rem;
+}
+
+.offering-coverage h4,
+.offering-coverage p {
+  margin: 0;
+}
+
+.coverage-group {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  padding: 0.85rem;
+}
+
+.coverage-group legend {
+  padding: 0 0.35rem;
+  color: var(--color-accent);
+  font-weight: 800;
+}
+
 .school-card,
 .empty-state {
   margin-top: 0;
@@ -897,6 +972,86 @@ button:disabled {
 
 .empty-state h2 {
   margin-top: 0;
+}
+
+.tariff-reference {
+  margin-top: 3rem;
+}
+
+.tariff-reference > .section-heading {
+  margin-bottom: 1rem;
+}
+
+.tariff-card {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border-radius: var(--radius-medium);
+  background: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.tariff-meta,
+.tariff-band-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tariff-meta {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tariff-meta > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.tariff-meta span,
+.tariff-disclaimer,
+.tariff-editor-help {
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.tariff-band-list {
+  margin: 1rem 0;
+}
+
+.tariff-band-list > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tariff-band-list strong {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tariff-card > a {
+  color: var(--color-accent);
+  font-weight: 750;
+}
+
+.tariff-editor {
+  display: grid;
+  gap: 1rem;
+  max-width: 58rem;
+}
+
+.tariff-editor textarea {
+  min-height: 30rem;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.tariff-editor-help {
+  margin: 0;
 }
 
 .coverage-editor {

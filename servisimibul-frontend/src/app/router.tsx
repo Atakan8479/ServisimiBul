@@ -19,10 +19,12 @@ import {
   AdminApplicationsPage,
 } from '../features/admin/AdminApplicationsPage'
 import { AdminSchoolsPage } from '../features/admin/AdminSchoolsPage'
+import { AdminTariffsPage } from '../features/admin/AdminTariffsPage'
 import { AdminWorkspaceLayout } from '../features/admin/AdminWorkspaceLayout'
 import { OperatorOverviewPage } from '../features/operator/OperatorOverviewPage'
 import { OperatorProfilePage } from '../features/operator/OperatorProfilePage'
 import { OperatorSchoolsPage } from '../features/operator/OperatorSchoolsPage'
+import { OperatorOfferingsPage } from '../features/operator/OperatorOfferingsPage'
 import { OperatorWorkspaceLayout } from '../features/operator/OperatorWorkspaceLayout'
 
 export const routes: RouteObject[] = [
@@ -47,6 +49,7 @@ export const routes: RouteObject[] = [
       { index: true, Component: OperatorOverviewPage },
       { path: 'profile', Component: OperatorProfilePage },
       { path: 'schools', Component: OperatorSchoolsPage },
+      { path: 'offerings', Component: OperatorOfferingsPage },
     ],
   },
   {
@@ -63,6 +66,7 @@ export const routes: RouteObject[] = [
         Component: AdminApplicationDetailPage,
       },
       { path: 'schools', Component: AdminSchoolsPage },
+      { path: 'tariffs', Component: AdminTariffsPage },
     ],
   },
   { path: '*', Component: NotFoundPage },

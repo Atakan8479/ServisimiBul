@@ -32,6 +32,9 @@ describe('operator workspace flows', () => {
     expect(
       screen.getByRole('link', { name: 'Okullar ve kapsam' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Araçlar ve servisler' }),
+    ).toBeInTheDocument()
   })
 
   it('renders a pending application as read-only when approval is required', async () => {
@@ -52,6 +55,9 @@ describe('operator workspace flows', () => {
     expect(screen.getByLabelText('İşletme adı (isteğe bağlı)')).toBeDisabled()
     expect(
       screen.queryByRole('link', { name: 'Okullar ve kapsam' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Araçlar ve servisler' }),
     ).not.toBeInTheDocument()
   })
 
@@ -168,6 +174,94 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
   })
+
+  it('lists inactive vehicles but only offers active vehicles for new services', async () => {
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        HttpResponse.json([
+          vehicle('11111111-1111-4111-8111-111111111111', '34 ABC 123', true),
+          vehicle('22222222-2222-4222-8222-222222222222', '34 OLD 123', false),
+        ]),
+      ),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+    )
+
+    renderRoute('/operator/offerings')
+
+    expect(await screen.findByText('34 OLD 123')).toBeInTheDocument()
+    const vehicleSelect = screen.getByLabelText('Etkin araç')
+    expect(
+      within(vehicleSelect).getByRole('option', {
+        name: '34 ABC 123 — 16 kişi',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(vehicleSelect).queryByRole('option', { name: /34 OLD 123/ }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('saves only parent coverage neighborhoods and publishes the offering', async () => {
+    let coverageBody: unknown
+    let published = false
+    const activeVehicle = vehicle(
+      '11111111-1111-4111-8111-111111111111',
+      '34 ABC 123',
+      true,
+    )
+    const schoolWithCoverage = operatorSchool([
+      coverage(101, 10, 'Moda', 'Kadıköy'),
+      coverage(201, 11, 'Acıbadem', 'Üsküdar'),
+    ])
+    const draft = offering(false, [coverage(101, 10, 'Moda', 'Kadıköy')])
+    server.use(
+      authHandler(),
+      csrfHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        HttpResponse.json([activeVehicle]),
+      ),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([draft])),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([schoolWithCoverage]),
+      ),
+      http.put(
+        '/api/v1/operator/offerings/:id/coverage',
+        async ({ request }) => {
+          coverageBody = await request.json()
+          return HttpResponse.json(
+            offering(false, [
+              coverage(101, 10, 'Moda', 'Kadıköy'),
+              coverage(201, 11, 'Acıbadem', 'Üsküdar'),
+            ]),
+          )
+        },
+      ),
+      http.post('/api/v1/operator/offerings/:id/publish', () => {
+        published = true
+        return HttpResponse.json(offering(true, draft.coverage))
+      }),
+    )
+
+    renderRoute('/operator/offerings')
+    fireEvent.click(await screen.findByText('Servisi düzenle'))
+    const uskudar = screen.getByRole('group', { name: 'Üsküdar' })
+    fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis kapsamını kaydet' }),
+    )
+
+    expect(
+      await screen.findByText('Servis kapsamı kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yayımla' }))
+    expect(await screen.findByText('Servis yayımlandı.')).toBeInTheDocument()
+    expect(published).toBe(true)
+  })
 })
 
 function authHandler(
@@ -238,6 +332,35 @@ function coverage(
     provinceId: 34,
     provinceCode: '34',
     provinceName: 'İstanbul',
+  }
+}
+
+function vehicle(id: string, plate: string, active: boolean) {
+  return {
+    id,
+    plate,
+    capacity: 16,
+    active,
+    createdAt: '2026-10-15T10:00:00Z',
+    updatedAt: '2026-10-15T10:00:00Z',
+  }
+}
+
+function offering(published: boolean, items: ReturnType<typeof coverage>[]) {
+  return {
+    id: '33333333-3333-4333-8333-333333333333',
+    operatorSchoolId: '75ef6bb0-e313-43fb-a01c-c935774434b4',
+    schoolId: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
+    schoolName: 'Örnek Okulu',
+    vehicleId: '11111111-1111-4111-8111-111111111111',
+    vehiclePlate: '34 ABC 123',
+    vehicleCapacity: 16,
+    availableSeats: 3,
+    description: 'Sabah ve akşam servisi',
+    published,
+    coverage: items,
+    createdAt: '2026-10-15T10:00:00Z',
+    updatedAt: '2026-10-15T10:00:00Z',
   }
 }
 

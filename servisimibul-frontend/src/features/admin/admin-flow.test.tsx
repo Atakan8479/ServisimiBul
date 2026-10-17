@@ -206,6 +206,64 @@ describe('admin workspace flows', () => {
     expect(await screen.findByText('Okul pasife alındı.')).toBeInTheDocument()
     expect(within(card!).getByText('Pasif')).toBeInTheDocument()
   })
+
+  it('saves the tariff against the version that was loaded', async () => {
+    let updateBody: unknown
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/tariffs', () => HttpResponse.json(tariff('v1'))),
+      http.put('/api/v1/admin/tariffs/34', async ({ request }) => {
+        updateBody = await request.json()
+        return HttpResponse.json(tariff('v2'))
+      }),
+    )
+
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    const updated = tariff('v2')
+    updated.bands[0].amountKurus = 140_000
+    fireEvent.change(editor, { target: { value: JSON.stringify(updated) } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tarifeyi kaydet' }))
+
+    expect(
+      await screen.findByText('Tarife v2 sürümüyle kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(updateBody).toEqual({ expectedVersion: 'v1', tariff: updated })
+  })
+
+  it('keeps the tariff draft when another admin saved first', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/tariffs', () => HttpResponse.json(tariff('v1'))),
+      http.put('/api/v1/admin/tariffs/34', () =>
+        HttpResponse.json(
+          {
+            title: 'Conflict',
+            status: 409,
+            detail: 'Version conflict',
+            code: 'tariff_version_conflict',
+          },
+          { status: 409 },
+        ),
+      ),
+    )
+
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    const draft = JSON.stringify(tariff('my-draft'))
+    fireEvent.change(editor, { target: { value: draft } })
+    fireEvent.click(screen.getByRole('button', { name: 'Tarifeyi kaydet' }))
+
+    expect(await screen.findByText(/Taslağınız korunuyor/)).toBeInTheDocument()
+    expect(editor).toHaveValue(draft)
+    expect(
+      screen.getByRole('button', {
+        name: 'Taslağı bırakıp güncel sürümü yükle',
+      }),
+    ).toBeInTheDocument()
+  })
 })
 
 function authHandler(
@@ -275,6 +333,25 @@ function schoolPage(content: ReturnType<typeof school>[]) {
     size: 20,
     totalElements: content.length,
     totalPages: content.length ? 1 : 0,
+  }
+}
+
+function tariff(version: string) {
+  return {
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    authority: 'İBB UKOME',
+    academicYear: '2026–2027',
+    currency: 'TRY' as const,
+    effectiveFrom: '2026-09-01',
+    effectiveTo: '2027-08-31',
+    sourceTitle: 'UKOME kararı',
+    officialSourceUrl: 'https://example.com/ukome',
+    version,
+    bands: [
+      { minDistanceKm: 0, maxDistanceKm: 3, amountKurus: 130_000 },
+      { minDistanceKm: 3, maxDistanceKm: null, amountKurus: 150_000 },
+    ],
   }
 }
 

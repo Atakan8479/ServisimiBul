@@ -54,6 +54,9 @@ export function AdminWorkspaceLayout() {
           <NavLink to="/admin/schools" viewTransition>
             Okullar
           </NavLink>
+          <NavLink to="/admin/tariffs" viewTransition>
+            Tarifeler
+          </NavLink>
         </nav>
         <button
           className="secondary-button sidebar-action"
