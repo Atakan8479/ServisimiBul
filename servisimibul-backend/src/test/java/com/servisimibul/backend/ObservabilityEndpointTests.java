@@ -29,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThat;
                 + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
                 + "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration",
         "spring.datasource.password=health-secret-that-must-not-leak",
+        "spring.datasource.username=servisimibul_app",
         "spring.mail.host=localhost",
         "spring.mail.username=mail-test-user",
         "spring.mail.password=mail-secret-that-must-not-leak",
