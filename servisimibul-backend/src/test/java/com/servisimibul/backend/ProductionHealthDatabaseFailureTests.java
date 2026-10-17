@@ -9,6 +9,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -25,11 +26,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.mail.password=test-only",
         "servisimibul.tariff.storage-dir=${java.io.tmpdir}/servisimibul-prod-health-db-failure-test",
         "management.health.mail.enabled=false",
-        "management.health.db.enabled=false"
+        "management.health.db.enabled=false",
+        "spring.datasource.hikari.maximum-pool-size=1",
+        "spring.datasource.hikari.minimum-idle=0"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("prod")
 @Import(ProductionHealthDatabaseFailureTests.DatabaseFailureConfiguration.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class ProductionHealthDatabaseFailureTests {
 
     private final MockMvc mockMvc;
