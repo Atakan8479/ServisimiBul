@@ -32,7 +32,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | A-05 UKOME tariff backend | complete | GitHub issue #20 closed; PR #37 merged as `9d7a2c29cb50977ce19898fedbcf02252d482642`; PostgreSQL 17 workflow `38613779518` passed all 62 tests | Reviewed and merged 2026-10-14 |
 | A-06 Vehicle and ServiceOffering CRUD | complete | GitHub issue #21; PR #40 merged as `ac4a499ef9cbbede81ffc19be10cb711576fb66b`; PostgreSQL 17 workflow `38707204509` passed all 74 tests | Reviewed and merged 2026-10-15 |
 | A-10 Backend deployment and observability | complete | GitHub issue #27; PR #30 merged as `b98e74246ab382908ee01410f7f251378ac1908e`; workflow `38610241315` passed all 50 tests | Sequencing override explicitly requested 2026-10-13; reviewed and merged 2026-10-14 |
-| A-10 production foundation follow-up | in progress | Branch `codex/a-10-production-foundation`; provider-independent hardening only | Scope approved 2026-10-18; review pending |
+| A-10 production foundation follow-up | in review | Draft PR #54; PostgreSQL 17 Backend workflow `39072946271` passed all 193 tests and all 13 operational checks; Secret scan workflow `39072946348` passed | Scope approved 2026-10-18; Onat (`LePqrta`) requested for review |
 | B-01 Frontend foundation | complete | GitHub issue #12; PR #38 merged as `1d7c5993328173e64e5cd725094f53b3aa76bd20`; final Node 24 workflow `38722048633` passed | Reviewed and merged 2026-10-15 |
 | B-05 Operator profile and application lifecycle | complete | GitHub issue #14; PR #41 merged as `943706428b7c2d90525c4365de82799eac49e987`; final PostgreSQL 17 workflow `38726247161` passed | Reviewed and merged 2026-10-15 |
 | A-04 Anonymous public discovery backend | complete | PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
@@ -59,6 +59,8 @@ A-03 PR #39 adds V5 plus session-owned operator-school and same-province general
 A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. A-07 now supplies the per-offering coverage and publication checks on its feature branch. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-08, A-09, and B-10 are now merged, but A-10 still does not claim the product is production-ready: provider selection, monitoring/alerts, durable storage proof, migration rehearsal, and deployment/rollback rehearsal remain required.
+
+The provider-independent A-10 follow-up is submitted in draft PR #54. Local validation passed 24 focused production-configuration/email tests plus the PowerShell mock-server smoke suite. PostgreSQL 17 Backend workflow `39072946271` then passed all 193 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39072946348` also passed. No shared Supabase audit or operation was performed.
 
 ## Verified B-10 implementation evidence — 2026-10-17
 
