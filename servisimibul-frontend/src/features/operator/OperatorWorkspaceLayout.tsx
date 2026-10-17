@@ -60,6 +60,9 @@ export function OperatorWorkspaceLayout() {
           <NavLink to="/operator/schools" viewTransition>
             Okullar ve kapsam
           </NavLink>
+          <NavLink to="/operator/offerings" viewTransition>
+            Araçlar ve servisler
+          </NavLink>
         </nav>
         <button
           className="secondary-button sidebar-action"
