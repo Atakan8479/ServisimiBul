@@ -1,14 +1,18 @@
 # A-09 database and backup operations
 
-Verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
+Originally verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. Repository evidence records the later approved V8 migration and rolled-back post-migration audit on 2026-10-17. This documentation follow-up performs no new Supabase audit. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
 
 ## Current operational baseline
 
-- The shared `ServisimiBul` project is healthy on Supabase PostgreSQL 17.11 and the organization is on the Free plan.
-- Flyway history contains seven successful rows, V1 through V7. Repository V8 is pending and `service_offering_coverage` is therefore absent from the shared database.
-- The 15 current application tables have RLS enabled. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role have no direct privileges on it.
+- The last approved evidence records the shared `ServisimiBul` project on Supabase PostgreSQL 17.11 and the organization on the Free plan; re-verify both before an operation.
+- Flyway history contained eight successful rows, V1 through V8, after the approved 2026-10-17 migration. `service_offering_coverage` was present.
+- All 16 application tables had RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role had no direct privileges on it.
 - `PUBLIC`, `anon`, and `authenticated` have no direct privileges on any current application table or sequence.
-- The live geography and school catalog is empty. The two ADMIN accounts exist. No V8 migration, restore, backup export, pilot-data write, session deletion, or tariff-volume operation was performed by A-09.
+- The geography and school catalog was empty and the two ADMIN accounts existed at the last recorded audit. No restore, backup export, pilot-data write, session deletion, or tariff-volume operation was performed by this follow-up.
+
+### Historical A-09 pre-V8 baseline
+
+The original 2026-10-16 A-09 audit found successful V1–V7 history, 15 RLS-enabled application tables, and no `service_offering_coverage`; V8 was then pending. Its checked-in verification intentionally reported nine current-state passes and four target-state failures. The separately approved 2026-10-17 operation subsequently applied V8 and verified all 13 target-state checks. Retain the earlier evidence as migration history, but do not use it as the current operational baseline.
 
 The metadata audit used the connected Supabase administration interface and returned no credentials or row-level personal data. Re-run the preflight immediately before every operation because this snapshot will age.
 
@@ -54,7 +58,7 @@ Run the identity query through the controlled administration connection. The res
 if ($LASTEXITCODE -ne 0) { throw 'Database identity check failed' }
 ```
 
-Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. For this repository, run [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) after migration; before migration, its expected V8 checks should fail when the shared database is still at V7.
+Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. For the currently recorded V8 repository state, [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS`. Any different version or object inventory requires a fresh reviewed plan; do not infer current live state solely from this dated document.
 
 Stop if the target, role, current version, checksums, schema objects, or active incident differs from the reviewed plan.
 
