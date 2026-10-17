@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — A-09 database and backup operations in review
-Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-08, A-10, the combined local launcher, frontend design tooling, and the operator business-name optionality change are complete. A-09 is implemented and verified in PR #50; review and merge remain pending.
+## Current stage: Gate 8 — B-10 security hardening in progress
+Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-10, the combined local launcher, frontend design tooling, the operator business-name optionality change, and public discovery UI are complete. B-10 operator-approval mode and security hardening are being implemented in one review branch.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -15,7 +15,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
-| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, and A-08 merged; A-09 issue #26 is in progress | A-08 reviewed and merged 2026-10-16; A-09 execution approved 2026-10-16 |
+| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, A-08, A-09, and public discovery UI merged; B-10 is in progress | A-09 merged in PR #50; B-10 scope and implementation approved 2026-10-17 |
 
 ## Active work-package progress
 
@@ -38,7 +38,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
 | A-07 Offering-specific coverage and discovery enrichment | complete | GitHub issue #22 closed; PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | Reviewed and merged 2026-10-15 |
 | A-08 Database and performance hardening | complete | GitHub issue #24; PR #47 merged as `0054118`; measured PostgreSQL 17 workflow `38788568472` and post-`main`-merge workflow `38880661526` passed all 93 tests; detailed evidence in `docs/08_DATABASE_PERFORMANCE.md` | Reviewed and merged 2026-10-16 |
-| A-09 Database and backup operations | in review | GitHub issue #26; PR #50; PostgreSQL 17 workflow `38943652242` passed all 95 tests and all 13 operational verification checks | Execution approved 2026-10-16; review pending |
+| A-09 Database and backup operations | complete | GitHub issue #26; PR #50 merged as `64ca7e1`; PostgreSQL 17 workflow `38943652242` passed all 95 tests and all 13 operational verification checks | Reviewed and merged 2026-10-16 |
+| B-10 Operator approval and security hardening | in progress | `codex/operator-approval-b10-hardening`; clean backend test compilation passed; 15 focused policy/configuration/limiter/client-identity tests and 25 frontend tests passed locally | Scope and one-PR implementation approved 2026-10-17; review pending |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 
