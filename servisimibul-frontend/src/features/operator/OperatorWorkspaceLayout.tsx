@@ -13,6 +13,8 @@ export function OperatorWorkspaceLayout() {
   const navigate = useNavigate()
   const [error, setError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
+  const canManageResources =
+    !user.operatorApprovalRequired || user.approvalStatus === 'APPROVED'
 
   async function signOut() {
     setLoggingOut(true)
@@ -55,11 +57,13 @@ export function OperatorWorkspaceLayout() {
             Genel bakış
           </NavLink>
           <NavLink to="/operator/profile" viewTransition>
-            Profil ve başvuru
+            {user.operatorApprovalRequired ? 'Profil ve başvuru' : 'Profil'}
           </NavLink>
-          <NavLink to="/operator/schools" viewTransition>
-            Okullar ve kapsam
-          </NavLink>
+          {canManageResources && (
+            <NavLink to="/operator/schools" viewTransition>
+              Okullar ve kapsam
+            </NavLink>
+          )}
         </nav>
         <button
           className="secondary-button sidebar-action"

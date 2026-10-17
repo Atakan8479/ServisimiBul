@@ -1,9 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useRouteLoaderData } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/client'
+import type { AuthUser } from '../auth/auth-api'
 import {
   getProfile,
   resubmitApplication,
@@ -58,6 +59,7 @@ const statusContent: Record<
 
 export function OperatorProfilePage() {
   const navigate = useNavigate()
+  const user = useRouteLoaderData('operator') as AuthUser
   const [profile, setProfile] = useState<OperatorProfile>()
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<string>()
@@ -161,20 +163,35 @@ export function OperatorProfilePage() {
     return <PageLoading label="Profil yükleniyor" />
   }
 
+  const profileEditable =
+    !user.operatorApprovalRequired || profile?.approvalStatus !== 'PENDING'
+
   return (
     <section className="workspace-page">
-      <p className="eyebrow">Profil ve başvuru</p>
+      <p className="eyebrow">
+        {user.operatorApprovalRequired ? 'Profil ve başvuru' : 'Pilot profili'}
+      </p>
       <h1>İşletme bilgileriniz</h1>
       <p className="page-lead">
-        İletişim telefonu onaydan sonra velilere açık olarak gösterilir.
+        {user.operatorApprovalRequired
+          ? 'İletişim telefonu onaydan sonra velilere açık olarak gösterilir.'
+          : 'Yönetici onayı pilotta kapalıdır; diğer görünürlük koşulları aynen uygulanır.'}
       </p>
 
-      {profile && (
+      {profile && user.operatorApprovalRequired && (
         <div
           className={`status-banner ${statusContent[profile.approvalStatus].tone}`}
         >
           <strong>{statusContent[profile.approvalStatus].label}</strong>
           <span>{statusContent[profile.approvalStatus].detail}</span>
+        </div>
+      )}
+      {profile && !user.operatorApprovalRequired && (
+        <div className="status-banner success" role="status">
+          <strong>Pilot modu etkin</strong>
+          <span>
+            Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.
+          </span>
         </div>
       )}
       {loadError && (
@@ -199,6 +216,7 @@ export function OperatorProfilePage() {
             <input
               aria-invalid={Boolean(errors.businessName)}
               autoComplete="organization"
+              disabled={!profileEditable}
               {...register('businessName')}
             />
             {errors.businessName && (
@@ -213,6 +231,7 @@ export function OperatorProfilePage() {
             <input
               aria-invalid={Boolean(errors.contactPhone)}
               autoComplete="tel"
+              disabled={!profileEditable}
               type="tel"
               {...register('contactPhone')}
             />
@@ -224,10 +243,18 @@ export function OperatorProfilePage() {
           </label>
           <label className="form-field">
             <span>Kısa açıklama</span>
-            <textarea rows={5} {...register('description')} />
+            <textarea
+              disabled={!profileEditable}
+              rows={5}
+              {...register('description')}
+            />
           </label>
           <label className="checkbox-row visibility-control">
-            <input type="checkbox" {...register('publiclyVisible')} />
+            <input
+              disabled={!profileEditable}
+              type="checkbox"
+              {...register('publiclyVisible')}
+            />
             <span>
               <strong>Profilimi velilere göster</strong>
               <small>
@@ -237,34 +264,43 @@ export function OperatorProfilePage() {
             </span>
           </label>
           <div className="button-row">
-            <button
-              className="primary-button"
-              disabled={isSubmitting || !isDirty}
-              type="submit"
-            >
-              {isSubmitting ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
-            </button>
-            {(profile.approvalStatus === 'DRAFT' ||
-              profile.approvalStatus === 'CHANGES_REQUESTED') && (
+            {profileEditable && (
               <button
-                className="secondary-button"
-                disabled={actionPending || isDirty}
-                onClick={moveApplication}
-                type="button"
+                className="primary-button"
+                disabled={isSubmitting || !isDirty}
+                type="submit"
               >
-                {actionPending
-                  ? 'Gönderiliyor…'
-                  : profile.approvalStatus === 'DRAFT'
-                    ? 'Başvuruyu gönder'
-                    : 'Yeniden gönder'}
+                {isSubmitting ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
               </button>
             )}
+            {user.operatorApprovalRequired &&
+              (profile.approvalStatus === 'DRAFT' ||
+                profile.approvalStatus === 'CHANGES_REQUESTED') && (
+                <button
+                  className="secondary-button"
+                  disabled={actionPending || isDirty}
+                  onClick={moveApplication}
+                  type="button"
+                >
+                  {actionPending
+                    ? 'Gönderiliyor…'
+                    : profile.approvalStatus === 'DRAFT'
+                      ? 'Başvuruyu gönder'
+                      : 'Yeniden gönder'}
+                </button>
+              )}
           </div>
-          {isDirty &&
+          {user.operatorApprovalRequired &&
+            isDirty &&
             (profile.approvalStatus === 'DRAFT' ||
               profile.approvalStatus === 'CHANGES_REQUESTED') && (
               <small>Başvuruyu göndermeden önce değişiklikleri kaydedin.</small>
             )}
+          {user.operatorApprovalRequired && !profileEditable && (
+            <small>
+              İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.
+            </small>
+          )}
         </form>
       )}
     </section>
