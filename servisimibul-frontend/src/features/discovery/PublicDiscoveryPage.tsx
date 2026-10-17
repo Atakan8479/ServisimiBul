@@ -11,6 +11,7 @@ import {
   type PublicOperator,
   type School,
 } from './discovery-api'
+import { PublicTariffReference } from '../tariff/PublicTariffReference'
 
 const searchSchema = z.object({
   schoolId: z.string().uuid('Bir okul seçin.'),
@@ -26,6 +27,7 @@ interface SearchSelection {
   districtName: string
   neighborhoodId: number
   neighborhoodName: string
+  provinceCode: string
 }
 
 export function PublicDiscoveryPage() {
@@ -189,6 +191,7 @@ export function PublicDiscoveryPage() {
         districtName: district.name,
         neighborhoodId: neighborhood.id,
         neighborhoodName: neighborhood.name,
+        provinceCode: school.provinceCode,
       },
       0,
     )
@@ -373,6 +376,10 @@ export function PublicDiscoveryPage() {
         }}
         page={results}
         selection={lastSelection}
+      />
+      <PublicTariffReference
+        key={lastSelection?.provinceCode}
+        provinceCode={lastSelection?.provinceCode}
       />
     </section>
   )
