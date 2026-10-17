@@ -23,12 +23,15 @@ import java.util.Map;
 public class InMemoryRateLimiter {
 
     private static final int SALT_BYTES = 32;
+    private static final int PROBATION_DIVISOR = 4;
 
     private final RateLimitProperties properties;
     private final Clock clock;
     private final MeterRegistry meterRegistry;
     private final byte[] keySalt;
-    private final Map<RateLimitRule, Map<String, AttemptWindow>> exactWindows =
+    private final Map<RateLimitRule, Map<String, AttemptWindow>> protectedWindows =
+            new EnumMap<>(RateLimitRule.class);
+    private final Map<RateLimitRule, Map<String, AttemptWindow>> probationWindows =
             new EnumMap<>(RateLimitRule.class);
     private final Map<RateLimitRule, OverflowWindow[]> overflowWindows =
             new EnumMap<>(RateLimitRule.class);
@@ -53,7 +56,8 @@ public class InMemoryRateLimiter {
         this.meterRegistry = meterRegistry;
         this.keySalt = keySalt.clone();
         for (RateLimitRule rule : RateLimitRule.values()) {
-            exactWindows.put(rule, new LinkedHashMap<>(128, 0.75f, true));
+            protectedWindows.put(rule, new LinkedHashMap<>(128, 0.75f, true));
+            probationWindows.put(rule, new LinkedHashMap<>(32, 0.75f, true));
             OverflowWindow[] buckets = new OverflowWindow[properties.capacity().overflowBuckets()];
             for (int index = 0; index < buckets.length; index++) {
                 buckets[index] = new OverflowWindow();
@@ -83,52 +87,122 @@ public class InMemoryRateLimiter {
     }
 
     synchronized int activeKeyCount() {
-        return exactWindows.values().stream().mapToInt(Map::size).sum();
+        return protectedWindows.values().stream().mapToInt(Map::size).sum()
+                + probationWindows.values().stream().mapToInt(Map::size).sum();
     }
 
     private AttemptResult acquire(RateLimitRule rule, String identity, Instant now) {
         RateLimitProperties.Limit limit = limit(rule);
         HashedIdentity hashedIdentity = hash(rule, identity);
-        Map<String, AttemptWindow> ruleWindows = exactWindows.get(rule);
-        AttemptWindow exact = ruleWindows.get(hashedIdentity.digest());
-        if (exact != null) {
-            return exact.acquire(limit.requests(), limit.window(), now);
+        Map<String, AttemptWindow> protectedRuleWindows = protectedWindows.get(rule);
+        AttemptWindow protectedWindow = protectedRuleWindows.get(hashedIdentity.digest());
+        if (protectedWindow != null) {
+            return protectedWindow.acquire(limit.requests(), limit.window(), now);
         }
 
-        removeExpiredExactWindows(rule, limit.window(), now);
-        int ruleCapacity = Math.max(
-                1,
-                properties.capacity().maxKeys() / RateLimitRule.values().length
-        );
-        if (ruleWindows.size() < ruleCapacity) {
-            AttemptWindow created = new AttemptWindow();
-            ruleWindows.put(hashedIdentity.digest(), created);
-            return created.acquire(limit.requests(), limit.window(), now);
+        Map<String, AttemptWindow> probationRuleWindows = probationWindows.get(rule);
+        AttemptWindow probationWindow = probationRuleWindows.get(hashedIdentity.digest());
+        if (probationWindow != null) {
+            probationWindow.removeExpired(limit.window(), now);
+            if (probationWindow.isEmpty()) {
+                return probationWindow.acquire(limit.requests(), limit.window(), now);
+            }
+            removeExpiredWindows(protectedRuleWindows, limit.window(), now);
+            if (!probationWindow.hasOverflowHistory()
+                    && protectedRuleWindows.size() < protectedCapacity()) {
+                probationRuleWindows.remove(hashedIdentity.digest());
+                protectedRuleWindows.put(hashedIdentity.digest(), probationWindow);
+                return probationWindow.acquire(limit.requests(), limit.window(), now);
+            }
+
+            incrementSaturation(rule);
+            OverflowWindow bucket = overflowBucket(rule, hashedIdentity);
+            int overflowLimit = overflowLimit(limit);
+            if (!probationWindow.hasOverflowHistory()) {
+                AttemptResult recordedFirstAttempt = bucket.acquire(
+                        overflowLimit,
+                        limit.window(),
+                        now
+                );
+                probationWindow.markOverflowHistory();
+                if (!recordedFirstAttempt.allowed()) {
+                    return recordedFirstAttempt;
+                }
+            }
+            return bucket.acquire(overflowLimit, limit.window(), now);
         }
 
+        removeExpiredWindows(protectedRuleWindows, limit.window(), now);
+        removeExpiredWindows(probationRuleWindows, limit.window(), now);
+        admitFirstAttempt(rule, hashedIdentity.digest(), limit, now);
+        return new AttemptResult(true, 0);
+    }
+
+    private void admitFirstAttempt(
+            RateLimitRule rule,
+            String digest,
+            RateLimitProperties.Limit limit,
+            Instant now
+    ) {
+        Map<String, AttemptWindow> probationRuleWindows = probationWindows.get(rule);
+        if (probationRuleWindows.size() >= probationCapacity()) {
+            String eldestDigest = probationRuleWindows.keySet().iterator().next();
+            probationRuleWindows.remove(eldestDigest);
+            meterRegistry.counter(
+                    "servisimibul.rate_limit.probation_evictions.total",
+                    "rule",
+                    rule.name().toLowerCase()
+            ).increment();
+        }
+        AttemptWindow created = new AttemptWindow();
+        AttemptResult firstAttempt = created.acquire(limit.requests(), limit.window(), now);
+        if (!firstAttempt.allowed()) {
+            throw new IllegalStateException("A positive rate limit rejected its first attempt");
+        }
+        probationRuleWindows.put(digest, created);
+    }
+
+    private void removeExpiredWindows(
+            Map<String, AttemptWindow> windows,
+            Duration window,
+            Instant now
+    ) {
+        windows.entrySet().removeIf(entry -> {
+            entry.getValue().removeExpired(window, now);
+            return entry.getValue().isEmpty();
+        });
+    }
+
+    private int protectedCapacity() {
+        return ruleCapacity() - probationCapacity();
+    }
+
+    private int probationCapacity() {
+        return Math.max(1, ruleCapacity() / PROBATION_DIVISOR);
+    }
+
+    private int ruleCapacity() {
+        return Math.max(2, properties.capacity().maxKeys() / RateLimitRule.values().length);
+    }
+
+    private void incrementSaturation(RateLimitRule rule) {
         meterRegistry.counter(
                 "servisimibul.rate_limit.saturation.total",
                 "rule",
                 rule.name().toLowerCase()
         ).increment();
+    }
+
+    private OverflowWindow overflowBucket(RateLimitRule rule, HashedIdentity hashedIdentity) {
         OverflowWindow[] buckets = overflowWindows.get(rule);
-        OverflowWindow bucket = buckets[Math.floorMod(hashedIdentity.bucketHash(), buckets.length)];
-        int overflowLimit = Math.multiplyExact(
+        return buckets[Math.floorMod(hashedIdentity.bucketHash(), buckets.length)];
+    }
+
+    private int overflowLimit(RateLimitProperties.Limit limit) {
+        return Math.multiplyExact(
                 limit.requests(),
                 properties.capacity().overflowMultiplier()
         );
-        return bucket.acquire(overflowLimit, limit.window(), now);
-    }
-
-    private void removeExpiredExactWindows(
-            RateLimitRule rule,
-            Duration window,
-            Instant now
-    ) {
-        exactWindows.get(rule).entrySet().removeIf(entry -> {
-            entry.getValue().removeExpired(window, now);
-            return entry.getValue().isEmpty();
-        });
     }
 
     private RateLimitProperties.Limit limit(RateLimitRule rule) {
@@ -178,15 +252,27 @@ public class InMemoryRateLimiter {
     private record AttemptResult(boolean allowed, long retryAfterSeconds) {
     }
 
+    private static long retryAfterSeconds(Instant now, Instant deadline) {
+        Duration remaining = Duration.between(now, deadline);
+        if (remaining.isNegative() || remaining.isZero()) {
+            return 1;
+        }
+        long wholeSeconds = remaining.getSeconds();
+        return remaining.getNano() == 0 ? Math.max(1, wholeSeconds) : wholeSeconds + 1;
+    }
+
     private static final class AttemptWindow {
 
         private final ArrayDeque<Instant> attempts = new ArrayDeque<>();
+        private boolean overflowHistory;
 
         private AttemptResult acquire(int limit, Duration window, Instant now) {
             removeExpired(window, now);
             if (attempts.size() >= limit) {
-                long seconds = Duration.between(now, attempts.getFirst().plus(window)).toSeconds();
-                return new AttemptResult(false, Math.max(1, seconds));
+                return new AttemptResult(
+                        false,
+                        retryAfterSeconds(now, attempts.getFirst().plus(window))
+                );
             }
             attempts.addLast(now);
             return new AttemptResult(true, 0);
@@ -197,10 +283,21 @@ public class InMemoryRateLimiter {
             while (!attempts.isEmpty() && !attempts.getFirst().isAfter(cutoff)) {
                 attempts.removeFirst();
             }
+            if (attempts.isEmpty()) {
+                overflowHistory = false;
+            }
         }
 
         private boolean isEmpty() {
             return attempts.isEmpty();
+        }
+
+        private boolean hasOverflowHistory() {
+            return overflowHistory;
+        }
+
+        private void markOverflowHistory() {
+            overflowHistory = true;
         }
     }
 
@@ -219,8 +316,10 @@ public class InMemoryRateLimiter {
                 attempts = 0;
             }
             if (attempts >= limit) {
-                long seconds = Duration.between(now, startedAt.plus(window)).toSeconds();
-                return new AttemptResult(false, Math.max(1, seconds));
+                return new AttemptResult(
+                        false,
+                        retryAfterSeconds(now, startedAt.plus(window))
+                );
             }
             attempts++;
             return new AttemptResult(true, 0);

@@ -46,6 +46,21 @@ class InMemoryRateLimiterTests {
     }
 
     @Test
+    void retryAfterRoundsUpWithoutUnderstatingTheRemainingWindow() {
+        InMemoryRateLimiter limiter = limiter(properties(120, 1, Duration.ofMillis(1_500)));
+
+        limiter.requireAllowance(RateLimitRule.LOGIN_ACCOUNT, "account", START);
+
+        assertThatThrownBy(() -> limiter.requireAllowance(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "account",
+                START.plusMillis(400)
+        )).isInstanceOf(RateLimitExceededException.class)
+                .extracting("retryAfterSeconds")
+                .isEqualTo(2L);
+    }
+
+    @Test
     void keepsRulesAndIdentitiesIsolated() {
         InMemoryRateLimiter limiter = limiter(properties(120, 1, Duration.ofMinutes(1)));
 
@@ -80,10 +95,12 @@ class InMemoryRateLimiterTests {
         int perRuleCapacity = 120 / RateLimitRule.values().length;
 
         for (int index = 0; index < perRuleCapacity + 200; index++) {
-            limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, "attacker-" + index, START);
+            String identity = "attacker-" + index;
+            limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START);
+            limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START);
         }
 
-        assertThat(limiter.activeKeyCount()).isEqualTo(perRuleCapacity);
+        assertThat(limiter.activeKeyCount()).isLessThanOrEqualTo(perRuleCapacity);
         assertThat(registry.get("servisimibul.rate_limit.saturation.total")
                 .tag("rule", "login_account")
                 .counter()
@@ -97,16 +114,110 @@ class InMemoryRateLimiterTests {
     }
 
     @Test
-    void overflowRemainsBoundedDuringLargeAdversarialIdentityChurn() {
-        InMemoryRateLimiter limiter = limiter(properties(120, 1, Duration.ofMinutes(15)));
+    void oneShotIdentityChurnCannotDenyLegitimateNewIdentitiesOnTheSameRule() {
+        SimpleMeterRegistry registry = new SimpleMeterRegistry();
+        InMemoryRateLimiter limiter = limiter(
+                properties(120, 1, Duration.ofMinutes(15)),
+                registry
+        );
         int perRuleCapacity = 120 / RateLimitRule.values().length;
 
         for (int index = 0; index < 100_000; index++) {
-            limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, "churn-" + index, START);
+            assertThat(limiter.tryAcquire(
+                    RateLimitRule.LOGIN_ACCOUNT,
+                    "churn-" + index,
+                    START
+            )).isTrue();
         }
 
-        assertThat(limiter.activeKeyCount()).isEqualTo(perRuleCapacity);
-        assertThat(limiter.tryAcquire(RateLimitRule.LOGIN_IP, "legitimate-peer", START))
+        assertThat(limiter.activeKeyCount()).isLessThanOrEqualTo(perRuleCapacity);
+        assertThat(registry.get("servisimibul.rate_limit.probation_evictions.total")
+                .tag("rule", "login_account")
+                .counter()
+                .count()).isGreaterThan(0);
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "legitimate-new-account",
+                START
+        )).isTrue();
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "legitimate-new-account",
+                START
+        )).isFalse();
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "another-legitimate-new-account",
+                START
+        )).isTrue();
+    }
+
+    @Test
+    void overflowContentionMayRejectRetriesButNotFirstAttemptsForTheSameRule() {
+        InMemoryRateLimiter limiter = limiter(properties(120, 1, Duration.ofMinutes(15)));
+        int perRuleCapacity = 120 / RateLimitRule.values().length;
+        int probationCapacity = perRuleCapacity / 4;
+        int protectedCapacity = perRuleCapacity - probationCapacity;
+
+        for (int index = 0; index < protectedCapacity; index++) {
+            String identity = "protected-" + index;
+            assertThat(limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START)).isTrue();
+            assertThat(limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START)).isFalse();
+        }
+        for (int index = 0; index < 10_000; index++) {
+            String identity = "overflow-churn-" + index;
+            assertThat(limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START)).isTrue();
+            limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START);
+        }
+
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "legitimate-after-overflow-saturation",
+                START
+        )).isTrue();
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "legitimate-after-overflow-saturation",
+                START
+        )).isFalse();
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "legitimate-after-overflow-saturation",
+                START
+        )).isFalse();
+        assertThat(limiter.tryAcquire(
+                RateLimitRule.LOGIN_ACCOUNT,
+                "second-legitimate-after-overflow-saturation",
+                START
+        )).isTrue();
+        assertThat(limiter.activeKeyCount()).isLessThanOrEqualTo(perRuleCapacity);
+    }
+
+    @Test
+    void concurrentNewIdentityChurnRemainsBoundedAndAdmitsEachFirstAttempt() throws Exception {
+        InMemoryRateLimiter limiter = limiter(properties(120, 1, Duration.ofMinutes(15)));
+        List<Callable<Boolean>> attempts = new ArrayList<>();
+        for (int index = 0; index < 2_000; index++) {
+            String identity = "concurrent-churn-" + index;
+            attempts.add(() -> limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, identity, START));
+        }
+
+        try (var executor = Executors.newFixedThreadPool(24)) {
+            long allowed = executor.invokeAll(attempts).stream()
+                    .filter(future -> {
+                        try {
+                            return future.get();
+                        } catch (Exception failure) {
+                            throw new AssertionError(failure);
+                        }
+                    })
+                    .count();
+            assertThat(allowed).isEqualTo(attempts.size());
+        }
+
+        assertThat(limiter.activeKeyCount())
+                .isLessThanOrEqualTo(120 / RateLimitRule.values().length);
+        assertThat(limiter.tryAcquire(RateLimitRule.LOGIN_ACCOUNT, "post-churn-legitimate", START))
                 .isTrue();
     }
 

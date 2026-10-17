@@ -55,6 +55,7 @@ Approval state is important: never turn a proposal into a settled decision witho
 1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
 2. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
 3. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
+4. D028 still defaults new profiles to public visibility. Registration labels the mandatory phone as public, but it has no separate disclosure acknowledgement or pre-publication confirmation. Before the approval-disabled pilot is enabled, product/legal owners must decide whether that label is sufficient or whether an explicit acknowledgement/confirmation is required; changing the default itself requires a superseding decision.
 
 ## Decision change procedure
 When an approved decision changes: update this document, related domain/API/roadmap files, acceptance tests and task scope in the same reviewed PR. Never silently overwrite the old rule.
