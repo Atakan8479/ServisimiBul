@@ -162,6 +162,139 @@ nav a.active {
   margin: 1rem 0 0;
 }
 
+.discovery-page {
+  width: min(68rem, 100%);
+}
+
+.discovery-intro {
+  max-width: 48rem;
+}
+
+.discovery-intro > p:last-child {
+  max-width: 42rem;
+  margin: 1.25rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+.discovery-search {
+  max-width: 64rem;
+  margin-top: 2rem;
+}
+
+.discovery-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.discovery-note {
+  max-width: 52rem;
+  margin: 1.25rem 0;
+  color: var(--color-muted);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.discovery-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.discovery-results {
+  margin-top: 3rem;
+}
+
+.discovery-result-heading {
+  margin-bottom: 1.25rem;
+}
+
+.operator-result-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: 1rem;
+}
+
+.operator-result-card {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.operator-result-card h3,
+.operator-result-card h4,
+.operator-result-card p {
+  margin: 0;
+}
+
+.operator-result-card h3 {
+  font-size: 1.35rem;
+}
+
+.operator-school {
+  margin-top: 0.35rem !important;
+  color: var(--color-accent) !important;
+  font-weight: 750;
+}
+
+.offering-summary {
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.offering-summary h4 {
+  font-size: 0.95rem;
+}
+
+.offering-summary ul {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.offering-summary li {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.offering-summary strong {
+  color: var(--color-text);
+}
+
+.operator-contact {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.operator-contact .button-link {
+  min-height: 2.75rem;
+  align-items: center;
+  margin-top: 0;
+}
+
+.discovery-results .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
 .eyebrow {
   margin: 0 0 0.75rem;
   color: var(--color-accent);
@@ -1016,6 +1149,19 @@ button:disabled {
 
   .action-grid {
     grid-template-columns: 1fr;
+  }
+
+  .discovery-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discovery-search > .primary-button {
+    width: 100%;
+  }
+
+  .discovery-load-error {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .status-banner {
