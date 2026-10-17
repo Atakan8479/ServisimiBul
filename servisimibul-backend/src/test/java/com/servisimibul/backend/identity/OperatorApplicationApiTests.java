@@ -217,6 +217,7 @@ class OperatorApplicationApiTests {
 
         mockMvc.perform(get("/api/v1/admin/operators")
                         .with(asUser(admin))
+                        .param("status", "PENDING")
                         .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
@@ -287,7 +288,8 @@ class OperatorApplicationApiTests {
         assertThat(userRepository.findById(operator.getId()).orElseThrow().isEnabled()).isFalse();
         assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).isEmpty();
         mockMvc.perform(get("/api/v1/auth/me").cookie(sessionCookie))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/api/v1/operator/profile").with(asUser(operator)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("operator_suspended"));
