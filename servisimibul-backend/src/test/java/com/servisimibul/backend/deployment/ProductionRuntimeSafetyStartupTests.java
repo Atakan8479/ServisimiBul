@@ -57,7 +57,7 @@ class ProductionRuntimeSafetyStartupTests {
 
             assertThat(startupFailure)
                     .isInstanceOf(IllegalStateException.class)
-                    .hasRootCauseMessage(
+                    .hasMessage(
                             "Unsafe production runtime configuration: "
                                     + "Flyway must be disabled in the production web process"
                     );
