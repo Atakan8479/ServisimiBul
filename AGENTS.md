@@ -31,7 +31,7 @@ When sources conflict: stop, explain the conflict, and request a decision. Do no
 - Operator can appear in searches without any Vehicle or ServiceOffering.
 - Match by exact School + per-school Neighborhood coverage; neighborhood may be in another district of the SAME province, not another province.
 - Operator business name is optional; public contact phone is mandatory. Active public operator profile exposes a valid contact phone; operator may hide entire profile.
-- Published visibility derived from email verified + enabled account + admin approval + active operator + public profile toggle + active school and matching coverage; do not cache a duplicate operator `isPublished` state.
+- Published visibility is derived from email verified + enabled account + the effective operator-approval policy + active operator + public profile toggle + active school and matching coverage; do not cache a duplicate operator `isPublished` state. Administrative approval is required by the safe default and bypassed only when `OPERATOR_APPROVAL_REQUIRED=false` is explicitly configured for the pilot.
 - Requesting corrections to a rejected application is NOT a permanent ban; track review reasons and let operator edit/re-submit. Do not assume final state names beyond approved ones.
 - ServiceOffering is optional; each offering has its own coverage and it must be a subset of its OperatorSchoolCoverage.
 - MVP tariffs are official UKOME distance bands stored as JSON, editable by admins via Spring Boot; NOT fare tables in PostgreSQL, and NO operator-entered monthly price for MVP. Do not infer kilometers from neighborhood.

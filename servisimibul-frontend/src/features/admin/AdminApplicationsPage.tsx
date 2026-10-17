@@ -1,6 +1,12 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import {
+  Link,
+  useNavigate,
+  useParams,
+  useRouteLoaderData,
+} from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import type { AuthUser } from '../auth/auth-api'
 import {
   approveApplication,
   getApplication,
@@ -21,7 +27,10 @@ const statusLabels: Record<ApplicationStatus, string> = {
 
 export function AdminApplicationsPage() {
   const navigate = useNavigate()
-  const [status, setStatus] = useState<ApplicationStatus>('PENDING')
+  const user = useRouteLoaderData('admin') as AuthUser
+  const [status, setStatus] = useState<ApplicationStatus | undefined>(
+    user.operatorApprovalRequired ? 'PENDING' : undefined,
+  )
   const [page, setPage] = useState(0)
   const [result, setResult] = useState<ApplicationPage>()
   const [error, setError] = useState<string>()
@@ -46,30 +55,42 @@ export function AdminApplicationsPage() {
 
   return (
     <section className="workspace-page">
-      <p className="eyebrow">Başvuru yönetimi</p>
-      <h1>İşletmeci başvuruları</h1>
+      <p className="eyebrow">
+        {user.operatorApprovalRequired
+          ? 'Başvuru yönetimi'
+          : 'Pilot moderasyonu'}
+      </p>
+      <h1>
+        {user.operatorApprovalRequired
+          ? 'İşletmeci başvuruları'
+          : 'İşletmeciler'}
+      </h1>
       <p className="page-lead">
-        Başvuruları durumuna göre inceleyin ve gerekli işlemi uygulayın.
+        {user.operatorApprovalRequired
+          ? 'Başvuruları durumuna göre inceleyin ve gerekli işlemi uygulayın.'
+          : 'Pilot işletmecilerini başvuru beklemeden izleyin ve gerektiğinde askıya alın.'}
       </p>
 
-      <label className="form-field application-filter">
-        <span>Başvuru durumu</span>
-        <select
-          onChange={(event) => {
-            setLoading(true)
-            setError(undefined)
-            setStatus(event.target.value as ApplicationStatus)
-            setPage(0)
-          }}
-          value={status}
-        >
-          {Object.entries(statusLabels).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </label>
+      {user.operatorApprovalRequired && (
+        <label className="form-field application-filter">
+          <span>Başvuru durumu</span>
+          <select
+            onChange={(event) => {
+              setLoading(true)
+              setError(undefined)
+              setStatus(event.target.value as ApplicationStatus)
+              setPage(0)
+            }}
+            value={status}
+          >
+            {Object.entries(statusLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       {error && (
         <div className="form-error" role="alert">
@@ -87,20 +108,30 @@ export function AdminApplicationsPage() {
                   <h2>{profile.businessName || 'İsimsiz işletme'}</h2>
                   <p>{profile.contactPhone}</p>
                 </div>
-                <span className="status-pill neutral">
-                  {statusLabels[profile.approvalStatus]}
-                </span>
+                {user.operatorApprovalRequired && (
+                  <span className="status-pill neutral">
+                    {statusLabels[profile.approvalStatus]}
+                  </span>
+                )}
               </div>
               <Link to={`/admin/applications/${profile.id}`} viewTransition>
-                Başvuruyu incele
+                {user.operatorApprovalRequired
+                  ? 'Başvuruyu incele'
+                  : 'Profili incele'}
               </Link>
             </article>
           ))}
         </div>
       ) : (
         <div className="empty-state">
-          <h2>Bu durumda başvuru yok</h2>
-          <p>Başka bir durum seçerek listeyi değiştirebilirsiniz.</p>
+          <h2>
+            {user.operatorApprovalRequired
+              ? 'Bu durumda başvuru yok'
+              : 'Henüz işletmeci yok'}
+          </h2>
+          {user.operatorApprovalRequired && (
+            <p>Başka bir durum seçerek listeyi değiştirebilirsiniz.</p>
+          )}
         </div>
       )}
 
@@ -140,6 +171,7 @@ export function AdminApplicationsPage() {
 export function AdminApplicationDetailPage() {
   const { applicationId } = useParams()
   const navigate = useNavigate()
+  const user = useRouteLoaderData('admin') as AuthUser
   const [detail, setDetail] = useState<ApplicationDetail>()
   const [reason, setReason] = useState('')
   const [pending, setPending] = useState(false)
@@ -225,9 +257,14 @@ export function AdminApplicationDetailPage() {
   return (
     <section className="workspace-page">
       <Link to="/admin/applications" viewTransition>
-        ← Başvurulara dön
+        ←{' '}
+        {user.operatorApprovalRequired
+          ? 'Başvurulara dön'
+          : 'İşletmecilere dön'}
       </Link>
-      <p className="eyebrow">Başvuru detayı</p>
+      <p className="eyebrow">
+        {user.operatorApprovalRequired ? 'Başvuru detayı' : 'Pilot moderasyonu'}
+      </p>
       <h1>{profile?.businessName || 'İsimsiz işletme'}</h1>
 
       {error && (
@@ -246,9 +283,11 @@ export function AdminApplicationDetailPage() {
           <article className="form-card compact-card application-detail">
             <div className="school-title-row">
               <h2>Profil bilgileri</h2>
-              <span className="status-pill neutral">
-                {statusLabels[profile.approvalStatus]}
-              </span>
+              {user.operatorApprovalRequired && (
+                <span className="status-pill neutral">
+                  {statusLabels[profile.approvalStatus]}
+                </span>
+              )}
             </div>
             <dl className="detail-list">
               <div>
@@ -270,38 +309,39 @@ export function AdminApplicationDetailPage() {
             </dl>
           </article>
 
-          {profile.approvalStatus === 'PENDING' && (
-            <section className="form-card compact-card form-stack">
-              <h2>Başvuruyu sonuçlandır</h2>
-              <button
-                className="primary-button"
-                disabled={pending}
-                onClick={approve}
-                type="button"
-              >
-                Başvuruyu onayla
-              </button>
-              <form className="form-stack" onSubmit={requestRevision}>
-                <label className="form-field">
-                  <span>Düzeltme nedeni</span>
-                  <textarea
-                    onChange={(event) => setReason(event.target.value)}
-                    rows={4}
-                    value={reason}
-                  />
-                </label>
+          {user.operatorApprovalRequired &&
+            profile.approvalStatus === 'PENDING' && (
+              <section className="form-card compact-card form-stack">
+                <h2>Başvuruyu sonuçlandır</h2>
                 <button
-                  className="secondary-button"
+                  className="primary-button"
                   disabled={pending}
-                  type="submit"
+                  onClick={approve}
+                  type="button"
                 >
-                  Düzeltme iste
+                  Başvuruyu onayla
                 </button>
-              </form>
-            </section>
-          )}
+                <form className="form-stack" onSubmit={requestRevision}>
+                  <label className="form-field">
+                    <span>Düzeltme nedeni</span>
+                    <textarea
+                      onChange={(event) => setReason(event.target.value)}
+                      rows={4}
+                      value={reason}
+                    />
+                  </label>
+                  <button
+                    className="secondary-button"
+                    disabled={pending}
+                    type="submit"
+                  >
+                    Düzeltme iste
+                  </button>
+                </form>
+              </section>
+            )}
 
-          {profile.active && profile.approvalStatus === 'APPROVED' && (
+          {profile.active && (
             <button
               className="danger-button admin-danger-action"
               disabled={pending}

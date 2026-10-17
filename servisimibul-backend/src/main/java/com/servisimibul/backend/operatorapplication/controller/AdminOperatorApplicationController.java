@@ -27,7 +27,7 @@ public class AdminOperatorApplicationController {
 
     @GetMapping
     public PageResponse<ProfileResponse> queue(
-            @RequestParam(defaultValue = "PENDING") OperatorApprovalStatus status,
+            @RequestParam(required = false) OperatorApprovalStatus status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {

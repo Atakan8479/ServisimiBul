@@ -2,12 +2,20 @@ package com.servisimibul.backend.auth;
 
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
+import com.servisimibul.backend.identity.OperatorProfile;
+import com.servisimibul.backend.identity.OperatorProfileRepository;
+import com.servisimibul.backend.identity.PasswordResetToken;
+import com.servisimibul.backend.identity.PasswordResetTokenRepository;
 import com.servisimibul.backend.security.SessionRevoker;
+import com.servisimibul.backend.security.TokenHasher;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.csrf.CsrfToken;
@@ -29,6 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@ExtendWith(OutputCaptureExtension.class)
 class SessionAuthenticationApiTests {
 
     private static final String PASSWORD = "correct horse battery staple";
@@ -38,6 +47,15 @@ class SessionAuthenticationApiTests {
 
     @Autowired
     private AppUserRepository userRepository;
+
+    @Autowired
+    private OperatorProfileRepository profileRepository;
+
+    @Autowired
+    private PasswordResetTokenRepository resetTokenRepository;
+
+    @Autowired
+    private TokenHasher tokenHasher;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -90,6 +108,31 @@ class SessionAuthenticationApiTests {
     }
 
     @Test
+    void successfulLoginRotatesThePreLoginSessionAndInvalidatesItsOldIdentifier()
+            throws Exception {
+        AppUser user = createVerifiedUser("rotation-user@example.com");
+        CsrfSession csrf = csrfSession();
+
+        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
+                        .cookie(csrf.cookie())
+                        .header(csrf.header(), csrf.token())
+                        .contentType("application/json")
+                        .content("""
+                                {"email":"%s","password":"%s","rememberMe":false}
+                                """.formatted(user.getEmail(), PASSWORD)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Cookie rotated = result.getResponse().getCookie("SBSESSION");
+        assertThat(rotated).isNotNull();
+        assertThat(rotated.getValue()).isNotEqualTo(csrf.cookie().getValue());
+        mockMvc.perform(get("/api/v1/auth/me").cookie(csrf.cookie()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/auth/me").cookie(rotated))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void rememberMeCreatesPersistentNinetyDaySession() throws Exception {
         AppUser user = createVerifiedUser("remembered-user@example.com");
 
@@ -118,7 +161,7 @@ class SessionAuthenticationApiTests {
 
         assertThat(sessionRepository.findByPrincipalName(user.getEmail())).hasSize(2);
         mockMvc.perform(get("/api/v1/auth/me").cookie(first.cookie()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         sessionRevoker.revokeAll(user.getId());
         assertThat(sessionRepository.findByPrincipalName(user.getEmail())).isEmpty();
@@ -133,6 +176,65 @@ class SessionAuthenticationApiTests {
 
         assertInvalidLogin(unverified.getEmail(), PASSWORD);
         assertInvalidLogin("missing@example.com", PASSWORD);
+    }
+
+    @Test
+    void passwordResetRevokesJdbcSessionsAndTheOldCookieCannotAuthenticate() throws Exception {
+        AppUser user = createVerifiedUser("jdbc-reset@example.com");
+        LoginResult login = login(user.getEmail(), false);
+        String rawToken = "reset-token-that-must-not-be-logged";
+        resetTokenRepository.saveAndFlush(new PasswordResetToken(
+                user,
+                tokenHasher.hash(rawToken),
+                OffsetDateTime.now().plusMinutes(30)
+        ));
+        CsrfSession csrf = csrfSession();
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .cookie(csrf.cookie())
+                        .header(csrf.header(), csrf.token())
+                        .contentType("application/json")
+                        .content("""
+                                {"token":"%s","newPassword":"new correct horse battery staple"}
+                                """.formatted(rawToken)))
+                .andExpect(status().isNoContent());
+
+        assertThat(sessionRepository.findByPrincipalName(user.getEmail())).isEmpty();
+        mockMvc.perform(get("/api/v1/auth/me").cookie(login.cookie()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void disabledDatabaseUserCannotUseAnExistingSessionForOperatorData() throws Exception {
+        AppUser user = createVerifiedUser("disabled-session@example.com");
+        profileRepository.saveAndFlush(new OperatorProfile(user, null, "+905551112233"));
+        LoginResult login = login(user.getEmail(), false);
+        user.disable();
+        userRepository.flush();
+
+        mockMvc.perform(get("/api/v1/operator/profile").cookie(login.cookie()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("operator_account_disabled"));
+    }
+
+    @Test
+    void authenticationSecretsNeverAppearInCapturedLogs(CapturedOutput output) throws Exception {
+        String secretPassword = "log-sentinel-password-12345";
+        CsrfSession csrf = csrfSession();
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .cookie(csrf.cookie())
+                        .header(csrf.header(), csrf.token())
+                        .contentType("application/json")
+                        .content("""
+                                {"email":"missing-log@example.com","password":"%s","rememberMe":false}
+                                """.formatted(secretPassword)))
+                .andExpect(status().isUnauthorized());
+
+        assertThat(output.getAll())
+                .doesNotContain(secretPassword)
+                .doesNotContain(csrf.token())
+                .doesNotContain(csrf.cookie().getValue());
     }
 
     private void assertInvalidLogin(String email, String password) throws Exception {

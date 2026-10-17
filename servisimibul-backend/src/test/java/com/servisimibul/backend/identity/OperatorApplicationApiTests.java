@@ -64,7 +64,7 @@ class OperatorApplicationApiTests {
 
     @Test
     void operatorCanReadPatchAndSubmitOwnProfileWithoutChangingProtectedState() throws Exception {
-        AppUser operator = createOperator("profile-owner@example.com", "Profile Owner", false);
+        AppUser operator = createOperator("profile-owner@example.com", "Profile Owner", true);
 
         mockMvc.perform(get("/api/v1/operator/profile").with(asUser(operator)))
                 .andExpect(status().isOk())
@@ -126,7 +126,7 @@ class OperatorApplicationApiTests {
 
     @Test
     void revisionHistoryIsAppendedAndOperatorCanEditThenResubmit() throws Exception {
-        AppUser operator = createOperator("revision-owner@example.com", "Revision Owner", false);
+        AppUser operator = createOperator("revision-owner@example.com", "Revision Owner", true);
         AppUser admin = createAdmin("revision-admin@example.com");
         OperatorProfile profile = submit(operator);
 
@@ -164,7 +164,7 @@ class OperatorApplicationApiTests {
 
     @Test
     void approvedProfileEditsApplyWithoutRenewedReview() throws Exception {
-        AppUser operator = createOperator("approved-owner@example.com", "Approved Owner", false);
+        AppUser operator = createOperator("approved-owner@example.com", "Approved Owner", true);
         AppUser admin = createAdmin("approval-admin@example.com");
         OperatorProfile profile = submit(operator);
 
@@ -187,16 +187,37 @@ class OperatorApplicationApiTests {
     }
 
     @Test
+    void pendingApplicationIsReadableButCannotBeEditedOrManageResources() throws Exception {
+        AppUser operator = createOperator("pending-read-only@example.com", "Pending Owner", true);
+        submit(operator);
+
+        mockMvc.perform(get("/api/v1/operator/profile").with(asUser(operator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approvalStatus").value("PENDING"));
+        mockMvc.perform(patch("/api/v1/operator/profile")
+                        .with(asUser(operator))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"businessName\":\"Must Not Change\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("operator_application_read_only"));
+        mockMvc.perform(get("/api/v1/operator/schools").with(asUser(operator)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("operator_approval_required"));
+    }
+
+    @Test
     void adminQueueIsFilteredPaginatedAndDetailed() throws Exception {
-        AppUser first = createOperator("queue-one@example.com", "Queue One", false);
-        AppUser second = createOperator("queue-two@example.com", "Queue Two", false);
-        createOperator("queue-draft@example.com", "Queue Draft", false);
+        AppUser first = createOperator("queue-one@example.com", "Queue One", true);
+        AppUser second = createOperator("queue-two@example.com", "Queue Two", true);
+        createOperator("queue-draft@example.com", "Queue Draft", true);
         AppUser admin = createAdmin("queue-admin@example.com");
         OperatorProfile firstProfile = submit(first);
         submit(second);
 
         mockMvc.perform(get("/api/v1/admin/operators")
                         .with(asUser(admin))
+                        .param("status", "PENDING")
                         .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
@@ -220,7 +241,7 @@ class OperatorApplicationApiTests {
 
     @Test
     void roleCsrfReasonAndSelfReviewBoundariesAreEnforced() throws Exception {
-        AppUser operator = createOperator("boundary-owner@example.com", "Boundary Owner", false);
+        AppUser operator = createOperator("boundary-owner@example.com", "Boundary Owner", true);
         AppUser admin = createAdmin("boundary-admin@example.com");
         OperatorProfile profile = submit(operator);
 
@@ -267,7 +288,8 @@ class OperatorApplicationApiTests {
         assertThat(userRepository.findById(operator.getId()).orElseThrow().isEnabled()).isFalse();
         assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).isEmpty();
         mockMvc.perform(get("/api/v1/auth/me").cookie(sessionCookie))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/api/v1/operator/profile").with(asUser(operator)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("operator_suspended"));

@@ -9,6 +9,58 @@ import { server } from '../../test/server'
 afterEach(resetCsrfToken)
 
 describe('operator workspace flows', () => {
+  it('hides the approval workflow and keeps draft profile editing available in pilot mode', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      http.get('/api/v1/operator/profile', () =>
+        HttpResponse.json(profile('DRAFT')),
+      ),
+    )
+
+    renderRoute('/operator/profile')
+
+    expect(await screen.findByText('Pilot modu etkin')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Başvuruyu gönder' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText('İşletme adı (isteğe bağlı)')).toBeEnabled()
+    expect(
+      screen.getByRole('link', { name: 'Okullar ve kapsam' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Araçlar ve servisler' }),
+    ).toBeInTheDocument()
+  })
+
+  it('renders a pending application as read-only when approval is required', async () => {
+    server.use(
+      authHandler(true, 'PENDING'),
+      http.get('/api/v1/operator/profile', () =>
+        HttpResponse.json(profile('PENDING')),
+      ),
+    )
+
+    renderRoute('/operator/profile')
+
+    expect(
+      await screen.findByText(
+        'İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('İşletme adı (isteğe bağlı)')).toBeDisabled()
+    expect(
+      screen.queryByRole('link', { name: 'Okullar ve kapsam' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Araçlar ve servisler' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('edits a correction-requested profile and resubmits it', async () => {
     let patchBody: unknown
     let resubmitted = false
@@ -212,12 +264,17 @@ describe('operator workspace flows', () => {
   })
 })
 
-function authHandler() {
+function authHandler(
+  operatorApprovalRequired = true,
+  approvalStatus = 'APPROVED',
+) {
   return http.get('/api/v1/auth/me', () =>
     HttpResponse.json({
       id: '6e2973ac-0302-49a8-b519-563ec9861272',
       email: 'operator@example.com',
       role: 'OPERATOR',
+      operatorApprovalRequired,
+      approvalStatus,
     }),
   )
 }

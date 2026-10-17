@@ -36,7 +36,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                     where user.emailVerifiedAt is not null
                       and user.enabled = true
                       and user.role = :userRole
-                      and profile.approvalStatus = :approvalStatus
+                      and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
                       and profile.active = true
                       and profile.publiclyVisible = true
                       and exists (
@@ -59,7 +59,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                     where user.emailVerifiedAt is not null
                       and user.enabled = true
                       and user.role = :userRole
-                      and profile.approvalStatus = :approvalStatus
+                      and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
                       and profile.active = true
                       and profile.publiclyVisible = true
                       and exists (
@@ -80,6 +80,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             @Param("neighborhoodId") Long neighborhoodId,
             @Param("userRole") UserRole userRole,
             @Param("approvalStatus") OperatorApprovalStatus approvalStatus,
+            @Param("approvalRequired") boolean approvalRequired,
             Pageable pageable
     );
 

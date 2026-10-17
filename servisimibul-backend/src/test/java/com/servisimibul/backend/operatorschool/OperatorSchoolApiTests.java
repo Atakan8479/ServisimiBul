@@ -235,7 +235,7 @@ class OperatorSchoolApiTests {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
 
         AppUser operator = createOperator("csrf-owner@example.com", "Csrf Owner");
         mockMvc.perform(post("/api/v1/operator/schools")
@@ -246,8 +246,13 @@ class OperatorSchoolApiTests {
     }
 
     private AppUser createOperator(String email, String businessName) {
-        AppUser user = userRepository.saveAndFlush(AppUser.newOperator(email, "test-password-hash"));
-        profileRepository.saveAndFlush(new OperatorProfile(user, businessName, "+905551112233"));
+        AppUser user = AppUser.newOperator(email, "test-password-hash");
+        user.verifyEmail(java.time.OffsetDateTime.now());
+        userRepository.saveAndFlush(user);
+        OperatorProfile profile = new OperatorProfile(user, businessName, "+905551112233");
+        profile.submit();
+        profile.approve();
+        profileRepository.saveAndFlush(profile);
         return user;
     }
 

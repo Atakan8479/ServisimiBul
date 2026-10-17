@@ -467,7 +467,7 @@ class OfferingApiTests {
                         .content("{\"plate\":\"34EEE005\",\"capacity\":10}"))
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/operator/vehicles"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     private Fixture createFixture(String email, String businessName, String plate) {
@@ -498,8 +498,13 @@ class OfferingApiTests {
     }
 
     private AppUser createOperator(String email, String businessName) {
-        AppUser user = userRepository.saveAndFlush(AppUser.newOperator(email, "test-password-hash"));
-        profileRepository.saveAndFlush(new OperatorProfile(user, businessName, "+905551112233"));
+        AppUser user = AppUser.newOperator(email, "test-password-hash");
+        user.verifyEmail(java.time.OffsetDateTime.now());
+        userRepository.saveAndFlush(user);
+        OperatorProfile profile = new OperatorProfile(user, businessName, "+905551112233");
+        profile.submit();
+        profile.approve();
+        profileRepository.saveAndFlush(profile);
         return user;
     }
 

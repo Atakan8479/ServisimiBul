@@ -10,6 +10,7 @@ This runbook covers the Spring Boot backend artifact. It does not authorize a pr
 - Store secrets in the deployment platform's secret manager. Do not put secret values in Git, image layers, command history, health responses, or logs.
 - Run Flyway as a one-shot release step with migration credentials. Run the application with only the restricted `servisimibul_app` credentials and Flyway disabled.
 - Deploy immutable JARs. Do not write tariff data or other persistent state inside an expanded or packaged application artifact.
+- Run exactly one backend instance for the initial pilot. The platform must restart a failed process automatically; do not infer high availability from a single process.
 
 ## Build
 
@@ -51,6 +52,9 @@ The deployable artifact is `target/servisimibul-backend-0.0.1-SNAPSHOT.jar`. A r
 | `SB_SHUTDOWN_TIMEOUT` | no | Graceful shutdown window, default `30s`. |
 | `SB_FORWARD_HEADERS_STRATEGY` | no | Defaults to `none`; set only for a reviewed trusted-proxy topology. |
 | `SB_TARIFF_STORAGE_DIR` | yes | Backend-only durable writable tariff volume; never the repository, classpath, or packaged JAR. |
+| `OPERATOR_APPROVAL_REQUIRED=false` | yes for the initial pilot | Explicitly bypasses application review waiting. The application default is safely `true`; omission therefore changes pilot behavior and must fail the release checklist. |
+
+Rate-limit variables use the `SB_RATE_LIMIT_*` prefix. Defaults preserve login `10/account/15m` and `100/IP/15m`, registration/resend/recovery `20/IP/1h`, eligible resend/recovery `5/account/1h`, plus provisional verification `60/IP` and `5/token` per 15 minutes, reset `30/IP` and `5/token` per 15 minutes, and public search `120/IP/1m`. `SB_RATE_LIMIT_MAX_KEYS` and `SB_RATE_LIMIT_OVERFLOW_BUCKETS` bound memory. Treat all non-established values as staging defaults requiring measurement, not production-validated capacity.
 
 Do not provide `SB_DB_MIGRATION_USER` or `SB_DB_MIGRATION_PASSWORD` to the normal runtime. The production profile always marks `SBSESSION` Secure; the common configuration also makes it HttpOnly, `SameSite=Lax`, path `/`, with no Domain attribute.
 
@@ -100,6 +104,8 @@ curl --fail --silent --show-error https://<origin>/readyz
 
 Health endpoints are intentionally anonymous because infrastructure probes cannot hold a user session. They return aggregate status only. Restrict them at the edge if the hosting platform supports internal-only probes, but do not expose more Actuator endpoints as a substitute.
 
+The complete production-profile security context permits anonymous `GET /livez` and `GET /readyz`. Liveness uses only application lifecycle state; readiness includes the database indicator. A 401/403 from either path is a launch blocker.
+
 ## Logging and secret handling
 
 The `prod` profile writes Elastic Common Schema JSON to stdout. The deployment platform, not the application, owns collection and retention. Hibernate bind-value logging and Spring MVC request-detail logging are explicitly disabled.
@@ -119,6 +125,16 @@ Production uses one browser origin for the frontend and `/api/v1`, so no applica
 
 Forwarded headers are ignored by default. If a platform requires them for HTTPS redirects or absolute links, enable only the platform-supported strategy and ensure the application port is reachable solely through trusted proxies; otherwise clients could spoof scheme or host information.
 
+Rate-limit client identity independently uses the actual network peer and does not trust arbitrary `Forwarded` or `X-Forwarded-For`. Before changing that behavior, document the exact proxy hops and header-replacement guarantees and add spoofing tests. HSTS is emitted only when Spring recognizes a secure HTTPS request, so the chosen proxy topology must also be verified in staging.
+
+## Single-instance rate limiter
+
+The in-process limiter has bounded per-rule storage, expired-key cleanup, a protected repeated-identity tier, a small least-recently-used first-attempt probation tier, and constant-memory fixed-window overflow buckets. One-shot identity churn can evict only probationary single attempts; it cannot evict protected multi-attempt histories or poison overflow buckets, and a legitimate new identity on the same rule still receives a first attempt. Repeats are promoted when protected capacity exists. If protected capacity is full, repeats use the overflow tier, which conservatively records both their first and current attempts.
+
+This bounded fallback retains explicit trade-offs. Evicting a probationary record can let that single attempt be forgotten, so authentication endpoints rely on their companion network-peer and token/account rules. Sustained distributed identities that each repeat can fill protected storage and overflow counters; unrelated repeats sharing a bucket can then be conservatively rejected, although new first attempts are not globally rejected. The process-secret fingerprint makes targeted bucket selection impractical but does not prevent untargeted botnet churn. Monitor active keys, probation evictions, saturation, and 429 rates together; a sustained rise requires abuse investigation and may trigger edge-level protection.
+
+Limiter state resets on restart and is not shared. A platform that briefly overlaps old and new processes during deployment creates independent enforcement windows; verify that behavior before launch. If overlap weakens authentication protection beyond the accepted risk, require edge-level shared enforcement even while application traffic normally targets one instance. Future multi-instance work must compare managed edge/CDN controls, Redis, and PostgreSQL advisory/storage designs for cost, availability, security, operational complexity, and fail-open/fail-closed behavior; PostgreSQL is not added merely for hypothetical scaling.
+
 ## Tariff persistence contract
 
 D033–D035 approve a backend-only persistent filesystem directory configured by `SB_TARIFF_STORAGE_DIR`; A-05 implements that contract. The production profile requires the variable, and deployment must mount the directory on a durable writable volume outside the packaged JAR. It must never point at the classpath, frontend, PostgreSQL fare tables, or Supabase Storage.
@@ -136,6 +152,14 @@ The implementation uses immutable version files and same-filesystem atomic repla
 7. Shift traffic gradually when the platform supports it. Watch status transitions, error rate, latency, restart count, database connections, and ECS logs.
 8. Remove superseded instances only after the observation window passes.
 
+## Provider-neutral readiness and scaling
+
+Railway, Render, and a managed VPS remain candidates; none is approved. Before selection, confirm low-traffic cost from a current quote, Java 21 artifact/container support, automatic restart, status-only liveness/readiness probes, secret handling, log/metric retention, persistent-volume durability and backups, outbound Supabase PostgreSQL/TLS support, connection management, custom-domain same-origin routing, deployment overlap/downtime behavior, and an explicit rollback mechanism. A VPS additionally requires named ownership for OS patching, firewall/TLS/reverse-proxy maintenance, monitoring, backup verification, and process supervision.
+
+Launch monitoring must cover CPU, memory, request latency/error rate, restart count, readiness transitions, database pool active/pending/timeout behavior, rate-limit saturation/rejections, disk/volume health, and backup failures with actionable alerts. Capacity changes are triggered by measured sustained saturation, latency/error degradation, connection-pool pressure, deployment availability needs, or traffic growth; this document intentionally sets no unsupported numeric threshold.
+
+Before adding instances: budget database connections across replicas; confirm Spring Session JDBC cleanup/index performance; move rate enforcement to an edge/shared design; replace the single-writer tariff filesystem or add a reviewed shared store/lock; coordinate Flyway as one pre-deploy job; ensure background jobs have leader/singleton execution; add load balancing, graceful draining, and rolling-deployment tests. Existing pilot operators also need a reviewed grandfathering/migration plan before changing `OPERATOR_APPROVAL_REQUIRED` from `false` to `true`, otherwise legitimate DRAFT/PENDING businesses could disappear from discovery.
+
 ## Rollback
 
 Application rollback and database recovery are separate decisions:
@@ -147,4 +171,4 @@ Application rollback and database recovery are separate decisions:
 5. Use [`10_DATABASE_AND_BACKUP_OPERATIONS.md`](10_DATABASE_AND_BACKUP_OPERATIONS.md) only after confirming the exact target, recovery point, data-loss window, and receiving fresh destructive-operation approval.
 6. Record the incident, applied migration versions, final artifact digest, validation evidence, and follow-up actions.
 
-Until B-10 and the remaining feature work are complete, this runbook is a deployable foundation rather than authorization to call the whole product production-ready.
+Passing B-10 tests makes this a stronger deployable foundation, not authorization to call the product production-ready. Provider selection, proxy/overlap behavior, durable-volume and backup proof, staging limit measurements, monitoring/alerts, migration rehearsal, and release smoke checks remain deployment gates.

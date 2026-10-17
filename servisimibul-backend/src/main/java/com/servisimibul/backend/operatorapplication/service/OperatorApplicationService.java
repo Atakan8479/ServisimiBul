@@ -18,6 +18,7 @@ import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ReviewResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.RevisionRequest;
 import com.servisimibul.backend.operatorapplication.exception.OperatorApplicationApiException;
+import com.servisimibul.backend.operatorapproval.OperatorApprovalPolicy;
 import com.servisimibul.backend.security.CurrentUser;
 import com.servisimibul.backend.security.SessionRevoker;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +40,7 @@ public class OperatorApplicationService {
     private final OperatorApplicationReviewRepository reviewRepository;
     private final AuthInputValidator inputValidator;
     private final SessionRevoker sessionRevoker;
+    private final OperatorApprovalPolicy approvalPolicy;
 
     @Transactional(readOnly = true)
     public ProfileResponse profile() {
@@ -55,6 +57,7 @@ public class OperatorApplicationService {
         }
 
         OperatorProfile profile = currentProfileForUpdate();
+        approvalPolicy.requireProfileEdit(profile);
         String businessName = request.hasBusinessName()
                 ? validated(() -> inputValidator.businessName(request.businessName()))
                 : profile.getBusinessName();
@@ -75,6 +78,7 @@ public class OperatorApplicationService {
 
     @Transactional
     public ProfileResponse submit() {
+        approvalPolicy.requireWorkflowEnabled();
         OperatorProfile profile = currentProfileForUpdate();
         requireStatus(
                 profile,
@@ -89,6 +93,7 @@ public class OperatorApplicationService {
 
     @Transactional
     public ProfileResponse resubmit() {
+        approvalPolicy.requireWorkflowEnabled();
         OperatorProfile profile = currentProfileForUpdate();
         requireStatus(
                 profile,
@@ -108,14 +113,14 @@ public class OperatorApplicationService {
             int size
     ) {
         validatePage(page, size);
-        var result = profileRepository.findAllByApprovalStatus(
-                status,
-                PageRequest.of(
-                        page,
-                        size,
-                        Sort.by("createdAt").ascending().and(Sort.by("id").ascending())
-                )
+        PageRequest pageRequest = PageRequest.of(
+                page,
+                size,
+                Sort.by("createdAt").ascending().and(Sort.by("id").ascending())
         );
+        var result = status == null
+                ? profileRepository.findAll(pageRequest)
+                : profileRepository.findAllByApprovalStatus(status, pageRequest);
         return new PageResponse<>(
                 result.getContent().stream().map(this::toProfileResponse).toList(),
                 result.getNumber(),
@@ -132,6 +137,7 @@ public class OperatorApplicationService {
 
     @Transactional
     public ApplicationDetailResponse approve(UUID id) {
+        approvalPolicy.requireWorkflowEnabled();
         OperatorProfile profile = detailedProfileForUpdate(id);
         AppUser reviewer = reviewerFor(profile);
         requireActive(profile);
@@ -155,6 +161,7 @@ public class OperatorApplicationService {
 
     @Transactional
     public ApplicationDetailResponse requestRevision(UUID id, RevisionRequest request) {
+        approvalPolicy.requireWorkflowEnabled();
         OperatorProfile profile = detailedProfileForUpdate(id);
         AppUser reviewer = reviewerFor(profile);
         requireActive(profile);
@@ -199,14 +206,14 @@ public class OperatorApplicationService {
     private OperatorProfile currentProfile() {
         OperatorProfile profile = profileRepository.findByUserId(currentUser.id())
                 .orElseThrow(this::profileNotFound);
-        requireActive(profile);
+        approvalPolicy.requireProfileRead(profile);
         return profile;
     }
 
     private OperatorProfile currentProfileForUpdate() {
         OperatorProfile profile = profileRepository.findByUserIdForUpdate(currentUser.id())
                 .orElseThrow(this::profileNotFound);
-        requireActive(profile);
+        approvalPolicy.requireProfileRead(profile);
         return profile;
     }
 

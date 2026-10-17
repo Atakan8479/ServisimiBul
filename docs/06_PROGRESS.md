@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — A-09 database and backup operations in review
-Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-08, A-10, the combined local launcher, frontend design tooling, and the operator business-name optionality change are complete. A-09 is implemented and verified in PR #50; review and merge remain pending.
+## Current stage: Gate 8 — B-10 security hardening in progress
+Status: Gates 0–7, J-01, A-01, B-01–B-07, J-02, A-02–A-10, the combined local launcher, frontend design tooling, the operator business-name optionality change, and public discovery UI are complete. B-10 operator-approval mode and security hardening are being implemented in one review branch.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -15,7 +15,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
-| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, and A-08 merged; A-09 issue #26 is in progress | A-08 reviewed and merged 2026-10-16; A-09 execution approved 2026-10-16 |
+| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, A-08, A-09, and public discovery UI merged; B-10 is in progress | A-09 merged in PR #50; B-10 scope and implementation approved 2026-10-17 |
 
 ## Active work-package progress
 
@@ -38,7 +38,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | Operator business-name optionality | complete | PR #44 merged as `6c19040643983bc35ace85c594c2e2c2d064dc83`; merged-head workflow `38749758044` passed all 87 tests | Domain-wide optionality approved, reviewed, and merged 2026-10-15 |
 | A-07 Offering-specific coverage and discovery enrichment | complete | GitHub issue #22 closed; PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | Reviewed and merged 2026-10-15 |
 | A-08 Database and performance hardening | complete | GitHub issue #24; PR #47 merged as `0054118`; measured PostgreSQL 17 workflow `38788568472` and post-`main`-merge workflow `38880661526` passed all 93 tests; detailed evidence in `docs/08_DATABASE_PERFORMANCE.md` | Reviewed and merged 2026-10-16 |
-| A-09 Database and backup operations | in review | GitHub issue #26; PR #50; PostgreSQL 17 workflow `38943652242` passed all 95 tests and all 13 operational verification checks | Execution approved 2026-10-16; review pending |
+| A-09 Database and backup operations | complete | GitHub issue #26; PR #50 merged as `64ca7e1`; PostgreSQL 17 workflow `38943652242` passed all 95 tests and all 13 operational verification checks | Reviewed and merged 2026-10-16 |
+| B-10 Operator approval and security hardening | in review | Draft PR #53; review-follow-up PostgreSQL 17 Backend workflow `39045647945` passed all 172 tests and all 13 operational verification checks; Frontend workflow `39045647944` passed every gate and all 25 tests | Scope and one-PR implementation approved 2026-10-17; review pending |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 
@@ -57,6 +58,16 @@ A-03 PR #39 adds V5 plus session-owned operator-school and same-province general
 A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deactivation is lifecycle-based and transactionally unpublishes dependent offerings. A-07 now supplies the per-offering coverage and publication checks on its feature branch. V6 has not been applied to shared Supabase.
 
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-10 does not claim the product is production-ready: A-08, A-09, B-10, and remaining feature implementation are still required.
+
+## Verified B-10 implementation evidence — 2026-10-17
+
+- Branch `codex/operator-approval-b10-hardening` and draft PR #53 are based on current `main` commit `77e203d`; Onat (`LePqrta`) is requested as reviewer. The PR remains unmerged.
+- Safe-default approval-required and explicit pilot-disabled application contexts cover lifecycle permissions, workflow-disabled 409 responses, unchanged stored statuses, owned-resource management, eligible offering publication, anonymous discovery without vehicles/offerings, admin listing/moderation, and suspension.
+- The production security chain now permits status-only anonymous `/livez` and database-backed `/readyz`; a production-profile database-down contributor test verifies readiness returns 503 while liveness stays independent and status-only. Systematic CSRF, 401/403, headers, hostile CORS, JDBC session rotation/revocation, disabled-session, and sensitive-log regressions are included.
+- The configurable in-memory limiter preserves established authentication limits and adds verification/reset/search rules. Per-rule protected and probation budgets, constant-memory overflow buckets, secret-hashed identities, expiry cleanup, active-key/probation-eviction/saturation metrics, forwarded-header spoofing, shared-IP, expiration and `Retry-After` ceiling boundaries, concurrency, 100,000 one-shot identities, and same-rule overflow contention cover the bounded saturation strategy and its documented residual false-positive/DoS risks.
+- Review follow-up workflows passed at commit `c7ac9d1`: Backend `39045647945` completed Java 21 compilation, clean V1–V8 migration, all 172 tests with zero failures/errors/skips, and all 13 PostgreSQL 17 operational verification checks; Frontend `39045647944` passed repository-wide Prettier, ESLint, strict TypeScript, all 25 Vitest tests, and the production build.
+- The approved D043 follow-up keeps D028 and the registration contract unchanged while disclosing before submission that an eligible public profile, contact phone, and shared business information may be visible to anonymous visitors. It adds no acknowledgement checkbox. After integrating merged B-09, local Node.js 24 verification passed repository-wide Prettier, ESLint, strict TypeScript, all 31 Vitest tests, and the production build; navigation regressions cover the combined offering link and B-10 permission gate. Browser automation could not initialize because its local kernel-assets path was unavailable, so no browser-verified claim is made for this follow-up.
+- No Flyway migration, shared Supabase operation, cloud resource, production setting, provider selection, dependency, or lockfile change is part of PR #53. Provider/proxy overlap behavior, staging rate measurements, monitoring/alerts, durable tariff volume/backup, and approval-enablement grandfathering remain launch gates.
 
 A-04 adds the anonymous school-and-neighborhood operator search with the full derived publication predicate, distinct stable pagination, public phone exposure, no authentication email, and no vehicle/offering visibility dependency. A-07 enriches each already-paginated operator with matching published offerings without changing base eligibility. No migration or shared Supabase operation is part of A-04.
 

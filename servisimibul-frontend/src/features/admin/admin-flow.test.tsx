@@ -12,6 +12,48 @@ afterEach(() => {
 })
 
 describe('admin workspace flows', () => {
+  it('lists every pilot operator without an approval filter and preserves suspension', async () => {
+    let requestedStatus: string | null = 'not-called'
+    server.use(
+      authHandler('ADMIN', false),
+      csrfHandler(),
+      http.get('/api/v1/admin/operators', ({ request }) => {
+        requestedStatus = new URL(request.url).searchParams.get('status')
+        return HttpResponse.json({
+          content: [applicationDetail('DRAFT').profile],
+          page: 0,
+          size: 20,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+      http.get('/api/v1/admin/operators/:id', () =>
+        HttpResponse.json(applicationDetail('DRAFT')),
+      ),
+    )
+
+    renderRoute('/admin/applications')
+
+    expect(
+      await screen.findByRole('heading', { name: 'İşletmeciler' }),
+    ).toBeInTheDocument()
+    const profileLink = await screen.findByRole('link', {
+      name: 'Profili incele',
+    })
+    expect(requestedStatus).toBeNull()
+    expect(screen.queryByLabelText('Başvuru durumu')).not.toBeInTheDocument()
+    fireEvent.click(profileLink)
+    expect(
+      await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Başvuruyu onayla' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Düzeltme iste' }),
+    ).not.toBeInTheDocument()
+  })
+
   it('prevents an operator from opening the admin workspace', async () => {
     server.use(authHandler('OPERATOR'))
 
@@ -224,12 +266,17 @@ describe('admin workspace flows', () => {
   })
 })
 
-function authHandler(role: 'ADMIN' | 'OPERATOR') {
+function authHandler(
+  role: 'ADMIN' | 'OPERATOR',
+  operatorApprovalRequired = true,
+) {
   return http.get('/api/v1/auth/me', () =>
     HttpResponse.json({
       id: 'd28cc858-ed74-479a-b346-8b9cdccaaab8',
       email: `${role.toLowerCase()}@example.com`,
       role,
+      operatorApprovalRequired,
+      approvalStatus: role === 'OPERATOR' ? 'APPROVED' : null,
     }),
   )
 }

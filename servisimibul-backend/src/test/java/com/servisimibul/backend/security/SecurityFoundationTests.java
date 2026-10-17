@@ -31,6 +31,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -72,11 +73,12 @@ class SecurityFoundationTests {
     @Test
     void unknownAndRoleProtectedRoutesAreDeniedByDefault() throws Exception {
         mockMvc.perform(get("/internal-test"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTHENTICATION_REQUIRED"));
         mockMvc.perform(get("/api/v1/operator/test"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(get("/api/v1/admin/test"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -91,7 +93,8 @@ class SecurityFoundationTests {
     @Test
     void publicStateChangingRouteStillRequiresCsrf() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("CSRF_INVALID"));
         mockMvc.perform(post("/api/v1/auth/register")
                         .with(csrf())
                         .contentType("application/json")
@@ -121,6 +124,39 @@ class SecurityFoundationTests {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentType("application/problem+json"));
+    }
+
+    @Test
+    void securityHeadersAreSafeAndHstsRequiresARecognizedSecureRequest() throws Exception {
+        mockMvc.perform(get("/api/v1/provinces").secure(true))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Content-Type-Options", "nosniff"))
+                .andExpect(header().string("X-Frame-Options", "DENY"))
+                .andExpect(header().string("Referrer-Policy", "strict-origin-when-cross-origin"))
+                .andExpect(header().string(
+                        "Permissions-Policy",
+                        "camera=(), geolocation=(), microphone=()"
+                ))
+                .andExpect(header().string(
+                        "Strict-Transport-Security",
+                        "max-age=31536000 ; includeSubDomains"
+                ));
+
+        mockMvc.perform(get("/api/v1/provinces"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("Strict-Transport-Security"));
+    }
+
+    @Test
+    void hostileCredentialedCorsPreflightIsNotAuthorized() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .options("/api/v1/operator/profile")
+                        .header("Origin", "https://hostile.example")
+                        .header("Access-Control-Request-Method", "PATCH")
+                        .header("Access-Control-Request-Headers", "content-type,x-csrf-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("Access-Control-Allow-Origin"))
+                .andExpect(header().doesNotExist("Access-Control-Allow-Credentials"));
     }
 
     @Test

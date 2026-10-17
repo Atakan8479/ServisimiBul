@@ -14,6 +14,7 @@ import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.OperatorApprovalStatus;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.UserRole;
+import com.servisimibul.backend.operatorapproval.OperatorApprovalPolicy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -35,6 +36,7 @@ public class PublicOperatorDiscoveryService {
     private final PublicOperatorDiscoveryRepository discoveryRepository;
     private final SchoolRepository schoolRepository;
     private final NeighborhoodRepository neighborhoodRepository;
+    private final OperatorApprovalPolicy approvalPolicy;
 
     @Transactional(readOnly = true)
     public PageResponse<OperatorResponse> search(
@@ -66,6 +68,7 @@ public class PublicOperatorDiscoveryService {
                 neighborhoodId,
                 UserRole.OPERATOR,
                 OperatorApprovalStatus.APPROVED,
+                approvalPolicy.isRequired(),
                 PageRequest.of(page, size)
         );
         MatchingSchoolResponse matchingSchool = new MatchingSchoolResponse(
