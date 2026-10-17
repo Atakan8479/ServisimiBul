@@ -3,7 +3,6 @@ package com.servisimibul.backend.support;
 import org.flywaydb.core.Flyway;
 import org.springframework.core.env.Environment;
 
-import java.net.InetAddress;
 import java.net.URI;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -15,7 +14,7 @@ public final class IsolatedPostgresTestDatabase {
 
     private static final Set<String> LOOPBACK_HOSTS = Set.of("localhost", "127.0.0.1", "::1");
     private static final String MARKER_QUERY = """
-            select current_database(), current_user, inet_server_addr()::text,
+            select current_database(), current_user,
                    current_setting('server_version_num')::integer,
                    (select count(*)
                     from test_harness.database_instance
@@ -122,13 +121,20 @@ public final class IsolatedPostgresTestDatabase {
         try (var statement = connection.prepareStatement(MARKER_QUERY)) {
             statement.setString(1, expectedMarker);
             try (ResultSet result = statement.executeQuery()) {
-                if (!result.next()
-                        || !expectedDatabase.equals(result.getString(1))
-                        || !settings.username().equals(result.getString(2))
-                        || !isLoopback(result.getString(3))
-                        || result.getInt(4) / 10_000 != 17
-                        || result.getInt(5) != 1) {
-                    throw unsafe("database identity or disposable marker did not match");
+                if (!result.next()) {
+                    throw unsafe("database identity query returned no row");
+                }
+                if (!expectedDatabase.equals(result.getString(1))) {
+                    throw unsafe("database name did not match the disposable target");
+                }
+                if (!settings.username().equals(result.getString(2))) {
+                    throw unsafe("database identity did not match the configured test role");
+                }
+                if (result.getInt(3) / 10_000 != 17) {
+                    throw unsafe("database server is not PostgreSQL 17");
+                }
+                if (result.getInt(4) != 1) {
+                    throw unsafe("unique disposable database marker did not match");
                 }
             }
         }
@@ -161,14 +167,6 @@ public final class IsolatedPostgresTestDatabase {
         String database = path == null || path.length() < 2 ? "" : path.substring(1);
         if (!LOOPBACK_HOSTS.contains(uri.getHost()) || !expectedDatabase.equals(database)) {
             throw unsafe("tests may connect only to the named loopback database");
-        }
-    }
-
-    private static boolean isLoopback(String address) {
-        try {
-            return address != null && InetAddress.getByName(address).isLoopbackAddress();
-        } catch (Exception invalidAddress) {
-            return false;
         }
     }
 
