@@ -59,16 +59,16 @@ public class OperatorApprovalPolicy {
                     "A verified email address is required"
             );
         }
-        if (!profile.getUser().isEnabled()) {
-            throw OperatorAccessException.forbidden(
-                    "operator_account_disabled",
-                    "The operator account is disabled"
-            );
-        }
         if (!profile.isActive()) {
             throw OperatorAccessException.forbidden(
                     "operator_suspended",
                     "The operator account is suspended"
+            );
+        }
+        if (!profile.getUser().isEnabled()) {
+            throw OperatorAccessException.forbidden(
+                    "operator_account_disabled",
+                    "The operator account is disabled"
             );
         }
     }
