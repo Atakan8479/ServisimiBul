@@ -2,6 +2,7 @@ package com.servisimibul.backend.ratelimit;
 
 import com.servisimibul.backend.auth.exception.RateLimitExceededException;
 import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.nio.ByteBuffer;
@@ -32,6 +33,7 @@ public class InMemoryRateLimiter {
     private final Map<RateLimitRule, OverflowWindow[]> overflowWindows =
             new EnumMap<>(RateLimitRule.class);
 
+    @Autowired
     public InMemoryRateLimiter(
             RateLimitProperties properties,
             Clock clock,
