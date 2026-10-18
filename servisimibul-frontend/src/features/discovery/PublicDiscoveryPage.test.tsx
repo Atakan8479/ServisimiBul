@@ -378,9 +378,7 @@ describe('public operator discovery', () => {
     expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
     expect(
-      screen.getByText(
-        /Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/,
-      ),
+      screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul adında ara'), {
