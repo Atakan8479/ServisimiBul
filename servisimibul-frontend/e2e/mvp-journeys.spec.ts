@@ -290,6 +290,9 @@ async function login(page: Page, email: string) {
 async function search(page: Page, district: string, neighborhood: string) {
   await page.goto('/')
   await page
+    .getByLabel('Okulun bulunduğu il')
+    .selectOption({ label: 'İstanbul' })
+  await page
     .locator('select[name="schoolId"]')
     .selectOption({ label: 'Örnek Okulu — Kadıköy' })
   await page

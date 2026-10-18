@@ -1,5 +1,11 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { http, HttpResponse } from 'msw'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
+import { delay, http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { describe, expect, it } from 'vitest'
 import { routes } from '../../app/router'
@@ -164,6 +170,138 @@ describe('public operator discovery', () => {
       ),
     ).toHaveAttribute('role', 'alert')
   })
+
+  it('requires a database-backed pilot province before loading schools', async () => {
+    let schoolRequests = 0
+    server.use(
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([
+          { id: 34, code: '34', name: 'İstanbul' },
+          { id: 6, code: '06', name: 'Ankara' },
+        ]),
+      ),
+      http.get('/api/v1/schools', () => {
+        schoolRequests += 1
+        return HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 50,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      }),
+    )
+
+    renderHome()
+    await screen.findByRole('option', { name: 'İstanbul' })
+    expect(
+      screen.queryByRole('option', { name: 'Ankara' }),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByText('Okulun bulunduğu ili seçin.'),
+    ).toBeInTheDocument()
+    expect(schoolRequests).toBe(0)
+  })
+
+  it('explains when Istanbul is missing instead of fabricating a fallback', async () => {
+    server.use(
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([{ id: 6, code: '06', name: 'Ankara' }]),
+      ),
+    )
+
+    renderHome()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'İstanbul bilgisi henüz okul kataloğunda bulunmuyor. Lütfen daha sonra tekrar deneyin.',
+    )
+    expect(screen.getByLabelText('Okulun bulunduğu il')).toBeDisabled()
+    expect(
+      screen.queryByRole('option', { name: 'Ankara' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('uses school-location filters without leaking other provinces', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/schools', async ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(parameters)
+        const districtId = parameters.get('districtId')
+        await delay(districtId ? 10 : 80)
+        return HttpResponse.json({
+          content: districtId
+            ? [{ ...school, name: 'Kadıköy İlkokulu' }]
+            : [school, ankaraSchool],
+          page: 0,
+          size: 50,
+          totalElements: districtId ? 1 : 2,
+          totalPages: 1,
+        })
+      }),
+      ...locationHandlers(),
+    )
+
+    renderHome()
+    await screen.findByRole('option', { name: 'İstanbul' })
+    fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    await screen.findByRole('option', { name: 'Kadıköy' })
+    fireEvent.change(screen.getByLabelText('Okulun ilçesi (isteğe bağlı)'), {
+      target: { value: '10' },
+    })
+
+    expect(
+      await screen.findByRole('option', { name: 'Kadıköy İlkokulu — Kadıköy' }),
+    ).toBeInTheDocument()
+    await delay(100)
+    expect(
+      screen.queryByRole('option', { name: 'Ankara İlkokulu — Çankaya' }),
+    ).not.toBeInTheDocument()
+    expect(requests).toHaveLength(2)
+    expect(requests[0].get('provinceId')).toBe('34')
+    expect(requests[0].has('districtId')).toBe(false)
+    expect(requests[1].get('districtId')).toBe('10')
+  })
+
+  it('does not restore search results after school-location filters change', async () => {
+    server.use(
+      ...locationHandlers(),
+      tariffHandler(),
+      http.get('/api/v1/operators', async () => {
+        await delay(80)
+        return HttpResponse.json({
+          content: [operator('Geciken Servis')],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+    await screen.findByRole('button', { name: 'İşletmeciler aranıyor...' })
+    fireEvent.change(screen.getByLabelText('Okulun ilçesi (isteğe bağlı)'), {
+      target: { value: '10' },
+    })
+
+    await delay(100)
+    expect(
+      screen.queryByRole('heading', { name: 'Geciken Servis' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByText('1 işletmeci bulundu')).not.toBeInTheDocument()
+  })
 })
 
 const school = {
@@ -182,17 +320,38 @@ const school = {
   active: true,
 }
 
+const ankaraSchool = {
+  ...school,
+  id: '36df806f-b9ab-4a75-89de-51d5ae8af800',
+  neighborhoodId: 301,
+  neighborhoodName: 'Bahçelievler',
+  districtId: 30,
+  districtName: 'Çankaya',
+  provinceId: 6,
+  provinceCode: '06',
+  provinceName: 'Ankara',
+  name: 'Ankara İlkokulu',
+}
+
 function locationHandlers() {
   return [
-    http.get('/api/v1/schools', () =>
-      HttpResponse.json({
+    http.get('/api/v1/provinces', () =>
+      HttpResponse.json([
+        { id: 34, code: '34', name: 'İstanbul' },
+        { id: 6, code: '06', name: 'Ankara' },
+      ]),
+    ),
+    http.get('/api/v1/schools', ({ request }) => {
+      const parameters = new URL(request.url).searchParams
+      expect(parameters.get('provinceId')).toBe('34')
+      return HttpResponse.json({
         content: [school],
         page: 0,
         size: 50,
         totalElements: 1,
         totalPages: 1,
-      }),
-    ),
+      })
+    }),
     http.get('/api/v1/districts', () =>
       HttpResponse.json([
         { id: 10, provinceId: 34, name: 'Kadıköy' },
@@ -248,18 +407,27 @@ function operator(businessName: string) {
 }
 
 async function selectLocation() {
+  await screen.findByRole('option', { name: 'İstanbul' })
+  expect(
+    screen.queryByRole('option', { name: 'Ankara' }),
+  ).not.toBeInTheDocument()
+  fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+    target: { value: '34' },
+  })
+
   await screen.findByRole('option', { name: 'Örnek İlkokulu — Kadıköy' })
   fireEvent.change(screen.getByLabelText('Okul'), {
     target: { value: school.id },
   })
 
-  await screen.findByRole('option', { name: 'Üsküdar' })
-  fireEvent.change(screen.getByLabelText('İlçe'), {
+  const pickupDistrict = screen.getByLabelText('Servis alınacak ilçe')
+  await within(pickupDistrict).findByRole('option', { name: 'Üsküdar' })
+  fireEvent.change(pickupDistrict, {
     target: { value: '11' },
   })
 
   await screen.findByRole('option', { name: 'Acıbadem' })
-  fireEvent.change(screen.getByLabelText('Mahalle'), {
+  fireEvent.change(screen.getByLabelText('Servis alınacak mahalle'), {
     target: { value: '201' },
   })
 

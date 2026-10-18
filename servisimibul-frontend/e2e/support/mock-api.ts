@@ -207,6 +207,9 @@ export async function installMockApi(page: Page, state: MockApiState) {
       })
     }
 
+    if (path === '/provinces' && method === 'GET') {
+      return json(route, [{ id: 34, code: '34', name: 'İstanbul' }])
+    }
     if (path === '/schools' && method === 'GET') {
       return json(route, pageResponse([school()], 50))
     }
