@@ -345,7 +345,7 @@ describe('public operator discovery', () => {
     expect(screen.getByRole('button', { name: 'Sonraki sayfa' })).toBeDisabled()
   })
 
-  it('uses pending search text when sort and district change and clears an excluded school', async () => {
+  it('uses pending search text when filters change', async () => {
     const requests: URLSearchParams[] = []
     server.use(
       http.get('/api/v1/schools', ({ request }) => {
@@ -377,8 +377,11 @@ describe('public operator discovery', () => {
     })
     expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
-    expect(screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/))
-      .toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/,
+      ),
+    ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul adında ara'), {
       target: { value: 'ATATÜRK' },
@@ -403,7 +406,7 @@ describe('public operator discovery', () => {
     })
   })
 
-  it('uses pending search text before changing pages and resets to the first page', async () => {
+  it('applies pending search before pagination', async () => {
     const requests: URLSearchParams[] = []
     server.use(
       http.get('/api/v1/schools', ({ request }) => {
