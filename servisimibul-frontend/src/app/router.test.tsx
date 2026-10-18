@@ -55,7 +55,9 @@ describe('application routes', () => {
     ).toBeInTheDocument()
     // Wait for the overview's async GET before this test resets its MSW handlers.
     expect(
-      await screen.findByText('Profiliniz henüz ebeveyn aramalarına uygun değil.'),
+      await screen.findByText(
+        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+      ),
     ).toBeInTheDocument()
   })
 

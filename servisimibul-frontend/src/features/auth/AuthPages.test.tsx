@@ -164,7 +164,9 @@ describe('operator authentication screens', () => {
     })
     // Avoid leaving the overview's readiness request in flight after teardown.
     expect(
-      await screen.findByText('Profiliniz henüz ebeveyn aramalarına uygun değil.'),
+      await screen.findByText(
+        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+      ),
     ).toBeInTheDocument()
   })
 
