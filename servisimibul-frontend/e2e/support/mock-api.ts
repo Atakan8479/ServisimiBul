@@ -1,0 +1,512 @@
+import type { Page, Route } from '@playwright/test'
+
+type Role = 'ADMIN' | 'OPERATOR'
+type ApprovalStatus = 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED'
+
+const operatorId = '99dd588e-2b72-419e-aa29-28fb97f8ad20'
+const operatorUserId = '6e2973ac-0302-49a8-b519-563ec9861272'
+const adminUserId = 'd28cc858-ed74-479a-b346-8b9cdccaaab8'
+const schoolId = '6de54e65-6e04-4168-a1cb-967a98d7ec12'
+const operatorSchoolId = '75ef6bb0-e313-43fb-a01c-c935774434b4'
+const vehicleId = '11111111-1111-4111-8111-111111111111'
+const offeringId = '33333333-3333-4333-8333-333333333333'
+
+const createdAt = '2026-10-18T10:00:00Z'
+
+export interface MockApiState {
+  registered: boolean
+  verified: boolean
+  approvalStatus: ApprovalStatus
+  active: boolean
+  publiclyVisible: boolean
+  businessName: string | null
+  contactPhone: string
+  description: string | null
+  reviewHistory: Array<{
+    id: string
+    reviewedById: string
+    decision: 'APPROVED' | 'CHANGES_REQUESTED'
+    reason: string | null
+    reviewedAt: string
+  }>
+  operatorSchoolAdded: boolean
+  generalCoverage: number[]
+  vehicles: Array<{
+    id: string
+    plate: string
+    capacity: number
+    active: boolean
+    createdAt: string
+    updatedAt: string
+  }>
+  offerings: Array<{
+    id: string
+    operatorSchoolId: string
+    schoolId: string
+    schoolName: string
+    vehicleId: string
+    vehiclePlate: string
+    vehicleCapacity: number
+    availableSeats: number | null
+    description: string | null
+    published: boolean
+    coverage: ReturnType<typeof coverage>[]
+    createdAt: string
+    updatedAt: string
+  }>
+  tariff: ReturnType<typeof tariff>
+}
+
+export function createMockApiState(): MockApiState {
+  return {
+    registered: false,
+    verified: false,
+    approvalStatus: 'DRAFT',
+    active: true,
+    publiclyVisible: true,
+    businessName: null,
+    contactPhone: '+905321234567',
+    description: null,
+    reviewHistory: [],
+    operatorSchoolAdded: false,
+    generalCoverage: [],
+    vehicles: [],
+    offerings: [],
+    tariff: tariff('v1'),
+  }
+}
+
+export async function installMockApi(page: Page, state: MockApiState) {
+  let role: Role | undefined
+
+  await page.route('**/api/v1/**', async (route) => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const path = url.pathname.replace('/api/v1', '')
+    const method = request.method()
+
+    if (path === '/auth/csrf' && method === 'GET') {
+      return json(route, {
+        headerName: 'X-CSRF-TOKEN',
+        parameterName: '_csrf',
+        token: 'e2e-csrf-token',
+      })
+    }
+    if (path === '/auth/register' && method === 'POST') {
+      state.registered = true
+      return empty(route, 202)
+    }
+    if (path === '/auth/verify-email' && method === 'POST') {
+      state.verified = state.registered
+      return empty(route)
+    }
+    if (path === '/auth/login' && method === 'POST') {
+      const body = await request.postDataJSON()
+      role = body.email === 'admin@example.com' ? 'ADMIN' : 'OPERATOR'
+      if (role === 'OPERATOR' && (!state.verified || !state.active)) {
+        role = undefined
+        return problem(route, 401, 'invalid_credentials')
+      }
+      return json(route, authUser(role, state))
+    }
+    if (path === '/auth/me' && method === 'GET') {
+      if (!role || (role === 'OPERATOR' && !state.active)) {
+        role = undefined
+        return problem(route, 401, 'authentication_required')
+      }
+      return json(route, authUser(role, state))
+    }
+    if (path === '/auth/logout' && method === 'POST') {
+      role = undefined
+      return empty(route)
+    }
+
+    if (path === '/operator/profile' && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () =>
+        json(route, profile(state)),
+      )
+    }
+    if (path === '/operator/profile' && method === 'PATCH') {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        state.businessName = body.businessName?.trim() || null
+        state.contactPhone = body.contactPhone
+        state.description = body.description
+        state.publiclyVisible = body.publiclyVisible
+        return json(route, profile(state))
+      })
+    }
+    if (path === '/operator/application/submit' && method === 'POST') {
+      return requireRole(route, role, 'OPERATOR', () => {
+        state.approvalStatus = 'PENDING'
+        return json(route, profile(state))
+      })
+    }
+    if (path === '/operator/application/resubmit' && method === 'POST') {
+      return requireRole(route, role, 'OPERATOR', () => {
+        state.approvalStatus = 'PENDING'
+        return json(route, profile(state))
+      })
+    }
+
+    if (path === '/admin/operators' && method === 'GET') {
+      return requireRole(route, role, 'ADMIN', () =>
+        json(route, pageResponse([profile(state)], 20)),
+      )
+    }
+    if (path === `/admin/operators/${operatorId}` && method === 'GET') {
+      return requireRole(route, role, 'ADMIN', () =>
+        json(route, applicationDetail(state)),
+      )
+    }
+    if (
+      path === `/admin/operators/${operatorId}/request-revision` &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'ADMIN', async () => {
+        const body = await request.postDataJSON()
+        state.approvalStatus = 'CHANGES_REQUESTED'
+        state.reviewHistory.push({
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          reviewedById: adminUserId,
+          decision: 'CHANGES_REQUESTED',
+          reason: body.reason,
+          reviewedAt: createdAt,
+        })
+        return json(route, applicationDetail(state))
+      })
+    }
+    if (
+      path === `/admin/operators/${operatorId}/approve` &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'ADMIN', () => {
+        state.approvalStatus = 'APPROVED'
+        state.reviewHistory.push({
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          reviewedById: adminUserId,
+          decision: 'APPROVED',
+          reason: null,
+          reviewedAt: createdAt,
+        })
+        return json(route, applicationDetail(state))
+      })
+    }
+    if (
+      path === `/admin/operators/${operatorId}/suspend` &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'ADMIN', () => {
+        state.active = false
+        return json(route, applicationDetail(state))
+      })
+    }
+
+    if (path === '/schools' && method === 'GET') {
+      return json(route, pageResponse([school()], 50))
+    }
+    if (path === '/districts' && method === 'GET') {
+      return json(route, [
+        { id: 10, provinceId: 34, name: 'Kadıköy' },
+        { id: 11, provinceId: 34, name: 'Üsküdar' },
+      ])
+    }
+    if (path === '/neighborhoods' && method === 'GET') {
+      return json(
+        route,
+        url.searchParams.get('districtId') === '11'
+          ? [{ id: 201, districtId: 11, name: 'Acıbadem' }]
+          : [{ id: 101, districtId: 10, name: 'Moda' }],
+      )
+    }
+    if (path === '/operator/schools' && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () =>
+        json(route, state.operatorSchoolAdded ? [operatorSchool(state)] : []),
+      )
+    }
+    if (path === '/operator/schools' && method === 'POST') {
+      return requireRole(route, role, 'OPERATOR', () => {
+        state.operatorSchoolAdded = true
+        return json(route, operatorSchool(state), 201)
+      })
+    }
+    if (
+      path === `/operator/schools/${operatorSchoolId}/coverage` &&
+      method === 'PUT'
+    ) {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        state.generalCoverage = body.neighborhoodIds
+        return json(route, operatorSchool(state))
+      })
+    }
+
+    if (path === '/operator/vehicles' && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () =>
+        json(route, state.vehicles),
+      )
+    }
+    if (path === '/operator/vehicles' && method === 'POST') {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        const vehicle = {
+          id: vehicleId,
+          plate: body.plate,
+          capacity: body.capacity,
+          active: true,
+          createdAt,
+          updatedAt: createdAt,
+        }
+        state.vehicles.push(vehicle)
+        return json(route, vehicle, 201)
+      })
+    }
+    if (path === '/operator/offerings' && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () =>
+        json(route, state.offerings),
+      )
+    }
+    if (path === '/operator/offerings' && method === 'POST') {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        const vehicle = state.vehicles.find(
+          (item) => item.id === body.vehicleId,
+        )
+        const offering = {
+          id: offeringId,
+          operatorSchoolId: body.operatorSchoolId,
+          schoolId,
+          schoolName: 'Örnek Okulu',
+          vehicleId: body.vehicleId,
+          vehiclePlate: vehicle?.plate ?? '34 ABC 123',
+          vehicleCapacity: vehicle?.capacity ?? 16,
+          availableSeats: body.availableSeats,
+          description: body.description,
+          published: false,
+          coverage: [],
+          createdAt,
+          updatedAt: createdAt,
+        }
+        state.offerings.push(offering)
+        return json(route, offering, 201)
+      })
+    }
+    if (
+      path === `/operator/offerings/${offeringId}/coverage` &&
+      method === 'PUT'
+    ) {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        const offering = state.offerings[0]
+        if (!offering) return problem(route, 404, 'offering_not_found')
+        offering.coverage = body.neighborhoodIds.map(coverage)
+        return json(route, offering)
+      })
+    }
+    if (
+      path === `/operator/offerings/${offeringId}/publish` &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'OPERATOR', () => {
+        const offering = state.offerings[0]
+        if (!offering) return problem(route, 404, 'offering_not_found')
+        offering.published = true
+        return json(route, offering)
+      })
+    }
+
+    if (path === '/operators' && method === 'GET') {
+      const neighborhoodId = Number(url.searchParams.get('neighborhoodId'))
+      const eligible =
+        state.verified &&
+        state.active &&
+        state.publiclyVisible &&
+        state.approvalStatus === 'APPROVED' &&
+        state.operatorSchoolAdded &&
+        state.generalCoverage.includes(neighborhoodId)
+      const publishedOfferings = state.offerings
+        .filter(
+          (offering) =>
+            offering.published &&
+            offering.coverage.some(
+              (item) => item.neighborhoodId === neighborhoodId,
+            ),
+        )
+        .map((offering) => ({
+          offeringId: offering.id,
+          availableSeats: offering.availableSeats,
+          vehicleCapacity: offering.vehicleCapacity,
+          description: offering.description,
+        }))
+      return json(
+        route,
+        pageResponse(
+          eligible
+            ? [
+                {
+                  operatorId,
+                  businessName: state.businessName,
+                  contactPhone: state.contactPhone,
+                  description: state.description,
+                  matchingSchool: { id: schoolId, name: 'Örnek Okulu' },
+                  publishedOfferings,
+                },
+              ]
+            : [],
+          10,
+        ),
+      )
+    }
+    if (path === '/tariffs' && method === 'GET') {
+      return json(route, state.tariff)
+    }
+    if (path === '/admin/tariffs/34' && method === 'PUT') {
+      return requireRole(route, role, 'ADMIN', async () => {
+        const body = await request.postDataJSON()
+        state.tariff = body.tariff
+        return json(route, state.tariff)
+      })
+    }
+
+    return problem(route, 404, 'mock_route_not_found')
+  })
+}
+
+function authUser(role: Role, state: MockApiState) {
+  return {
+    id: role === 'ADMIN' ? adminUserId : operatorUserId,
+    email: role === 'ADMIN' ? 'admin@example.com' : 'operator@example.com',
+    role,
+    operatorApprovalRequired: true,
+    approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
+  }
+}
+
+function profile(state: MockApiState) {
+  return {
+    id: operatorId,
+    businessName: state.businessName,
+    contactPhone: state.contactPhone,
+    description: state.description,
+    approvalStatus: state.approvalStatus,
+    active: state.active,
+    publiclyVisible: state.publiclyVisible,
+    createdAt,
+    updatedAt: createdAt,
+  }
+}
+
+function applicationDetail(state: MockApiState) {
+  return { profile: profile(state), reviewHistory: state.reviewHistory }
+}
+
+function school() {
+  return {
+    id: schoolId,
+    neighborhoodId: 101,
+    neighborhoodName: 'Moda',
+    districtId: 10,
+    districtName: 'Kadıköy',
+    provinceId: 34,
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    name: 'Örnek Okulu',
+    address: null,
+    sourceName: null,
+    sourceCode: null,
+    active: true,
+  }
+}
+
+function operatorSchool(state: MockApiState) {
+  return {
+    id: operatorSchoolId,
+    schoolId,
+    schoolName: 'Örnek Okulu',
+    schoolNeighborhoodId: 101,
+    schoolDistrictId: 10,
+    schoolProvinceId: 34,
+    schoolProvinceCode: '34',
+    schoolProvinceName: 'İstanbul',
+    active: true,
+    coverage: state.generalCoverage.map(coverage),
+  }
+}
+
+function coverage(neighborhoodId: number) {
+  const uskudar = neighborhoodId === 201
+  return {
+    neighborhoodId,
+    neighborhoodName: uskudar ? 'Acıbadem' : 'Moda',
+    districtId: uskudar ? 11 : 10,
+    districtName: uskudar ? 'Üsküdar' : 'Kadıköy',
+    provinceId: 34,
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+  }
+}
+
+function tariff(version: string) {
+  return {
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    authority: 'İBB UKOME',
+    academicYear: '2026–2027',
+    currency: 'TRY' as const,
+    effectiveFrom: '2026-09-01',
+    effectiveTo: '2027-08-31',
+    sourceTitle: 'UKOME kararı',
+    officialSourceUrl: 'https://example.com/ukome',
+    version,
+    bands: [
+      { minDistanceKm: 0, maxDistanceKm: 3, amountKurus: 130_000 },
+      { minDistanceKm: 3, maxDistanceKm: null, amountKurus: 150_000 },
+    ],
+  }
+}
+
+function pageResponse<T>(content: T[], size: number) {
+  return {
+    content,
+    page: 0,
+    size,
+    totalElements: content.length,
+    totalPages: content.length ? 1 : 0,
+  }
+}
+
+function requireRole(
+  route: Route,
+  actual: Role | undefined,
+  expected: Role,
+  action: () => unknown,
+) {
+  return actual === expected
+    ? action()
+    : problem(route, actual ? 403 : 401, 'authentication_required')
+}
+
+function json(route: Route, body: unknown, status = 200) {
+  return route.fulfill({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  })
+}
+
+function empty(route: Route, status = 204) {
+  return route.fulfill({ status, body: '' })
+}
+
+function problem(route: Route, status: number, code: string) {
+  return json(
+    route,
+    {
+      title: status === 404 ? 'Not found' : 'Authentication required',
+      status,
+      detail: status === 404 ? 'Mock route not found.' : 'Please sign in.',
+      code,
+    },
+    status,
+  )
+}

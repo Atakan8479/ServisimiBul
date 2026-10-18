@@ -5,7 +5,11 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { PublicLayout } from '../components/layouts'
-import { NotFoundPage, RouteErrorPage } from '../components/route-states'
+import {
+  LoadingPage,
+  NotFoundPage,
+  RouteErrorPage,
+} from '../components/route-states'
 import { ApiError } from '../api/client'
 import { PublicDiscoveryPage } from '../features/discovery/PublicDiscoveryPage'
 import {
@@ -45,6 +49,7 @@ export const routes: RouteObject[] = [
     loader: operatorLoader,
     Component: OperatorWorkspaceLayout,
     ErrorBoundary: RouteErrorPage,
+    HydrateFallback: LoadingPage,
     children: [
       { index: true, Component: OperatorOverviewPage },
       { path: 'profile', Component: OperatorProfilePage },
@@ -58,6 +63,7 @@ export const routes: RouteObject[] = [
     loader: adminLoader,
     Component: AdminWorkspaceLayout,
     ErrorBoundary: RouteErrorPage,
+    HydrateFallback: LoadingPage,
     children: [
       { index: true, loader: () => redirect('/admin/applications') },
       { path: 'applications', Component: AdminApplicationsPage },
