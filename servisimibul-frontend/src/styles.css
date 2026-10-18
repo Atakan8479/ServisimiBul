@@ -189,6 +189,162 @@ nav a.active {
   margin-top: 1.5rem;
 }
 
+.school-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.school-search-row {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.school-results {
+  margin-top: 1.25rem;
+  border-block: 1px solid var(--color-border);
+}
+
+.school-result-summary,
+.school-result-error,
+.selected-school-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.school-result-summary {
+  padding: 1rem 0;
+}
+
+.school-result-summary h3,
+.school-result-summary p,
+.school-browser-empty h3,
+.school-browser-empty p {
+  margin: 0;
+}
+
+.school-result-summary p,
+.school-browser-empty p,
+.school-result-list span,
+.selected-school-summary span {
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.school-result-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.school-result-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.school-result-list li > div,
+.selected-school-summary > div {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.school-result-list strong,
+.selected-school-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.school-results > .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0 0 1.25rem;
+}
+
+.school-browser-empty {
+  padding: 1.5rem 0;
+}
+
+.school-browser-empty p {
+  margin-top: 0.45rem;
+}
+
+.school-result-error {
+  padding: 1rem 0;
+  color: #78271f;
+  line-height: 1.5;
+}
+
+.school-result-loading {
+  padding: 1rem 0 1.25rem;
+  color: var(--color-muted);
+}
+
+.school-result-loading > div {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.school-result-loading i {
+  display: block;
+  height: 2.8rem;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-soft);
+  animation: skeleton-pulse 1.2s var(--ease-out) infinite alternate;
+}
+
+.school-selection-notice,
+.school-selection-error {
+  display: block;
+  margin-top: 1rem;
+}
+
+.school-selection-notice {
+  color: #694d08;
+  line-height: 1.5;
+}
+
+.selected-school-summary {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius-small);
+  background: var(--color-surface-soft);
+}
+
+.pickup-search {
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.pickup-heading {
+  align-items: flex-start;
+}
+
+@keyframes skeleton-pulse {
+  from {
+    opacity: 0.55;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
 .discovery-note {
   max-width: 60ch;
   margin: 1.25rem 0;
@@ -1481,6 +1637,33 @@ button:disabled {
 
   .discovery-field-grid {
     grid-template-columns: 1fr;
+  }
+
+  .school-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .school-search-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .school-search-row > *,
+  .school-search-row > button {
+    width: 100%;
+  }
+
+  .school-result-list li,
+  .selected-school-summary,
+  .school-result-error {
+    display: grid;
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .school-result-list li > button,
+  .selected-school-summary > button {
+    justify-self: start;
   }
 
   .discovery-search > .primary-button {

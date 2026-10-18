@@ -68,6 +68,8 @@ const schoolPageSchema = pageSchema(schoolSchema)
 const operatorPageSchema = pageSchema(operatorSchema)
 
 export type School = z.infer<typeof schoolSchema>
+export type SchoolPage = z.infer<typeof schoolPageSchema>
+export type SchoolSort = 'name-asc' | 'name-desc'
 export type Province = z.infer<typeof provinceSchema>
 export type District = z.infer<typeof districtSchema>
 export type Neighborhood = z.infer<typeof neighborhoodSchema>
@@ -80,27 +82,42 @@ export function getProvinces(): Promise<Province[]> {
   })
 }
 
-export function getSchools(
-  provinceId: number,
-  districtId?: number,
-): Promise<School[]> {
-  // shortcut: D019 keeps the curated catalog deliberately small; add server paging when it exceeds 50 schools.
+export function getSchools({
+  provinceId,
+  districtId,
+  query,
+  sort,
+  page,
+}: {
+  provinceId: number
+  districtId?: number
+  query?: string
+  sort: SchoolSort
+  page: number
+}): Promise<SchoolPage> {
   const parameters = new URLSearchParams({
     provinceId: String(provinceId),
-    page: '0',
-    size: '50',
+    sort,
+    page: String(page),
+    size: '10',
   })
   if (districtId) parameters.set('districtId', String(districtId))
+  if (query?.trim()) parameters.set('query', query.trim())
 
   return apiRequest(`/schools?${parameters.toString()}`, {
     schema: schoolPageSchema,
-  }).then((page) =>
-    page.content.filter(
-      (school) =>
-        school.provinceId === provinceId &&
-        (!districtId || school.districtId === districtId),
-    ),
-  )
+  }).then((schoolPage) => {
+    if (
+      schoolPage.content.some(
+        (school) =>
+          school.provinceId !== provinceId ||
+          (districtId !== undefined && school.districtId !== districtId),
+      )
+    ) {
+      throw new Error('School results do not match the requested geography')
+    }
+    return schoolPage
+  })
 }
 
 export function getDistricts(provinceId: number): Promise<District[]> {

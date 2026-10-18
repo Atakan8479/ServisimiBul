@@ -129,14 +129,8 @@ describe('application routes', () => {
 
   it('uses a view transition when navigating between pages', async () => {
     server.use(
-      http.get('/api/v1/schools', () =>
-        HttpResponse.json({
-          content: [],
-          page: 0,
-          size: 50,
-          totalElements: 0,
-          totalPages: 0,
-        }),
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }]),
       ),
     )
     const startViewTransition = vi.fn((update: () => void) => {
@@ -160,9 +154,9 @@ describe('application routes', () => {
         screen.getByRole('heading', { name: 'ServisimiBul' }),
       ).toBeInTheDocument()
       expect(screen.getByText('Servis bulmanın yeni yolu.')).toBeInTheDocument()
-      // Let the public page's school lookup finish before navigating away.
+      // Let the public page's database-backed pilot location lookup finish.
       expect(
-        await screen.findByRole('option', { name: 'Okul seçin' }),
+        await screen.findByRole('option', { name: 'İstanbul' }),
       ).toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'Yönetim' }),

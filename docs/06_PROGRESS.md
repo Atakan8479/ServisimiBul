@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — B-14 operator discovery readiness ready for review
-Status: Gates 0–8, J-01, J-02, A-01–A-10, B-01–B-11, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. B-14 adds server-authoritative discovery readiness plus guided school/coverage onboarding on a feature branch; isolated PostgreSQL CI and human review remain pending.
+## Current stage: Post-MVP follow-up — B-13 school results ready for review
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-12, B-14, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. B-13 adds complete server-side school filtering, sorting, and deterministic pagination plus an editable public school-results browser in draft PR #64; automated checks have passed and human review remains pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -44,7 +44,9 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 | B-11 End-to-end and accessibility validation | complete | GitHub issue #28; PR #55 merged as `c2b3f9c`; final Frontend workflow `39122106995` and Secret scan workflow `39122106934` passed | Reviewed and merged 2026-10-18 |
-| B-14 Operator discovery readiness and guided onboarding | ready for review | GitHub issue #59; branch `codex/b-14-operator-discovery-readiness`; backend compile/test-compile and frontend local checks passed; isolated PostgreSQL CI pending | Onat (`LePqrta`) implementation owner; Atakan (`Atakan8479`) review pending |
+| B-12 Database-backed school location discovery | complete | GitHub issue #57; PR #60 merged as `d6e766a`; Frontend workflow `39146373250` and Secret scan workflow `39146373216` passed | Reviewed and merged 2026-10-18 |
+| B-13 Searchable and sortable school results | ready for review | GitHub issue #58; draft PR #64; Backend workflow `39172007199`, Frontend workflow `39172007201`, and Secret scan workflow `39172007274` passed | Human review pending |
+| B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -64,14 +66,23 @@ A-10 was intentionally started before its planned Phase 4 dependencies at human 
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
 
-## Verified B-14 local evidence — 2026-10-18
+## Verified B-13 evidence — 2026-10-19
 
-- Branch `codex/b-14-operator-discovery-readiness` starts from refreshed `origin/main` merge commit `c2b3f9c`; GitHub Issue #59 was open and no competing open B-14/discovery-readiness pull request was found at task start.
+- Branch `codex/b-13-school-results` starts from `origin/main` commit `d6e766a`; draft PR #64 closes GitHub Issue #58.
+- Anonymous `GET /api/v1/schools` applies optional province, district, and Turkish-normalized name filters before pagination. The validated `name-asc` and `name-desc` modes sort by normalized school name and UUID, providing deterministic tie-breaking across pages without changing stored names.
+- The public discovery page replaces the former first-50 selector with server-backed results, keeps school-location filters editable, resets to page zero after filter/sort changes, preserves a compatible selection, and explicitly clears a selection and dependent pickup/results state when a filter excludes it. School location and pickup location remain separate same-province choices.
+- Backend workflow `39172007199` passed clean V1–V8 validation, the full 217-test suite on disposable PostgreSQL 17.11, the deployment smoke check, and all 13 migration-operation checks. Coverage includes Turkish search, ascending/descending paging, invalid sort rejection, and repeated multi-page UUID tie-breaker stability.
+- Frontend workflow `39172007201` passed repository-wide Prettier, ESLint, strict TypeScript, all 48 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the B-13 browsing journey. Secret scan workflow `39172007274` passed.
+- The local Java 21-targeted package build passed. Local frontend lint, typecheck, all 48 Vitest tests, production build, and all 6 Playwright checks passed; the repository-wide Windows format command still reports the known CRLF differences in untouched files, while all touched files and Linux CI pass Prettier.
+- No dependency, lockfile, Flyway migration, schema, shared Supabase resource, production setting, deployment, or cloud resource was changed. The unrelated `.idea/compiler.xml` working-tree change remains unmodified and excluded.
+
+## Verified B-14 evidence — 2026-10-18
+
+- PR #62 merged as `c073476`; its final Backend workflow `39150895644` passed all 214 tests on disposable PostgreSQL 17, Frontend workflow `39150895638` passed, and Secret scan workflow `39150895653` passed.
 - The authenticated read-only `GET /api/v1/operator/discovery-readiness` derives identity only from the session and reports the account, profile, effective approval, active-school, and same-province per-school general-coverage gates. Its overall result means at least one configured school/neighborhood combination is eligible and does not require a Vehicle or ServiceOffering.
 - Default approval-required tests cover approval, profile, account, ownership, inactive school/link, zero-coverage, same-province cross-district, mismatched-province, anonymous, CSRF-free GET, and actual anonymous-discovery agreement scenarios. The existing independent approval-disabled context now asserts DRAFT readiness and discovery agreement without changing stored status.
 - The operator overview consumes the server result without recreating the overall publication predicate. The school flow opens a newly attached school's coverage editor, transfers keyboard focus, respects reduced motion, and provides distinct guidance for hidden profiles, inactive links/schools, zero coverage, empty/no-result/all-linked catalogs, and separate per-school coverage.
-- A clean lockfile install passed ESLint, strict TypeScript, all 41 Vitest tests, and the production build. The project Playwright suite passed 5/5 tests: the 13-journey flow, WCAG 2.2 AA/no-overflow checks at desktop/tablet/mobile, keyboard focus, and reduced-motion coverage. Touched frontend files pass Prettier; repository-wide Windows `format:check` continues to report only the known CRLF differences in untouched files and will be rechecked in Linux CI.
-- Maven main and test compilation passed on Java 21-targeted sources. Database-backed tests were not run against the developer's configured database because no verified disposable PostgreSQL 17 target was available; full isolated PostgreSQL verification is a pull-request CI gate.
+- A clean lockfile install passed ESLint, strict TypeScript, all 41 Vitest tests, and the production build. The project Playwright suite passed 5/5 tests: the 13-journey flow, WCAG 2.2 AA/no-overflow checks at desktop/tablet/mobile, keyboard focus, and reduced-motion coverage. Touched frontend files and the Linux CI repository-wide Prettier check passed.
 - No dependency, lockfile, Flyway migration, schema, shared Supabase resource, production setting, deployment, or cloud resource was changed. The unrelated `.idea/compiler.xml` working-tree change remains unmodified and excluded.
 
 ## Verified B-11 local evidence — 2026-10-18

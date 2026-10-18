@@ -22,16 +22,40 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
                     select school
                     from School school
                     where school.active = true
-                      and (:query is null or lower(school.name) like lower(concat('%', :query, '%')))
+                      and (:query = '' or cast(function(
+                            'translate',
+                            lower(function('translate', school.name, 'İI', 'ii')),
+                            'âçğıîöşüû',
+                            'acgiiosuu'
+                          ) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
-                    order by lower(school.name), school.id
+                    order by
+                      case when :descending = false then cast(function(
+                        'translate',
+                        lower(function('translate', school.name, 'İI', 'ii')),
+                        'âçğıîöşüû',
+                        'acgiiosuu'
+                      ) as string) end asc,
+                      case when :descending = false then school.id end asc,
+                      case when :descending = true then cast(function(
+                        'translate',
+                        lower(function('translate', school.name, 'İI', 'ii')),
+                        'âçğıîöşüû',
+                        'acgiiosuu'
+                      ) as string) end desc,
+                      case when :descending = true then school.id end desc
                     """,
             countQuery = """
                     select count(school)
                     from School school
                     where school.active = true
-                      and (:query is null or lower(school.name) like lower(concat('%', :query, '%')))
+                      and (:query = '' or cast(function(
+                            'translate',
+                            lower(function('translate', school.name, 'İI', 'ii')),
+                            'âçğıîöşüû',
+                            'acgiiosuu'
+                          ) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     """
@@ -40,6 +64,7 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
             @Param("query") String query,
             @Param("provinceId") Long provinceId,
             @Param("districtId") Long districtId,
+            @Param("descending") boolean descending,
             Pageable pageable
     );
 
