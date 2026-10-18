@@ -1,5 +1,7 @@
 package com.servisimibul.backend.geography;
 
+import com.servisimibul.backend.geography.dto.GeographyDtos.SchoolResponse;
+import com.servisimibul.backend.geography.service.GeographyCatalogService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -9,6 +11,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
@@ -40,6 +43,9 @@ class GeographyCatalogApiTests {
 
     @Autowired
     private SchoolRepository schoolRepository;
+
+    @Autowired
+    private GeographyCatalogService catalogService;
 
     @Test
     void anonymousReferenceReadsAreStableFilteredAndSessionless() throws Exception {
@@ -183,6 +189,39 @@ class GeographyCatalogApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content[0].name").value("Okul 24"))
                 .andExpect(jsonPath("$.content[9].name").value("Okul 15"));
+    }
+
+    @Test
+    void equalNormalizedSchoolNamesUseUuidTieBreakerWithoutPagingGaps() {
+        Neighborhood neighborhood = createNeighborhood();
+        Long provinceId = neighborhood.getDistrict().getProvince().getId();
+        List<UUID> expectedIds = IntStream.range(0, 23)
+                .mapToObj(index -> schoolRepository.saveAndFlush(
+                        new School(neighborhood, "Aynı Okul", null, null, null)
+                ).getId())
+                .toList();
+
+        List<UUID> firstPass = equalNameSchoolPages(provinceId);
+        List<UUID> secondPass = equalNameSchoolPages(provinceId);
+
+        assertThat(firstPass).containsExactlyInAnyOrderElementsOf(expectedIds);
+        assertThat(firstPass).doesNotHaveDuplicates();
+        assertThat(secondPass).containsExactlyElementsOf(firstPass);
+    }
+
+    private List<UUID> equalNameSchoolPages(Long provinceId) {
+        return IntStream.range(0, 3)
+                .mapToObj(page -> catalogService.schools(
+                        null,
+                        provinceId,
+                        null,
+                        "name-asc",
+                        page,
+                        10
+                ))
+                .flatMap(result -> result.content().stream())
+                .map(SchoolResponse::id)
+                .toList();
     }
 
     @Test
