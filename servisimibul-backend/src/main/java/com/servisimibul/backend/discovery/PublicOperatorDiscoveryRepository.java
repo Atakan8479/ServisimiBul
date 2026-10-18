@@ -49,6 +49,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                             and school.active = true
                             and school.id = :schoolId
                             and coverage.neighborhood.id = :neighborhoodId
+                            and coverage.neighborhood.district.province.id = school.neighborhood.district.province.id
                       )
                     order by profile.businessName, profile.id
                     """,
@@ -72,6 +73,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                             and school.active = true
                             and school.id = :schoolId
                             and coverage.neighborhood.id = :neighborhoodId
+                            and coverage.neighborhood.district.province.id = school.neighborhood.district.province.id
                       )
                     """
     )

@@ -162,6 +162,10 @@ describe('operator authentication screens', () => {
       password: 'long password value',
       rememberMe: true,
     })
+    // Avoid leaving the overview's readiness request in flight after teardown.
+    expect(
+      await screen.findByText('Profiliniz henüz ebeveyn aramalarına uygun değil.'),
+    ).toBeInTheDocument()
   })
 
   it('shows server field errors next to the matching registration input', async () => {

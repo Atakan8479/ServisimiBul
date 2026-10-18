@@ -1,5 +1,6 @@
 package com.servisimibul.backend.operatorapplication;
 
+import com.servisimibul.backend.discovery.PublicOperatorDiscoveryRepository;
 import com.servisimibul.backend.geography.District;
 import com.servisimibul.backend.geography.DistrictRepository;
 import com.servisimibul.backend.geography.Neighborhood;
@@ -12,12 +13,15 @@ import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
+import com.servisimibul.backend.identity.OperatorApprovalStatus;
+import com.servisimibul.backend.identity.UserRole;
 import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -27,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,6 +60,8 @@ class OperatorDiscoveryReadinessApiTests {
     private OperatorSchoolRepository operatorSchoolRepository;
     @Autowired
     private OperatorSchoolCoverageRepository coverageRepository;
+    @Autowired
+    private PublicOperatorDiscoveryRepository discoveryRepository;
 
     @Test
     void anonymousIsRejectedAndAuthenticatedGetDoesNotRequireCsrf() throws Exception {
@@ -243,6 +250,24 @@ class OperatorDiscoveryReadinessApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.schools[0].validCoverageCount").value(0))
                 .andExpect(jsonPath("$.discoveryEligible").value(false));
+
+        // The public endpoint pre-filters cross-province selections; the repository
+        // must also reject malformed persisted coverage if called directly.
+        assertThat(discoveryRepository.findPublishedOperators(
+                geography.firstSchool().getId(),
+                foreignNeighborhood.getId(),
+                UserRole.OPERATOR,
+                OperatorApprovalStatus.APPROVED,
+                true,
+                PageRequest.of(0, 20)
+        ).getTotalElements()).isZero();
+        mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", geography.firstSchool().getId().toString())
+                        .param("neighborhoodId", foreignNeighborhood.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(0))
+                .andExpect(jsonPath("$.content").isEmpty());
+
         mockMvc.perform(get("/api/v1/operator/discovery-readiness")
                         .with(asOperator(other.user())))
                 .andExpect(status().isOk())
