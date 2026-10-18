@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import java.time.Clock;
 
 @Configuration
-@EnableConfigurationProperties(AuthEmailProperties.class)
+@EnableConfigurationProperties({AuthEmailProperties.class, EmailVerificationProperties.class})
 @EnableAsync
 class AuthConfiguration {
 

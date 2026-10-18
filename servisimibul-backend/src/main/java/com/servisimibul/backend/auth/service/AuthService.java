@@ -1,5 +1,6 @@
 package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.config.EmailVerificationProperties;
 import com.servisimibul.backend.auth.dto.EmailRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class AuthService {
 
     private final AuthInputValidator validator;
+    private final EmailVerificationProperties emailVerification;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
     private final InMemoryRateLimiter rateLimiter;
@@ -34,14 +36,18 @@ public class AuthService {
     private final Clock clock;
 
     public void register(RegisterRequest request, String remoteAddress) {
-        requireEmail();
+        boolean verificationRequired = emailVerification.required();
+        if (verificationRequired) {
+            requireEmail();
+        }
         String email = validator.email(request.email());
         String password = validator.password(request.password(), "password");
         String businessName = validator.businessName(request.businessName());
         String contactPhone = validator.phone(request.contactPhone());
         rateLimiter.requireAllowance(RateLimitRule.REGISTRATION_IP, remoteAddress);
 
-        String rawToken = tokenGenerator.generate();
+        String rawToken = verificationRequired ? tokenGenerator.generate() : "";
+        String tokenHash = verificationRequired ? tokenHasher.hash(rawToken) : "";
         boolean created;
         try {
             created = persistence.register(
@@ -49,13 +55,13 @@ public class AuthService {
                     password,
                     businessName,
                     contactPhone,
-                    tokenHasher.hash(rawToken),
+                    tokenHash,
                     now()
             );
         } catch (DataIntegrityViolationException duplicateRegistration) {
             created = false;
         }
-        if (created) {
+        if (created && verificationRequired) {
             safelySend(() -> emailSender.sendVerification(email, rawToken));
         }
     }

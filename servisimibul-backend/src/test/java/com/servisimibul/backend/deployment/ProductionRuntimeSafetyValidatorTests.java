@@ -38,6 +38,14 @@ class ProductionRuntimeSafetyValidatorTests {
     }
 
     @Test
+    void rejectsDisabledEmailVerificationInProductionRuntime() {
+        MockEnvironment environment = safeProductionEnvironment()
+                .withProperty("app.auth.email-verification.required", "false");
+
+        assertUnsafe(environment, "Email verification must be required");
+    }
+
+    @Test
     void rejectsEffectiveMigrationConnectionSettingsInProductionRuntime() {
         MockEnvironment environment = safeProductionEnvironment()
                 .withProperty("spring.flyway.user", "migration-user");

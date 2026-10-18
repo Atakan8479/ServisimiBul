@@ -1,12 +1,15 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
 
-afterEach(resetCsrfToken)
+afterEach(() => {
+  resetCsrfToken()
+  vi.unstubAllEnvs()
+})
 
 describe('operator authentication screens', () => {
   it('explains public profile visibility without requiring consent', () => {
@@ -59,6 +62,38 @@ describe('operator authentication screens', () => {
       businessName: '',
       contactPhone: '0532 123 45 67',
     })
+  })
+
+  it('shows immediate login guidance when local email verification is disabled', async () => {
+    vi.stubEnv('VITE_EMAIL_VERIFICATION_REQUIRED', 'false')
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/register',
+        () => new HttpResponse(null, { status: 202 }),
+      ),
+    )
+
+    renderRoute('/operator/register')
+
+    expect(screen.queryByText(/E-posta doğrulamanız/)).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('E-posta'), {
+      target: { value: 'local-operator@example.com' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'long password value' },
+    })
+    fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
+      target: { value: '0532 123 45 67' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Hesap oluştur' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Hesabınız hazır' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.'),
+    ).toBeInTheDocument()
   })
 
   it('verifies the token supplied by the email link', async () => {

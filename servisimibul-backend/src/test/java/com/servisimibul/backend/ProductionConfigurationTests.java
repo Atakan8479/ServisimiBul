@@ -24,6 +24,7 @@ class ProductionConfigurationTests {
                 .containsEntry("spring.mail.properties[mail.smtp.connectiontimeout]",
                         "${SB_MAIL_CONNECTION_TIMEOUT_MS:5000}")
                 .containsEntry("server.servlet.session.cookie.secure", "true")
+                .containsEntry("app.auth.email-verification.required", "true")
                 .containsEntry("spring.flyway.enabled", "false")
                 .containsEntry("spring.flyway.url", "")
                 .containsEntry("spring.flyway.user", "")
@@ -53,6 +54,8 @@ class ProductionConfigurationTests {
                 .containsEntry("spring.flyway.user", "${SB_DB_MIGRATION_USER:}")
                 .containsEntry("app.operator-approval.required",
                         "${OPERATOR_APPROVAL_REQUIRED:true}")
+                .containsEntry("app.auth.email-verification.required",
+                        "${SB_EMAIL_VERIFICATION_REQUIRED:true}")
                 .containsEntry("app.rate-limit.login-account.requests",
                         "${SB_RATE_LIMIT_LOGIN_ACCOUNT_REQUESTS:10}")
                 .containsEntry("app.rate-limit.login-account.window",

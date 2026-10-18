@@ -181,6 +181,7 @@ $backendEnvironment['SB_FLYWAY_ENABLED'] = 'false'
 $backendEnvironment['SB_ADMIN_BOOTSTRAP_ENABLED'] = 'false'
 $backendEnvironment['SPRING_PROFILES_ACTIVE'] = 'local'
 $backendEnvironment['SB_COOKIE_SECURE'] = 'false'
+$backendEnvironment['SB_EMAIL_VERIFICATION_REQUIRED'] = 'false'
 
 $backendJava = Join-Path $javaRuntime.Home 'bin\java.exe'
 $viteEntryPoint = Join-Path $frontendDirectory 'node_modules\vite\bin\vite.js'
@@ -212,12 +213,19 @@ try {
 }
 
 try {
-    $frontendProcess = Start-Process `
-        -FilePath $nodeRuntime.Node `
-        -ArgumentList @($viteEntryPoint, '--strictPort') `
-        -WorkingDirectory $frontendDirectory `
-        -NoNewWindow `
-        -PassThru
+    $previousFrontendEnvironment = Set-TemporaryEnvironment -Values @{
+        VITE_EMAIL_VERIFICATION_REQUIRED = 'false'
+    }
+    try {
+        $frontendProcess = Start-Process `
+            -FilePath $nodeRuntime.Node `
+            -ArgumentList @($viteEntryPoint, '--strictPort') `
+            -WorkingDirectory $frontendDirectory `
+            -NoNewWindow `
+            -PassThru
+    } finally {
+        Restore-Environment -Previous $previousFrontendEnvironment
+    }
 
     Write-Host 'Frontend: http://localhost:5173'
     Write-Host 'Backend:  http://localhost:8080'

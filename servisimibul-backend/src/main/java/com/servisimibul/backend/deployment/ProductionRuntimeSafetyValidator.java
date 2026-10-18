@@ -39,6 +39,13 @@ public final class ProductionRuntimeSafetyValidator implements EnvironmentPostPr
         if (hasActiveProfile(environment, "migration")) {
             throw unsafe("The prod and migration profiles cannot be active together");
         }
+        if (!environment.getProperty(
+                "app.auth.email-verification.required",
+                Boolean.class,
+                true
+        )) {
+            throw unsafe("Email verification must be required in production");
+        }
         if (MIGRATION_SECRET_PROPERTIES.stream()
                 .anyMatch(property -> hasText(environment.getProperty(property)))) {
             throw unsafe("Migration credentials must not be injected into the production web process");

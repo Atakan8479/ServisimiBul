@@ -21,7 +21,7 @@ After configuring `servisimibul-backend/.env` and installing the frontend packag
 .\dev.ps1
 ```
 
-The launcher uses Java 21 or newer, requires Node.js 24, keeps backend environment variables out of the frontend process, disables Flyway and the one-shot ADMIN bootstrap, and enables the local HTTP cookie settings. The configured database must already be at the repository's latest Flyway version. Open `http://localhost:5173`; Vite proxies `/api` to Spring Boot on port 8080. Press Ctrl+C once to stop both processes.
+The launcher uses Java 21 or newer, requires Node.js 24, keeps backend secrets out of the frontend process, disables Flyway and the one-shot ADMIN bootstrap, and enables the local HTTP cookie settings. For the current testing period it also auto-verifies newly registered local accounts and shows matching registration guidance; production continues to require email verification. The configured database must already be at the repository's latest Flyway version. Open `http://localhost:5173`; Vite proxies `/api` to Spring Boot on port 8080. Press Ctrl+C once to stop both processes.
 
 If `JAVA_HOME` still points to an older JDK, either correct it or select a JDK for this run:
 

@@ -84,6 +84,8 @@ Set `SB_TARIFF_STORAGE_DIR` to a backend-only persistent writable directory befo
 
 Local HTTP development must explicitly set `SPRING_PROFILES_ACTIVE=local` and `SB_COOKIE_SECURE=false`, as shown in `.env.example`. Deployed environments use the `prod` profile, which enforces a Secure `SBSESSION` cookie and structured JSON logs.
 
+For the current testing period, the root `dev.ps1` launcher sets `SB_EMAIL_VERIFICATION_REQUIRED=false`. A newly registered local test account is marked verified in the registration transaction, receives no verification token or email, and can log in immediately. Existing accounts are not rewritten. The default value remains `true`, and the production profile plus early runtime guard require verification. Remove the launcher override when live email delivery testing begins.
+
 Before V1 runs, an administrator must provision the runtime login outside Flyway. Use a newly generated password and never commit the executed statement:
 
 ```sql

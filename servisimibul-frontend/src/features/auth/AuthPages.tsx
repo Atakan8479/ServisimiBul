@@ -53,6 +53,8 @@ type LoginForm = z.infer<typeof loginSchema>
 type VerificationForm = z.infer<typeof verificationSchema>
 
 export function RegisterPage() {
+  const emailVerificationRequired =
+    import.meta.env.VITE_EMAIL_VERIFICATION_REQUIRED !== 'false'
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
   const {
@@ -74,10 +76,23 @@ export function RegisterPage() {
 
   if (complete) {
     return (
-      <AuthCard eyebrow="Kayıt alındı" title="E-postanızı kontrol edin">
+      <AuthCard
+        eyebrow="Kayıt alındı"
+        title={
+          emailVerificationRequired
+            ? 'E-postanızı kontrol edin'
+            : 'Hesabınız hazır'
+        }
+      >
         <p>
-          Hesap varsa doğrulama bağlantısı gönderildi. Bağlantıyı açtıktan sonra
-          giriş yapabilirsiniz.
+          {emailVerificationRequired ? (
+            <>
+              Hesap varsa doğrulama bağlantısı gönderildi. Bağlantıyı açtıktan
+              sonra giriş yapabilirsiniz.
+            </>
+          ) : (
+            <>Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.</>
+          )}
         </p>
         <Link className="button-link" to="/operator/login" viewTransition>
           Giriş sayfasına git
@@ -135,10 +150,20 @@ export function RegisterPage() {
             İşletme profilinizin görünürlüğü
           </strong>
           <p>
-            E-posta doğrulamanız tamamlandığında ve hizmet verdiğiniz okul ile
-            mahalle bilgilerini eklediğinizde, diğer yayın koşulları da
-            sağlanıyorsa işletme profiliniz herkese açık arama sonuçlarında
-            görüntülenebilir.
+            {emailVerificationRequired ? (
+              <>
+                E-posta doğrulamanız tamamlandığında ve hizmet verdiğiniz okul
+                ile mahalle bilgilerini eklediğinizde, diğer yayın koşulları da
+                sağlanıyorsa işletme profiliniz herkese açık arama sonuçlarında
+                görüntülenebilir.
+              </>
+            ) : (
+              <>
+                Hizmet verdiğiniz okul ile mahalle bilgilerini eklediğinizde,
+                diğer yayın koşulları da sağlanıyorsa işletme profiliniz herkese
+                açık arama sonuçlarında görüntülenebilir.
+              </>
+            )}
           </p>
           <p>
             İletişim telefonunuz ve profilinizde paylaştığınız işletme bilgileri

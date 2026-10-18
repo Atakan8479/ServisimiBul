@@ -1,5 +1,6 @@
 package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.config.EmailVerificationProperties;
 import com.servisimibul.backend.auth.exception.InvalidAuthTokenException;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
@@ -28,6 +29,7 @@ class AuthPersistenceService {
 
     private static final Duration TOKEN_COOLDOWN = Duration.ofSeconds(60);
     private final AppUserRepository userRepository;
+    private final EmailVerificationProperties emailVerification;
     private final OperatorProfileRepository profileRepository;
     private final EmailVerificationTokenRepository verificationTokenRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
@@ -49,9 +51,13 @@ class AuthPersistenceService {
 
         AppUser user = userRepository.save(AppUser.newOperator(email, passwordHash));
         profileRepository.save(new OperatorProfile(user, businessName, contactPhone));
-        verificationTokenRepository.saveAndFlush(
-                new EmailVerificationToken(user, tokenHash, now.plusHours(24))
-        );
+        if (emailVerification.required()) {
+            verificationTokenRepository.saveAndFlush(
+                    new EmailVerificationToken(user, tokenHash, now.plusHours(24))
+            );
+        } else {
+            user.verifyEmail(now);
+        }
         return true;
     }
 
