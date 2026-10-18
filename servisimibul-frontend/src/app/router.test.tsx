@@ -23,6 +23,20 @@ describe('application routes', () => {
           approvalStatus: 'APPROVED',
         }),
       ),
+      http.get('/api/v1/operator/discovery-readiness', () =>
+        HttpResponse.json({
+          discoveryEligible: false,
+          emailVerified: true,
+          accountEnabled: true,
+          profileActive: true,
+          publiclyVisible: true,
+          approvalRequired: true,
+          approvalSatisfied: true,
+          hasActiveSchoolRelationship: false,
+          hasEligibleSchoolCoverage: false,
+          schools: [],
+        }),
+      ),
     )
 
     render(
@@ -32,10 +46,18 @@ describe('application routes', () => {
     )
 
     expect(
-      await screen.findByRole('heading', { name: 'İşletmeci alanı' }),
+      await screen.findByRole('heading', {
+        name: 'Aramalarda görünmeye hazır mısınız?',
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),
+    ).toBeInTheDocument()
+    // Wait for the overview's async GET before this test resets its MSW handlers.
+    expect(
+      await screen.findByText(
+        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+      ),
     ).toBeInTheDocument()
   })
 
@@ -106,6 +128,17 @@ describe('application routes', () => {
   })
 
   it('uses a view transition when navigating between pages', async () => {
+    server.use(
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 50,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
     const startViewTransition = vi.fn((update: () => void) => {
       update()
       return { finished: Promise.resolve() }
@@ -127,6 +160,10 @@ describe('application routes', () => {
         screen.getByRole('heading', { name: 'ServisimiBul' }),
       ).toBeInTheDocument()
       expect(screen.getByText('Servis bulmanın yeni yolu.')).toBeInTheDocument()
+      // Let the public page's school lookup finish before navigating away.
+      expect(
+        await screen.findByRole('option', { name: 'Okul seçin' }),
+      ).toBeInTheDocument()
       expect(
         screen.queryByRole('link', { name: 'Yönetim' }),
       ).not.toBeInTheDocument()

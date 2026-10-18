@@ -54,7 +54,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   await test.step('2. Log in and complete operator profile', async () => {
     await login(operatorPage, 'operator@example.com')
     await expect(
-      operatorPage.getByRole('heading', { name: 'İşletmeci alanı' }),
+      operatorPage.getByRole('heading', {
+        name: 'Aramalarda görünmeye hazır mısınız?',
+      }),
     ).toBeVisible()
     await operatorPage.goto('/operator/profile')
     await operatorPage
@@ -117,7 +119,11 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .getByLabel('Aktif okul')
       .selectOption({ label: 'Örnek Okulu — Kadıköy' })
     await operatorPage.getByRole('button', { name: 'Okulu ekle' }).click()
-    await operatorPage.getByRole('button', { name: 'Kapsamı düzenle' }).click()
+    await expect(
+      operatorPage.getByRole('heading', {
+        name: 'Örnek Okulu için hizmet mahalleleri',
+      }),
+    ).toBeFocused()
     await operatorPage
       .getByRole('group', { name: 'Kadıköy' })
       .getByRole('checkbox', { name: 'Moda' })
@@ -128,11 +134,20 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .check()
     await operatorPage.getByRole('button', { name: 'Kapsamı kaydet' }).click()
     await expect(
-      operatorPage.getByText('Hizmet kapsamı kaydedildi.'),
+      operatorPage.getByText(
+        'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
+      ),
     ).toBeVisible()
   })
 
   await test.step('8. Appear in anonymous discovery without vehicles or offerings', async () => {
+    await operatorPage.goto('/operator')
+    await expect(
+      operatorPage.getByText('Profiliniz uygun aramalarda görünebilir.'),
+    ).toBeVisible()
+    await expect(
+      operatorPage.getByText(/Araç eklemeden veya ayrıntılı hizmet ilanı/),
+    ).toBeVisible()
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(
       publicPage.getByRole('heading', { name: '1 işletmeci bulundu' }),

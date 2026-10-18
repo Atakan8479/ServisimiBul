@@ -20,6 +20,29 @@ export const operatorProfileSchema = z.object({
   updatedAt: z.string(),
 })
 
+const schoolReadinessSchema = z.object({
+  operatorSchoolId: z.string().uuid(),
+  schoolId: z.string().uuid(),
+  schoolName: z.string(),
+  relationshipActive: z.boolean(),
+  schoolActive: z.boolean(),
+  validCoverageCount: z.number().int().nonnegative(),
+  contributesToDiscovery: z.boolean(),
+})
+
+export const discoveryReadinessSchema = z.object({
+  discoveryEligible: z.boolean(),
+  emailVerified: z.boolean(),
+  accountEnabled: z.boolean(),
+  profileActive: z.boolean(),
+  publiclyVisible: z.boolean(),
+  approvalRequired: z.boolean(),
+  approvalSatisfied: z.boolean(),
+  hasActiveSchoolRelationship: z.boolean(),
+  hasEligibleSchoolCoverage: z.boolean(),
+  schools: z.array(schoolReadinessSchema),
+})
+
 const schoolSchema = z.object({
   id: z.string().uuid(),
   neighborhoodId: z.number().int().positive(),
@@ -63,6 +86,7 @@ export const operatorSchoolSchema = z.object({
   schoolProvinceId: z.number().int().positive(),
   schoolProvinceCode: z.string(),
   schoolProvinceName: z.string(),
+  schoolActive: z.boolean(),
   active: z.boolean(),
   coverage: z.array(coverageSchema),
 })
@@ -81,6 +105,7 @@ const neighborhoodSchema = z.object({
 
 export type ApprovalStatus = z.infer<typeof approvalStatusSchema>
 export type OperatorProfile = z.infer<typeof operatorProfileSchema>
+export type DiscoveryReadiness = z.infer<typeof discoveryReadinessSchema>
 export type OperatorSchool = z.infer<typeof operatorSchoolSchema>
 export type School = z.infer<typeof schoolSchema>
 export type District = z.infer<typeof districtSchema>
@@ -97,6 +122,13 @@ export function getProfile(): Promise<OperatorProfile> {
   return apiRequest('/operator/profile', {
     requiresSession: true,
     schema: operatorProfileSchema,
+  })
+}
+
+export function getDiscoveryReadiness(): Promise<DiscoveryReadiness> {
+  return apiRequest('/operator/discovery-readiness', {
+    requiresSession: true,
+    schema: discoveryReadinessSchema,
   })
 }
 

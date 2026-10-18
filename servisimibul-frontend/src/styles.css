@@ -647,6 +647,10 @@ button:disabled {
   white-space: nowrap;
 }
 
+.workspace-page .status-banner strong {
+  white-space: normal;
+}
+
 .status-banner.success,
 .status-pill.success {
   border-color: #a9cfb9;
@@ -750,6 +754,127 @@ button:disabled {
 .action-card > small {
   color: var(--color-muted);
   line-height: 1.5;
+}
+
+.readiness-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.readiness-error p {
+  margin: 0;
+}
+
+.readiness-list {
+  display: grid;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  border-block: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.readiness-list li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.readiness-list li:last-child {
+  border-bottom: 0;
+}
+
+.readiness-list strong,
+.readiness-schools strong {
+  display: block;
+}
+
+.readiness-list li > div,
+.optional-next-steps > div {
+  min-width: 0;
+}
+
+.readiness-list p {
+  max-width: 68ch;
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.readiness-list a {
+  align-self: center;
+}
+
+.readiness-state {
+  min-width: 3.8rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  background: #fff1da;
+  color: #70470c;
+  font-size: 0.75rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.readiness-list .complete .readiness-state {
+  background: #e5f5eb;
+  color: #185a39;
+}
+
+.readiness-schools {
+  margin-top: 2.5rem;
+}
+
+.readiness-schools h2,
+.optional-next-steps h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.readiness-schools ul {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.readiness-schools li {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.35fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.readiness-schools span {
+  color: var(--color-muted);
+}
+
+.optional-next-steps {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-top: 2.5rem;
+  padding: 1.25rem;
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-soft);
+}
+
+.optional-next-steps p {
+  max-width: 68ch;
+  margin: 0.5rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.optional-next-steps .button-link {
+  flex: 0 0 auto;
 }
 
 .form-card {
@@ -970,12 +1095,26 @@ button:disabled {
   margin-bottom: 0;
 }
 
+.school-card-copy .school-warning {
+  margin-top: 0.7rem;
+  color: #70470c;
+  font-weight: 700;
+}
+
 .empty-state {
   text-align: center;
 }
 
 .empty-state h2 {
   margin-top: 0;
+}
+
+.compact-empty {
+  padding: 1rem;
+}
+
+.compact-empty h4 {
+  margin: 0;
 }
 
 .tariff-reference {
@@ -1323,6 +1462,21 @@ button:disabled {
 
   .action-grid {
     grid-template-columns: 1fr;
+  }
+
+  .readiness-error,
+  .optional-next-steps {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .readiness-list li,
+  .readiness-schools li {
+    grid-template-columns: 1fr;
+  }
+
+  .readiness-list a {
+    justify-self: start;
   }
 
   .discovery-field-grid {

@@ -14,10 +14,15 @@ public interface OperatorSchoolCoverageRepository extends JpaRepository<Operator
     @Query("""
             select coverage
             from OperatorSchoolCoverage coverage
+            join fetch coverage.operatorSchool operatorSchool
+            join fetch operatorSchool.school school
+            join fetch school.neighborhood schoolNeighborhood
+            join fetch schoolNeighborhood.district schoolDistrict
+            join fetch schoolDistrict.province
             join fetch coverage.neighborhood neighborhood
             join fetch neighborhood.district district
             join fetch district.province
-            where coverage.operatorSchool.operator.id = :operatorId
+            where operatorSchool.operator.id = :operatorId
             order by lower(district.name), lower(neighborhood.name), neighborhood.id
             """)
     List<OperatorSchoolCoverage> findAllDetailedByOperatorId(@Param("operatorId") UUID operatorId);

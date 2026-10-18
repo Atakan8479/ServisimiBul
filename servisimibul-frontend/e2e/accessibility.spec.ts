@@ -39,6 +39,12 @@ for (const viewport of viewports) {
     await page.goto('/operator/login')
     await assertVisibleKeyboardFocus(page)
     await login(page, 'operator@example.com')
+    await expect(
+      page.getByRole('heading', {
+        name: 'Aramalarda görünmeye hazır mısınız?',
+      }),
+    ).toBeVisible()
+    await audit(page, 'operator readiness overview')
     await page.goto('/operator/profile')
     await expect(
       page.getByRole('heading', { name: 'İşletme bilgileriniz' }),
@@ -71,6 +77,18 @@ test('reduced-motion mode removes decorative and page-transition motion', async 
   page,
 }) => {
   const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  await page.addInitScript(() => {
+    Element.prototype.scrollIntoView = function (
+      options?: ScrollIntoViewOptions,
+    ) {
+      ;(
+        window as Window & { __lastScrollBehavior?: ScrollBehavior }
+      ).__lastScrollBehavior = options?.behavior
+    }
+  })
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await installMockApi(page, state)
   await page.goto('/')
@@ -80,6 +98,25 @@ test('reduced-motion mode removes decorative and page-transition motion', async 
     .first()
     .evaluate((element) => getComputedStyle(element).animationName)
   expect(animationName).toBe('none')
+
+  await login(page, 'operator@example.com')
+  await page.goto('/operator/schools')
+  await page
+    .getByLabel('Aktif okul')
+    .selectOption({ label: 'Örnek Okulu — Kadıköy' })
+  await page.getByRole('button', { name: 'Okulu ekle' }).click()
+  await expect(
+    page.getByRole('heading', {
+      name: 'Örnek Okulu için hizmet mahalleleri',
+    }),
+  ).toBeFocused()
+  expect(
+    await page.evaluate(
+      () =>
+        (window as Window & { __lastScrollBehavior?: ScrollBehavior })
+          .__lastScrollBehavior,
+    ),
+  ).toBe('auto')
 })
 
 async function audit(page: Page, surface: string) {

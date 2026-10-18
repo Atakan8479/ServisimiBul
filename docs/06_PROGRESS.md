@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — B-11 end-to-end and accessibility validation in review
-Status: Gates 0–7, J-01, A-01, B-01–B-10, J-02, A-02–A-10, the combined local launcher, frontend design tooling, the operator business-name optionality change, and public discovery UI are merged. The final planned B-11 validation task is in review with repeatable browser evidence for the 13 MVP journeys plus WCAG, responsive, session-expiry, state, and privacy checks without using shared Supabase.
+## Current stage: Post-MVP follow-up — B-14 operator discovery readiness ready for review
+Status: Gates 0–8, J-01, J-02, A-01–A-10, B-01–B-11, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. B-14 adds server-authoritative discovery readiness plus guided school/coverage onboarding on a feature branch; isolated PostgreSQL CI and human review remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -15,7 +15,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
-| 8 Pilot QA and UI | in review | B-01, B-06, B-07, A-08, A-09, B-10, A-10 production follow-up, and public discovery UI merged; B-11 validation in PR #55 | Initial B-11 Frontend and Secret scan workflows passed 2026-10-18 |
+| 8 Pilot QA and UI | complete | B-01, B-06, B-07, A-08, A-09, B-10, A-10 production follow-up, public discovery UI, and B-11 PR #55 merged | B-11 reviewed and merged 2026-10-18 |
 
 ## Active work-package progress
 
@@ -43,7 +43,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-10 Operator approval and security hardening | complete | PR #53 merged as `9ebe2f0`; merge-head Backend workflow `39060704778` and Frontend workflow `39060704773` passed | Reviewed and merged 2026-10-17 |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
-| B-11 End-to-end and accessibility validation | in review | GitHub issue #28; PR #55; local Playwright suite passed all 13 journeys and three viewport/a11y checks; initial Frontend workflow `39121956828` and Secret scan workflow `39121956907` passed | Atakan (`Atakan8479`) requested for review 2026-10-18 |
+| B-11 End-to-end and accessibility validation | complete | GitHub issue #28; PR #55 merged as `c2b3f9c`; final Frontend workflow `39122106995` and Secret scan workflow `39122106934` passed | Reviewed and merged 2026-10-18 |
+| B-14 Operator discovery readiness and guided onboarding | ready for review | GitHub issue #59; branch `codex/b-14-operator-discovery-readiness`; backend compile/test-compile and frontend local checks passed; isolated PostgreSQL CI pending | Onat (`LePqrta`) implementation owner; Atakan (`Atakan8479`) review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -63,10 +64,20 @@ A-10 was intentionally started before its planned Phase 4 dependencies at human 
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
 
+## Verified B-14 local evidence — 2026-10-18
+
+- Branch `codex/b-14-operator-discovery-readiness` starts from refreshed `origin/main` merge commit `c2b3f9c`; GitHub Issue #59 was open and no competing open B-14/discovery-readiness pull request was found at task start.
+- The authenticated read-only `GET /api/v1/operator/discovery-readiness` derives identity only from the session and reports the account, profile, effective approval, active-school, and same-province per-school general-coverage gates. Its overall result means at least one configured school/neighborhood combination is eligible and does not require a Vehicle or ServiceOffering.
+- Default approval-required tests cover approval, profile, account, ownership, inactive school/link, zero-coverage, same-province cross-district, mismatched-province, anonymous, CSRF-free GET, and actual anonymous-discovery agreement scenarios. The existing independent approval-disabled context now asserts DRAFT readiness and discovery agreement without changing stored status.
+- The operator overview consumes the server result without recreating the overall publication predicate. The school flow opens a newly attached school's coverage editor, transfers keyboard focus, respects reduced motion, and provides distinct guidance for hidden profiles, inactive links/schools, zero coverage, empty/no-result/all-linked catalogs, and separate per-school coverage.
+- A clean lockfile install passed ESLint, strict TypeScript, all 41 Vitest tests, and the production build. The project Playwright suite passed 5/5 tests: the 13-journey flow, WCAG 2.2 AA/no-overflow checks at desktop/tablet/mobile, keyboard focus, and reduced-motion coverage. Touched frontend files pass Prettier; repository-wide Windows `format:check` continues to report only the known CRLF differences in untouched files and will be rechecked in Linux CI.
+- Maven main and test compilation passed on Java 21-targeted sources. Database-backed tests were not run against the developer's configured database because no verified disposable PostgreSQL 17 target was available; full isolated PostgreSQL verification is a pull-request CI gate.
+- No dependency, lockfile, Flyway migration, schema, shared Supabase resource, production setting, deployment, or cloud resource was changed. The unrelated `.idea/compiler.xml` working-tree change remains unmodified and excluded.
+
 ## Verified B-11 local evidence — 2026-10-18
 
 - Branch `codex/b-11-e2e-accessibility-validation` starts from merged A-10 follow-up commit `cf24a9b` and GitHub reported no open pull requests at task start.
-- PR #55 is open for review. Its initial Frontend workflow `39121956828` passed the complete unit, production-build, and Playwright gates; Secret scan workflow `39121956907` also passed.
+- PR #55 was merged as `c2b3f9c`. Its final Frontend workflow `39122106995` passed the complete unit, production-build, and Playwright gates; Secret scan workflow `39122106934` also passed.
 - The project-owned Playwright suite runs the exact 13 plan journeys in numbered steps against the real Vite application and a deterministic, stateful browser API double. It covers registration/verification, operator profile and application review, school/general coverage, discovery without optional data, vehicle/offering publication and specific coverage, tariff update/public display, suspension, session revocation, and public visibility removal.
 - Accessibility checks target WCAG 2.2 AA through axe-core on representative public, authentication, operator, and admin routes at 1440×900, 768×1024, and 390×844. The same browser checks verify keyboard-visible skip-link focus and absence of horizontal overflow.
 - The existing global reduced-motion kill was replaced with targeted zero-duration motion tokens and static loading/decorative alternatives. Protected routes now provide an explicit React Router hydration fallback, removing the prior console warning while preserving an accessible loading state.
