@@ -277,6 +277,47 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   ])
 })
 
+test('edits school filters after listing and keeps pickup geography separate', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  await installMockApi(page, state)
+  await page.goto('/')
+  await page
+    .getByLabel('Okulun bulunduğu il')
+    .selectOption({ label: 'İstanbul' })
+
+  const schoolNames = page.locator('.school-result-list strong')
+  await expect(schoolNames).toHaveText([
+    'Atatürk İlkokulu',
+    'Örnek Okulu',
+    'Zübeyde Hanım İlkokulu',
+  ])
+
+  await page.getByLabel('Sıralama').selectOption('name-desc')
+  await expect(schoolNames).toHaveText([
+    'Zübeyde Hanım İlkokulu',
+    'Örnek Okulu',
+    'Atatürk İlkokulu',
+  ])
+
+  await page.getByLabel('Okul adında ara').fill('ornek')
+  await page.getByRole('button', { name: 'Okullarda ara' }).click()
+  await expect(schoolNames).toHaveText(['Örnek Okulu'])
+
+  await page.getByRole('button', { name: 'Filtreleri temizle' }).click()
+  await expect(schoolNames).toHaveCount(3)
+  await page.getByLabel('Okulun ilçesi').selectOption({ label: 'Üsküdar' })
+  await expect(schoolNames).toHaveText(['Zübeyde Hanım İlkokulu'])
+
+  await page
+    .getByRole('button', { name: 'Zübeyde Hanım İlkokulu okulunu seç' })
+    .click()
+  await expect(page.getByText('Seçilen okul')).toBeVisible()
+  await expect(page.getByLabel('Servis alınacak ilçe')).toBeEnabled()
+  await expect(page.getByLabel('Servis alınacak mahalle')).toBeDisabled()
+})
+
 async function login(page: Page, email: string) {
   await page.goto('/operator/login')
   await page.getByLabel('E-posta').fill(email)
@@ -292,9 +333,8 @@ async function search(page: Page, district: string, neighborhood: string) {
   await page
     .getByLabel('Okulun bulunduğu il')
     .selectOption({ label: 'İstanbul' })
-  await page
-    .locator('select[name="schoolId"]')
-    .selectOption({ label: 'Örnek Okulu — Kadıköy' })
+  await page.getByText('Örnek Okulu', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()
   await page
     .locator('select[name="districtId"]')
     .selectOption({ label: district })

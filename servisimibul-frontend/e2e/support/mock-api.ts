@@ -211,7 +211,33 @@ export async function installMockApi(page: Page, state: MockApiState) {
       return json(route, [{ id: 34, code: '34', name: 'İstanbul' }])
     }
     if (path === '/schools' && method === 'GET') {
-      return json(route, pageResponse([school()], 50))
+      if (!url.searchParams.has('sort')) {
+        return json(route, pageResponse([school()], 50))
+      }
+
+      const districtId = url.searchParams.get('districtId')
+      const query = normalizeSchoolSearch(url.searchParams.get('query') ?? '')
+      const sort = url.searchParams.get('sort')
+      const pageNumber = Number(url.searchParams.get('page') ?? '0')
+      const pageSize = Number(url.searchParams.get('size') ?? '10')
+      const matchingSchools = publicSchools()
+        .filter((item) => !districtId || item.districtId === Number(districtId))
+        .filter(
+          (item) => !query || normalizeSchoolSearch(item.name).includes(query),
+        )
+        .sort((left, right) =>
+          left.name.localeCompare(right.name, 'tr-TR', { sensitivity: 'base' }),
+        )
+      if (sort === 'name-desc') matchingSchools.reverse()
+
+      const start = pageNumber * pageSize
+      return json(route, {
+        content: matchingSchools.slice(start, start + pageSize),
+        page: pageNumber,
+        size: pageSize,
+        totalElements: matchingSchools.length,
+        totalPages: Math.ceil(matchingSchools.length / pageSize),
+      })
     }
     if (path === '/districts' && method === 'GET') {
       return json(route, [
@@ -424,6 +450,35 @@ function school() {
     sourceCode: null,
     active: true,
   }
+}
+
+function publicSchools() {
+  return [
+    {
+      ...school(),
+      id: '10000000-0000-4000-8000-000000000001',
+      name: 'Atatürk İlkokulu',
+    },
+    school(),
+    {
+      ...school(),
+      id: '10000000-0000-4000-8000-000000000003',
+      neighborhoodId: 201,
+      neighborhoodName: 'Acıbadem',
+      districtId: 11,
+      districtName: 'Üsküdar',
+      name: 'Zübeyde Hanım İlkokulu',
+    },
+  ]
+}
+
+function normalizeSchoolSearch(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .replaceAll('ı', 'i')
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
 }
 
 function operatorSchool(state: MockApiState) {

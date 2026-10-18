@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 import {
@@ -11,6 +11,8 @@ import {
   type OperatorPage,
   type PublicOperator,
   type School,
+  type SchoolPage,
+  type SchoolSort,
 } from './discovery-api'
 import { PublicTariffReference } from '../tariff/PublicTariffReference'
 
@@ -32,6 +34,14 @@ interface SearchSelection {
   provinceCode: string
 }
 
+interface SchoolFilters {
+  districtId: string
+  query: string
+  sort: SchoolSort
+}
+
+const DEFAULT_SCHOOL_SORT: SchoolSort = 'name-asc'
+
 export function PublicDiscoveryPage() {
   const [provinces, setProvinces] = useState<
     Awaited<ReturnType<typeof getProvinces>>
@@ -39,9 +49,15 @@ export function PublicDiscoveryPage() {
   const [schoolDistricts, setSchoolDistricts] = useState<
     Awaited<ReturnType<typeof getDistricts>>
   >([])
-  const [schools, setSchools] = useState<School[]>([])
+  const [schoolPage, setSchoolPage] = useState<SchoolPage>()
+  const [schoolPageNumber, setSchoolPageNumber] = useState(0)
   const [schoolDistrictId, setSchoolDistrictId] = useState('')
-  const [schoolFilter, setSchoolFilter] = useState('')
+  const [schoolQueryInput, setSchoolQueryInput] = useState('')
+  const [schoolQuery, setSchoolQuery] = useState('')
+  const [schoolSort, setSchoolSort] = useState<SchoolSort>(DEFAULT_SCHOOL_SORT)
+  const [selectedSchool, setSelectedSchool] = useState<School>()
+  const [schoolNotice, setSchoolNotice] = useState<string>()
+  const [schoolLoadError, setSchoolLoadError] = useState<string>()
   const [pickupDistricts, setPickupDistricts] = useState<
     Awaited<ReturnType<typeof getDistricts>>
   >([])
@@ -85,7 +101,6 @@ export function PublicDiscoveryPage() {
     control,
     name: 'schoolProvinceId',
   })
-  const selectedSchoolId = useWatch({ control, name: 'schoolId' })
   const selectedDistrictId = useWatch({ control, name: 'districtId' })
   const selectedNeighborhoodId = useWatch({
     control,
@@ -117,18 +132,27 @@ export function PublicDiscoveryPage() {
   }, [])
 
   const loadSchools = useCallback(
-    async (provinceId: number, districtId?: number) => {
+    async (provinceId: number, filters: SchoolFilters, page: number) => {
       const request = ++schoolRequest.current
+      setSchoolPageNumber(page)
       setLoadingSchools(true)
-      setLocationError(undefined)
+      setSchoolLoadError(undefined)
+      setSchoolPage(undefined)
       try {
-        const nextSchools = await getSchools(provinceId, districtId)
-        if (request === schoolRequest.current) setSchools(nextSchools)
+        const nextPage = await getSchools({
+          provinceId,
+          districtId: filters.districtId
+            ? Number(filters.districtId)
+            : undefined,
+          query: filters.query,
+          sort: filters.sort,
+          page,
+        })
+        if (request === schoolRequest.current) setSchoolPage(nextPage)
       } catch {
         if (request === schoolRequest.current) {
-          setSchools([])
-          setLocationError(
-            'Okullar yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.',
+          setSchoolLoadError(
+            'Okul sonuçları yüklenemedi. Filtrelerinizi koruduk; tekrar deneyebilirsiniz.',
           )
         }
       } finally {
@@ -142,98 +166,169 @@ export function PublicDiscoveryPage() {
     void Promise.resolve().then(loadProvinces)
   }, [loadProvinces])
 
-  const visibleSchools = useMemo(() => {
-    const filter = schoolFilter.trim().toLocaleLowerCase('tr-TR')
-    if (!filter) return schools
-    return schools.filter(
-      (school) =>
-        school.id === selectedSchoolId ||
-        `${school.name} ${school.districtName}`
-          .toLocaleLowerCase('tr-TR')
-          .includes(filter),
-    )
-  }, [schoolFilter, schools, selectedSchoolId])
+  function clearResults() {
+    searchRequest.current += 1
+    setSearching(false)
+    setResults(undefined)
+    setLastSelection(undefined)
+    setSearchError(undefined)
+  }
+
+  function clearSelectedSchool(notice?: string) {
+    setSelectedSchool(undefined)
+    setValue('schoolId', '')
+    setValue('districtId', '')
+    setValue('neighborhoodId', '')
+    clearErrors(['schoolId', 'districtId', 'neighborhoodId'])
+    setPickupDistricts([])
+    setNeighborhoods([])
+    setSchoolNotice(notice)
+    pickupDistrictRequest.current += 1
+    neighborhoodRequest.current += 1
+    setLoadingDistricts(false)
+    setLoadingNeighborhoods(false)
+    clearResults()
+  }
+
+  function keepSelectionIfCompatible(filters: SchoolFilters) {
+    if (!selectedSchool) return
+
+    const districtMatches =
+      !filters.districtId ||
+      selectedSchool.districtId === Number(filters.districtId)
+    const queryMatches =
+      !filters.query ||
+      normalizeSchoolText(selectedSchool.name).includes(
+        normalizeSchoolText(filters.query),
+      )
+
+    if (!districtMatches || !queryMatches) {
+      clearSelectedSchool(
+        'Önceki okul seçimi yeni okul filtreleriyle eşleşmediği için kaldırıldı. Sonuçlardan yeniden okul seçin.',
+      )
+    }
+  }
 
   async function selectSchoolProvince(provinceId: string) {
     setValue('schoolProvinceId', provinceId, { shouldValidate: true })
     setSchoolDistrictId('')
-    setSchoolFilter('')
-    setValue('schoolId', '')
-    setValue('districtId', '')
-    setValue('neighborhoodId', '')
-    clearErrors([
-      'schoolProvinceId',
-      'schoolId',
-      'districtId',
-      'neighborhoodId',
-    ])
+    setSchoolQueryInput('')
+    setSchoolQuery('')
+    setSchoolSort(DEFAULT_SCHOOL_SORT)
     setSchoolDistricts([])
-    setSchools([])
-    setPickupDistricts([])
-    setNeighborhoods([])
-    clearResults()
+    setSchoolPage(undefined)
+    setSchoolLoadError(undefined)
+    clearSelectedSchool()
+    clearErrors('schoolProvinceId')
     setLocationError(undefined)
     schoolDistrictRequest.current += 1
     schoolRequest.current += 1
-    pickupDistrictRequest.current += 1
-    neighborhoodRequest.current += 1
     setLoadingSchoolDistricts(false)
     setLoadingSchools(false)
-    setLoadingDistricts(false)
-    setLoadingNeighborhoods(false)
 
     if (!provinceId) return
 
     const numericProvinceId = Number(provinceId)
-    const request = schoolDistrictRequest.current
+    const districtRequest = ++schoolDistrictRequest.current
     setLoadingSchoolDistricts(true)
     void getDistricts(numericProvinceId)
       .then((nextDistricts) => {
-        if (request === schoolDistrictRequest.current) {
+        if (districtRequest === schoolDistrictRequest.current) {
           setSchoolDistricts(nextDistricts)
         }
       })
       .catch(() => {
-        if (request === schoolDistrictRequest.current) {
+        if (districtRequest === schoolDistrictRequest.current) {
           setLocationError(
             'Okul ilçeleri yüklenemedi. İli yeniden seçip tekrar deneyin.',
           )
         }
       })
       .finally(() => {
-        if (request === schoolDistrictRequest.current) {
+        if (districtRequest === schoolDistrictRequest.current) {
           setLoadingSchoolDistricts(false)
         }
       })
 
-    await loadSchools(numericProvinceId)
+    await loadSchools(
+      numericProvinceId,
+      { districtId: '', query: '', sort: DEFAULT_SCHOOL_SORT },
+      0,
+    )
   }
 
   async function selectSchoolDistrict(nextDistrictId: string) {
     setSchoolDistrictId(nextDistrictId)
-    setSchoolFilter('')
-    setValue('schoolId', '')
-    setValue('districtId', '')
-    setValue('neighborhoodId', '')
-    clearErrors(['schoolId', 'districtId', 'neighborhoodId'])
-    setSchools([])
-    setPickupDistricts([])
-    setNeighborhoods([])
-    clearResults()
-    pickupDistrictRequest.current += 1
-    neighborhoodRequest.current += 1
-    setLoadingDistricts(false)
-    setLoadingNeighborhoods(false)
+    const filters = {
+      districtId: nextDistrictId,
+      query: schoolQuery,
+      sort: schoolSort,
+    }
+    keepSelectionIfCompatible(filters)
+    if (!selectedSchoolProvinceId) return
+    await loadSchools(Number(selectedSchoolProvinceId), filters, 0)
+  }
 
+  async function applySchoolSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!selectedSchoolProvinceId) return
+
+    const nextQuery = schoolQueryInput.trim()
+    setSchoolQuery(nextQuery)
+    const filters = {
+      districtId: schoolDistrictId,
+      query: nextQuery,
+      sort: schoolSort,
+    }
+    keepSelectionIfCompatible(filters)
+    await loadSchools(Number(selectedSchoolProvinceId), filters, 0)
+  }
+
+  async function changeSchoolSort(nextSort: SchoolSort) {
+    setSchoolSort(nextSort)
     if (!selectedSchoolProvinceId) return
     await loadSchools(
       Number(selectedSchoolProvinceId),
-      nextDistrictId ? Number(nextDistrictId) : undefined,
+      {
+        districtId: schoolDistrictId,
+        query: schoolQuery,
+        sort: nextSort,
+      },
+      0,
     )
   }
 
-  async function selectSchool(schoolId: string) {
-    setValue('schoolId', schoolId, { shouldValidate: true })
+  async function clearSchoolFilters() {
+    setSchoolDistrictId('')
+    setSchoolQueryInput('')
+    setSchoolQuery('')
+    setSchoolSort(DEFAULT_SCHOOL_SORT)
+    setSchoolNotice(undefined)
+    if (!selectedSchoolProvinceId) return
+    await loadSchools(
+      Number(selectedSchoolProvinceId),
+      { districtId: '', query: '', sort: DEFAULT_SCHOOL_SORT },
+      0,
+    )
+  }
+
+  async function changeSchoolPage(page: number) {
+    if (!selectedSchoolProvinceId) return
+    await loadSchools(
+      Number(selectedSchoolProvinceId),
+      {
+        districtId: schoolDistrictId,
+        query: schoolQuery,
+        sort: schoolSort,
+      },
+      page,
+    )
+  }
+
+  async function selectSchool(school: School) {
+    setSelectedSchool(school)
+    setSchoolNotice(undefined)
+    setValue('schoolId', school.id, { shouldValidate: true })
     setValue('districtId', '')
     setValue('neighborhoodId', '')
     clearErrors(['schoolId', 'districtId', 'neighborhoodId'])
@@ -243,9 +338,6 @@ export function PublicDiscoveryPage() {
     setLocationError(undefined)
     pickupDistrictRequest.current += 1
     neighborhoodRequest.current += 1
-
-    const school = schools.find((item) => item.id === schoolId)
-    if (!school) return
 
     const request = pickupDistrictRequest.current
     setLoadingDistricts(true)
@@ -257,7 +349,7 @@ export function PublicDiscoveryPage() {
     } catch {
       if (request === pickupDistrictRequest.current) {
         setLocationError(
-          'İlçeler yüklenemedi. Okulu yeniden seçip tekrar deneyin.',
+          'Servis alınacak ilçeler yüklenemedi. Okulu yeniden seçip tekrar deneyin.',
         )
       }
     } finally {
@@ -305,23 +397,22 @@ export function PublicDiscoveryPage() {
   }
 
   async function submit(values: SearchValues) {
-    const school = schools.find((item) => item.id === values.schoolId)
     const district = pickupDistricts.find(
       (item) => item.id === Number(values.districtId),
     )
     const neighborhood = neighborhoods.find(
       (item) => item.id === Number(values.neighborhoodId),
     )
-    if (!school || !district || !neighborhood) return
+    if (!selectedSchool || !district || !neighborhood) return
 
     await runSearch(
       {
-        schoolId: school.id,
-        schoolName: school.name,
+        schoolId: selectedSchool.id,
+        schoolName: selectedSchool.name,
         districtName: district.name,
         neighborhoodId: neighborhood.id,
         neighborhoodName: neighborhood.name,
-        provinceCode: school.provinceCode,
+        provinceCode: selectedSchool.provinceCode,
       },
       0,
     )
@@ -351,25 +442,17 @@ export function PublicDiscoveryPage() {
     }
   }
 
-  function clearResults() {
-    searchRequest.current += 1
-    setSearching(false)
-    setResults(undefined)
-    setLastSelection(undefined)
-    setSearchError(undefined)
-  }
-
   function retryLocationLoad() {
     if (!selectedSchoolProvinceId) {
       void loadProvinces()
     } else if (
       selectedDistrictId &&
-      selectedSchoolId &&
+      selectedSchool &&
       neighborhoods.length === 0
     ) {
       void selectDistrict(selectedDistrictId)
-    } else if (selectedSchoolId && pickupDistricts.length === 0) {
-      void selectSchool(selectedSchoolId)
+    } else if (selectedSchool && pickupDistricts.length === 0) {
+      void selectSchool(selectedSchool)
     } else {
       void selectSchoolProvince(selectedSchoolProvinceId)
     }
@@ -386,18 +469,13 @@ export function PublicDiscoveryPage() {
         </p>
       </div>
 
-      <form
-        className="form-card discovery-search"
-        onSubmit={handleSubmit(submit)}
-        aria-busy={searching}
-        noValidate
-      >
+      <div className="form-card discovery-search">
         <div className="section-heading">
           <div>
-            <h2>Okul ve mahalleyi seçin</h2>
+            <h2>Önce okulu bulun</h2>
             <p>
-              Önce okulun bulunduğu ili seçin; ardından servis istediğiniz
-              mahalleyi belirtin.
+              Okulun konumunu filtreleyin. Servis alınacak ilçe ve mahalleyi
+              okulu seçtikten sonra ayrıca belirleyeceksiniz.
             </p>
           </div>
         </div>
@@ -415,7 +493,7 @@ export function PublicDiscoveryPage() {
           </div>
         )}
 
-        <div className="discovery-field-grid">
+        <div className="school-filter-grid">
           <label className="form-field">
             Okulun bulunduğu il
             <select
@@ -447,7 +525,7 @@ export function PublicDiscoveryPage() {
           </label>
 
           <label className="form-field">
-            Okulun ilçesi (isteğe bağlı)
+            Okulun ilçesi
             <select
               disabled={!selectedSchoolProvinceId || loadingSchoolDistricts}
               onChange={(event) =>
@@ -469,131 +547,193 @@ export function PublicDiscoveryPage() {
           </label>
 
           <label className="form-field">
-            Yüklenen okullarda ara
-            <input
+            Sıralama
+            <select
               disabled={!selectedSchoolProvinceId || loadingSchools}
-              onChange={(event) => setSchoolFilter(event.target.value)}
-              placeholder="Örneğin Atatürk İlkokulu"
-              type="search"
-              value={schoolFilter}
-            />
-          </label>
-
-          <label className="form-field">
-            Okul
-            <select
-              {...register('schoolId')}
-              aria-describedby={errors.schoolId ? 'school-error' : undefined}
-              aria-invalid={Boolean(errors.schoolId)}
-              disabled={
-                !selectedSchoolProvinceId ||
-                loadingSchools ||
-                schools.length === 0
+              onChange={(event) =>
+                void changeSchoolSort(event.target.value as SchoolSort)
               }
-              onChange={(event) => void selectSchool(event.target.value)}
-              value={selectedSchoolId}
+              value={schoolSort}
             >
-              <option value="">
-                {!selectedSchoolProvinceId
-                  ? 'Önce il seçin'
-                  : loadingSchools
-                    ? 'Okullar yükleniyor...'
-                    : 'Okul seçin'}
-              </option>
-              {visibleSchools.map((school) => (
-                <option key={school.id} value={school.id}>
-                  {school.name} — {school.districtName}
-                </option>
-              ))}
+              <option value="name-asc">Okul adı A–Z</option>
+              <option value="name-desc">Okul adı Z–A</option>
             </select>
-            {errors.schoolId && (
-              <small className="field-error" id="school-error">
-                {errors.schoolId.message}
-              </small>
-            )}
-          </label>
-
-          <label className="form-field">
-            Servis alınacak ilçe
-            <select
-              {...register('districtId')}
-              aria-describedby={
-                errors.districtId ? 'district-error' : undefined
-              }
-              aria-invalid={Boolean(errors.districtId)}
-              disabled={!selectedSchoolId || loadingDistricts}
-              onChange={(event) => void selectDistrict(event.target.value)}
-              value={selectedDistrictId}
-            >
-              <option value="">
-                {loadingDistricts ? 'İlçeler yükleniyor...' : 'İlçe seçin'}
-              </option>
-              {pickupDistricts.map((district) => (
-                <option key={district.id} value={district.id}>
-                  {district.name}
-                </option>
-              ))}
-            </select>
-            {errors.districtId && (
-              <small className="field-error" id="district-error">
-                {errors.districtId.message}
-              </small>
-            )}
-          </label>
-
-          <label className="form-field">
-            Servis alınacak mahalle
-            <select
-              {...register('neighborhoodId')}
-              aria-describedby={
-                errors.neighborhoodId ? 'neighborhood-error' : undefined
-              }
-              aria-invalid={Boolean(errors.neighborhoodId)}
-              disabled={!selectedDistrictId || loadingNeighborhoods}
-              onChange={(event) => selectNeighborhood(event.target.value)}
-              value={selectedNeighborhoodId}
-            >
-              <option value="">
-                {loadingNeighborhoods
-                  ? 'Mahalleler yükleniyor...'
-                  : 'Mahalle seçin'}
-              </option>
-              {neighborhoods.map((neighborhood) => (
-                <option key={neighborhood.id} value={neighborhood.id}>
-                  {neighborhood.name}
-                </option>
-              ))}
-            </select>
-            {errors.neighborhoodId && (
-              <small className="field-error" id="neighborhood-error">
-                {errors.neighborhoodId.message}
-              </small>
-            )}
           </label>
         </div>
 
-        {selectedSchoolProvinceId &&
-          !loadingSchools &&
-          !locationError &&
-          schools.length === 0 && (
-            <p className="discovery-note" role="status">
-              Bu il ve ilçe seçimi için aktif okul bulunamadı.
-            </p>
-          )}
+        <form className="school-search-row" onSubmit={applySchoolSearch}>
+          <label className="form-field grow">
+            Okul adında ara
+            <input
+              disabled={!selectedSchoolProvinceId || loadingSchools}
+              onChange={(event) => setSchoolQueryInput(event.target.value)}
+              placeholder="Örneğin Atatürk İlkokulu"
+              type="search"
+              value={schoolQueryInput}
+            />
+          </label>
+          <button
+            className="secondary-button"
+            disabled={!selectedSchoolProvinceId || loadingSchools}
+            type="submit"
+          >
+            Okullarda ara
+          </button>
+          <button
+            className="text-button"
+            disabled={
+              !selectedSchoolProvinceId ||
+              loadingSchools ||
+              (!schoolDistrictId &&
+                !schoolQuery &&
+                schoolSort === DEFAULT_SCHOOL_SORT)
+            }
+            onClick={() => void clearSchoolFilters()}
+            type="button"
+          >
+            Filtreleri temizle
+          </button>
+        </form>
 
-        <p className="discovery-note">
-          Mahalle eşleşmesi, belirli bir adresten kesin servis imkânı anlamına
-          gelmez. Ayrıntıları işletmeciyle görüşün. Koltuk bilgisi rezervasyon
-          değildir; UKOME tarifeleri yalnızca resmi referanstır, kişisel fiyat
-          teklifi değildir.
-        </p>
+        {schoolNotice && (
+          <p className="school-selection-notice" role="status">
+            {schoolNotice}
+          </p>
+        )}
 
-        <button className="primary-button" disabled={searching} type="submit">
-          {searching
-            ? 'İşletmeciler aranıyor...'
-            : 'Servis işletmecilerini bul'}
-        </button>
-      </form>
+        <SchoolResults
+          error={schoolLoadError}
+          loading={loadingSchools}
+          onPageChange={(page) => void changeSchoolPage(page)}
+          onRetry={() => void changeSchoolPage(schoolPageNumber)}
+          onSelect={(school) => void selectSchool(school)}
+          page={schoolPage}
+          selectedSchoolId={selectedSchool?.id}
+          visible={Boolean(selectedSchoolProvinceId)}
+        />
+
+        <input {...register('schoolId')} type="hidden" />
+        {errors.schoolId && (
+          <small
+            className="field-error school-selection-error"
+            id="school-error"
+          >
+            {errors.schoolId.message}
+          </small>
+        )}
+
+        {selectedSchool && (
+          <div className="selected-school-summary" role="status">
+            <div>
+              <strong>Seçilen okul</strong>
+              <span>
+                {selectedSchool.name} · {selectedSchool.districtName}
+              </span>
+            </div>
+            <button
+              className="text-button"
+              onClick={() => clearSelectedSchool('Okul seçimi kaldırıldı.')}
+              type="button"
+            >
+              Seçimi kaldır
+            </button>
+          </div>
+        )}
+
+        <form
+          className="pickup-search"
+          onSubmit={handleSubmit(submit)}
+          aria-busy={searching}
+          noValidate
+        >
+          <div className="section-heading pickup-heading">
+            <div>
+              <h2>Servis alınacak konumu seçin</h2>
+              <p>
+                Bu konum okulun ilçesinden farklı olabilir; aynı il içindeki
+                hizmet bölgeleri aranır.
+              </p>
+            </div>
+          </div>
+
+          <div className="discovery-field-grid">
+            <label className="form-field">
+              Servis alınacak ilçe
+              <select
+                {...register('districtId')}
+                aria-describedby={
+                  errors.districtId ? 'district-error' : undefined
+                }
+                aria-invalid={Boolean(errors.districtId)}
+                disabled={!selectedSchool || loadingDistricts}
+                onChange={(event) => void selectDistrict(event.target.value)}
+                value={selectedDistrictId}
+              >
+                <option value="">
+                  {!selectedSchool
+                    ? 'Önce okul seçin'
+                    : loadingDistricts
+                      ? 'İlçeler yükleniyor...'
+                      : 'İlçe seçin'}
+                </option>
+                {pickupDistricts.map((district) => (
+                  <option key={district.id} value={district.id}>
+                    {district.name}
+                  </option>
+                ))}
+              </select>
+              {errors.districtId && (
+                <small className="field-error" id="district-error">
+                  {errors.districtId.message}
+                </small>
+              )}
+            </label>
+
+            <label className="form-field">
+              Servis alınacak mahalle
+              <select
+                {...register('neighborhoodId')}
+                aria-describedby={
+                  errors.neighborhoodId ? 'neighborhood-error' : undefined
+                }
+                aria-invalid={Boolean(errors.neighborhoodId)}
+                disabled={!selectedDistrictId || loadingNeighborhoods}
+                onChange={(event) => selectNeighborhood(event.target.value)}
+                value={selectedNeighborhoodId}
+              >
+                <option value="">
+                  {loadingNeighborhoods
+                    ? 'Mahalleler yükleniyor...'
+                    : 'Mahalle seçin'}
+                </option>
+                {neighborhoods.map((neighborhood) => (
+                  <option key={neighborhood.id} value={neighborhood.id}>
+                    {neighborhood.name}
+                  </option>
+                ))}
+              </select>
+              {errors.neighborhoodId && (
+                <small className="field-error" id="neighborhood-error">
+                  {errors.neighborhoodId.message}
+                </small>
+              )}
+            </label>
+          </div>
+
+          <p className="discovery-note">
+            Mahalle eşleşmesi, belirli bir adresten kesin servis imkânı anlamına
+            gelmez. Ayrıntıları işletmeciyle görüşün. Koltuk bilgisi rezervasyon
+            değildir; UKOME tarifeleri yalnızca resmi referanstır, kişisel fiyat
+            teklifi değildir.
+          </p>
+
+          <button className="primary-button" disabled={searching} type="submit">
+            {searching
+              ? 'İşletmeciler aranıyor...'
+              : 'Servis işletmecilerini bul'}
+          </button>
+        </form>
+      </div>
 
       <DiscoveryResults
         error={searchError}
@@ -610,6 +750,149 @@ export function PublicDiscoveryPage() {
       />
     </section>
   )
+}
+
+function SchoolResults({
+  error,
+  loading,
+  onPageChange,
+  onRetry,
+  onSelect,
+  page,
+  selectedSchoolId,
+  visible,
+}: {
+  error?: string
+  loading: boolean
+  onPageChange: (page: number) => void
+  onRetry: () => void
+  onSelect: (school: School) => void
+  page?: SchoolPage
+  selectedSchoolId?: string
+  visible: boolean
+}) {
+  if (!visible) {
+    return (
+      <div className="school-browser-empty">
+        <h3>Okulları listelemek için il seçin</h3>
+        <p>İstanbul seçildikten sonra okul sonuçları burada görünecek.</p>
+      </div>
+    )
+  }
+
+  return (
+    <section className="school-results" aria-busy={loading} aria-live="polite">
+      {loading && (
+        <div className="school-result-loading" role="status">
+          <span>Okullar yükleniyor...</span>
+          <div aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="school-result-error" role="alert">
+          <span>{error}</span>
+          <button className="text-button" onClick={onRetry} type="button">
+            Tekrar dene
+          </button>
+        </div>
+      )}
+
+      {!loading && !error && page && (
+        <>
+          <div className="school-result-summary">
+            <h3>
+              {page.totalElements === 0
+                ? 'Okul bulunamadı'
+                : `${page.totalElements} okul bulundu`}
+            </h3>
+            {page.totalElements > 0 && (
+              <p>
+                Sayfa {page.page + 1} / {page.totalPages}
+              </p>
+            )}
+          </div>
+
+          {page.content.length === 0 ? (
+            <div className="school-browser-empty">
+              <h3>Bu filtrelerle eşleşen okul yok</h3>
+              <p>
+                Okul adını kısaltın, ilçe filtresini kaldırın veya tüm okul
+                filtrelerini temizleyin.
+              </p>
+            </div>
+          ) : (
+            <ul className="school-result-list">
+              {page.content.map((school) => {
+                const selected = school.id === selectedSchoolId
+                return (
+                  <li key={school.id}>
+                    <div>
+                      <strong>{school.name}</strong>
+                      <span>
+                        {school.districtName} · {school.neighborhoodName}
+                      </span>
+                    </div>
+                    <button
+                      aria-label={
+                        selected
+                          ? `${school.name} seçildi`
+                          : `${school.name} okulunu seç`
+                      }
+                      aria-pressed={selected}
+                      className={selected ? 'secondary-button' : 'text-button'}
+                      disabled={selected}
+                      onClick={() => onSelect(school)}
+                      type="button"
+                    >
+                      {selected ? 'Seçildi' : 'Bu okulu seç'}
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+
+          {page.totalPages > 1 && (
+            <nav className="pagination" aria-label="Okul sonuçları sayfaları">
+              <button
+                className="secondary-button"
+                disabled={page.page === 0}
+                onClick={() => onPageChange(page.page - 1)}
+                type="button"
+              >
+                Önceki sayfa
+              </button>
+              <span>
+                Sayfa {page.page + 1} / {page.totalPages}
+              </span>
+              <button
+                className="secondary-button"
+                disabled={page.page + 1 >= page.totalPages}
+                onClick={() => onPageChange(page.page + 1)}
+                type="button"
+              >
+                Sonraki sayfa
+              </button>
+            </nav>
+          )}
+        </>
+      )}
+    </section>
+  )
+}
+
+function normalizeSchoolText(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase('tr-TR')
+    .replaceAll('ı', 'i')
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
 }
 
 function DiscoveryResults({
