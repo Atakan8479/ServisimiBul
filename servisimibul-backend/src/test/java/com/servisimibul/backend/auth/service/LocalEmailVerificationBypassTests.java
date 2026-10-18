@@ -10,6 +10,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,10 +22,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "app.auth.email-verification.required=false",
-        "servisimibul.email.enabled=false"
+        "servisimibul.email.enabled=false",
+        "spring.datasource.hikari.maximum-pool-size=2"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("local")
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @Transactional
 class LocalEmailVerificationBypassTests {
 
