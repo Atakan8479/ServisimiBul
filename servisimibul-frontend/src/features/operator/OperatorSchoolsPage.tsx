@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type RefObject,
+} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import {
   addOperatorSchool,
+  getDiscoveryReadiness,
   getDistricts,
   getNeighborhoods,
   getOperatorSchools,
@@ -11,6 +19,7 @@ import {
   searchSchools,
   setOperatorSchoolActive,
   type District,
+  type DiscoveryReadiness,
   type Neighborhood,
   type OperatorSchool,
   type School,
@@ -18,15 +27,21 @@ import {
 
 export function OperatorSchoolsPage() {
   const navigate = useNavigate()
+  const coverageHeadingRef = useRef<HTMLHeadingElement>(null)
   const [relationships, setRelationships] = useState<OperatorSchool[]>([])
+  const [readiness, setReadiness] = useState<DiscoveryReadiness>()
   const [schoolResults, setSchoolResults] = useState<School[]>([])
   const [query, setQuery] = useState('')
   const [selectedSchoolId, setSelectedSchoolId] = useState('')
   const [editingCoverageId, setEditingCoverageId] = useState<string>()
+  const [pendingFocusId, setPendingFocusId] = useState<string>()
   const [loading, setLoading] = useState(true)
   const [pending, setPending] = useState<string>()
   const [error, setError] = useState<string>()
-  const [notice, setNotice] = useState<string>()
+  const [notice, setNotice] = useState<{
+    message: string
+    tone: 'success' | 'warning'
+  }>()
 
   useEffect(() => {
     let active = true
@@ -43,10 +58,37 @@ export function OperatorSchoolsPage() {
       .finally(() => {
         if (active) setLoading(false)
       })
+    void getDiscoveryReadiness()
+      .then((discoveryReadiness) => {
+        if (active) setReadiness(discoveryReadiness)
+      })
+      .catch((reason: unknown) => {
+        if (!active) return
+        if (reason instanceof ApiError && reason.sessionExpired) {
+          void navigate('/operator/login?reason=session', { replace: true })
+        }
+      })
     return () => {
       active = false
     }
   }, [navigate])
+
+  useEffect(() => {
+    if (!pendingFocusId || editingCoverageId !== pendingFocusId) return
+    const heading = coverageHeadingRef.current
+    if (!heading) return
+    heading.focus()
+    if (typeof heading.scrollIntoView === 'function') {
+      const reducedMotion = window.matchMedia?.(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
+      heading.scrollIntoView({
+        behavior: reducedMotion ? 'auto' : 'smooth',
+        block: 'start',
+      })
+    }
+    setPendingFocusId(undefined)
+  }, [editingCoverageId, pendingFocusId, relationships])
 
   async function findSchools(event: FormEvent) {
     event.preventDefault()
@@ -75,7 +117,13 @@ export function OperatorSchoolsPage() {
       const created = await addOperatorSchool(selectedSchoolId)
       setRelationships((current) => [...current, created])
       setSelectedSchoolId('')
-      setNotice('Okul çalışma alanınıza eklendi.')
+      setEditingCoverageId(created.id)
+      setPendingFocusId(created.id)
+      setNotice({
+        message:
+          'Okul eklendi. Şimdi bu okul için hizmet mahallelerini seçip kapsamı kaydedin.',
+        tone: 'success',
+      })
     } catch (reason) {
       handleSession(reason, navigate, setError)
     } finally {
@@ -87,9 +135,17 @@ export function OperatorSchoolsPage() {
     setPending(relationship.id)
     setError(undefined)
     try {
-      updateRelationship(
-        await setOperatorSchoolActive(relationship.id, !relationship.active),
+      const updated = await setOperatorSchoolActive(
+        relationship.id,
+        !relationship.active,
       )
+      updateRelationship(updated)
+      setNotice({
+        message: updated.active
+          ? 'Okul bağlantısı etkinleştirildi.'
+          : 'Okul bağlantısı pasife alındı; bu okul artık aramalara katkı sağlamaz.',
+        tone: updated.active ? 'success' : 'warning',
+      })
     } catch (reason) {
       handleSession(reason, navigate, setError)
     } finally {
@@ -111,7 +167,10 @@ export function OperatorSchoolsPage() {
         current.filter((item) => item.id !== relationship.id),
       )
       setEditingCoverageId(undefined)
-      setNotice('Okul bağlantısı kaldırıldı.')
+      setNotice({
+        message: 'Okul bağlantısı ve okula özel kapsam kaldırıldı.',
+        tone: 'warning',
+      })
     } catch (reason) {
       handleSession(reason, navigate, setError)
     } finally {
@@ -154,8 +213,25 @@ export function OperatorSchoolsPage() {
         </div>
       )}
       {notice && (
-        <div className="status-banner success" role="status">
-          {notice}
+        <div className={`status-banner ${notice.tone}`} role="status">
+          {notice.message}
+        </div>
+      )}
+
+      {readiness && !readiness.publiclyVisible && (
+        <div className="status-banner warning" role="status">
+          <strong>Profil görünürlüğünüz kapalı.</strong>
+          <span>
+            Okul ve mahalle kapsamınız tam olsa da profilinizi herkese açık
+            yapana kadar aramalarda görünmezsiniz.{' '}
+            <button
+              className="text-button"
+              onClick={() => void navigate('/operator/profile')}
+              type="button"
+            >
+              Profil ayarlarına git
+            </button>
+          </span>
         </div>
       )}
 
@@ -176,6 +252,7 @@ export function OperatorSchoolsPage() {
             <input
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Okul adı"
+              id="school-search-input"
               value={query}
             />
           </label>
@@ -210,18 +287,24 @@ export function OperatorSchoolsPage() {
             {pending === 'add' ? 'Ekleniyor…' : 'Okulu ekle'}
           </button>
         </form>
-        {availableSchools.length === 0 && (
-          <p className="empty-note">
-            Aramanızda eklenebilecek başka aktif okul yok.
-          </p>
-        )}
+        <SchoolCatalogGuidance
+          availableCount={availableSchools.length}
+          query={query}
+          resultCount={schoolResults.length}
+        />
       </section>
 
       <div className="school-list">
         {relationships.length === 0 ? (
           <div className="empty-state">
             <h2>Henüz okul eklenmedi</h2>
-            <p>Yukarıdaki listeden ilk okulunuzu seçebilirsiniz.</p>
+            <p>
+              Yukarıdaki okul aramasından ilk okulunuzu ekleyin. Okul eklenince
+              hizmet mahallesi seçimi otomatik olarak açılır.
+            </p>
+            <a className="text-button" href="#school-search-input">
+              Okul aramasına git
+            </a>
           </div>
         ) : (
           relationships.map((relationship) => (
@@ -230,15 +313,39 @@ export function OperatorSchoolsPage() {
                 <div className="school-title-row">
                   <h2>{relationship.schoolName}</h2>
                   <span
-                    className={`status-pill ${relationship.active ? 'success' : 'neutral'}`}
+                    className={`status-pill ${relationship.active && relationship.schoolActive ? 'success' : 'neutral'}`}
                   >
-                    {relationship.active ? 'Aktif' : 'Pasif'}
+                    {!relationship.schoolActive
+                      ? 'Okul pasif'
+                      : relationship.active
+                        ? 'Aktif'
+                        : 'Bağlantı pasif'}
                   </span>
                 </div>
                 <p>
                   {relationship.schoolProvinceName} ·{' '}
                   {relationship.coverage.length} hizmet mahallesi
                 </p>
+                {!relationship.schoolActive && (
+                  <p className="school-warning">
+                    Bu okul yönetici tarafından pasife alındı ve aramalara katkı
+                    sağlamaz.
+                  </p>
+                )}
+                {relationship.schoolActive && !relationship.active && (
+                  <p className="school-warning">
+                    Bu bağlantıyı etkinleştirene kadar okul aramalara katkı
+                    sağlamaz.
+                  </p>
+                )}
+                {relationship.schoolActive &&
+                  relationship.active &&
+                  relationship.coverage.length === 0 && (
+                    <p className="school-warning">
+                      Bu okul için hizmet mahallesi seçin; kapsam kaydedilmeden
+                      okul aramalara katkı sağlamaz.
+                    </p>
+                  )}
               </div>
               <div className="button-row">
                 <button
@@ -256,7 +363,9 @@ export function OperatorSchoolsPage() {
                 </button>
                 <button
                   className="secondary-button"
-                  disabled={pending === relationship.id}
+                  disabled={
+                    pending === relationship.id || !relationship.schoolActive
+                  }
                   onClick={() => toggleActive(relationship)}
                   type="button"
                 >
@@ -275,8 +384,21 @@ export function OperatorSchoolsPage() {
                 <CoverageEditor
                   onSaved={(updated) => {
                     updateRelationship(updated)
-                    setNotice('Hizmet kapsamı kaydedildi.')
+                    setNotice(
+                      updated.coverage.length > 0
+                        ? {
+                            message:
+                              'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
+                            tone: 'success',
+                          }
+                        : {
+                            message:
+                              'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
+                            tone: 'warning',
+                          },
+                    )
                   }}
+                  headingRef={coverageHeadingRef}
                   relationship={editingRelationship}
                 />
               )}
@@ -289,9 +411,11 @@ export function OperatorSchoolsPage() {
 }
 
 function CoverageEditor({
+  headingRef,
   relationship,
   onSaved,
 }: {
+  headingRef: RefObject<HTMLHeadingElement | null>
   relationship: OperatorSchool
   onSaved: (updated: OperatorSchool) => void
 }) {
@@ -370,9 +494,12 @@ function CoverageEditor({
     >
       <div className="section-heading">
         <div>
-          <h3>{relationship.schoolProvinceName} hizmet kapsamı</h3>
+          <h3 ref={headingRef} tabIndex={-1}>
+            {relationship.schoolName} için hizmet mahalleleri
+          </h3>
           <p>
-            Farklı ilçelerden mahalle seçebilirsiniz; il dışı seçim yapılamaz.
+            {relationship.schoolProvinceName} içinde farklı ilçelerden mahalle
+            seçebilirsiniz; il dışı seçim yapılamaz.
           </p>
         </div>
         <span className="count-badge">{selectedCount} seçili</span>
@@ -398,6 +525,14 @@ function CoverageEditor({
             </button>
           </div>
           <div className="district-groups">
+            {groups.length === 0 && (
+              <div className="empty-state compact-empty">
+                <h4>Mahalle kataloğu henüz boş</h4>
+                <p>
+                  Bu il için mahalle verisi eklenmeden hizmet kapsamı seçilemez.
+                </p>
+              </div>
+            )}
             {groups.map(({ district, neighborhoods }) => (
               <fieldset key={district.id}>
                 <legend>{district.name}</legend>
@@ -435,6 +570,39 @@ function CoverageEditor({
         </>
       )}
     </section>
+  )
+}
+
+function SchoolCatalogGuidance({
+  availableCount,
+  query,
+  resultCount,
+}: {
+  availableCount: number
+  query: string
+  resultCount: number
+}) {
+  if (availableCount > 0) return null
+  if (resultCount === 0 && query.trim()) {
+    return (
+      <p className="empty-note">
+        Bu aramayla eşleşen aktif okul bulunamadı. Okul adını kısaltarak yeniden
+        deneyin.
+      </p>
+    )
+  }
+  if (resultCount === 0) {
+    return (
+      <p className="empty-note">
+        Pilot okul kataloğu henüz boş. Bir yönetici okul ekledikten sonra burada
+        seçim yapabilirsiniz.
+      </p>
+    )
+  }
+  return (
+    <p className="empty-note">
+      Görüntülenen tüm okullar zaten hizmet ağınıza eklenmiş.
+    </p>
   )
 }
 

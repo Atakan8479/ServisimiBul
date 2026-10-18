@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -9,6 +15,111 @@ import { server } from '../../test/server'
 afterEach(resetCsrfToken)
 
 describe('operator workspace flows', () => {
+  it('shows backend-authoritative readiness in pilot mode without an approval step', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({
+        approvalRequired: false,
+        approvalSatisfied: true,
+        discoveryEligible: true,
+        hasActiveSchoolRelationship: true,
+        hasEligibleSchoolCoverage: true,
+        schools: [schoolReadiness()],
+      }),
+    )
+
+    renderRoute('/operator')
+
+    expect(
+      await screen.findByText('Profiliniz uygun aramalarda görünebilir.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
+    expect(
+      screen.getByText(/Araç eklemeden veya ayrıntılı hizmet ilanı/),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
+  })
+
+  it('shows approval and profile guidance only when the server reports them incomplete', async () => {
+    server.use(
+      authHandler(true, 'PENDING'),
+      readinessHandler({
+        approvalRequired: true,
+        approvalSatisfied: false,
+        profileActive: false,
+        publiclyVisible: false,
+      }),
+    )
+
+    renderRoute('/operator')
+
+    expect(await screen.findByText('Yönetici onayı')).toBeInTheDocument()
+    expect(
+      screen.getByText(/Askıya alınmış veya etkin olmayan profil/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Okulları yönet' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('shows a retry action when readiness cannot be loaded', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      http.get('/api/v1/operator/discovery-readiness', () =>
+        HttpResponse.json(
+          {
+            title: 'Service Unavailable',
+            status: 503,
+            detail: 'Uygunluk bilgisi şu anda alınamıyor.',
+            code: 'readiness_unavailable',
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    renderRoute('/operator')
+
+    expect(
+      await screen.findByText('Uygunluk bilgisi şu anda alınamıyor.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Yeniden dene' }),
+    ).toBeInTheDocument()
+  })
+
+  it('announces readiness loading before rendering the checklist', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    server.use(
+      authHandler(false, 'DRAFT'),
+      http.get('/api/v1/operator/discovery-readiness', async () => {
+        await gate
+        return HttpResponse.json({
+          discoveryEligible: false,
+          emailVerified: true,
+          accountEnabled: true,
+          profileActive: true,
+          publiclyVisible: true,
+          approvalRequired: false,
+          approvalSatisfied: true,
+          hasActiveSchoolRelationship: false,
+          hasEligibleSchoolCoverage: false,
+          schools: [],
+        })
+      }),
+    )
+
+    renderRoute('/operator')
+    expect(
+      await screen.findByText('Arama uygunluğu yükleniyor'),
+    ).toBeInTheDocument()
+    release()
+    expect(await screen.findByText('Hesap doğrulaması')).toBeInTheDocument()
+  })
+
   it('hides the approval workflow and keeps draft profile editing available in pilot mode', async () => {
     server.use(
       authHandler(false, 'DRAFT'),
@@ -67,6 +178,7 @@ describe('operator workspace flows', () => {
     server.use(
       authHandler(),
       csrfHandler(),
+      readinessHandler(),
       http.get('/api/v1/operator/profile', () =>
         HttpResponse.json(profile('CHANGES_REQUESTED')),
       ),
@@ -118,16 +230,17 @@ describe('operator workspace flows', () => {
     server.use(
       authHandler(),
       csrfHandler(),
+      readinessHandler(),
       http.get('/api/v1/operator/schools', () =>
         HttpResponse.json([operatorSchool([])]),
       ),
       http.get('/api/v1/schools', () =>
         HttpResponse.json({
-          content: [],
+          content: [school()],
           page: 0,
           size: 50,
-          totalElements: 0,
-          totalPages: 0,
+          totalElements: 1,
+          totalPages: 1,
         }),
       ),
       http.get('/api/v1/districts', () =>
@@ -162,6 +275,11 @@ describe('operator workspace flows', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
     )
+    expect(
+      screen.getByText(
+        'Görüntülenen tüm okullar zaten hizmet ağınıza eklenmiş.',
+      ),
+    ).toBeInTheDocument()
 
     const kadikoy = await screen.findByRole('group', { name: 'Kadıköy' })
     const uskudar = screen.getByRole('group', { name: 'Üsküdar' })
@@ -170,9 +288,200 @@ describe('operator workspace flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
 
     expect(
-      await screen.findByText('Hizmet kapsamı kaydedildi.'),
+      await screen.findByText(
+        'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
+      ),
     ).toBeInTheDocument()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
+  })
+
+  it('opens a newly added school coverage editor and moves keyboard focus', async () => {
+    const created = operatorSchool([])
+    server.use(
+      authHandler(false, 'DRAFT'),
+      csrfHandler(),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school()],
+          page: 0,
+          size: 50,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.post('/api/v1/operator/schools', () => HttpResponse.json(created)),
+      http.get('/api/v1/districts', () => HttpResponse.json([])),
+    )
+
+    renderRoute('/operator/schools')
+    fireEvent.change(await screen.findByLabelText('Aktif okul'), {
+      target: { value: created.schoolId },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Okulu ekle' }))
+
+    expect(
+      await screen.findByText(/Şimdi bu okul için hizmet mahallelerini/),
+    ).toBeInTheDocument()
+    const heading = await screen.findByRole('heading', {
+      name: 'Örnek Okulu için hizmet mahalleleri',
+    })
+    await waitFor(() => expect(heading).toHaveFocus())
+    expect(
+      screen.getByText(/kapsam kaydedilmeden okul aramalara katkı sağlamaz/),
+    ).toBeInTheDocument()
+  })
+
+  it('distinguishes an empty pilot catalog from a search with no results', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 50,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/operator/schools')
+    expect(
+      await screen.findByText(/Pilot okul kataloğu henüz boş/),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Okul ara'), {
+      target: { value: 'Bulunmayan' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
+    expect(
+      await screen.findByText(/Bu aramayla eşleşen aktif okul bulunamadı/),
+    ).toBeInTheDocument()
+  })
+
+  it('warns about hidden profiles and administrator-deactivated schools', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({
+        approvalRequired: false,
+        approvalSatisfied: true,
+        publiclyVisible: false,
+      }),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([], { schoolActive: false })]),
+      ),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 50,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/operator/schools')
+
+    expect(
+      await screen.findByText('Profil görünürlüğünüz kapalı.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/okul yönetici tarafından pasife alındı/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Pasife al' })).toBeDisabled()
+  })
+
+  it('keeps each linked school coverage visibly separate', async () => {
+    const secondId = '85ef6bb0-e313-43fb-a01c-c935774434b4'
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([
+          operatorSchool([coverage(101, 10, 'Moda', 'Kadıköy')]),
+          operatorSchool([], {
+            id: secondId,
+            schoolId: '7de54e65-6e04-4168-a1cb-967a98d7ec12',
+            schoolName: 'İkinci Okul',
+          }),
+        ]),
+      ),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 50,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/operator/schools')
+    const firstCard = (await screen.findByText('Örnek Okulu')).closest(
+      'article',
+    )
+    const secondCard = screen.getByText('İkinci Okul').closest('article')
+    expect(firstCard).not.toBeNull()
+    expect(secondCard).not.toBeNull()
+    expect(
+      within(firstCard!).getByText(/1 hizmet mahallesi/),
+    ).toBeInTheDocument()
+    expect(
+      within(secondCard!).getByText(/0 hizmet mahallesi/),
+    ).toBeInTheDocument()
+    expect(
+      within(secondCard!).getByText(/hizmet mahallesi seçin/),
+    ).toBeInTheDocument()
+  })
+
+  it('warns when saving removes every neighborhood from a school', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      csrfHandler(),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([
+          operatorSchool([coverage(101, 10, 'Moda', 'Kadıköy')]),
+        ]),
+      ),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school()],
+          page: 0,
+          size: 50,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/districts', () =>
+        HttpResponse.json([{ id: 10, provinceId: 34, name: 'Kadıköy' }]),
+      ),
+      http.get('/api/v1/neighborhoods', () =>
+        HttpResponse.json([{ id: 101, districtId: 10, name: 'Moda' }]),
+      ),
+      http.put('/api/v1/operator/schools/:id/coverage', () =>
+        HttpResponse.json(operatorSchool([])),
+      ),
+    )
+
+    renderRoute('/operator/schools')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
+    )
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Moda' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
+
+    expect(
+      await screen.findByText(
+        'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('lists inactive vehicles but only offers active vehicles for new services', async () => {
@@ -289,6 +598,42 @@ function csrfHandler() {
   )
 }
 
+function readinessHandler(overrides: Record<string, unknown> = {}) {
+  return http.get('/api/v1/operator/discovery-readiness', () =>
+    HttpResponse.json({
+      discoveryEligible: false,
+      emailVerified: true,
+      accountEnabled: true,
+      profileActive: true,
+      publiclyVisible: true,
+      approvalRequired: true,
+      approvalSatisfied: true,
+      hasActiveSchoolRelationship: true,
+      hasEligibleSchoolCoverage: false,
+      schools: [
+        schoolReadiness({
+          validCoverageCount: 0,
+          contributesToDiscovery: false,
+        }),
+      ],
+      ...overrides,
+    }),
+  )
+}
+
+function schoolReadiness(overrides: Record<string, unknown> = {}) {
+  return {
+    operatorSchoolId: '75ef6bb0-e313-43fb-a01c-c935774434b4',
+    schoolId: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
+    schoolName: 'Örnek Okulu',
+    relationshipActive: true,
+    schoolActive: true,
+    validCoverageCount: 1,
+    contributesToDiscovery: true,
+    ...overrides,
+  }
+}
+
 function profile(status: string) {
   return {
     id: '99dd588e-2b72-419e-aa29-28fb97f8ad20',
@@ -303,7 +648,10 @@ function profile(status: string) {
   }
 }
 
-function operatorSchool(items: ReturnType<typeof coverage>[]) {
+function operatorSchool(
+  items: ReturnType<typeof coverage>[],
+  overrides: Record<string, unknown> = {},
+) {
   return {
     id: '75ef6bb0-e313-43fb-a01c-c935774434b4',
     schoolId: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
@@ -313,8 +661,28 @@ function operatorSchool(items: ReturnType<typeof coverage>[]) {
     schoolProvinceId: 34,
     schoolProvinceCode: '34',
     schoolProvinceName: 'İstanbul',
+    schoolActive: true,
     active: true,
     coverage: items,
+    ...overrides,
+  }
+}
+
+function school() {
+  return {
+    id: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
+    neighborhoodId: 100,
+    neighborhoodName: 'Moda',
+    districtId: 10,
+    districtName: 'Kadıköy',
+    provinceId: 34,
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    name: 'Örnek Okulu',
+    address: null,
+    sourceName: null,
+    sourceCode: null,
+    active: true,
   }
 }
 

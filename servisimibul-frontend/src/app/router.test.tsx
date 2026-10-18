@@ -23,6 +23,20 @@ describe('application routes', () => {
           approvalStatus: 'APPROVED',
         }),
       ),
+      http.get('/api/v1/operator/discovery-readiness', () =>
+        HttpResponse.json({
+          discoveryEligible: false,
+          emailVerified: true,
+          accountEnabled: true,
+          profileActive: true,
+          publiclyVisible: true,
+          approvalRequired: true,
+          approvalSatisfied: true,
+          hasActiveSchoolRelationship: false,
+          hasEligibleSchoolCoverage: false,
+          schools: [],
+        }),
+      ),
     )
 
     render(
@@ -32,7 +46,9 @@ describe('application routes', () => {
     )
 
     expect(
-      await screen.findByRole('heading', { name: 'İşletmeci alanı' }),
+      await screen.findByRole('heading', {
+        name: 'Aramalarda görünmeye hazır mısınız?',
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),

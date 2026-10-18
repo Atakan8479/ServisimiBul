@@ -126,6 +126,11 @@ export async function installMockApi(page: Page, state: MockApiState) {
         json(route, profile(state)),
       )
     }
+    if (path === '/operator/discovery-readiness' && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () =>
+        json(route, discoveryReadiness(state)),
+      )
+    }
     if (path === '/operator/profile' && method === 'PATCH') {
       return requireRole(route, role, 'OPERATOR', async () => {
         const body = await request.postDataJSON()
@@ -428,8 +433,44 @@ function operatorSchool(state: MockApiState) {
     schoolProvinceId: 34,
     schoolProvinceCode: '34',
     schoolProvinceName: 'İstanbul',
+    schoolActive: true,
     active: true,
     coverage: state.generalCoverage.map(coverage),
+  }
+}
+
+function discoveryReadiness(state: MockApiState) {
+  const hasEligibleSchoolCoverage =
+    state.operatorSchoolAdded && state.generalCoverage.length > 0
+  const approvalSatisfied = state.approvalStatus === 'APPROVED'
+  return {
+    discoveryEligible:
+      state.verified &&
+      state.active &&
+      state.publiclyVisible &&
+      approvalSatisfied &&
+      hasEligibleSchoolCoverage,
+    emailVerified: state.verified,
+    accountEnabled: state.active,
+    profileActive: state.active,
+    publiclyVisible: state.publiclyVisible,
+    approvalRequired: true,
+    approvalSatisfied,
+    hasActiveSchoolRelationship: state.operatorSchoolAdded,
+    hasEligibleSchoolCoverage,
+    schools: state.operatorSchoolAdded
+      ? [
+          {
+            operatorSchoolId,
+            schoolId,
+            schoolName: 'Örnek Okulu',
+            relationshipActive: true,
+            schoolActive: true,
+            validCoverageCount: state.generalCoverage.length,
+            contributesToDiscovery: hasEligibleSchoolCoverage,
+          },
+        ]
+      : [],
   }
 }
 

@@ -126,6 +126,20 @@ describe('operator authentication screens', () => {
         return HttpResponse.json(operatorUser)
       }),
       http.get('/api/v1/auth/me', () => HttpResponse.json(operatorUser)),
+      http.get('/api/v1/operator/discovery-readiness', () =>
+        HttpResponse.json({
+          discoveryEligible: false,
+          emailVerified: true,
+          accountEnabled: true,
+          profileActive: true,
+          publiclyVisible: true,
+          approvalRequired: true,
+          approvalSatisfied: true,
+          hasActiveSchoolRelationship: false,
+          hasEligibleSchoolCoverage: false,
+          schools: [],
+        }),
+      ),
     )
 
     renderRoute('/operator/login')
@@ -139,7 +153,9 @@ describe('operator authentication screens', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'İşletmeci alanı' }),
+      await screen.findByRole('heading', {
+        name: 'Aramalarda görünmeye hazır mısınız?',
+      }),
     ).toBeInTheDocument()
     expect(loginBody).toEqual({
       email: 'operator@example.com',
