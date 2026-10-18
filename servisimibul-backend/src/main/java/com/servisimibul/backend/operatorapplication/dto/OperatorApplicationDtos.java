@@ -105,6 +105,34 @@ public final class OperatorApplicationDtos {
     ) {
     }
 
+    public record DiscoveryReadinessResponse(
+            boolean discoveryEligible,
+            boolean emailVerified,
+            boolean accountEnabled,
+            boolean profileActive,
+            boolean publiclyVisible,
+            boolean approvalRequired,
+            boolean approvalSatisfied,
+            boolean hasActiveSchoolRelationship,
+            boolean hasEligibleSchoolCoverage,
+            List<SchoolReadinessResponse> schools
+    ) {
+        public DiscoveryReadinessResponse {
+            schools = List.copyOf(schools);
+        }
+    }
+
+    public record SchoolReadinessResponse(
+            UUID operatorSchoolId,
+            UUID schoolId,
+            String schoolName,
+            boolean relationshipActive,
+            boolean schoolActive,
+            int validCoverageCount,
+            boolean contributesToDiscovery
+    ) {
+    }
+
     public record ReviewResponse(
             UUID id,
             UUID reviewedById,

@@ -91,6 +91,7 @@ class OperatorSchoolApiTests {
                                 """.formatted(school.getId())))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.schoolId").value(school.getId().toString()))
+                .andExpect(jsonPath("$.schoolActive").value(true))
                 .andExpect(jsonPath("$.active").value(true))
                 .andExpect(jsonPath("$.coverage").isEmpty());
 

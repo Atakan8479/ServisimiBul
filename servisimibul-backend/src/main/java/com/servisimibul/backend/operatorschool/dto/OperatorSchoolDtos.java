@@ -52,6 +52,7 @@ public final class OperatorSchoolDtos {
             Long schoolProvinceId,
             String schoolProvinceCode,
             String schoolProvinceName,
+            boolean schoolActive,
             boolean active,
             @Valid List<CoverageResponse> coverage
     ) {

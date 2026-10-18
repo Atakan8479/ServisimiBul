@@ -229,6 +229,7 @@ public class OperatorSchoolService {
                 schoolProvince.getId(),
                 schoolProvince.getCode(),
                 schoolProvince.getName(),
+                school.isActive(),
                 relationship.isActive(),
                 coverage.stream().map(this::toCoverageResponse).toList()
         );

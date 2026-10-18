@@ -17,16 +17,19 @@ import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
+import com.servisimibul.backend.security.AuthenticatedUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -89,5 +92,23 @@ class PublicDiscoveryApprovalDisabledTests {
         assertThat(result.getRequest().getSession(false)).isNull();
         assertThat(profileRepository.findById(profile.getId()).orElseThrow().getApprovalStatus())
                 .isEqualTo(OperatorApprovalStatus.DRAFT);
+
+        mockMvc.perform(get("/api/v1/operator/discovery-readiness")
+                        .with(asOperator(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approvalRequired").value(false))
+                .andExpect(jsonPath("$.approvalSatisfied").value(true))
+                .andExpect(jsonPath("$.discoveryEligible").value(true))
+                .andExpect(jsonPath("$.schools[0].contributesToDiscovery").value(true));
+    }
+
+    private RequestPostProcessor asOperator(AppUser user) {
+        return user(new AuthenticatedUser(
+                user.getId(),
+                user.getEmail(),
+                "hash",
+                user.getRole(),
+                true
+        ));
     }
 }
