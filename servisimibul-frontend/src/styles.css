@@ -190,7 +190,7 @@ nav a.active {
 }
 
 .discovery-note {
-  max-width: 52rem;
+  max-width: 60ch;
   margin: 1.25rem 0;
   color: var(--color-muted);
   font-size: 0.95rem;
@@ -203,6 +203,10 @@ nav a.active {
   justify-content: space-between;
   gap: 1rem;
   margin-top: 1rem;
+  padding: 0.9rem 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-danger) 35%, white);
+  color: #78271f;
+  line-height: 1.5;
 }
 
 .discovery-results {
@@ -1349,13 +1353,13 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+  :root {
+    --motion-fast: 0ms;
+    --motion-page: 0ms;
+  }
+
+  html {
+    scroll-behavior: auto;
   }
 
   ::view-transition-old(root),
@@ -1365,5 +1369,19 @@ button:disabled {
 
   .road-minibus {
     animation: none !important;
+  }
+
+  .page-content > *,
+  .workspace-content > *,
+  .state-page > *,
+  .loading-dot,
+  .loading-indicator span {
+    animation: none !important;
+  }
+
+  .loading-dot,
+  .loading-indicator span {
+    opacity: 1;
+    transform: none;
   }
 }

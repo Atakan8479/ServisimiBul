@@ -9,7 +9,9 @@ npm run dev
 
 Copy `.env.example` to an ignored `.env.local` only when the backend does not run at `http://localhost:8080`. `BACKEND_PROXY_TARGET` is read by Vite's local server and is not exposed to browser code. Never put database credentials, session secrets, admin credentials, or Supabase service keys in frontend environment files.
 
-The operator workspace provides registration, email verification, login, profile/application management, and school/general-coverage screens. The admin area remains a route shell. Frontend route guards and selected identifiers are usability features only; Spring Security, ownership checks, and coverage validation remain authoritative.
+The operator workspace provides registration, email verification, login, profile/application management, school/general-coverage, vehicle, and offering screens. The admin workspace provides application review, pilot-school management, and official-tariff editing. Frontend route guards and selected identifiers are usability features only; Spring Security, ownership checks, and coverage validation remain authoritative.
+
+The B-11 Playwright suite uses deterministic mocked same-origin API responses and synthetic identities. It never needs backend credentials or shared Supabase. Local Windows runs use installed Microsoft Edge; CI installs disposable Playwright Chromium. See `docs/11_E2E_ACCESSIBILITY_VALIDATION.md` for the evidence boundary and journey matrix.
 
 Before opening a pull request, run:
 
@@ -18,5 +20,6 @@ npm run format:check
 npm run lint
 npm run typecheck
 npm test
+npm run test:e2e
 npm run build
 ```

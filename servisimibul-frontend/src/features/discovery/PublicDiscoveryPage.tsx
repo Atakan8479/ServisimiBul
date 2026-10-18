@@ -244,7 +244,7 @@ export function PublicDiscoveryPage() {
         </div>
 
         {locationError && (
-          <div className="form-error discovery-load-error" role="alert">
+          <div className="discovery-load-error" role="alert">
             <span>{locationError}</span>
             {schools.length === 0 && (
               <button
