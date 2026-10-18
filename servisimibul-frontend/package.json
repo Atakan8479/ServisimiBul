@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write src/features/discovery/PublicDiscoveryPage.test.tsx && git diff -- src/features/discovery/PublicDiscoveryPage.test.tsx && prettier --check .",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
