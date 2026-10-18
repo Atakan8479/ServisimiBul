@@ -146,6 +146,40 @@ class GeographyCatalogApiTests {
     }
 
     @Test
+    void publicSchoolSearchTreatsSqlWildcardsAsLiteralCharacters() throws Exception {
+        Neighborhood neighborhood = createNeighborhood();
+        School percent = schoolRepository.saveAndFlush(
+                new School(neighborhood, "Yüzde % Okulu", null, null, null)
+        );
+        School underscore = schoolRepository.saveAndFlush(
+                new School(neighborhood, "Alt_Çizgi Okulu", null, null, null)
+        );
+        School exclamation = schoolRepository.saveAndFlush(
+                new School(neighborhood, "Dikkat! Okulu", null, null, null)
+        );
+        schoolRepository.saveAndFlush(
+                new School(neighborhood, "Yüzde ve Alt Çizgi Okulu", null, null, null)
+        );
+
+        mockMvc.perform(get("/api/v1/schools").param("query", "%"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(percent.getId().toString()));
+        mockMvc.perform(get("/api/v1/schools").param("query", "_"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(underscore.getId().toString()));
+        mockMvc.perform(get("/api/v1/schools").param("query", "!"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(exclamation.getId().toString()));
+        mockMvc.perform(get("/api/v1/schools").param("query", "alt_cizgi"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(underscore.getId().toString()));
+    }
+
+    @Test
     void publicSchoolPagingIsStableAndCanReachEveryMatchInBothDirections() throws Exception {
         Neighborhood neighborhood = createNeighborhood();
         Long provinceId = neighborhood.getDistrict().getProvince().getId();

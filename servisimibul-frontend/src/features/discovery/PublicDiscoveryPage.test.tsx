@@ -226,7 +226,7 @@ describe('public operator discovery', () => {
     ).not.toBeInTheDocument()
   })
 
-  it('uses school-location filters without leaking other provinces', async () => {
+  it('rejects an out-of-province server page instead of silently changing its totals', async () => {
     const requests: URLSearchParams[] = []
     server.use(
       http.get('/api/v1/schools', async ({ request }) => {
@@ -252,6 +252,10 @@ describe('public operator discovery', () => {
     fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
       target: { value: '34' },
     })
+    expect(
+      await screen.findByText(/Okul sonuçları yüklenemedi/),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('2 okul bulundu')).not.toBeInTheDocument()
     await screen.findByRole('option', { name: 'Kadıköy' })
     fireEvent.change(screen.getByLabelText('Okulun ilçesi'), {
       target: { value: '10' },
@@ -339,6 +343,101 @@ describe('public operator discovery', () => {
     }
     expect(requests.at(-1)?.get('page')).toBe('6')
     expect(screen.getByRole('button', { name: 'Sonraki sayfa' })).toBeDisabled()
+  })
+
+  it('uses pending search text when sort and district change and clears an excluded school', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/schools', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(new URLSearchParams(parameters))
+        return HttpResponse.json({
+          content: [school],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+      ...locationHandlers(),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.change(screen.getByLabelText('Okul adında ara'), {
+      target: { value: 'GÜNEŞ' },
+    })
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'name-desc' },
+    })
+
+    await waitFor(() => {
+      expect(requests.at(-1)?.get('query')).toBe('GÜNEŞ')
+      expect(requests.at(-1)?.get('sort')).toBe('name-desc')
+    })
+    expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
+    expect(screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/))
+      .toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Okul adında ara'), {
+      target: { value: 'ATATÜRK' },
+    })
+    fireEvent.change(screen.getByLabelText('Okulun ilçesi'), {
+      target: { value: '10' },
+    })
+    await waitFor(() => {
+      expect(requests.at(-1)?.get('query')).toBe('ATATÜRK')
+      expect(requests.at(-1)?.get('districtId')).toBe('10')
+      expect(requests.at(-1)?.get('page')).toBe('0')
+    })
+
+    fireEvent.change(screen.getByLabelText('Okul adında ara'), {
+      target: { value: 'bekleyen' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
+    expect(screen.getByLabelText('Okul adında ara')).toHaveValue('')
+    await waitFor(() => {
+      expect(requests.at(-1)?.has('query')).toBe(false)
+      expect(requests.at(-1)?.has('districtId')).toBe(false)
+    })
+  })
+
+  it('uses pending search text before changing pages and resets to the first page', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/schools', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(new URLSearchParams(parameters))
+        const page = Number(parameters.get('page'))
+        return HttpResponse.json({
+          content: [{ ...school, name: `Sayfa ${page + 1} Okulu` }],
+          page,
+          size: 10,
+          totalElements: 21,
+          totalPages: 3,
+        })
+      }),
+      ...locationHandlers(),
+    )
+    renderHome()
+    await screen.findByRole('option', { name: 'İstanbul' })
+    fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    expect(await screen.findByText('Sayfa 1 Okulu')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    expect(await screen.findByText('Sayfa 2 Okulu')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Okul adında ara'), {
+      target: { value: 'yeni' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    await waitFor(() => {
+      expect(requests.at(-1)?.get('query')).toBe('yeni')
+      expect(requests.at(-1)?.get('page')).toBe('0')
+    })
+    expect(await screen.findByText('Sayfa 1 Okulu')).toBeInTheDocument()
   })
 
   it('keeps a selected school while paging and compatible filters change', async () => {

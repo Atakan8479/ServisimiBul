@@ -106,14 +106,18 @@ export function getSchools({
 
   return apiRequest(`/schools?${parameters.toString()}`, {
     schema: schoolPageSchema,
-  }).then((schoolPage) => ({
-    ...schoolPage,
-    content: schoolPage.content.filter(
-      (school) =>
-        school.provinceId === provinceId &&
-        (!districtId || school.districtId === districtId),
-    ),
-  }))
+  }).then((schoolPage) => {
+    if (
+      schoolPage.content.some(
+        (school) =>
+          school.provinceId !== provinceId ||
+          (districtId !== undefined && school.districtId !== districtId),
+      )
+    ) {
+      throw new Error('School results do not match the requested geography')
+    }
+    return schoolPage
+  })
 }
 
 export function getDistricts(provinceId: number): Promise<District[]> {

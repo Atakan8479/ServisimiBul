@@ -27,7 +27,7 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
                             lower(function('translate', school.name, 'İI', 'ii')),
                             'âçğıîöşüû',
                             'acgiiosuu'
-                          ) as string) like concat('%', :query, '%'))
+                          ) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     order by
@@ -55,7 +55,7 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
                             lower(function('translate', school.name, 'İI', 'ii')),
                             'âçğıîöşüû',
                             'acgiiosuu'
-                          ) as string) like concat('%', :query, '%'))
+                          ) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     """

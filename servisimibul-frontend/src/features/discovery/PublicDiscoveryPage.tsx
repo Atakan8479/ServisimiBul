@@ -258,10 +258,12 @@ export function PublicDiscoveryPage() {
   }
 
   async function selectSchoolDistrict(nextDistrictId: string) {
+    const nextQuery = schoolQueryInput.trim()
     setSchoolDistrictId(nextDistrictId)
+    setSchoolQuery(nextQuery)
     const filters = {
       districtId: nextDistrictId,
-      query: schoolQuery,
+      query: nextQuery,
       sort: schoolSort,
     }
     keepSelectionIfCompatible(filters)
@@ -285,17 +287,17 @@ export function PublicDiscoveryPage() {
   }
 
   async function changeSchoolSort(nextSort: SchoolSort) {
+    const nextQuery = schoolQueryInput.trim()
     setSchoolSort(nextSort)
+    setSchoolQuery(nextQuery)
+    const filters = {
+      districtId: schoolDistrictId,
+      query: nextQuery,
+      sort: nextSort,
+    }
+    keepSelectionIfCompatible(filters)
     if (!selectedSchoolProvinceId) return
-    await loadSchools(
-      Number(selectedSchoolProvinceId),
-      {
-        districtId: schoolDistrictId,
-        query: schoolQuery,
-        sort: nextSort,
-      },
-      0,
-    )
+    await loadSchools(Number(selectedSchoolProvinceId), filters, 0)
   }
 
   async function clearSchoolFilters() {
@@ -314,14 +316,20 @@ export function PublicDiscoveryPage() {
 
   async function changeSchoolPage(page: number) {
     if (!selectedSchoolProvinceId) return
+    const nextQuery = schoolQueryInput.trim()
+    const filters = {
+      districtId: schoolDistrictId,
+      query: nextQuery,
+      sort: schoolSort,
+    }
+    if (nextQuery !== schoolQuery) {
+      setSchoolQuery(nextQuery)
+      keepSelectionIfCompatible(filters)
+    }
     await loadSchools(
       Number(selectedSchoolProvinceId),
-      {
-        districtId: schoolDistrictId,
-        query: schoolQuery,
-        sort: schoolSort,
-      },
-      page,
+      filters,
+      nextQuery === schoolQuery ? page : 0,
     )
   }
 
@@ -585,6 +593,7 @@ export function PublicDiscoveryPage() {
               !selectedSchoolProvinceId ||
               loadingSchools ||
               (!schoolDistrictId &&
+                !schoolQueryInput.trim() &&
                 !schoolQuery &&
                 schoolSort === DEFAULT_SCHOOL_SORT)
             }

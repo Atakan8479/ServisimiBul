@@ -285,8 +285,11 @@ public class GeographyCatalogService {
             return normalized;
         }
         String lowercase = normalized.toLowerCase(TURKISH).replace('\u0131', 'i');
-        return COMBINING_MARKS.matcher(Normalizer.normalize(lowercase, Normalizer.Form.NFD))
-                .replaceAll("");
+        String withoutDiacritics = COMBINING_MARKS.matcher(
+                Normalizer.normalize(lowercase, Normalizer.Form.NFD)
+        ).replaceAll("");
+        // SQL LIKE must interpret %, _ and the escape character as literal search text.
+        return withoutDiacritics.replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     private String normalizeRequired(String value, String field, int maxLength) {
