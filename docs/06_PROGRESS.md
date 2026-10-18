@@ -447,3 +447,10 @@ Never mark tasks done because code was generated: verification and review requir
 - Node.js 24 checks passed: ESLint, strict TypeScript, all 27 Vitest/Testing Library/MSW tests, and the Vite production build. The build retains the existing single-chunk size warning at approximately 522 kB minified.
 - Playwright MCP verified mocked public, operator, and ADMIN states at 1440×900 and 390×844. All six captures had no horizontal overflow and no console errors; the only warning was the pre-existing React Router `HydrateFallback` warning. The Impeccable detector reported no deterministic findings after the B-09 UI edits.
 - Browser verification used same-origin mocked API responses and synthetic identities only; no credentials, live account, backend mutation, Supabase operation, migration, dependency, lockfile, application configuration, or production setting was changed.
+
+## Verified local email-verification testing exception — 2026-10-18
+
+- PR #56 adds an explicitly local-only registration path that immediately verifies newly registered test accounts when the combined `dev.ps1` launcher is used. Existing unverified accounts are not changed, and production continues to require email verification.
+- The backend configuration guard rejects the bypass outside the `local` profile, while the production profile hardcodes verification as required. No Supabase data, migration, shared schema, or production setting was changed.
+- The focused backend suite passed 17 tests locally. GitHub Actions then passed the complete backend job in 1m26s, the frontend job in 27s, and the secret scan in 7s.
+- The first backend CI run exposed PostgreSQL connection exhaustion after the new isolated Spring context remained cached. The test now limits its Hikari pool to two connections and closes its context after the class; the complete backend rerun passed.
