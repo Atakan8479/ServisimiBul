@@ -4,7 +4,7 @@
 
 This runbook covers A-11's one-time İstanbul geography preparation. PostgreSQL remains the application's runtime source of truth; the application must not call TurkiyeAPI at runtime.
 
-The current stage is **source verification only**. Do not write import SQL, connect to a database, or import any records until a developer has run the verifier manually without Codex and recorded a passing result.
+The source-verification gate passed on 18 October 2026. The importer is available for disposable local PostgreSQL 17 only.
 
 ## Source and provenance
 
@@ -62,6 +62,16 @@ Record the following in the A-11 pull request before importer implementation:
 
 Do not attach raw JSON or credentials.
 
+### Recorded gate result
+
+- Executed manually without Codex on 18 October 2026
+- PowerShell: `7.6.5`
+- Province: İstanbul (`34`)
+- Districts: `39`
+- Neighborhoods: `963`
+- Dataset version: `2025`
+- Last updated: `2026-05-21`
+
 ## Verifier tests
 
 The test suite uses only a loopback mock server and does not contact TurkiyeAPI or a database:
@@ -70,9 +80,30 @@ The test suite uses only a loopback mock server and does not contact TurkiyeAPI 
 pwsh -NoLogo -NoProfile -File .\scripts\Test-IstanbulGeographySource.Tests.ps1
 ```
 
-## Import stage after the gate
+## Disposable local import
 
-After the manual verifier passes, continue on the same A-11 branch with a dedicated PowerShell 7 importer, isolated tests, and reviewed SQL DML. The importer must:
+The importer requires PostgreSQL 17 client tools and the same fail-closed environment contract as the backend's isolated database tests:
+
+```powershell
+$env:SB_TEST_DB_DISPOSABLE = 'true'
+$env:SB_TEST_DATABASE_NAME = 'servisimibul_a11'
+$env:SB_TEST_DB_INSTANCE_ID = '<matching test_harness.database_instance value>'
+$env:PGHOST = '127.0.0.1'
+$env:PGPORT = '<local PostgreSQL port>'
+$env:PGDATABASE = $env:SB_TEST_DATABASE_NAME
+$env:PGUSER = '<local administrator role>'
+$env:PGPASSWORD = '<local disposable password>'
+
+# Read-only preview; this is the default.
+pwsh -NoLogo -NoProfile -File .\scripts\Import-IstanbulGeography.ps1 `
+    -PsqlPath 'C:\Program Files\PostgreSQL\17\bin\psql.exe'
+
+# Apply only after reviewing the preview and proving the target is disposable.
+pwsh -NoLogo -NoProfile -File .\scripts\Import-IstanbulGeography.ps1 `
+    -PsqlPath 'C:\Program Files\PostgreSQL\17\bin\psql.exe' -Apply
+```
+
+The importer:
 
 - default to dry-run;
 - require explicit apply and prove the target is disposable local PostgreSQL 17;
@@ -83,6 +114,14 @@ After the manual verifier passes, continue on the same A-11 branch with a dedica
 - report a row-count preview before apply;
 - be idempotent, with a second execution inserting zero rows;
 - verify foreign keys, final counts, and the existing geography API responses.
+
+Run its isolated PostgreSQL 17 test with:
+
+```powershell
+pwsh -NoLogo -NoProfile -File .\scripts\Import-IstanbulGeography.Tests.ps1
+```
+
+The test creates a uniquely named cluster under the Windows temporary directory, applies V1, verifies dry-run/apply/repeat behavior and stable IDs, rejects a non-loopback target, stops the cluster, and removes the temporary directory. It passed on 18 October 2026 with PostgreSQL `17.4`.
 
 Real schools remain manually curated through the existing ADMIN school UI/API. Do not invent schools in the shared database.
 

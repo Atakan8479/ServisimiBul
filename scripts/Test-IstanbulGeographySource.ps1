@@ -14,7 +14,9 @@ param(
     [ValidateRange(1, 1000)]
     [int]$NeighborhoodPageSize = 1000,
 
-    [switch]$AllowHttpForLocalTest
+    [switch]$AllowHttpForLocalTest,
+
+    [switch]$PassThru
 )
 
 Set-StrictMode -Version Latest
@@ -247,6 +249,17 @@ foreach ($districtId in $districtIds) {
     if ($actualNeighborhoodCounts[$districtId] -ne $reportedNeighborhoodCounts[$districtId]) {
         throw "District $districtId neighborhood count does not match its reported statistics."
     }
+}
+
+if ($PassThru) {
+    [pscustomobject]@{
+        Province = [pscustomobject]@{ Code = '34'; Name = 'İstanbul' }
+        Districts = $districts
+        Neighborhoods = $neighborhoods.ToArray()
+        DatasetVersion = $expectedDatasetVersion
+        LastUpdated = $expectedLastUpdated
+    }
+    return
 }
 
 Write-Output 'PASS: TurkiyeAPI İstanbul geography source verification completed.'

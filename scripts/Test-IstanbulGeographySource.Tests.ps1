@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([switch]$DefinitionsOnly)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -224,6 +224,10 @@ function Invoke-VerifierFixture {
     } finally {
         Stop-GeographyMockServer -Server $server
     }
+}
+
+if ($DefinitionsOnly) {
+    return
 }
 
 $result = Invoke-VerifierFixture -Scenario 'Success' -RequestCount 5
