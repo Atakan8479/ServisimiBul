@@ -1,11 +1,13 @@
 package com.servisimibul.backend;
 
+import com.servisimibul.backend.support.IsolatedPostgresMigrationInitializer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.core.env.Environment;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.web.servlet.MockMvc;
 
 import javax.sql.DataSource;
@@ -22,11 +24,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.mail.host=localhost",
         "spring.mail.username=test",
         "spring.mail.password=test-only",
+        "spring.flyway.enabled=false",
+        "spring.flyway.url=",
+        "spring.flyway.user=",
+        "spring.flyway.password=",
         "servisimibul.tariff.storage-dir=${java.io.tmpdir}/servisimibul-prod-health-test",
         "management.health.mail.enabled=false"
 })
 @AutoConfigureMockMvc
 @ActiveProfiles("prod")
+@ContextConfiguration(initializers = IsolatedPostgresMigrationInitializer.class)
 class ProductionHealthSecurityTests {
 
     @Autowired

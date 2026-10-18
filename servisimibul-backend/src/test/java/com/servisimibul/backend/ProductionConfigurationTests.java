@@ -24,6 +24,10 @@ class ProductionConfigurationTests {
                 .containsEntry("spring.mail.properties[mail.smtp.connectiontimeout]",
                         "${SB_MAIL_CONNECTION_TIMEOUT_MS:5000}")
                 .containsEntry("server.servlet.session.cookie.secure", "true")
+                .containsEntry("spring.flyway.enabled", "false")
+                .containsEntry("spring.flyway.url", "")
+                .containsEntry("spring.flyway.user", "")
+                .containsEntry("spring.flyway.password", "")
                 .containsEntry("spring.autoconfigure.exclude",
                         "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration")
                 .containsEntry("server.forward-headers-strategy", "${SB_FORWARD_HEADERS_STRATEGY:none}");
@@ -70,6 +74,16 @@ class ProductionConfigurationTests {
                 .containsEntry("spring.autoconfigure.exclude",
                         "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration")
                 .containsEntry("logging.structured.format.console", "ecs");
+    }
+
+    @Test
+    void productionSafetyValidatorIsRegisteredBeforeAutoConfiguration() throws IOException {
+        Properties properties = load("META-INF/spring.factories");
+
+        assertThat(properties).containsEntry(
+                "org.springframework.boot.EnvironmentPostProcessor",
+                "com.servisimibul.backend.deployment.ProductionRuntimeSafetyValidator"
+        );
     }
 
     private Properties load(String resourceName) throws IOException {
