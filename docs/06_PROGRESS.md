@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Gate 8 — B-11 end-to-end and accessibility validation in progress
-Status: Gates 0–7, J-01, A-01, B-01–B-10, J-02, A-02–A-10, the combined local launcher, frontend design tooling, the operator business-name optionality change, and public discovery UI are merged. The final planned B-11 validation task is adding repeatable browser evidence for the 13 MVP journeys plus WCAG, responsive, session-expiry, state, and privacy checks without using shared Supabase.
+## Current stage: Gate 8 — B-11 end-to-end and accessibility validation in review
+Status: Gates 0–7, J-01, A-01, B-01–B-10, J-02, A-02–A-10, the combined local launcher, frontend design tooling, the operator business-name optionality change, and public discovery UI are merged. The final planned B-11 validation task is in review with repeatable browser evidence for the 13 MVP journeys plus WCAG, responsive, session-expiry, state, and privacy checks without using shared Supabase.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -15,7 +15,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | 5 Operator school coverage + catalog | complete | A-02 PR #35 and A-03 PR #39 merged; A-03 workflow `38634143068` passed all 68 tests | A-03 reviewed and merged 2026-10-14 |
 | 6 Parent public search | complete | A-04 PR #43 merged as `4868ad46f8ec7df664c33c70321f1ae3ac6a73f2`; PostgreSQL 17 workflow `38735898544` passed all 85 tests | Reviewed and merged 2026-10-15 |
 | 7 Optional offerings/tariff JSON | complete | A-05 and A-06 merged; A-07 PR #45 merged as `9b2116521edd5b320807d71879ce57db49182d77`; final pre-merge PostgreSQL 17 workflow `38781566742` passed all 90 tests | A-07 reviewed and merged 2026-10-15 |
-| 8 Pilot QA and UI | in progress | B-01, B-06, B-07, A-08, A-09, B-10, A-10 production follow-up, and public discovery UI merged; B-11 validation in progress | A-10 follow-up merged in PR #54; B-11 started 2026-10-18 |
+| 8 Pilot QA and UI | in review | B-01, B-06, B-07, A-08, A-09, B-10, A-10 production follow-up, and public discovery UI merged; B-11 validation in PR #55 | Initial B-11 Frontend and Secret scan workflows passed 2026-10-18 |
 
 ## Active work-package progress
 
@@ -43,7 +43,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-10 Operator approval and security hardening | complete | PR #53 merged as `9ebe2f0`; merge-head Backend workflow `39060704778` and Frontend workflow `39060704773` passed | Reviewed and merged 2026-10-17 |
 | B-06 Operator workspace | complete | GitHub issue #17; PR #42 merged as `1aa8683`; Node 24 Frontend workflow `38730195352` passed all gates | Reviewed and merged 2026-10-15 |
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
-| B-11 End-to-end and accessibility validation | in progress | GitHub issue #28; local Playwright browser suite passed all 13 numbered journeys and WCAG/overflow checks at 1440×900, 768×1024, and 390×844; final repository gates pending | Task started after A-10 PR #54 merged, 2026-10-18 |
+| B-11 End-to-end and accessibility validation | in review | GitHub issue #28; PR #55; local Playwright suite passed all 13 journeys and three viewport/a11y checks; initial Frontend workflow `39121956828` and Secret scan workflow `39121956907` passed | Atakan (`Atakan8479`) requested for review 2026-10-18 |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -66,6 +66,7 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 ## Verified B-11 local evidence — 2026-10-18
 
 - Branch `codex/b-11-e2e-accessibility-validation` starts from merged A-10 follow-up commit `cf24a9b` and GitHub reported no open pull requests at task start.
+- PR #55 is open for review. Its initial Frontend workflow `39121956828` passed the complete unit, production-build, and Playwright gates; Secret scan workflow `39121956907` also passed.
 - The project-owned Playwright suite runs the exact 13 plan journeys in numbered steps against the real Vite application and a deterministic, stateful browser API double. It covers registration/verification, operator profile and application review, school/general coverage, discovery without optional data, vehicle/offering publication and specific coverage, tariff update/public display, suspension, session revocation, and public visibility removal.
 - Accessibility checks target WCAG 2.2 AA through axe-core on representative public, authentication, operator, and admin routes at 1440×900, 768×1024, and 390×844. The same browser checks verify keyboard-visible skip-link focus and absence of horizontal overflow.
 - The existing global reduced-motion kill was replaced with targeted zero-duration motion tokens and static loading/decorative alternatives. Protected routes now provide an explicit React Router hydration fallback, removing the prior console warning while preserving an accessible loading state.
