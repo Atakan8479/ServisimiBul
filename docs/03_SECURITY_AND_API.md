@@ -41,7 +41,7 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `GET /api/v1/provinces`
 - `GET /api/v1/districts?provinceId=...`
 - `GET /api/v1/neighborhoods?districtId=...`
-- `GET /api/v1/schools?query=...&provinceId=...&districtId=...&page=0&size=20`
+- `GET /api/v1/schools?query=...&provinceId=...&districtId=...&sort=name-asc&page=0&size=20`
 - `GET /api/v1/schools/{id}`
 - `GET /api/v1/operators?schoolId=...&neighborhoodId=...&page=0&size=20`
 - `GET /api/v1/operators/{id}`
@@ -88,6 +88,8 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `PUT /api/v1/admin/tariffs/{provinceCode}` (persistent validated JSON; request includes expected current version)
 
 Public school list/detail responses expose only active schools. Geography lists and school results use deterministic name/id ordering. School create/patch fields are `neighborhoodId`, `name`, optional `address`, optional `sourceName`, optional `sourceCode`, and `active`; supplying `sourceCode` requires `sourceName`, and the source pair remains unique. PATCH is partial and explicit `null` clears optional fields. School CSV import is deferred by D019 and is not part of the current pilot API.
+
+Public school browsing applies `query`, `provinceId`, and `districtId` before pagination. `sort` accepts only `name-asc` (the default) or `name-desc`; both directions use the normalized school name plus the school UUID as a deterministic tie-breaker, so paging cannot sort only a truncated frontend page. School-name search normalizes Turkish dotted/dotless I and Turkish diacritics in both the request text and the query-time school-name expression without changing stored names. The anonymous frontend keeps school-location filters visible after results render, resets to page zero when a filter or sort changes, and treats the later pickup district/neighborhood as a separate same-province choice.
 
 Operator-school self-management never accepts an `operatorId`; ownership comes from the authenticated session. Create accepts `{schoolId,active?}` with `active` defaulting to `true`, and the school must currently be active. PATCH accepts exactly the mutable lifecycle field `{active}`. DELETE removes the owned relationship and its general coverage; future offering migrations must preserve their own integrity when they begin referencing this relationship.
 

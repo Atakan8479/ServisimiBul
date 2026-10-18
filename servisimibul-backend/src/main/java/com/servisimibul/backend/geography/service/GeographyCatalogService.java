@@ -22,14 +22,19 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.text.Normalizer;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
 public class GeographyCatalogService {
 
     private static final int MAX_PAGE_SIZE = 50;
+    private static final Locale TURKISH = Locale.forLanguageTag("tr-TR");
+    private static final Pattern COMBINING_MARKS = Pattern.compile("\\p{M}+");
 
     private final ProvinceRepository provinceRepository;
     private final DistrictRepository districtRepository;
@@ -72,18 +77,28 @@ public class GeographyCatalogService {
             String query,
             Long provinceId,
             Long districtId,
+            String sort,
             int page,
             int size
     ) {
         validatePage(page, size);
         requirePositiveIfPresent(provinceId, "provinceId");
         requirePositiveIfPresent(districtId, "districtId");
-        String normalizedQuery = normalizeQuery(query);
+        String normalizedQuery = normalizePublicSchoolQuery(query);
+        boolean descending = switch (sort) {
+            case "name-asc" -> false;
+            case "name-desc" -> true;
+            default -> throw GeographyApiException.validation(
+                    "sort",
+                    "must be one of name-asc or name-desc"
+            );
+        };
 
         Page<School> schools = schoolRepository.findPublicSchools(
                 normalizedQuery,
                 provinceId,
                 districtId,
+                descending,
                 PageRequest.of(page, size)
         );
         return toPageResponse(schools);
@@ -262,6 +277,16 @@ public class GeographyCatalogService {
         String normalized = normalizeOptional(query, 255, "query");
         // Keep the optional filter typed as text when Hibernate binds it for PostgreSQL.
         return normalized == null ? "" : normalized;
+    }
+
+    private String normalizePublicSchoolQuery(String query) {
+        String normalized = normalizeQuery(query);
+        if (normalized.isEmpty()) {
+            return normalized;
+        }
+        String lowercase = normalized.toLowerCase(TURKISH).replace('\u0131', 'i');
+        return COMBINING_MARKS.matcher(Normalizer.normalize(lowercase, Normalizer.Form.NFD))
+                .replaceAll("");
     }
 
     private String normalizeRequired(String value, String field, int maxLength) {

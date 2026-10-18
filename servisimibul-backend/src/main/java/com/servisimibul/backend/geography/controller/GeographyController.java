@@ -43,10 +43,11 @@ public class GeographyController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long provinceId,
             @RequestParam(required = false) Long districtId,
+            @RequestParam(defaultValue = "name-asc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
-        return catalogService.schools(query, provinceId, districtId, page, size);
+        return catalogService.schools(query, provinceId, districtId, sort, page, size);
     }
 
     @GetMapping("/schools/{id}")

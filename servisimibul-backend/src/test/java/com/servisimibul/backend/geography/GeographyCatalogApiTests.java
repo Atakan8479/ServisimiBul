@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -103,6 +104,85 @@ class GeographyCatalogApiTests {
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
                 .andExpect(jsonPath("$.code").value("school_not_found"))
                 .andExpect(jsonPath("$.instance").value("/api/v1/schools/" + inactive.getId()));
+    }
+
+    @Test
+    void publicSchoolSearchUsesTurkishNormalizationAndValidatedSorts() throws Exception {
+        Neighborhood neighborhood = createNeighborhood();
+        School istiklal = schoolRepository.saveAndFlush(
+                new School(neighborhood, "İSTANBUL IŞIK OKULU", null, null, null)
+        );
+        School cinar = schoolRepository.saveAndFlush(
+                new School(neighborhood, "Çınar İlkokulu", null, null, null)
+        );
+
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("query", "istanbul isik")
+                        .param("provinceId", neighborhood.getDistrict().getProvince().getId().toString())
+                        .param("sort", "name-asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(istiklal.getId().toString()));
+
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("query", "cinar")
+                        .param("provinceId", neighborhood.getDistrict().getProvince().getId().toString())
+                        .param("sort", "name-desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(cinar.getId().toString()));
+
+        mockMvc.perform(get("/api/v1/schools").param("sort", "recent"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.code").value("validation_error"))
+                .andExpect(jsonPath("$.fieldErrors.sort").exists());
+    }
+
+    @Test
+    void publicSchoolPagingIsStableAndCanReachEveryMatchInBothDirections() throws Exception {
+        Neighborhood neighborhood = createNeighborhood();
+        Long provinceId = neighborhood.getDistrict().getProvince().getId();
+        IntStream.range(0, 25)
+                .mapToObj(index -> new School(
+                        neighborhood,
+                        "Okul %02d".formatted(index),
+                        null,
+                        null,
+                        null
+                ))
+                .forEach(schoolRepository::save);
+        schoolRepository.flush();
+
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("provinceId", provinceId.toString())
+                        .param("sort", "name-asc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Okul 00"))
+                .andExpect(jsonPath("$.content[9].name").value("Okul 09"))
+                .andExpect(jsonPath("$.totalElements").value(25))
+                .andExpect(jsonPath("$.totalPages").value(3));
+
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("provinceId", provinceId.toString())
+                        .param("sort", "name-asc")
+                        .param("page", "2")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(5))
+                .andExpect(jsonPath("$.content[0].name").value("Okul 20"))
+                .andExpect(jsonPath("$.content[4].name").value("Okul 24"));
+
+        mockMvc.perform(get("/api/v1/schools")
+                        .param("provinceId", provinceId.toString())
+                        .param("sort", "name-desc")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].name").value("Okul 24"))
+                .andExpect(jsonPath("$.content[9].name").value("Okul 15"));
     }
 
     @Test
