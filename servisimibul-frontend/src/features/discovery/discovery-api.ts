@@ -1,6 +1,12 @@
 import { z } from 'zod'
 import { apiRequest } from '../../api/client'
 
+const provinceSchema = z.object({
+  id: z.number().int().positive(),
+  code: z.string(),
+  name: z.string(),
+})
+
 const schoolSchema = z.object({
   id: z.string().uuid(),
   neighborhoodId: z.number().int().positive(),
@@ -62,16 +68,39 @@ const schoolPageSchema = pageSchema(schoolSchema)
 const operatorPageSchema = pageSchema(operatorSchema)
 
 export type School = z.infer<typeof schoolSchema>
+export type Province = z.infer<typeof provinceSchema>
 export type District = z.infer<typeof districtSchema>
 export type Neighborhood = z.infer<typeof neighborhoodSchema>
 export type PublicOperator = z.infer<typeof operatorSchema>
 export type OperatorPage = z.infer<typeof operatorPageSchema>
 
-export function getSchools(): Promise<School[]> {
+export function getProvinces(): Promise<Province[]> {
+  return apiRequest('/provinces', {
+    schema: z.array(provinceSchema),
+  })
+}
+
+export function getSchools(
+  provinceId: number,
+  districtId?: number,
+): Promise<School[]> {
   // shortcut: D019 keeps the curated catalog deliberately small; add server paging when it exceeds 50 schools.
-  return apiRequest('/schools?page=0&size=50', {
+  const parameters = new URLSearchParams({
+    provinceId: String(provinceId),
+    page: '0',
+    size: '50',
+  })
+  if (districtId) parameters.set('districtId', String(districtId))
+
+  return apiRequest(`/schools?${parameters.toString()}`, {
     schema: schoolPageSchema,
-  }).then((page) => page.content)
+  }).then((page) =>
+    page.content.filter(
+      (school) =>
+        school.provinceId === provinceId &&
+        (!districtId || school.districtId === districtId),
+    ),
+  )
 }
 
 export function getDistricts(provinceId: number): Promise<District[]> {

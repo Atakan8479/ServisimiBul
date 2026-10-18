@@ -467,3 +467,14 @@ Never mark tasks done because code was generated: verification and review requir
 - The backend configuration guard rejects the bypass outside the `local` profile, while the production profile hardcodes verification as required. No Supabase data, migration, shared schema, or production setting was changed.
 - The focused backend suite passed 17 tests locally. GitHub Actions then passed the complete backend job in 1m26s, the frontend job in 27s, and the secret scan in 7s.
 - The first backend CI run exposed PostgreSQL connection exhaustion after the new isolated Spring context remained cached. The test now limits its Hikari pool to two connections and closes its context after the class; the complete backend rerun passed.
+
+## Verified B-12 database-backed school discovery evidence — 2026-10-18
+
+- Branch: `codex/b-12-database-backed-school-discovery`; GitHub issue #57; based on merged `main` commit `c2b3f9c`.
+- Anonymous discovery now requires a school-location province before loading schools. The Istanbul pilot option, school-location districts, and filtered schools all come from the existing Spring Boot geography APIs; no hardcoded database IDs, local geography catalog, runtime cache, migration, or backend contract change was introduced.
+- School-location district is optional and separate from the required pickup district/neighborhood. School requests send the selected `provinceId` and optional `districtId`, while pickup matching retains same-province cross-district behavior.
+- Changing school-location filters clears incompatible school, pickup, neighborhood, tariff, and operator-result state. Request generations prevent slower school, district, neighborhood, or operator responses from restoring stale state, and client response validation excludes schools outside the requested province/district.
+- Missing Istanbul data, empty filtered schools, loading, retry, and API-error states are explicit. The existing first-50 shortcut remains clearly labeled as loaded-school search; B-13 owns complete server-side search, sorting, and pagination.
+- Node.js 24 verification passed ESLint, strict TypeScript, all 36 Vitest/Testing Library/MSW tests, and the Vite production build. The existing bundle-size warning remains at approximately 528 kB minified.
+- Playwright passed all five checks in 30 seconds: WCAG 2.2 AA and horizontal-overflow checks at 1440×900, 768×1024, and 390×844; reduced-motion behavior; and all 13 mocked MVP journeys. Impeccable reported no deterministic findings in the changed page.
+- Browser verification used mocked same-origin APIs. No backend test, live account, Supabase read/write, migration, dependency, lockfile, credential, or production setting was changed.
