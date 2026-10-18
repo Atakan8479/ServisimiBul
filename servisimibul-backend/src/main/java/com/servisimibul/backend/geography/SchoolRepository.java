@@ -22,40 +22,40 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
                     select school
                     from School school
                     where school.active = true
-                      and (:query = '' or function(
+                      and (:query = '' or cast(function(
                             'translate',
                             lower(function('translate', school.name, 'İI', 'ii')),
                             'âçğıîöşüû',
                             'acgiiosuu'
-                          ) like concat('%', :query, '%'))
+                          ) as string) like concat('%', :query, '%'))
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     order by
-                      case when :descending = false then function(
+                      case when :descending = false then cast(function(
                         'translate',
                         lower(function('translate', school.name, 'İI', 'ii')),
                         'âçğıîöşüû',
                         'acgiiosuu'
-                      ) end asc,
+                      ) as string) end asc,
                       case when :descending = false then school.id end asc,
-                      case when :descending = true then function(
+                      case when :descending = true then cast(function(
                         'translate',
                         lower(function('translate', school.name, 'İI', 'ii')),
                         'âçğıîöşüû',
                         'acgiiosuu'
-                      ) end desc,
+                      ) as string) end desc,
                       case when :descending = true then school.id end desc
                     """,
             countQuery = """
                     select count(school)
                     from School school
                     where school.active = true
-                      and (:query = '' or function(
+                      and (:query = '' or cast(function(
                             'translate',
                             lower(function('translate', school.name, 'İI', 'ii')),
                             'âçğıîöşüû',
                             'acgiiosuu'
-                          ) like concat('%', :query, '%'))
+                          ) as string) like concat('%', :query, '%'))
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     """
