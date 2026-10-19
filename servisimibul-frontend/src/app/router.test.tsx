@@ -95,6 +95,10 @@ describe('application routes', () => {
     expect(
       screen.getByRole('navigation', { name: 'Yönetim alanı menüsü' }),
     ).toBeInTheDocument()
+    // Wait for the list request before resetting MSW handlers after the test.
+    expect(
+      await screen.findByRole('heading', { name: 'Bu durumda başvuru yok' }),
+    ).toBeInTheDocument()
   })
 
   it('redirects an expired operator session to a clear login message', async () => {

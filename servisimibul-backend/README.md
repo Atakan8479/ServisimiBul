@@ -112,7 +112,7 @@ pwsh -NoLogo -NoProfile -File ..\scripts\Test-IsolatedBackend.ps1
 pwsh -NoLogo -NoProfile -File ..\scripts\Test-IsolatedBackend.ps1 -Tests GeographyCatalogApiTests
 ```
 
-The harness accepts `-JavaHome` and `-PostgresBin` overrides, rejects non-loopback JDBC targets, verifies a unique database-instance marker before Maven starts, and removes the cluster in `finally`. Do not run the test suite against the shared Supabase project: the V1 test expects a clean database. See [`docs/12_WINDOWS_ISOLATED_DEVELOPMENT.md`](../docs/12_WINDOWS_ISOLATED_DEVELOPMENT.md).
+The harness accepts `-JavaHome` and `-PostgresBin` overrides, rejects non-loopback JDBC targets, verifies a unique database-instance marker before Maven starts, and removes the cluster in `finally`. Do not run the test suite against the shared Supabase project: the V1 test expects a clean database. See [`docs/13_WINDOWS_ISOLATED_DEVELOPMENT.md`](../docs/13_WINDOWS_ISOLATED_DEVELOPMENT.md).
 
 ## Deployment and probes
 

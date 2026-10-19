@@ -1,4 +1,4 @@
-# Isolated Windows development and test database
+# A-12 isolated Windows development and test database
 
 A-12 makes the root Windows launcher and local backend verification independent of the shared Supabase project. Both paths create a fresh PostgreSQL 17 cluster under the current user's temporary directory and delete it on exit.
 

@@ -45,7 +45,7 @@ When sources conflict: stop, explain the conflict, and request a decision. Do no
 - Verify Spring Boot 4.x dependency compatibility before changing Maven dependencies.
 - Write safe, reviewable migrations. Never mutate schema from Hibernate auto-DDL.
 - If live DB conflicts with planned Flyway V1, explain safe alternatives; no automated deletes, `baselineOnMigrate`, or `repair` without approval.
-- Any admin tariff JSON update must use a persistent writable store (not resources inside a packaged JAR); store selection is UNDECIDED. Validate inputs and handle concurrent writes/atomic saves.
+- Any admin tariff JSON update must use the D033-approved backend-only persistent directory configured by `SB_TARIFF_STORAGE_DIR`, never resources inside a packaged JAR. Preserve immutable versions, expected-version concurrency, validation, and atomic same-filesystem saves required by D034–D035.
 
 ## Deliverable standard
 Each approved task requires: limited-scope diff, relevant tests, validation notes, documentation/progress update, and PR-ready summary. Developers retain architectural and security approval authority.

@@ -126,8 +126,16 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     ).toBeFocused()
     await operatorPage
       .getByRole('group', { name: 'Kadıköy' })
+      .getByRole('button', { name: 'Kadıköy' })
+      .click()
+    await operatorPage
+      .getByRole('group', { name: 'Kadıköy' })
       .getByRole('checkbox', { name: 'Moda' })
       .check()
+    await operatorPage
+      .getByRole('group', { name: 'Üsküdar' })
+      .getByRole('button', { name: 'Üsküdar' })
+      .click()
     await operatorPage
       .getByRole('group', { name: 'Üsküdar' })
       .getByRole('checkbox', { name: 'Acıbadem' })
@@ -316,6 +324,65 @@ test('edits school filters after listing and keeps pickup geography separate', a
   await expect(page.getByText('Seçilen okul')).toBeVisible()
   await expect(page.getByLabel('Servis alınacak ilçe')).toBeEnabled()
   await expect(page.getByLabel('Servis alınacak mahalle')).toBeDisabled()
+})
+
+test('operator reaches and selects a school beyond the first 50 results', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  await installMockApi(page, state)
+
+  const catalog = Array.from({ length: 51 }, (_, index) => ({
+    id: `20000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    neighborhoodId: 101,
+    neighborhoodName: 'Moda',
+    districtId: 10,
+    districtName: 'Kadıköy',
+    provinceId: 34,
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    name: `Okul ${String(index + 1).padStart(3, '0')}`,
+    address: null,
+    sourceName: null,
+    sourceCode: null,
+    active: true,
+  }))
+  const requestedPages: number[] = []
+  await page.route('**/api/v1/schools?**', async (route) => {
+    const url = new URL(route.request().url())
+    const pageNumber = Number(url.searchParams.get('page') ?? '0')
+    const pageSize = Number(url.searchParams.get('size') ?? '10')
+    requestedPages.push(pageNumber)
+    const start = pageNumber * pageSize
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        content: catalog.slice(start, start + pageSize),
+        page: pageNumber,
+        size: pageSize,
+        totalElements: catalog.length,
+        totalPages: Math.ceil(catalog.length / pageSize),
+      }),
+    })
+  })
+
+  await login(page, 'operator@example.com')
+  await page.goto('/operator/schools')
+  await expect(page.getByText('51 aktif okul')).toBeVisible()
+  for (let pageNumber = 1; pageNumber < 6; pageNumber += 1) {
+    await page.getByRole('button', { name: 'Sonraki sayfa' }).click()
+    await expect(page.getByText(`Sayfa ${pageNumber + 1} / 6`)).toHaveCount(2)
+  }
+
+  await page
+    .getByLabel('Aktif okul')
+    .selectOption({ label: 'Okul 051 — Kadıköy' })
+  await expect(page.getByLabel('Aktif okul')).toHaveValue(catalog[50]!.id)
+  expect([...new Set(requestedPages)]).toEqual([0, 1, 2, 3, 4, 5])
 })
 
 async function login(page: Page, email: string) {

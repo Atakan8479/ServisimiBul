@@ -1,7 +1,8 @@
 # Progress ledger (update only after verification)
 
 ## Current stage: Post-MVP follow-up — A-12 isolated Windows development ready for review
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-12 replaces the prior shared-database Windows launcher with a disposable PostgreSQL 17 development and backend-test environment. Local implementation and verification are complete; human code review and a pull request remain pending.
+
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-12 replaces the prior shared-database Windows launcher with a disposable PostgreSQL 17 development and backend-test environment in PR #76. Local implementation and verification are complete; human code review remains pending. J-04 live protection activation and verification also remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -45,9 +46,13 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 | B-11 End-to-end and accessibility validation | complete | GitHub issue #28; PR #55 merged as `c2b3f9c`; final Frontend workflow `39122106995` and Secret scan workflow `39122106934` passed | Reviewed and merged 2026-10-18 |
 | B-12 Database-backed school location discovery | complete | GitHub issue #57; PR #60 merged as `d6e766a`; Frontend workflow `39146373250` and Secret scan workflow `39146373216` passed | Reviewed and merged 2026-10-18 |
-| B-13 Searchable and sortable school results | complete | GitHub issue #58; PR #64 merged as `0ffadfe`; Backend workflow `39172007199`, Frontend workflow `39172007201`, and Secret scan workflow `39172007274` passed | Reviewed and merged 2026-10-19 |
+| A-11 Verified İstanbul geography importer | complete | PR #63 merged as `9f752a8`; source and importer verification in `docs/11_ISTANBUL_GEOGRAPHY_IMPORT.md`; Secret scan workflow `39151790532` passed | Merged 2026-10-18; shared import remains separately approval-gated |
+| B-13 Searchable and sortable school results | complete | GitHub issue #58; PR #64 merged as `0ffadfe`; final Backend `39174222379`, Frontend `39174222316`, and Secret scan `39174222353` workflows passed | Merged 2026-10-19 |
 | B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
-| A-12 Isolated Windows development and full-stack test database | ready for review | Branch `codex/a-12-isolated-windows-dev`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; frontend lint/typecheck/50 tests/build passed | Implementation explicitly approved 2026-10-19; code review pending |
+| J-04 Repository protection and documentation reconciliation | in progress | GitHub issue #65; read-only API audit found unprotected `main`, zero rulesets, ambiguous `test` check names, and no submitted reviews on PRs #60/#62/#63/#64 | Local implementation approved 2026-10-19; remote ruleset activation pending explicit approval |
+| B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
+| B-18 Paginated operator school picker | complete | GitHub issue #71; PR #75 merged as `44af9e8`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Reviewed and merged 2026-10-19 |
+| A-12 Isolated Windows development and full-stack test database | ready for review | PR #76; branch `codex/a-12-isolated-windows-dev`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Implementation explicitly approved 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -69,21 +74,59 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 
 ## Verified A-12 evidence — 2026-10-19
 
-- Branch `codex/a-12-isolated-windows-dev` starts from merged `main` commit `0ffadfe`. The existing unrelated `.idea/compiler.xml` change was preserved and excluded.
+- PR #76 uses branch `codex/a-12-isolated-windows-dev`, now reconciled with `main` commit `44af9e8`. The existing unrelated `.idea/compiler.xml` change was preserved and excluded.
 - `dev.ps1` no longer reads the ignored backend `.env`. It creates a uniquely marked PostgreSQL 17.11 cluster on a random `127.0.0.1` port, generates independent admin/runtime passwords, applies Flyway V1–V8 in a one-shot migration process, clears privileged and inherited ADMIN/SMTP values, and starts Spring Boot only as `servisimibul_app`. Spring Boot, Vite, and the proxy target are restricted to loopback.
 - `dev.ps1 -SmokeTest` passed backend readiness, the Vite root, and a Vite-proxied `/api/v1/provinces` request containing the disposable fixture. The run then exited with code 0; ports 5173/8080 had zero listeners and no `ServisimiBul-A12-*` temp cluster remained.
 - The complete Java 21-targeted Maven `verify` lifecycle passed all 218 tests on the disposable cluster and produced the Spring Boot JAR. The first run exposed that PostgreSQL's Windows `C` locale did not lowercase uppercase Turkish characters; the school query now transliterates both uppercase and lowercase Turkish characters before ASCII lowercasing. The focused geography suite passed all 9 tests after the fix.
-- Node.js 24.22.0 passed ESLint, strict TypeScript, all 50 Vitest tests, and the Vite production build. The existing single-chunk size warning remains. The changed Vite configuration passes Prettier; repository-wide Prettier still reports the known Windows CRLF mismatch across 48 untouched files, so no unrelated mass formatting was performed.
+- Node.js 24.22.0 passed merged-state ESLint, strict TypeScript, all 55 Vitest tests, and the Vite production build without the former single-chunk warning. The changed Vite configuration passes Prettier; repository-wide Prettier still reports the known Windows CRLF mismatch across 48 untouched files, so no unrelated mass formatting was performed.
 - PowerShell syntax validation and A-12 safety regressions passed, including remote/wrong-database rejection, cleanup fail-closed behavior, loopback binding, credential clearing, and environment-example separation.
 - PostgreSQL 17.11 portable binaries were installed in the current user's Scoop directory to execute the local lifecycle; no PostgreSQL Windows service was created. No dependency, lockfile, Flyway migration, shared Supabase resource, production setting, cloud resource, ADMIN bootstrap, or persistent application data was changed.
 
+## J-04 follow-up verification — 2026-10-19
+
+- GitHub Actions for PR #73 head `c4c6a533bb1755d75ac9d42aa6ca078e25401aa5` passed: Backend run `39224801159`, Frontend run `39224800963`, and Secret scan run `39224801015`. The Frontend job's `npm run test:e2e` step succeeded in CI. Two earlier local Windows Playwright start-up stalls remain local-only observations, not evidence of an E2E failure in CI.
+- A read-only SQL query against the ACTIVE_HEALTHY shared ServisimiBul Supabase project on 2026-10-19 returned `province=1`, `district=39`, `neighborhood=963`, `school=1`. Earlier documentation claiming all four catalog tables were empty was stale. Row provenance/import authorship has not been established by this count query. No shared database writes or migrations were performed.
+- J-04's branch protection policy is still a proposal. CI success and this documentation update do not establish live ruleset activation; a separate owner-approved settings change and post-write API verification remain outstanding.
+
+## Verified B-16 local evidence — 2026-10-19
+
+- The operator school coverage editor now loads the province's district list first and requests a district's neighborhoods only when that district is expanded. Reopening an already loaded district reuses its data, and in-flight requests are cancelled when the editor is replaced or unmounted.
+- Previously saved selections remain visible and are included when saving even if their districts were never opened. Selection and clearing actions are district-scoped, and each district has independent loading, empty, error, and retry states.
+- Focused coverage tests verify zero neighborhood requests on editor open, one request for the opened district, no duplicate request on collapse/reopen, preservation of unopened coverage, district retry, cancellation during school switching, and per-school selection isolation. The full frontend suite passed ESLint, strict TypeScript, all 52 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the 13-journey MVP flow.
+- Repository-wide Prettier still reports 28 pre-existing files outside the B-16 change; all five B-16 application/test files pass scoped Prettier and `git diff --check`. No dependency, backend, API contract, migration, shared Supabase resource, credential, or production setting was changed.
+
+## Verified B-18 local evidence — 2026-10-19
+
+- The operator school picker now uses the existing paginated school catalog with ten results per page, `name-asc` ordering, and trimmed search queries instead of requesting only the first 50 schools. Linked schools stay separate and cannot be selected again.
+- A selected school remains available when paging or filtering moves it outside the current result set. Stale catalog requests are cancelled, and loading, empty, failure, retry, result-count, and page-navigation states are presented within the picker.
+- Unit tests cover a 61-school catalog, exact search/sort/page composition, selection retention across pages, stale-request cancellation, loading, failure, and retry. Playwright verifies selecting school 51 from a 51-school catalog through six requested pages.
+- Route-level lazy loading was limited to authentication, operator, and admin screens while the public landing page remains eager. The production entry chunk decreased from 542.65 kB minified / 160.68 kB gzip to 472.51 kB / 146.06 kB, removing the Vite 500 kB warning without adding a dependency.
+- The full frontend suite passed ESLint, strict TypeScript, all 55 Vitest tests, the production build, and all 7 Playwright checks. The six changed application/test files pass scoped Prettier and `git diff --check`; repository-wide Prettier still reports 27 pre-existing untouched files. No dependency, backend, API contract, migration, shared Supabase resource, credential, or production setting was changed.
+
+## Verified J-04 baseline evidence — 2026-10-19
+
+- GitHub Issue #65 defines repository protection and documentation reconciliation as J-04. The public repository's default branch is `main`; live API inspection matched local `main` at `0ffadfe6c03a902cf4abaf9203759b9f69e76245`, and GitHub reported no open pull requests.
+- `main` was unprotected and the repository had zero rulesets. The API reported no force-push/deletion protection or required review/status-check enforcement.
+- `Atakan8479` has administrator access and `LePqrta` has write access. PRs #60, #62, #63, and #64 were merged with successful applicable workflows but contained no submitted GitHub review, confirming that cross-review was not technically enforced.
+- The final PR #64 head ran Backend `39174222379`, Frontend `39174222316`, and Secret scan `39174222353` successfully. Their check-run names were `test`, `test`, and `gitleaks`; the duplicate `test` name is unsuitable for three independently required checks.
+- GitHub's current documentation confirms protected branches and repository rulesets are available for public repositories on GitHub Free and warns that duplicate job names across workflows create ambiguous required checks. No paid plan is required or authorized.
+- J-04 locally assigns unique `Backend`, `Frontend`, and `Secret scan` job names, makes all three workflows run for every pull request, pins the remaining floating official actions, adds two-developer CODEOWNERS, and documents the target no-bypass ruleset. Protection remains pending until the new checks run and a post-write API read verifies the live rule.
+- Targeted Prettier validation passed for all three workflows and the new protection runbook; `git diff --check` passed. The Java 21-targeted backend package completed successfully with tests skipped. Frontend ESLint, strict TypeScript, all 50 Vitest tests, and the production build passed. The repository-wide Windows Prettier check reproduced the known CRLF-only warnings in 49 untouched frontend files. Two Playwright attempts stalled while starting the configured Vite web server and exposed no listener on port 4173, so no new local E2E result is claimed; the required pull-request Frontend check remains the authoritative J-04 E2E gate.
+- No application source, dependency, lockfile, Flyway migration, shared Supabase resource, production setting, deployment, or subscription is changed.
+
+## Verified A-11 evidence — 2026-10-18
+
+- PR #63 merged as `9f752a8`; Secret scan workflow `39151790532` passed. It added the source verifier, disposable-local importer, their loopback/disposable PostgreSQL tests, and `docs/11_ISTANBUL_GEOGRAPHY_IMPORT.md`.
+- The manually executed source gate verified İstanbul province 34, 39 districts, 963 neighborhoods, dataset version `2025`, and last-updated date `2026-05-21`. The importer test passed against disposable local PostgreSQL 17.4, including preview/apply/repeat behavior, stable generated IDs, and non-loopback rejection.
+- A-11 did not read or modify shared Supabase. PostgreSQL remains the runtime source of truth, schools remain manually curated, and any shared geography import requires a fresh reviewed approval and execution plan.
+
 ## Verified B-13 evidence — 2026-10-19
 
-- Branch `codex/b-13-school-results` starts from `origin/main` commit `d6e766a`; draft PR #64 closes GitHub Issue #58.
+- PR #64 merged branch `codex/b-13-school-results` to `main` as `0ffadfe` and closed GitHub Issue #58.
 - Anonymous `GET /api/v1/schools` applies optional province, district, and Turkish-normalized name filters before pagination. The validated `name-asc` and `name-desc` modes sort by normalized school name and UUID, providing deterministic tie-breaking across pages without changing stored names.
 - The public discovery page replaces the former first-50 selector with server-backed results, keeps school-location filters editable, resets to page zero after filter/sort changes, preserves a compatible selection, and explicitly clears a selection and dependent pickup/results state when a filter excludes it. School location and pickup location remain separate same-province choices.
-- Backend workflow `39172007199` passed clean V1–V8 validation, the full 217-test suite on disposable PostgreSQL 17.11, the deployment smoke check, and all 13 migration-operation checks. Coverage includes Turkish search, ascending/descending paging, invalid sort rejection, and repeated multi-page UUID tie-breaker stability.
-- Frontend workflow `39172007201` passed repository-wide Prettier, ESLint, strict TypeScript, all 48 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the B-13 browsing journey. Secret scan workflow `39172007274` passed.
+- Implementation workflow `39172007199` passed clean V1–V8 validation, the full 217-test suite on disposable PostgreSQL 17.11, the deployment smoke check, and all 13 migration-operation checks. Coverage includes Turkish search, ascending/descending paging, invalid sort rejection, and repeated multi-page UUID tie-breaker stability.
+- Frontend workflow `39172007201` passed repository-wide Prettier, ESLint, strict TypeScript, all 48 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the B-13 browsing journey. Secret scan workflow `39172007274` passed. Final head workflows also passed: Backend `39174222379`, Frontend `39174222316`, and Secret scan `39174222353`.
 - The local Java 21-targeted package build passed. Local frontend lint, typecheck, all 48 Vitest tests, production build, and all 6 Playwright checks passed; the repository-wide Windows format command still reports the known CRLF differences in untouched files, while all touched files and Linux CI pass Prettier.
 - No dependency, lockfile, Flyway migration, schema, shared Supabase resource, production setting, deployment, or cloud resource was changed. The unrelated `.idea/compiler.xml` working-tree change remains unmodified and excluded.
 

@@ -225,14 +225,17 @@ describe('operator workspace flows', () => {
     expect(resubmitted).toBe(true)
   })
 
-  it('groups coverage by district and saves cross-district neighborhoods', async () => {
+  it('loads neighborhoods on demand and preserves unopened district coverage', async () => {
     let coverageBody: unknown
+    const neighborhoodRequests: string[] = []
     server.use(
       authHandler(),
       csrfHandler(),
       readinessHandler(),
       http.get('/api/v1/operator/schools', () =>
-        HttpResponse.json([operatorSchool([])]),
+        HttpResponse.json([
+          operatorSchool([coverage(201, 11, 'Acıbadem', 'Üsküdar')]),
+        ]),
       ),
       http.get('/api/v1/schools', () =>
         HttpResponse.json({
@@ -251,6 +254,7 @@ describe('operator workspace flows', () => {
       ),
       http.get('/api/v1/neighborhoods', ({ request }) => {
         const districtId = new URL(request.url).searchParams.get('districtId')
+        neighborhoodRequests.push(districtId ?? '')
         return HttpResponse.json(
           districtId === '10'
             ? [{ id: 101, districtId: 10, name: 'Moda' }]
@@ -277,14 +281,45 @@ describe('operator workspace flows', () => {
     )
     expect(
       screen.getByText(
-        'Görüntülenen tüm okullar zaten hizmet ağınıza eklenmiş.',
+        /Bu sayfadaki tüm okullar zaten hizmet ağınıza eklenmiş/,
       ),
     ).toBeInTheDocument()
+    expect(await screen.findByText('Seçili: Acıbadem')).toBeInTheDocument()
+    expect(neighborhoodRequests).toEqual([])
 
     const kadikoy = await screen.findByRole('group', { name: 'Kadıköy' })
-    const uskudar = screen.getByRole('group', { name: 'Üsküdar' })
-    fireEvent.click(within(kadikoy).getByRole('checkbox', { name: 'Moda' }))
-    fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
+    const kadikoyToggle = within(kadikoy).getByRole('button', {
+      name: 'Kadıköy',
+    })
+    expect(kadikoyToggle).toHaveAccessibleDescription('0 seçili')
+    expect(
+      within(screen.getByRole('group', { name: 'Üsküdar' })).getByRole(
+        'button',
+        { name: 'Üsküdar' },
+      ),
+    ).toHaveAccessibleDescription('1 seçili')
+    fireEvent.click(kadikoyToggle)
+    fireEvent.click(
+      await within(kadikoy).findByRole('button', {
+        name: 'Bu ilçenin tümünü seç',
+      }),
+    )
+    expect(kadikoyToggle).toHaveAccessibleDescription('1 seçili')
+    fireEvent.click(
+      within(kadikoy).getByRole('button', {
+        name: 'Bu ilçenin seçimini temizle',
+      }),
+    )
+    expect(kadikoyToggle).toHaveAccessibleDescription('0 seçili')
+    expect(screen.getByText('Seçili: Acıbadem')).toBeInTheDocument()
+    fireEvent.click(
+      within(kadikoy).getByRole('button', {
+        name: 'Bu ilçenin tümünü seç',
+      }),
+    )
+    fireEvent.click(kadikoyToggle)
+    fireEvent.click(kadikoyToggle)
+    expect(neighborhoodRequests).toEqual(['10'])
     fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
 
     expect(
@@ -293,6 +328,142 @@ describe('operator workspace flows', () => {
       ),
     ).toBeInTheDocument()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
+    expect(neighborhoodRequests).toEqual(['10'])
+  })
+
+  it('retries a failed district without loading other districts', async () => {
+    let attempts = 0
+    server.use(
+      authHandler(),
+      readinessHandler(),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school()],
+          page: 0,
+          size: 50,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/districts', () =>
+        HttpResponse.json([
+          { id: 10, provinceId: 34, name: 'Kadıköy' },
+          { id: 11, provinceId: 34, name: 'Üsküdar' },
+        ]),
+      ),
+      http.get('/api/v1/neighborhoods', ({ request }) => {
+        attempts += 1
+        const districtId = new URL(request.url).searchParams.get('districtId')
+        if (attempts === 1) {
+          return HttpResponse.json(
+            {
+              title: 'Service Unavailable',
+              status: 503,
+              detail: 'Kadıköy mahalleleri şu anda alınamıyor.',
+              code: 'neighborhoods_unavailable',
+            },
+            { status: 503 },
+          )
+        }
+        return HttpResponse.json(
+          districtId === '10'
+            ? [{ id: 101, districtId: 10, name: 'Moda' }]
+            : [{ id: 201, districtId: 11, name: 'Acıbadem' }],
+        )
+      }),
+    )
+
+    renderRoute('/operator/schools')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
+    )
+    const kadikoy = await screen.findByRole('group', { name: 'Kadıköy' })
+    fireEvent.click(within(kadikoy).getByRole('button', { name: 'Kadıköy' }))
+
+    expect(
+      await screen.findByText('Kadıköy mahalleleri şu anda alınamıyor.'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Yeniden dene' }))
+
+    expect(
+      await within(kadikoy).findByRole('checkbox', { name: 'Moda' }),
+    ).toBeInTheDocument()
+    expect(attempts).toBe(2)
+  })
+
+  it('cancels stale requests and isolates selections when switching schools', async () => {
+    let requestSignal: AbortSignal | undefined
+    let releaseRequest: (() => void) | undefined
+    const secondId = '85ef6bb0-e313-43fb-a01c-c935774434b4'
+    server.use(
+      authHandler(),
+      readinessHandler(),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([
+          operatorSchool([]),
+          operatorSchool([coverage(201, 11, 'Acıbadem', 'Üsküdar')], {
+            id: secondId,
+            schoolId: '7de54e65-6e04-4168-a1cb-967a98d7ec12',
+            schoolName: 'İkinci Okul',
+          }),
+        ]),
+      ),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school()],
+          page: 0,
+          size: 50,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/districts', () =>
+        HttpResponse.json([
+          { id: 10, provinceId: 34, name: 'Kadıköy' },
+          { id: 11, provinceId: 34, name: 'Üsküdar' },
+        ]),
+      ),
+      http.get('/api/v1/neighborhoods', async ({ request }) => {
+        requestSignal = request.signal
+        await new Promise<void>((resolve) => {
+          releaseRequest = resolve
+        })
+        return HttpResponse.json([{ id: 101, districtId: 10, name: 'Moda' }])
+      }),
+    )
+
+    renderRoute('/operator/schools')
+    const firstCard = (await screen.findByText('Örnek Okulu')).closest(
+      'article',
+    )
+    const secondCard = screen.getByText('İkinci Okul').closest('article')
+    expect(firstCard).not.toBeNull()
+    expect(secondCard).not.toBeNull()
+    fireEvent.click(
+      within(firstCard!).getByRole('button', { name: 'Kapsamı düzenle' }),
+    )
+    const kadikoy = await screen.findByRole('group', { name: 'Kadıköy' })
+    fireEvent.click(within(kadikoy).getByRole('button', { name: 'Kadıköy' }))
+    await waitFor(() => expect(requestSignal).toBeDefined())
+
+    fireEvent.click(
+      within(secondCard!).getByRole('button', { name: 'Kapsamı düzenle' }),
+    )
+    await waitFor(() => expect(requestSignal?.aborted).toBe(true))
+    releaseRequest?.()
+
+    const secondEditor = await screen.findByRole('region', {
+      name: 'İkinci Okul kapsamı',
+    })
+    expect(
+      await within(secondEditor).findByText('Seçili: Acıbadem'),
+    ).toBeInTheDocument()
+    expect(
+      within(secondEditor).queryByText('Seçili: Moda'),
+    ).not.toBeInTheDocument()
   })
 
   it('opens a newly added school coverage editor and moves keyboard focus', async () => {
@@ -351,7 +522,7 @@ describe('operator workspace flows', () => {
 
     renderRoute('/operator/schools')
     expect(
-      await screen.findByText(/Pilot okul kataloğu henüz boş/),
+      await screen.findByText(/Okul kataloğu henüz boş/),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul ara'), {
@@ -361,6 +532,177 @@ describe('operator workspace flows', () => {
     expect(
       await screen.findByText(/Bu aramayla eşleşen aktif okul bulunamadı/),
     ).toBeInTheDocument()
+  })
+
+  it('pages through more than 50 schools without losing the selected option', async () => {
+    const requests: string[] = []
+    const firstPageSchool = school({
+      id: '11111111-1111-4111-8111-111111111111',
+      name: 'İlk Sayfa Okulu',
+    })
+    const secondPageSchool = school({
+      id: '22222222-2222-4222-8222-222222222222',
+      name: 'İkinci Sayfa Okulu',
+    })
+    const searchedSchool = school({
+      id: '33333333-3333-4333-8333-333333333333',
+      name: 'Aranan Okul',
+    })
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.get('/api/v1/schools', ({ request }) => {
+        const url = new URL(request.url)
+        requests.push(url.search)
+        const query = url.searchParams.get('query')
+        const page = Number(url.searchParams.get('page'))
+        if (query === 'Aranan') {
+          return HttpResponse.json({
+            content: [searchedSchool],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+          })
+        }
+        return HttpResponse.json({
+          content: [page === 1 ? secondPageSchool : firstPageSchool],
+          page,
+          size: 10,
+          totalElements: 61,
+          totalPages: 7,
+        })
+      }),
+    )
+
+    renderRoute('/operator/schools')
+    const schoolSelect = await screen.findByLabelText('Aktif okul')
+    expect(
+      within(schoolSelect).getByRole('option', { name: /İlk Sayfa Okulu/ }),
+    ).toBeInTheDocument()
+    fireEvent.change(schoolSelect, { target: { value: firstPageSchool.id } })
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+
+    expect(
+      await within(schoolSelect).findByRole('option', {
+        name: /İkinci Sayfa Okulu/,
+      }),
+    ).toBeInTheDocument()
+    expect(schoolSelect).toHaveValue(firstPageSchool.id)
+    expect(
+      within(schoolSelect).getByRole('option', { name: /İlk Sayfa Okulu/ }),
+    ).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Okul ara'), {
+      target: { value: '  Aranan  ' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
+    expect(
+      await within(schoolSelect).findByRole('option', { name: /Aranan Okul/ }),
+    ).toBeInTheDocument()
+    expect(schoolSelect).toHaveValue(firstPageSchool.id)
+    expect(requests).toEqual([
+      '?page=0&size=10&sort=name-asc',
+      '?page=1&size=10&sort=name-asc',
+      '?page=0&size=10&sort=name-asc&query=Aranan',
+    ])
+  })
+
+  it('announces school loading and ignores an aborted stale search', async () => {
+    let slowSignal: AbortSignal | undefined
+    let releaseSlow: (() => void) | undefined
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.get('/api/v1/schools', async ({ request }) => {
+        const query = new URL(request.url).searchParams.get('query')
+        if (query === 'Yavaş') {
+          slowSignal = request.signal
+          await new Promise<void>((resolve) => {
+            releaseSlow = resolve
+          })
+          return HttpResponse.json({
+            content: [school({ name: 'Eski Sonuç' })],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+          })
+        }
+        return HttpResponse.json({
+          content: [school({ name: query === 'Hızlı' ? 'Yeni Sonuç' : 'İlk' })],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+
+    renderRoute('/operator/schools')
+    const input = await screen.findByLabelText('Okul ara')
+    fireEvent.change(input, { target: { value: 'Yavaş' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
+    expect(await screen.findByText('Okullar aranıyor')).toBeInTheDocument()
+    await waitFor(() => expect(slowSignal).toBeDefined())
+
+    fireEvent.change(input, { target: { value: 'Hızlı' } })
+    fireEvent.submit(input.closest('form')!)
+    await waitFor(() => expect(slowSignal?.aborted).toBe(true))
+    expect(
+      await screen.findByRole('option', { name: /Yeni Sonuç/ }),
+    ).toBeInTheDocument()
+    releaseSlow?.()
+    expect(screen.queryByRole('option', { name: /Eski Sonuç/ })).toBeNull()
+  })
+
+  it('retries the same school search after a catalog failure', async () => {
+    let failedAttempts = 0
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.get('/api/v1/schools', ({ request }) => {
+        const query = new URL(request.url).searchParams.get('query')
+        if (query === 'Hata' && failedAttempts++ === 0) {
+          return HttpResponse.json(
+            {
+              title: 'Service Unavailable',
+              status: 503,
+              detail: 'Okul kataloğu şu anda alınamıyor.',
+              code: 'schools_unavailable',
+            },
+            { status: 503 },
+          )
+        }
+        return HttpResponse.json({
+          content: [
+            school({ name: query === 'Hata' ? 'Bulunan Okul' : 'İlk' }),
+          ],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+
+    renderRoute('/operator/schools')
+    fireEvent.change(await screen.findByLabelText('Okul ara'), {
+      target: { value: 'Hata' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
+    expect(
+      await screen.findByText('Okul kataloğu şu anda alınamıyor.'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
+
+    expect(
+      await screen.findByRole('option', { name: /Bulunan Okul/ }),
+    ).toBeInTheDocument()
+    expect(failedAttempts).toBe(2)
   })
 
   it('warns about hidden profiles and administrator-deactivated schools', async () => {
@@ -473,6 +815,12 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/schools')
     fireEvent.click(
       await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
+    )
+    fireEvent.click(
+      within(await screen.findByRole('group', { name: 'Kadıköy' })).getByRole(
+        'button',
+        { name: 'Kadıköy' },
+      ),
     )
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Moda' }))
     fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
@@ -668,7 +1016,7 @@ function operatorSchool(
   }
 }
 
-function school() {
+function school(overrides: Record<string, unknown> = {}) {
   return {
     id: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
     neighborhoodId: 100,
@@ -683,6 +1031,7 @@ function school() {
     sourceName: null,
     sourceCode: null,
     active: true,
+    ...overrides,
   }
 }
 

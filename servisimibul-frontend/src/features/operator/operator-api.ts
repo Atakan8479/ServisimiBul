@@ -108,6 +108,7 @@ export type OperatorProfile = z.infer<typeof operatorProfileSchema>
 export type DiscoveryReadiness = z.infer<typeof discoveryReadinessSchema>
 export type OperatorSchool = z.infer<typeof operatorSchoolSchema>
 export type School = z.infer<typeof schoolSchema>
+export type SchoolPage = z.infer<typeof schoolPageSchema>
 export type District = z.infer<typeof districtSchema>
 export type Neighborhood = z.infer<typeof neighborhoodSchema>
 
@@ -164,15 +165,28 @@ export function getOperatorSchools(): Promise<OperatorSchool[]> {
   })
 }
 
-export function searchSchools(query: string): Promise<School[]> {
-  // shortcut: the curated catalog fits one API page; add paging when it grows past 50 schools.
-  const parameters = new URLSearchParams({ page: '0', size: '50' })
-  if (query.trim()) {
-    parameters.set('query', query.trim())
+export function searchSchools({
+  query,
+  page,
+  signal,
+}: {
+  query: string
+  page: number
+  signal?: AbortSignal
+}): Promise<SchoolPage> {
+  const parameters = new URLSearchParams({
+    page: String(page),
+    size: '10',
+    sort: 'name-asc',
+  })
+  const normalizedQuery = query.trim()
+  if (normalizedQuery) {
+    parameters.set('query', normalizedQuery)
   }
   return apiRequest(`/schools?${parameters.toString()}`, {
+    signal,
     schema: schoolPageSchema,
-  }).then((page) => page.content)
+  })
 }
 
 export function addOperatorSchool(schoolId: string): Promise<OperatorSchool> {
@@ -203,14 +217,22 @@ export function removeOperatorSchool(id: string): Promise<void> {
   })
 }
 
-export function getDistricts(provinceId: number): Promise<District[]> {
+export function getDistricts(
+  provinceId: number,
+  signal?: AbortSignal,
+): Promise<District[]> {
   return apiRequest(`/districts?provinceId=${provinceId}`, {
+    signal,
     schema: z.array(districtSchema),
   })
 }
 
-export function getNeighborhoods(districtId: number): Promise<Neighborhood[]> {
+export function getNeighborhoods(
+  districtId: number,
+  signal?: AbortSignal,
+): Promise<Neighborhood[]> {
   return apiRequest(`/neighborhoods?districtId=${districtId}`, {
+    signal,
     schema: z.array(neighborhoodSchema),
   })
 }
