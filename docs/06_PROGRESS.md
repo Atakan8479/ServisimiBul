@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — A-12 isolated Windows development ready for review
+## Current stage: Post-MVP follow-up — A-13 disposable recovery verification ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-12 replaces the prior shared-database Windows launcher with a disposable PostgreSQL 17 development and backend-test environment in PR #76. Local implementation and verification are complete; human code review remains pending. J-04 live protection activation and verification also remain pending.
+Status: Gates 0–8, J-01, J-02, A-01–A-12, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-13 verifies PostgreSQL and UKOME backup/restore behavior using two disposable loopback environments; local implementation and verification are complete, while human code review remains pending. J-04 live protection activation and verification also remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -52,7 +52,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | J-04 Repository protection and documentation reconciliation | in progress | GitHub issue #65; read-only API audit found unprotected `main`, zero rulesets, ambiguous `test` check names, and no submitted reviews on PRs #60/#62/#63/#64 | Local implementation approved 2026-10-19; remote ruleset activation pending explicit approval |
 | B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
 | B-18 Paginated operator school picker | complete | GitHub issue #71; PR #75 merged as `44af9e8`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Reviewed and merged 2026-10-19 |
-| A-12 Isolated Windows development and full-stack test database | ready for review | PR #76; branch `codex/a-12-isolated-windows-dev`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Implementation explicitly approved 2026-10-19; code review pending |
+| A-12 Isolated Windows development and full-stack test database | complete | PR #76 merged in `d7f9abf`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Reviewed and merged 2026-10-19 |
+| A-13 PostgreSQL and UKOME disposable backup/restore verification | ready for review | Branch `codex/a-13-backup-restore-verification`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Implementation explicitly approved 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -81,6 +82,17 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - Node.js 24.22.0 passed merged-state ESLint, strict TypeScript, all 55 Vitest tests, and the Vite production build without the former single-chunk warning. The changed Vite configuration passes Prettier; repository-wide Prettier still reports the known Windows CRLF mismatch across 48 untouched files, so no unrelated mass formatting was performed.
 - PowerShell syntax validation and A-12 safety regressions passed, including remote/wrong-database rejection, cleanup fail-closed behavior, loopback binding, credential clearing, and environment-example separation.
 - PostgreSQL 17.11 portable binaries were installed in the current user's Scoop directory to execute the local lifecycle; no PostgreSQL Windows service was created. No dependency, lockfile, Flyway migration, shared Supabase resource, production setting, cloud resource, ADMIN bootstrap, or persistent application data was changed.
+
+## Verified A-13 local recovery evidence — 2026-10-19
+
+- Branch `codex/a-13-backup-restore-verification` starts from merged A-12 commit `d7f9abf`. The existing unrelated `.idea/compiler.xml` change is preserved and excluded.
+- The repeatable drill created two separately marked PostgreSQL 17.11 clusters on random loopback ports, applied Flyway V1–V8 only to the source, seeded cross-district same-province relational data, produced and inspected a native custom-format archive, and restored it transactionally with `--no-owner` into the separately verified pristine target.
+- The restored target passed all 13 checks in `10_MIGRATION_VERIFICATION.sql`: exact V1–V8 history, 16-table/three-sequence inventory, RLS/policies, least-privilege grants, protected Flyway history, nullable business name, and the session-expiry index. The runtime role remained unable to read Flyway history, and the seven-object operator/school/coverage/vehicle/offering join returned the single expected restored relationship.
+- Spring Boot started with Flyway disabled and Hibernate `ddl-auto=validate` through the restored runtime role. Readiness, province data, anonymous operator discovery, and the public UKOME tariff read all passed against the restored state.
+- The independent tariff-volume backup contained three files whose relative paths, sizes, and SHA-256 hashes matched source, backup, and restored copies. The production validator read restored version `a13-v2`; rollback created `a13-rollback-v1` while both earlier immutable version files remained byte-for-byte unchanged.
+- The focused tariff recovery test, A-13 PowerShell safety suite, and complete Java 21-targeted Maven verification passed. The full backend suite ran 219 tests with zero failures, errors, or skips and produced the Spring Boot JAR. The safety suite rejects remote/wrong targets, same-instance restores, unsafe cleanup paths, and modified tariff files. The full successful local drill took 47.623 seconds; this disposable measurement is not a production RTO.
+- The first restore attempt failed safely because the custom archive includes `CREATE SCHEMA public` while the pristine target already had the default empty schema. The final drill verifies target identity and zero public tables before removing only that disposable schema; `pg_restore` remains single-transaction and never uses `--clean`.
+- Generated credentials, clusters, logs, archive, manifests, and tariff volumes were deleted after the run. The ignored evidence JSON is written under the backend `target` directory. No shared Supabase resource, cloud service, production setting, migration, dependency, lockfile, or persistent application data was changed.
 
 ## J-04 follow-up verification — 2026-10-19
 

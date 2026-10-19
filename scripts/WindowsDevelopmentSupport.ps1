@@ -80,6 +80,8 @@ function Resolve-SbPostgres17Tools {
             InitDb = Join-Path $candidate 'initdb.exe'
             PgCtl = Join-Path $candidate 'pg_ctl.exe'
             PgIsReady = Join-Path $candidate 'pg_isready.exe'
+            PgDump = Join-Path $candidate 'pg_dump.exe'
+            PgRestore = Join-Path $candidate 'pg_restore.exe'
             Postgres = Join-Path $candidate 'postgres.exe'
             Psql = Join-Path $candidate 'psql.exe'
         }
