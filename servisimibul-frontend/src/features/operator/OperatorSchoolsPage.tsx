@@ -23,19 +23,27 @@ import {
   type Neighborhood,
   type OperatorSchool,
   type School,
+  type SchoolPage,
 } from './operator-api'
 
 export function OperatorSchoolsPage() {
   const navigate = useNavigate()
   const coverageHeadingRef = useRef<HTMLHeadingElement>(null)
+  const schoolRequest = useRef<AbortController | undefined>(undefined)
   const [relationships, setRelationships] = useState<OperatorSchool[]>([])
   const [readiness, setReadiness] = useState<DiscoveryReadiness>()
-  const [schoolResults, setSchoolResults] = useState<School[]>([])
+  const [schoolPage, setSchoolPage] = useState<SchoolPage>()
+  const [schoolRequestParameters, setSchoolRequestParameters] = useState({
+    query: '',
+    page: 0,
+  })
   const [query, setQuery] = useState('')
-  const [selectedSchoolId, setSelectedSchoolId] = useState('')
+  const [selectedSchool, setSelectedSchool] = useState<School>()
   const [editingCoverageId, setEditingCoverageId] = useState<string>()
   const [pendingFocusId, setPendingFocusId] = useState<string>()
   const [loading, setLoading] = useState(true)
+  const [schoolLoading, setSchoolLoading] = useState(true)
+  const [schoolError, setSchoolError] = useState<string>()
   const [pending, setPending] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<{
@@ -45,11 +53,11 @@ export function OperatorSchoolsPage() {
 
   useEffect(() => {
     let active = true
-    void Promise.all([getOperatorSchools(), searchSchools('')])
-      .then(([owned, schools]) => {
-        if (!active) return
-        setRelationships(owned)
-        setSchoolResults(schools)
+    const controller = new AbortController()
+    schoolRequest.current = controller
+    void getOperatorSchools()
+      .then((owned) => {
+        if (active) setRelationships(owned)
       })
       .catch((reason: unknown) => {
         if (!active) return
@@ -57,6 +65,21 @@ export function OperatorSchoolsPage() {
       })
       .finally(() => {
         if (active) setLoading(false)
+      })
+    void searchSchools({ query: '', page: 0, signal: controller.signal })
+      .then((result) => {
+        if (active && !controller.signal.aborted) setSchoolPage(result)
+      })
+      .catch((reason: unknown) => {
+        if (active && !controller.signal.aborted) {
+          setSchoolError(messageFor(reason))
+        }
+      })
+      .finally(() => {
+        if (active && !controller.signal.aborted) setSchoolLoading(false)
+        if (schoolRequest.current === controller) {
+          schoolRequest.current = undefined
+        }
       })
     void getDiscoveryReadiness()
       .then((discoveryReadiness) => {
@@ -70,6 +93,8 @@ export function OperatorSchoolsPage() {
       })
     return () => {
       active = false
+      controller.abort()
+      schoolRequest.current?.abort()
     }
   }, [navigate])
 
@@ -92,21 +117,37 @@ export function OperatorSchoolsPage() {
 
   async function findSchools(event: FormEvent) {
     event.preventDefault()
-    setPending('search')
-    setError(undefined)
+    await loadSchoolPage(0, query)
+  }
+
+  async function loadSchoolPage(page: number, requestedQuery: string) {
+    schoolRequest.current?.abort()
+    const controller = new AbortController()
+    schoolRequest.current = controller
+    const parameters = { query: requestedQuery.trim(), page }
+    setSchoolRequestParameters(parameters)
+    setSchoolLoading(true)
+    setSchoolError(undefined)
+    setSchoolPage(undefined)
     try {
-      setSchoolResults(await searchSchools(query))
-      setSelectedSchoolId('')
+      const result = await searchSchools({
+        ...parameters,
+        signal: controller.signal,
+      })
+      if (schoolRequest.current === controller) setSchoolPage(result)
     } catch (reason) {
-      setError(messageFor(reason))
+      if (!controller.signal.aborted) setSchoolError(messageFor(reason))
     } finally {
-      setPending(undefined)
+      if (schoolRequest.current === controller) {
+        schoolRequest.current = undefined
+        setSchoolLoading(false)
+      }
     }
   }
 
   async function addSchool(event: FormEvent) {
     event.preventDefault()
-    if (!selectedSchoolId) {
+    if (!selectedSchool) {
       setError('Eklemek için bir okul seçin.')
       return
     }
@@ -114,9 +155,9 @@ export function OperatorSchoolsPage() {
     setError(undefined)
     setNotice(undefined)
     try {
-      const created = await addOperatorSchool(selectedSchoolId)
+      const created = await addOperatorSchool(selectedSchool.id)
       setRelationships((current) => [...current, created])
-      setSelectedSchoolId('')
+      setSelectedSchool(undefined)
       setEditingCoverageId(created.id)
       setPendingFocusId(created.id)
       setNotice({
@@ -184,12 +225,21 @@ export function OperatorSchoolsPage() {
     )
   }
 
+  const schoolResults = schoolPage?.content ?? []
   const availableSchools = schoolResults.filter(
     (school) =>
       !relationships.some(
         (relationship) => relationship.schoolId === school.id,
       ),
   )
+  const selectedSchoolOutsidePage =
+    selectedSchool &&
+    !availableSchools.some((school) => school.id === selectedSchool.id)
+      ? selectedSchool
+      : undefined
+  const schoolOptions = selectedSchoolOutsidePage
+    ? [selectedSchoolOutsidePage, ...availableSchools]
+    : availableSchools
   const editingRelationship = relationships.find(
     (relationship) => relationship.id === editingCoverageId,
   )
@@ -258,21 +308,100 @@ export function OperatorSchoolsPage() {
           </label>
           <button
             className="secondary-button"
-            disabled={pending === 'search'}
+            disabled={schoolLoading}
             type="submit"
           >
-            {pending === 'search' ? 'Aranıyor…' : 'Ara'}
+            {schoolLoading ? 'Aranıyor…' : 'Ara'}
           </button>
         </form>
+        <section
+          className="school-results"
+          aria-busy={schoolLoading}
+          aria-live="polite"
+        >
+          {schoolLoading && <InlineLoading label="Okullar aranıyor" />}
+          {!schoolLoading && schoolError && (
+            <div className="school-result-error" role="alert">
+              <span>{schoolError}</span>
+              <button
+                className="text-button"
+                onClick={() =>
+                  void loadSchoolPage(
+                    schoolRequestParameters.page,
+                    schoolRequestParameters.query,
+                  )
+                }
+                type="button"
+              >
+                Tekrar dene
+              </button>
+            </div>
+          )}
+          {!schoolLoading && !schoolError && schoolPage && (
+            <>
+              <div className="school-result-summary">
+                <strong>{schoolPage.totalElements} aktif okul</strong>
+                {schoolPage.totalElements > 0 && (
+                  <span>
+                    Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
+                  </span>
+                )}
+              </div>
+              {schoolPage.totalPages > 1 && (
+                <nav
+                  className="pagination"
+                  aria-label="Okul kataloğu sayfaları"
+                >
+                  <button
+                    className="secondary-button"
+                    disabled={schoolPage.page === 0}
+                    onClick={() =>
+                      void loadSchoolPage(
+                        schoolPage.page - 1,
+                        schoolRequestParameters.query,
+                      )
+                    }
+                    type="button"
+                  >
+                    Önceki sayfa
+                  </button>
+                  <span>
+                    Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
+                  </span>
+                  <button
+                    className="secondary-button"
+                    disabled={schoolPage.page + 1 >= schoolPage.totalPages}
+                    onClick={() =>
+                      void loadSchoolPage(
+                        schoolPage.page + 1,
+                        schoolRequestParameters.query,
+                      )
+                    }
+                    type="button"
+                  >
+                    Sonraki sayfa
+                  </button>
+                </nav>
+              )}
+            </>
+          )}
+        </section>
         <form className="search-row" onSubmit={addSchool}>
           <label className="form-field grow">
             <span>Aktif okul</span>
             <select
-              onChange={(event) => setSelectedSchoolId(event.target.value)}
-              value={selectedSchoolId}
+              disabled={schoolLoading && schoolOptions.length === 0}
+              onChange={(event) =>
+                setSelectedSchool(
+                  schoolOptions.find(
+                    (school) => school.id === event.target.value,
+                  ),
+                )
+              }
+              value={selectedSchool?.id ?? ''}
             >
               <option value="">Okul seçin</option>
-              {availableSchools.map((school) => (
+              {schoolOptions.map((school) => (
                 <option key={school.id} value={school.id}>
                   {school.name} — {school.districtName}
                 </option>
@@ -281,17 +410,19 @@ export function OperatorSchoolsPage() {
           </label>
           <button
             className="primary-button"
-            disabled={pending === 'add' || availableSchools.length === 0}
+            disabled={pending === 'add' || !selectedSchool}
             type="submit"
           >
             {pending === 'add' ? 'Ekleniyor…' : 'Okulu ekle'}
           </button>
         </form>
-        <SchoolCatalogGuidance
-          availableCount={availableSchools.length}
-          query={query}
-          resultCount={schoolResults.length}
-        />
+        {!schoolLoading && !schoolError && schoolPage && (
+          <SchoolCatalogGuidance
+            availableCount={availableSchools.length}
+            page={schoolPage}
+            query={schoolRequestParameters.query}
+          />
+        )}
       </section>
 
       <div className="school-list">
@@ -759,15 +890,15 @@ function CoverageEditor({
 
 function SchoolCatalogGuidance({
   availableCount,
+  page,
   query,
-  resultCount,
 }: {
   availableCount: number
+  page: SchoolPage
   query: string
-  resultCount: number
 }) {
   if (availableCount > 0) return null
-  if (resultCount === 0 && query.trim()) {
+  if (page.totalElements === 0 && query) {
     return (
       <p className="empty-note">
         Bu aramayla eşleşen aktif okul bulunamadı. Okul adını kısaltarak yeniden
@@ -775,17 +906,26 @@ function SchoolCatalogGuidance({
       </p>
     )
   }
-  if (resultCount === 0) {
+  if (page.totalElements === 0) {
     return (
       <p className="empty-note">
-        Pilot okul kataloğu henüz boş. Bir yönetici okul ekledikten sonra burada
-        seçim yapabilirsiniz.
+        Okul kataloğu henüz boş. Bir yönetici okul ekledikten sonra burada seçim
+        yapabilirsiniz.
+      </p>
+    )
+  }
+  if (page.content.length === 0) {
+    return (
+      <p className="empty-note">
+        Bu sayfada okul bulunamadı. Önceki sayfaya dönün veya aramayı yeniden
+        çalıştırın.
       </p>
     )
   }
   return (
     <p className="empty-note">
-      Görüntülenen tüm okullar zaten hizmet ağınıza eklenmiş.
+      Bu sayfadaki tüm okullar zaten hizmet ağınıza eklenmiş. Diğer sayfalara
+      geçebilir veya okul adıyla arayabilirsiniz.
     </p>
   )
 }

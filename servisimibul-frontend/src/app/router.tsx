@@ -12,24 +12,7 @@ import {
 } from '../components/route-states'
 import { ApiError } from '../api/client'
 import { PublicDiscoveryPage } from '../features/discovery/PublicDiscoveryPage'
-import {
-  LoginPage,
-  RegisterPage,
-  VerifyEmailPage,
-} from '../features/auth/AuthPages'
 import { currentUser } from '../features/auth/auth-api'
-import {
-  AdminApplicationDetailPage,
-  AdminApplicationsPage,
-} from '../features/admin/AdminApplicationsPage'
-import { AdminSchoolsPage } from '../features/admin/AdminSchoolsPage'
-import { AdminTariffsPage } from '../features/admin/AdminTariffsPage'
-import { AdminWorkspaceLayout } from '../features/admin/AdminWorkspaceLayout'
-import { OperatorOverviewPage } from '../features/operator/OperatorOverviewPage'
-import { OperatorProfilePage } from '../features/operator/OperatorProfilePage'
-import { OperatorSchoolsPage } from '../features/operator/OperatorSchoolsPage'
-import { OperatorOfferingsPage } from '../features/operator/OperatorOfferingsPage'
-import { OperatorWorkspaceLayout } from '../features/operator/OperatorWorkspaceLayout'
 
 export const routes: RouteObject[] = [
   {
@@ -38,30 +21,80 @@ export const routes: RouteObject[] = [
     ErrorBoundary: RouteErrorPage,
     children: [
       { index: true, Component: PublicDiscoveryPage },
-      { path: 'operator/register', Component: RegisterPage },
-      { path: 'operator/verify-email', Component: VerifyEmailPage },
-      { path: 'operator/login', Component: LoginPage },
+      {
+        path: 'operator/register',
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages')).RegisterPage,
+        }),
+      },
+      {
+        path: 'operator/verify-email',
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages'))
+            .VerifyEmailPage,
+        }),
+      },
+      {
+        path: 'operator/login',
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages')).LoginPage,
+        }),
+      },
     ],
   },
   {
     id: 'operator',
     path: '/operator',
     loader: operatorLoader,
-    Component: OperatorWorkspaceLayout,
+    lazy: async () => ({
+      Component: (await import('../features/operator/OperatorWorkspaceLayout'))
+        .OperatorWorkspaceLayout,
+    }),
     ErrorBoundary: RouteErrorPage,
     HydrateFallback: LoadingPage,
     children: [
-      { index: true, Component: OperatorOverviewPage },
-      { path: 'profile', Component: OperatorProfilePage },
-      { path: 'schools', Component: OperatorSchoolsPage },
-      { path: 'offerings', Component: OperatorOfferingsPage },
+      {
+        index: true,
+        lazy: async () => ({
+          Component: (await import('../features/operator/OperatorOverviewPage'))
+            .OperatorOverviewPage,
+        }),
+      },
+      {
+        path: 'profile',
+        lazy: async () => ({
+          Component: (await import('../features/operator/OperatorProfilePage'))
+            .OperatorProfilePage,
+        }),
+      },
+      {
+        path: 'schools',
+        lazy: async () => ({
+          Component: (await import('../features/operator/OperatorSchoolsPage'))
+            .OperatorSchoolsPage,
+        }),
+      },
+      {
+        path: 'offerings',
+        lazy: async () => ({
+          Component: (
+            await import('../features/operator/OperatorOfferingsPage')
+          ).OperatorOfferingsPage,
+        }),
+      },
     ],
   },
   {
     id: 'admin',
     path: '/admin',
     loader: adminLoader,
-    Component: AdminWorkspaceLayout,
+    lazy: async () => ({
+      Component: (await import('../features/admin/AdminWorkspaceLayout'))
+        .AdminWorkspaceLayout,
+    }),
     ErrorBoundary: RouteErrorPage,
     HydrateFallback: LoadingPage,
     children: [
@@ -70,13 +103,34 @@ export const routes: RouteObject[] = [
         loader: () => redirect('/admin/applications'),
         Component: () => null,
       },
-      { path: 'applications', Component: AdminApplicationsPage },
+      {
+        path: 'applications',
+        lazy: async () => ({
+          Component: (await import('../features/admin/AdminApplicationsPage'))
+            .AdminApplicationsPage,
+        }),
+      },
       {
         path: 'applications/:applicationId',
-        Component: AdminApplicationDetailPage,
+        lazy: async () => ({
+          Component: (await import('../features/admin/AdminApplicationsPage'))
+            .AdminApplicationDetailPage,
+        }),
       },
-      { path: 'schools', Component: AdminSchoolsPage },
-      { path: 'tariffs', Component: AdminTariffsPage },
+      {
+        path: 'schools',
+        lazy: async () => ({
+          Component: (await import('../features/admin/AdminSchoolsPage'))
+            .AdminSchoolsPage,
+        }),
+      },
+      {
+        path: 'tariffs',
+        lazy: async () => ({
+          Component: (await import('../features/admin/AdminTariffsPage'))
+            .AdminTariffsPage,
+        }),
+      },
     ],
   },
   { path: '*', Component: NotFoundPage },
