@@ -118,4 +118,8 @@ SELECT md5('a08-offering-coverage-' || (((offering.value - 1) * 3) + item.value)
 FROM generate_series(1, 4000) AS offering(value)
 CROSS JOIN generate_series(1, 3) AS item(value);
 
-ANALYZE;
+-- Restrict statistics refresh to synthetic workload tables. The runtime test role
+-- must not attempt to analyze system catalogs or protected application tables.
+ANALYZE province, district, neighborhood, school, app_user, operator_profile,
+        operator_school, operator_school_coverage, vehicle, service_offering,
+        service_offering_coverage;
