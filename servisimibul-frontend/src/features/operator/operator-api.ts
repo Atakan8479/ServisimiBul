@@ -203,14 +203,22 @@ export function removeOperatorSchool(id: string): Promise<void> {
   })
 }
 
-export function getDistricts(provinceId: number): Promise<District[]> {
+export function getDistricts(
+  provinceId: number,
+  signal?: AbortSignal,
+): Promise<District[]> {
   return apiRequest(`/districts?provinceId=${provinceId}`, {
+    signal,
     schema: z.array(districtSchema),
   })
 }
 
-export function getNeighborhoods(districtId: number): Promise<Neighborhood[]> {
+export function getNeighborhoods(
+  districtId: number,
+  signal?: AbortSignal,
+): Promise<Neighborhood[]> {
   return apiRequest(`/neighborhoods?districtId=${districtId}`, {
+    signal,
     schema: z.array(neighborhoodSchema),
   })
 }
