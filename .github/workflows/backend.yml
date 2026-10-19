@@ -1,13 +1,10 @@
 name: Backend
 
 on:
+  # Main protection requires this check on every pull request. Keep this
+  # unfiltered so documentation-only and repository-only changes cannot leave
+  # the required check pending forever.
   pull_request:
-    paths:
-      - "servisimibul-backend/**"
-      - "scripts/Test-BackendDeploymentSmoke*.ps1"
-      - "docs/07_BACKEND_DEPLOYMENT.md"
-      - "docs/10_MIGRATION_VERIFICATION.sql"
-      - ".github/workflows/backend.yml"
   push:
     branches: [main]
     paths:
@@ -22,6 +19,7 @@ permissions:
 
 jobs:
   test:
+    name: Backend
     runs-on: ubuntu-latest
     timeout-minutes: 10
     services:
