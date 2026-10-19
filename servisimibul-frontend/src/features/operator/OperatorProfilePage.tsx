@@ -169,13 +169,15 @@ export function OperatorProfilePage() {
   return (
     <section className="workspace-page">
       <p className="eyebrow">
-        {user.operatorApprovalRequired ? 'Profil ve başvuru' : 'Pilot profili'}
+        {user.operatorApprovalRequired
+          ? 'Profil ve başvuru'
+          : 'İşletmeci profili'}
       </p>
       <h1>İşletme bilgileriniz</h1>
       <p className="page-lead">
         {user.operatorApprovalRequired
           ? 'İletişim telefonu onaydan sonra velilere açık olarak gösterilir.'
-          : 'Yönetici onayı pilotta kapalıdır; diğer görünürlük koşulları aynen uygulanır.'}
+          : 'Profiliniz için yönetici onayı gerekmiyor; diğer görünürlük koşulları aynen uygulanır.'}
       </p>
 
       {profile && user.operatorApprovalRequired && (
@@ -188,7 +190,7 @@ export function OperatorProfilePage() {
       )}
       {profile && !user.operatorApprovalRequired && (
         <div className="status-banner success" role="status">
-          <strong>Pilot modu etkin</strong>
+          <strong>Yönetici onayı gerekmiyor</strong>
           <span>
             Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.
           </span>

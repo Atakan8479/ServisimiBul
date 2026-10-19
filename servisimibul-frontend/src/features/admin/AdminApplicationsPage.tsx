@@ -58,7 +58,7 @@ export function AdminApplicationsPage() {
       <p className="eyebrow">
         {user.operatorApprovalRequired
           ? 'Başvuru yönetimi'
-          : 'Pilot moderasyonu'}
+          : 'İşletmeci yönetimi'}
       </p>
       <h1>
         {user.operatorApprovalRequired
@@ -68,7 +68,7 @@ export function AdminApplicationsPage() {
       <p className="page-lead">
         {user.operatorApprovalRequired
           ? 'Başvuruları durumuna göre inceleyin ve gerekli işlemi uygulayın.'
-          : 'Pilot işletmecilerini başvuru beklemeden izleyin ve gerektiğinde askıya alın.'}
+          : 'İşletmecileri başvuru beklemeden izleyin ve gerektiğinde askıya alın.'}
       </p>
 
       {user.operatorApprovalRequired && (
@@ -263,7 +263,9 @@ export function AdminApplicationDetailPage() {
           : 'İşletmecilere dön'}
       </Link>
       <p className="eyebrow">
-        {user.operatorApprovalRequired ? 'Başvuru detayı' : 'Pilot moderasyonu'}
+        {user.operatorApprovalRequired
+          ? 'Başvuru detayı'
+          : 'İşletmeci yönetimi'}
       </p>
       <h1>{profile?.businessName || 'İsimsiz işletme'}</h1>
 

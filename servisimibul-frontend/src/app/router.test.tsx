@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
   RouterProvider,
   createMemoryRouter,
@@ -167,9 +167,11 @@ describe('application routes', () => {
       ).not.toBeInTheDocument()
       fireEvent.click(screen.getByRole('link', { name: 'Giriş' }))
 
-      expect(
-        await screen.findByRole('heading', { name: 'Hoş geldiniz' }),
-      ).toBeInTheDocument()
+      const loginHeading = await screen.findByRole('heading', {
+        name: 'Hoş geldiniz',
+      })
+      await waitFor(() => expect(loginHeading).toHaveFocus())
+      expect(document.title).toBe('Giriş | ServisimiBul')
       expect(startViewTransition).toHaveBeenCalledOnce()
     } finally {
       Reflect.deleteProperty(document, 'startViewTransition')

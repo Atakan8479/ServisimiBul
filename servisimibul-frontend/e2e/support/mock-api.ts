@@ -159,6 +159,11 @@ export async function installMockApi(page: Page, state: MockApiState) {
         json(route, pageResponse([profile(state)], 20)),
       )
     }
+    if (path === '/admin/schools' && method === 'GET') {
+      return requireRole(route, role, 'ADMIN', () =>
+        json(route, pageResponse([school()], 20)),
+      )
+    }
     if (path === `/admin/operators/${operatorId}` && method === 'GET') {
       return requireRole(route, role, 'ADMIN', () =>
         json(route, applicationDetail(state)),
