@@ -1380,9 +1380,54 @@ button:disabled {
 }
 
 .district-groups legend {
+  width: 100%;
   padding: 0 0.4rem;
+}
+
+.district-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+  border: 0;
+  padding: 0.25rem 0;
+  background: transparent;
   color: var(--color-accent);
+  font: inherit;
   font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.district-toggle span:last-child,
+.district-selection-summary {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  font-weight: 650;
+}
+
+.district-selection-summary {
+  margin: 0.35rem 0 0;
+}
+
+.district-panel {
+  margin-top: 0.85rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.district-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.75rem 0;
+}
+
+.district-load-error p {
+  margin: 0;
 }
 
 .neighborhood-grid {

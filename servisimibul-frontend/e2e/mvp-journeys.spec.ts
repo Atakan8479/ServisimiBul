@@ -126,8 +126,16 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     ).toBeFocused()
     await operatorPage
       .getByRole('group', { name: 'Kadıköy' })
+      .getByRole('button', { name: 'Kadıköy' })
+      .click()
+    await operatorPage
+      .getByRole('group', { name: 'Kadıköy' })
       .getByRole('checkbox', { name: 'Moda' })
       .check()
+    await operatorPage
+      .getByRole('group', { name: 'Üsküdar' })
+      .getByRole('button', { name: 'Üsküdar' })
+      .click()
     await operatorPage
       .getByRole('group', { name: 'Üsküdar' })
       .getByRole('checkbox', { name: 'Acıbadem' })

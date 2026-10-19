@@ -419,47 +419,141 @@ function CoverageEditor({
   relationship: OperatorSchool
   onSaved: (updated: OperatorSchool) => void
 }) {
-  const [groups, setGroups] = useState<
-    { district: District; neighborhoods: Neighborhood[] }[]
-  >([])
+  const [districts, setDistricts] = useState<District[]>([])
+  const [districtLoadState, setDistrictLoadState] = useState<
+    'loading' | 'loaded' | 'error'
+  >('loading')
+  const [districtError, setDistrictError] = useState<string>()
+  const [districtRetry, setDistrictRetry] = useState(0)
+  const [expandedDistrictIds, setExpandedDistrictIds] = useState<Set<number>>(
+    () => new Set(),
+  )
+  const [neighborhoodsByDistrict, setNeighborhoodsByDistrict] = useState<
+    Record<
+      number,
+      {
+        status: 'loading' | 'loaded' | 'error'
+        neighborhoods: Neighborhood[]
+        error?: string
+      }
+    >
+  >({})
   const [selected, setSelected] = useState(
     () => new Set(relationship.coverage.map((item) => item.neighborhoodId)),
   )
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string>()
+  const neighborhoodRequests = useRef(new Map<number, AbortController>())
 
   useEffect(() => {
-    let active = true
-    // shortcut: this loads one request per district; use a province endpoint if catalog scale makes this costly.
-    void getDistricts(relationship.schoolProvinceId)
-      .then((districts) =>
-        Promise.all(
-          districts.map(async (district) => ({
-            district,
-            neighborhoods: await getNeighborhoods(district.id),
-          })),
-        ),
-      )
+    const controller = new AbortController()
+    const requestMap = neighborhoodRequests.current
+    void getDistricts(relationship.schoolProvinceId, controller.signal)
       .then((result) => {
-        if (active) setGroups(result)
+        if (controller.signal.aborted) return
+        setDistricts(result)
+        setDistrictLoadState('loaded')
       })
       .catch((reason: unknown) => {
-        if (active) setError(messageFor(reason))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
+        if (controller.signal.aborted) return
+        setDistrictError(messageFor(reason))
+        setDistrictLoadState('error')
       })
     return () => {
-      active = false
+      controller.abort()
+      requestMap.forEach((request) => request.abort())
+      requestMap.clear()
     }
-  }, [relationship.schoolProvinceId])
+  }, [districtRetry, relationship.schoolProvinceId])
 
   const selectedCount = selected.size
-  const allNeighborhoodIds = useMemo(
-    () => groups.flatMap((group) => group.neighborhoods.map((item) => item.id)),
-    [groups],
-  )
+  const neighborhoodDetails = useMemo(() => {
+    const details = new Map<number, { districtId: number; name: string }>()
+    relationship.coverage.forEach((item) =>
+      details.set(item.neighborhoodId, {
+        districtId: item.districtId,
+        name: item.neighborhoodName,
+      }),
+    )
+    Object.values(neighborhoodsByDistrict).forEach((result) =>
+      result.neighborhoods.forEach((item) =>
+        details.set(item.id, {
+          districtId: item.districtId,
+          name: item.name,
+        }),
+      ),
+    )
+    return details
+  }, [neighborhoodsByDistrict, relationship.coverage])
+
+  const selectedByDistrict = useMemo(() => {
+    const result = new Map<number, { id: number; name: string }[]>()
+    selected.forEach((id) => {
+      const details = neighborhoodDetails.get(id)
+      if (!details) return
+      const items = result.get(details.districtId) ?? []
+      items.push({ id, name: details.name })
+      result.set(details.districtId, items)
+    })
+    result.forEach((items) =>
+      items.sort((left, right) => left.name.localeCompare(right.name, 'tr-TR')),
+    )
+    return result
+  }, [neighborhoodDetails, selected])
+
+  function loadNeighborhoods(districtId: number) {
+    if (
+      neighborhoodsByDistrict[districtId]?.status === 'loaded' ||
+      neighborhoodRequests.current.has(districtId)
+    ) {
+      return
+    }
+
+    const controller = new AbortController()
+    neighborhoodRequests.current.set(districtId, controller)
+    setNeighborhoodsByDistrict((current) => ({
+      ...current,
+      [districtId]: {
+        status: 'loading',
+        neighborhoods: current[districtId]?.neighborhoods ?? [],
+      },
+    }))
+    void getNeighborhoods(districtId, controller.signal)
+      .then((neighborhoods) => {
+        if (controller.signal.aborted) return
+        setNeighborhoodsByDistrict((current) => ({
+          ...current,
+          [districtId]: { status: 'loaded', neighborhoods },
+        }))
+      })
+      .catch((reason: unknown) => {
+        if (controller.signal.aborted) return
+        setNeighborhoodsByDistrict((current) => ({
+          ...current,
+          [districtId]: {
+            status: 'error',
+            neighborhoods: [],
+            error: messageFor(reason),
+          },
+        }))
+      })
+      .finally(() => {
+        if (neighborhoodRequests.current.get(districtId) === controller) {
+          neighborhoodRequests.current.delete(districtId)
+        }
+      })
+  }
+
+  function toggleDistrict(districtId: number) {
+    const willExpand = !expandedDistrictIds.has(districtId)
+    setExpandedDistrictIds((current) => {
+      const next = new Set(current)
+      if (next.has(districtId)) next.delete(districtId)
+      else next.add(districtId)
+      return next
+    })
+    if (willExpand) loadNeighborhoods(districtId)
+  }
 
   function toggle(id: number) {
     setSelected((current) => {
@@ -504,71 +598,161 @@ function CoverageEditor({
         </div>
         <span className="count-badge">{selectedCount} seçili</span>
       </div>
-      {loading ? (
-        <InlineLoading label="Mahalleler yükleniyor" />
-      ) : (
-        <>
-          <div className="coverage-toolbar">
-            <button
-              className="text-button"
-              onClick={() => setSelected(new Set(allNeighborhoodIds))}
-              type="button"
-            >
-              Tümünü seç
-            </button>
-            <button
-              className="text-button"
-              onClick={() => setSelected(new Set())}
-              type="button"
-            >
-              Seçimi temizle
-            </button>
-          </div>
-          <div className="district-groups">
-            {groups.length === 0 && (
-              <div className="empty-state compact-empty">
-                <h4>Mahalle kataloğu henüz boş</h4>
-                <p>
-                  Bu il için mahalle verisi eklenmeden hizmet kapsamı seçilemez.
-                </p>
-              </div>
-            )}
-            {groups.map(({ district, neighborhoods }) => (
-              <fieldset key={district.id}>
-                <legend>{district.name}</legend>
-                <div className="neighborhood-grid">
-                  {neighborhoods.map((neighborhood) => (
-                    <label
-                      className="checkbox-row compact"
-                      key={neighborhood.id}
-                    >
-                      <input
-                        checked={selected.has(neighborhood.id)}
-                        onChange={() => toggle(neighborhood.id)}
-                        type="checkbox"
-                      />
-                      <span>{neighborhood.name}</span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
-            ))}
-          </div>
-          {error && (
-            <div className="form-error" role="alert">
-              {error}
-            </div>
-          )}
+      {districtLoadState === 'loading' && (
+        <InlineLoading label="İlçeler yükleniyor" />
+      )}
+      {districtLoadState === 'error' && (
+        <div className="district-load-error" role="alert">
+          <p>{districtError}</p>
           <button
-            className="primary-button"
-            disabled={saving}
-            onClick={save}
+            className="secondary-button"
+            onClick={() => {
+              setDistrictLoadState('loading')
+              setDistrictError(undefined)
+              setDistrictRetry((current) => current + 1)
+            }}
             type="button"
           >
-            {saving ? 'Kaydediliyor…' : 'Kapsamı kaydet'}
+            İlçeleri yeniden dene
           </button>
-        </>
+        </div>
       )}
+      {districtLoadState === 'loaded' && (
+        <div className="district-groups">
+          {districts.length === 0 && (
+            <div className="empty-state compact-empty">
+              <h4>Mahalle kataloğu henüz boş</h4>
+              <p>
+                Bu il için mahalle verisi eklenmeden hizmet kapsamı seçilemez.
+              </p>
+            </div>
+          )}
+          {districts.map((district) => {
+            const expanded = expandedDistrictIds.has(district.id)
+            const loadResult = neighborhoodsByDistrict[district.id]
+            const districtSelection = selectedByDistrict.get(district.id) ?? []
+            const panelId = `district-${relationship.id}-${district.id}`
+            const countId = `${panelId}-count`
+            return (
+              <fieldset aria-label={district.name} key={district.id}>
+                <legend>
+                  <button
+                    aria-controls={panelId}
+                    aria-describedby={countId}
+                    aria-expanded={expanded}
+                    aria-label={district.name}
+                    className="district-toggle"
+                    onClick={() => toggleDistrict(district.id)}
+                    type="button"
+                  >
+                    <span>{district.name}</span>
+                    <span id={countId}>{districtSelection.length} seçili</span>
+                  </button>
+                </legend>
+                {districtSelection.length > 0 && (
+                  <p className="district-selection-summary">
+                    Seçili:{' '}
+                    {districtSelection.map((item) => item.name).join(', ')}
+                  </p>
+                )}
+                {expanded && (
+                  <div className="district-panel" id={panelId}>
+                    {(!loadResult || loadResult.status === 'loading') && (
+                      <InlineLoading
+                        label={`${district.name} mahalleleri yükleniyor`}
+                      />
+                    )}
+                    {loadResult?.status === 'error' && (
+                      <div className="district-load-error" role="alert">
+                        <p>{loadResult.error}</p>
+                        <button
+                          className="secondary-button"
+                          onClick={() => loadNeighborhoods(district.id)}
+                          type="button"
+                        >
+                          Yeniden dene
+                        </button>
+                      </div>
+                    )}
+                    {loadResult?.status === 'loaded' && (
+                      <>
+                        {loadResult.neighborhoods.length === 0 ? (
+                          <p className="empty-note">
+                            Bu ilçede seçilebilecek mahalle bulunamadı.
+                          </p>
+                        ) : (
+                          <>
+                            <div className="coverage-toolbar">
+                              <button
+                                className="text-button"
+                                onClick={() =>
+                                  setSelected((current) => {
+                                    const next = new Set(current)
+                                    loadResult.neighborhoods.forEach((item) =>
+                                      next.add(item.id),
+                                    )
+                                    return next
+                                  })
+                                }
+                                type="button"
+                              >
+                                Bu ilçenin tümünü seç
+                              </button>
+                              <button
+                                className="text-button"
+                                onClick={() =>
+                                  setSelected((current) => {
+                                    const next = new Set(current)
+                                    districtSelection.forEach((item) =>
+                                      next.delete(item.id),
+                                    )
+                                    return next
+                                  })
+                                }
+                                type="button"
+                              >
+                                Bu ilçenin seçimini temizle
+                              </button>
+                            </div>
+                            <div className="neighborhood-grid">
+                              {loadResult.neighborhoods.map((neighborhood) => (
+                                <label
+                                  className="checkbox-row compact"
+                                  key={neighborhood.id}
+                                >
+                                  <input
+                                    checked={selected.has(neighborhood.id)}
+                                    onChange={() => toggle(neighborhood.id)}
+                                    type="checkbox"
+                                  />
+                                  <span>{neighborhood.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </fieldset>
+            )
+          })}
+        </div>
+      )}
+      {error && (
+        <div className="form-error" role="alert">
+          {error}
+        </div>
+      )}
+      <button
+        className="primary-button"
+        disabled={saving || districtLoadState === 'loading'}
+        onClick={save}
+        type="button"
+      >
+        {saving ? 'Kaydediliyor…' : 'Kapsamı kaydet'}
+      </button>
     </section>
   )
 }

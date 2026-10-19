@@ -1,7 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — J-04 repository protection and documentation reconciliation
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-04 is reconciling the repository record and preparing unique required checks plus a no-bypass `main` ruleset; live protection activation and verification are still pending.
+## Current stage: Post-MVP follow-up — J-04 pending activation; B-16 ready for review
+
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-04 live protection activation and verification remain pending. B-16 now loads operator coverage neighborhoods only for expanded districts and is locally verified on its feature branch.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -49,6 +50,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-13 Searchable and sortable school results | complete | GitHub issue #58; PR #64 merged as `0ffadfe`; final Backend `39174222379`, Frontend `39174222316`, and Secret scan `39174222353` workflows passed | Merged 2026-10-19 |
 | B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
 | J-04 Repository protection and documentation reconciliation | in progress | GitHub issue #65; read-only API audit found unprotected `main`, zero rulesets, ambiguous `test` check names, and no submitted reviews on PRs #60/#62/#63/#64 | Local implementation approved 2026-10-19; remote ruleset activation pending explicit approval |
+| B-16 Lazy operator coverage selection | ready for review | GitHub issue #67; branch `codex/b-16-lazy-neighborhood-coverage`; local lint, typecheck, 52 Vitest tests, production build, and 6 Playwright tests passed | Task selected from Onat's assigned P0 efficiency work, 2026-10-19; review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -73,6 +75,13 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - GitHub Actions for PR #73 head `c4c6a533bb1755d75ac9d42aa6ca078e25401aa5` passed: Backend run `39224801159`, Frontend run `39224800963`, and Secret scan run `39224801015`. The Frontend job's `npm run test:e2e` step succeeded in CI. Two earlier local Windows Playwright start-up stalls remain local-only observations, not evidence of an E2E failure in CI.
 - A read-only SQL query against the ACTIVE_HEALTHY shared ServisimiBul Supabase project on 2026-10-19 returned `province=1`, `district=39`, `neighborhood=963`, `school=1`. Earlier documentation claiming all four catalog tables were empty was stale. Row provenance/import authorship has not been established by this count query. No shared database writes or migrations were performed.
 - J-04's branch protection policy is still a proposal. CI success and this documentation update do not establish live ruleset activation; a separate owner-approved settings change and post-write API verification remain outstanding.
+
+## Verified B-16 local evidence — 2026-10-19
+
+- The operator school coverage editor now loads the province's district list first and requests a district's neighborhoods only when that district is expanded. Reopening an already loaded district reuses its data, and in-flight requests are cancelled when the editor is replaced or unmounted.
+- Previously saved selections remain visible and are included when saving even if their districts were never opened. Selection and clearing actions are district-scoped, and each district has independent loading, empty, error, and retry states.
+- Focused coverage tests verify zero neighborhood requests on editor open, one request for the opened district, no duplicate request on collapse/reopen, preservation of unopened coverage, district retry, cancellation during school switching, and per-school selection isolation. The full frontend suite passed ESLint, strict TypeScript, all 52 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the 13-journey MVP flow.
+- Repository-wide Prettier still reports 28 pre-existing files outside the B-16 change; all five B-16 application/test files pass scoped Prettier and `git diff --check`. No dependency, backend, API contract, migration, shared Supabase resource, credential, or production setting was changed.
 
 ## Verified J-04 baseline evidence — 2026-10-19
 
