@@ -8,6 +8,8 @@ ServisimiBul is a school transportation operator discovery platform. The reposit
 - [`codex/prompts/`](codex/prompts/) — reusable onboarding prompts for new Codex sessions; not application code.
 - [`.github/workflows/backend.yml`](.github/workflows/backend.yml) — isolated PostgreSQL 17 backend CI.
 - [`.github/workflows/frontend.yml`](.github/workflows/frontend.yml) — Node.js 24 frontend formatting, lint, type-check, test, and build CI.
+- [`.github/workflows/secret-scan.yml`](.github/workflows/secret-scan.yml) — full-history pull-request and `main` secret scanning.
+- [`docs/12_REPOSITORY_PROTECTION.md`](docs/12_REPOSITORY_PROTECTION.md) — protected-branch policy and the two-developer review/merge workflow.
 
 For the Java package map and the recommended reading order, see the [backend README](servisimibul-backend/README.md#code-map).
 
