@@ -26,6 +26,18 @@ Backend and Frontend intentionally run on every pull request, including document
 
 Third-party actions are pinned to full commit SHAs. Updating an action requires a reviewed pull request that records the upstream release represented by the new SHA.
 
+## Verified PR #73 CI and local E2E troubleshooting — 2026-10-19
+
+The PR head `c4c6a533bb1755d75ac9d42aa6ca078e25401aa5` completed all three GitHub Actions jobs successfully: Backend `39224801159`, Frontend `39224800963`, and Secret scan `39224801015`. The Frontend job successfully ran `npm run test:e2e` after installing Chromium. This verifies CI execution of the named checks on that commit; any later commit to the PR needs its own successful checks. Local Windows Playwright attempts previously stalled while waiting for Vite, but that did not reproduce in CI.
+
+If Playwright stalls on a developer's Windows machine, diagnose locally without changing production behavior:
+
+1. Confirm Node.js 24 and run `npm ci` from `servisimibul-frontend`.
+2. Start `npm run dev -- --host 127.0.0.1 --port 4173` in a separate terminal and inspect the actual startup error, if any.
+3. Check that `http://127.0.0.1:4173` is reachable before executing `npm run test:e2e` in another terminal.
+4. Check for a port collision or endpoint blocked by local security software; collect Vite/Playwright stdout and stderr. Do not claim a passing local E2E run without its output.
+5. Recheck the latest PR-head GitHub Actions results before merge. Do not weaken or skip the mandatory Frontend CI check to work around a local-only failure.
+
 ## Target `main` ruleset
 
 Create one active branch ruleset targeting the repository default branch with no bypass actors:
