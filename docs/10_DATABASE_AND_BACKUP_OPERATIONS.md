@@ -1,6 +1,6 @@
-# A-09 database and backup operations
+# A-09 database and backup operations, verified locally by A-13
 
-Originally verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. Repository evidence records the later approved V8 migration and rolled-back post-migration audit on 2026-10-17. This documentation follow-up performs no new Supabase audit. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
+Originally verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. Repository evidence records the later approved V8 migration and rolled-back post-migration audit on 2026-10-17. A-13 exercised the logical database and tariff procedures only against disposable loopback PostgreSQL 17.11 environments on 2026-10-19; it performed no new Supabase audit. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
 
 ## Current operational baseline
 
@@ -106,9 +106,20 @@ Supabase managed backups and application-owned logical exports solve different p
 - A native PostgreSQL 17 custom-format dump is the Docker-free application-schema backup path for this project. It is not a complete clone of every Supabase platform feature.
 - Supabase Storage objects are not part of database backups. ServisimiBul currently does not use Supabase Storage for tariffs or application uploads.
 - Database backups do not preserve custom role passwords. Rebind/rotate runtime credentials after a managed restore and re-verify grants.
-- A backup is not considered recoverable until a separately approved restore drill has succeeded. A-09 did not perform such a drill, so no measured RTO is claimed.
+- A backup is not considered recoverable until a separately approved restore drill has succeeded. A-13 now proves the repository procedure in disposable local environments; its 47.623-second run is not a production RTO and does not prove a shared Supabase restore.
 
-Official references checked on 2026-10-16: [Supabase backups](https://supabase.com/docs/guides/platform/backups), [Supabase CLI database dump](https://supabase.com/docs/reference/cli/supabase-db-dump), [Supabase backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore), and [PostgreSQL 17 backup and restore](https://www.postgresql.org/docs/17/backup.html).
+Official references rechecked on 2026-10-19: [Supabase backups](https://supabase.com/docs/guides/platform/backups), [Supabase CLI database dump](https://supabase.com/docs/reference/cli/supabase-db-dump), [Supabase backup/restore guide](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore), and [PostgreSQL 17 backup and restore](https://www.postgresql.org/docs/17/backup.html).
+
+### Repeatable disposable recovery drill
+
+From the repository root on Windows with Java 21+, PowerShell 7, and native PostgreSQL 17 tools available:
+
+```powershell
+.\scripts\Test-BackupRestore.Tests.ps1
+.\scripts\Test-BackupRestore.ps1
+```
+
+The drill refuses non-loopback or same-instance targets. It creates all database, archive, log, and tariff state under uniquely named `%TEMP%` directories, verifies source and target identities, restores only into a separately provisioned empty target, and deletes the temporary state in `finally`. A sanitized evidence summary is written to the ignored `servisimibul-backend/target/a13-backup-restore-evidence.json`. Supplying `-JavaHome`, `-PostgresBin`, or `-EvidencePath` overrides discovery/output without changing the safety gates. Never point this local drill at Supabase or another existing database.
 
 ### Docker-free logical backup
 
@@ -121,7 +132,7 @@ $backupDirectory = Join-Path $env:SB_BACKUP_ROOT "database-$stamp"
 New-Item -ItemType Directory -Path $backupDirectory -ErrorAction Stop | Out-Null
 $archive = Join-Path $backupDirectory 'servisimibul-public.pgdump'
 
-& pg_dump.exe --format=custom --compress=9 --schema=public --no-owner `
+& pg_dump.exe --format=custom --compress=9 --schema=public `
   --file $archive
 if ($LASTEXITCODE -ne 0) { throw 'pg_dump failed' }
 
@@ -133,7 +144,7 @@ Get-FileHash -Algorithm SHA256 -LiteralPath $archive |
   Export-Csv -NoTypeInformation -LiteralPath "$archive.sha256.csv"
 ```
 
-Keep ACL statements so application grants can be reconstructed; `--no-owner` avoids coupling recovery to the source owner. The recovery target must have required roles such as `servisimibul_app`, `anon`, and `authenticated` before restoration. Store the archive and checksum encrypted on a different failure domain, restrict access, and record the source project, PostgreSQL version, Flyway version, timestamp, and retention class in a separate non-secret inventory.
+Keep ACL statements so application grants can be reconstructed. For custom archives, apply `--no-owner` to `pg_restore`; ownership selection at dump time is not used. The recovery target must have required roles such as `servisimibul_app`, `anon`, and `authenticated` before restoration. Store the archive and checksum encrypted on a different failure domain, restrict access, and record the source project, PostgreSQL version, Flyway version, timestamp, and retention class in a separate non-secret inventory.
 
 Minimum pilot policy: create an export before every approved migration and at least once per 24 hours while irreplaceable data exists; keep enough independent copies to cover the agreed recovery window. Retention deletion is a separate reviewed operation—never make an untested cleanup command part of the backup job.
 
@@ -150,7 +161,7 @@ The official Supabase CLI dump/restore guide uses Docker for its containerized P
 7. Rebind or rotate custom-role passwords and application secrets. Switch traffic only after the recovery owner signs off.
 8. Record actual recovery point, data loss, duration, failures, and follow-up work.
 
-For a Supabase managed restore, use the Dashboard backup/PITR workflow available to the project plan. It restores in place and causes downtime. Confirm the project reference and recovery point twice, expect temporary unavailability, and re-verify role passwords plus any external Storage objects afterward. A real managed or logical restore remains outside A-09 until separately approved.
+For a Supabase managed restore, use the Dashboard backup/PITR workflow available to the project plan. It restores in place and causes downtime. Confirm the project reference and recovery point twice, expect temporary unavailability, and re-verify role passwords plus any external Storage objects afterward. A shared, managed, or production-like restore remains separately approval-gated; A-13 proves only the disposable local procedure.
 
 ## Tariff backup, restore, and rollback
 
@@ -255,4 +266,4 @@ Record the observation date, dashboard period, current value, trend, threshold, 
 9. Restore traffic gradually, monitor errors/latency/connections/cost, communicate actual data loss, and retain the replaced target until sign-off.
 10. Rotate temporary credentials, close access, document actual RPO/RTO, and schedule corrective work plus the next restore drill.
 
-The operational objective is a database recovery point no older than 24 hours once irreplaceable pilot data exists, plus a tariff backup after every approved tariff change. Recovery time remains unvalidated until a separately approved restore exercise is completed.
+The operational objective is a database recovery point no older than 24 hours once irreplaceable pilot data exists, plus a tariff backup after every approved tariff change. A-13 measured 47.623 seconds for its small disposable fixture; production recovery time remains unvalidated until an environment-representative, separately approved exercise is completed.

@@ -35,6 +35,8 @@ B-10 completes the conditional operator-approval policy, persona/ownership/CSRF/
 
 A-12 replaces the Windows combined launcher's shared-database dependency with a disposable loopback PostgreSQL 17 cluster. It owns generated local credentials, one-shot Flyway migration, restricted runtime startup, environment-example separation, automated cleanup, a full-stack proxy smoke test, and a local wrapper for the complete backend verification suite. Success = no backend `.env` read, no shared Supabase access, runtime uses `servisimibul_app`, both application servers bind to loopback, all backend tests pass on the disposable cluster, the proxied fixture is observed, and cleanup leaves no listener or temp cluster.
 
+A-13 uses two independent A-12 clusters to prove the A-09 recovery procedures without a cloud or shared-database operation. It owns a PostgreSQL 17 custom archive, transactional restore into a pristine disposable target, V1–V8/inventory/RLS/grant/data verification, restored-backend startup, independent UKOME volume manifests, and rollback as a new immutable tariff version. Success = wrong/remote targets fail closed, all 13 migration checks pass after restore, relational discovery and tariff reads pass through the restored backend, historical tariff versions remain unchanged, and all temporary state is removed.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.
