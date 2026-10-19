@@ -1,7 +1,7 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — B-13 school results ready for review
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-12, B-14, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. B-13 adds complete server-side school filtering, sorting, and deterministic pagination plus an editable public school-results browser in draft PR #64; automated checks have passed and human review remains pending.
+## Current stage: Post-MVP follow-up — A-12 isolated Windows development ready for review
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-12 replaces the prior shared-database Windows launcher with a disposable PostgreSQL 17 development and backend-test environment. Local implementation and verification are complete; human code review and a pull request remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -45,8 +45,9 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-07 Admin workspace | complete | GitHub issue #18; PR #46 merged as `f60b6346de780168fc4789457cfc2c57b33981b2`; Backend workflow `38775737560` passed 87 tests; Frontend workflow `38775737657` passed all gates and 19 tests | Reviewed and merged 2026-10-16 |
 | B-11 End-to-end and accessibility validation | complete | GitHub issue #28; PR #55 merged as `c2b3f9c`; final Frontend workflow `39122106995` and Secret scan workflow `39122106934` passed | Reviewed and merged 2026-10-18 |
 | B-12 Database-backed school location discovery | complete | GitHub issue #57; PR #60 merged as `d6e766a`; Frontend workflow `39146373250` and Secret scan workflow `39146373216` passed | Reviewed and merged 2026-10-18 |
-| B-13 Searchable and sortable school results | ready for review | GitHub issue #58; draft PR #64; Backend workflow `39172007199`, Frontend workflow `39172007201`, and Secret scan workflow `39172007274` passed | Human review pending |
+| B-13 Searchable and sortable school results | complete | GitHub issue #58; PR #64 merged as `0ffadfe`; Backend workflow `39172007199`, Frontend workflow `39172007201`, and Secret scan workflow `39172007274` passed | Reviewed and merged 2026-10-19 |
 | B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
+| A-12 Isolated Windows development and full-stack test database | ready for review | Branch `codex/a-12-isolated-windows-dev`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; frontend lint/typecheck/50 tests/build passed | Implementation explicitly approved 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -65,6 +66,16 @@ A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deacti
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-08, A-09, and B-10 are now merged, but A-10 still does not claim the product is production-ready: provider selection, monitoring/alerts, durable storage proof, migration rehearsal, and deployment/rollback rehearsal remain required.
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
+
+## Verified A-12 evidence — 2026-10-19
+
+- Branch `codex/a-12-isolated-windows-dev` starts from merged `main` commit `0ffadfe`. The existing unrelated `.idea/compiler.xml` change was preserved and excluded.
+- `dev.ps1` no longer reads the ignored backend `.env`. It creates a uniquely marked PostgreSQL 17.11 cluster on a random `127.0.0.1` port, generates independent admin/runtime passwords, applies Flyway V1–V8 in a one-shot migration process, clears privileged and inherited ADMIN/SMTP values, and starts Spring Boot only as `servisimibul_app`. Spring Boot, Vite, and the proxy target are restricted to loopback.
+- `dev.ps1 -SmokeTest` passed backend readiness, the Vite root, and a Vite-proxied `/api/v1/provinces` request containing the disposable fixture. The run then exited with code 0; ports 5173/8080 had zero listeners and no `ServisimiBul-A12-*` temp cluster remained.
+- The complete Java 21-targeted Maven `verify` lifecycle passed all 218 tests on the disposable cluster and produced the Spring Boot JAR. The first run exposed that PostgreSQL's Windows `C` locale did not lowercase uppercase Turkish characters; the school query now transliterates both uppercase and lowercase Turkish characters before ASCII lowercasing. The focused geography suite passed all 9 tests after the fix.
+- Node.js 24.22.0 passed ESLint, strict TypeScript, all 50 Vitest tests, and the Vite production build. The existing single-chunk size warning remains. The changed Vite configuration passes Prettier; repository-wide Prettier still reports the known Windows CRLF mismatch across 48 untouched files, so no unrelated mass formatting was performed.
+- PowerShell syntax validation and A-12 safety regressions passed, including remote/wrong-database rejection, cleanup fail-closed behavior, loopback binding, credential clearing, and environment-example separation.
+- PostgreSQL 17.11 portable binaries were installed in the current user's Scoop directory to execute the local lifecycle; no PostgreSQL Windows service was created. No dependency, lockfile, Flyway migration, shared Supabase resource, production setting, cloud resource, ADMIN bootstrap, or persistent application data was changed.
 
 ## Verified B-13 evidence — 2026-10-19
 
