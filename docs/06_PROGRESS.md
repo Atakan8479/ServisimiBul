@@ -68,6 +68,12 @@ A-10 was intentionally started before its planned Phase 4 dependencies at human 
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
 
+## J-04 follow-up verification — 2026-10-19
+
+- GitHub Actions for PR #73 head `c4c6a533bb1755d75ac9d42aa6ca078e25401aa5` passed: Backend run `39224801159`, Frontend run `39224800963`, and Secret scan run `39224801015`. The Frontend job's `npm run test:e2e` step succeeded in CI. Two earlier local Windows Playwright start-up stalls remain local-only observations, not evidence of an E2E failure in CI.
+- A read-only SQL query against the ACTIVE_HEALTHY shared ServisimiBul Supabase project on 2026-10-19 returned `province=1`, `district=39`, `neighborhood=963`, `school=1`. Earlier documentation claiming all four catalog tables were empty was stale. Row provenance/import authorship has not been established by this count query. No shared database writes or migrations were performed.
+- J-04's branch protection policy is still a proposal. CI success and this documentation update do not establish live ruleset activation; a separate owner-approved settings change and post-write API verification remain outstanding.
+
 ## Verified J-04 baseline evidence — 2026-10-19
 
 - GitHub Issue #65 defines repository protection and documentation reconciliation as J-04. The public repository's default branch is `main`; live API inspection matched local `main` at `0ffadfe6c03a902cf4abaf9203759b9f69e76245`, and GitHub reported no open pull requests.
