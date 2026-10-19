@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — J-04 pending activation; B-18 ready for review
+## Current stage: Post-MVP follow-up — A-12 isolated Windows development ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, B-16, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-04 live protection activation and verification remain pending. B-18 now pages the operator school picker through the existing catalog API and is locally verified on its feature branch.
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-12 replaces the prior shared-database Windows launcher with a disposable PostgreSQL 17 development and backend-test environment in PR #76. Local implementation and verification are complete; human code review remains pending. J-04 live protection activation and verification also remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -51,7 +51,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
 | J-04 Repository protection and documentation reconciliation | in progress | GitHub issue #65; read-only API audit found unprotected `main`, zero rulesets, ambiguous `test` check names, and no submitted reviews on PRs #60/#62/#63/#64 | Local implementation approved 2026-10-19; remote ruleset activation pending explicit approval |
 | B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
-| B-18 Paginated operator school picker | ready for review | GitHub issue #71; branch `codex/b-18-school-picker-pagination`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Task selected from Onat's assigned P1 efficiency work, 2026-10-19; review pending |
+| B-18 Paginated operator school picker | complete | GitHub issue #71; PR #75 merged as `44af9e8`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Reviewed and merged 2026-10-19 |
+| A-12 Isolated Windows development and full-stack test database | ready for review | PR #76; branch `codex/a-12-isolated-windows-dev`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Implementation explicitly approved 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -70,6 +71,16 @@ A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deacti
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-08, A-09, and B-10 are now merged, but A-10 still does not claim the product is production-ready: provider selection, monitoring/alerts, durable storage proof, migration rehearsal, and deployment/rollback rehearsal remain required.
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
+
+## Verified A-12 evidence — 2026-10-19
+
+- PR #76 uses branch `codex/a-12-isolated-windows-dev`, now reconciled with `main` commit `44af9e8`. The existing unrelated `.idea/compiler.xml` change was preserved and excluded.
+- `dev.ps1` no longer reads the ignored backend `.env`. It creates a uniquely marked PostgreSQL 17.11 cluster on a random `127.0.0.1` port, generates independent admin/runtime passwords, applies Flyway V1–V8 in a one-shot migration process, clears privileged and inherited ADMIN/SMTP values, and starts Spring Boot only as `servisimibul_app`. Spring Boot, Vite, and the proxy target are restricted to loopback.
+- `dev.ps1 -SmokeTest` passed backend readiness, the Vite root, and a Vite-proxied `/api/v1/provinces` request containing the disposable fixture. The run then exited with code 0; ports 5173/8080 had zero listeners and no `ServisimiBul-A12-*` temp cluster remained.
+- The complete Java 21-targeted Maven `verify` lifecycle passed all 218 tests on the disposable cluster and produced the Spring Boot JAR. The first run exposed that PostgreSQL's Windows `C` locale did not lowercase uppercase Turkish characters; the school query now transliterates both uppercase and lowercase Turkish characters before ASCII lowercasing. The focused geography suite passed all 9 tests after the fix.
+- Node.js 24.22.0 passed merged-state ESLint, strict TypeScript, all 55 Vitest tests, and the Vite production build without the former single-chunk warning. The changed Vite configuration passes Prettier; repository-wide Prettier still reports the known Windows CRLF mismatch across 48 untouched files, so no unrelated mass formatting was performed.
+- PowerShell syntax validation and A-12 safety regressions passed, including remote/wrong-database rejection, cleanup fail-closed behavior, loopback binding, credential clearing, and environment-example separation.
+- PostgreSQL 17.11 portable binaries were installed in the current user's Scoop directory to execute the local lifecycle; no PostgreSQL Windows service was created. No dependency, lockfile, Flyway migration, shared Supabase resource, production setting, cloud resource, ADMIN bootstrap, or persistent application data was changed.
 
 ## J-04 follow-up verification — 2026-10-19
 

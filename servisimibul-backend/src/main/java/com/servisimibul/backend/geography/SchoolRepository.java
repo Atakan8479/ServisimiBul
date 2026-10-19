@@ -22,40 +22,38 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
                     select school
                     from School school
                     where school.active = true
-                      and (:query = '' or cast(function(
+                      and (:query = '' or cast(lower(function(
                             'translate',
-                            lower(function('translate', school.name, 'İI', 'ii')),
-                            'âçğıîöşüû',
-                            'acgiiosuu'
-                          ) as string) like concat('%', :query, '%') escape '!')
+                            school.name,
+                            'İIÂÇĞÎÖŞÜÛâçğıîöşüû',
+                            'iiACGIOSUUacgiiosuu'
+                          )) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     order by
-                      case when :descending = false then cast(function(
-                        'translate',
-                        lower(function('translate', school.name, 'İI', 'ii')),
-                        'âçğıîöşüû',
-                        'acgiiosuu'
-                      ) as string) end asc,
+                      case when :descending = false then cast(lower(function(
+                        'translate', school.name,
+                        'İIÂÇĞÎÖŞÜÛâçğıîöşüû',
+                        'iiACGIOSUUacgiiosuu'
+                      )) as string) end asc,
                       case when :descending = false then school.id end asc,
-                      case when :descending = true then cast(function(
-                        'translate',
-                        lower(function('translate', school.name, 'İI', 'ii')),
-                        'âçğıîöşüû',
-                        'acgiiosuu'
-                      ) as string) end desc,
+                      case when :descending = true then cast(lower(function(
+                        'translate', school.name,
+                        'İIÂÇĞÎÖŞÜÛâçğıîöşüû',
+                        'iiACGIOSUUacgiiosuu'
+                      )) as string) end desc,
                       case when :descending = true then school.id end desc
                     """,
             countQuery = """
                     select count(school)
                     from School school
                     where school.active = true
-                      and (:query = '' or cast(function(
+                      and (:query = '' or cast(lower(function(
                             'translate',
-                            lower(function('translate', school.name, 'İI', 'ii')),
-                            'âçğıîöşüû',
-                            'acgiiosuu'
-                          ) as string) like concat('%', :query, '%') escape '!')
+                            school.name,
+                            'İIÂÇĞÎÖŞÜÛâçğıîöşüû',
+                            'iiACGIOSUUacgiiosuu'
+                          )) as string) like concat('%', :query, '%') escape '!')
                       and (:provinceId is null or school.neighborhood.district.province.id = :provinceId)
                       and (:districtId is null or school.neighborhood.district.id = :districtId)
                     """

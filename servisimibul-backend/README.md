@@ -76,13 +76,19 @@ Each developer must configure JDK 25 on their own computer:
 
 ## Environment
 
-Copy `.env.example` to an ignored `.env` and replace the example values. Spring Boot does not read `.env` itself, so load it through the IntelliJ run configuration or export the variables before starting the application.
+The root `dev.ps1` is the normal Windows development entry point. It creates an isolated local database and intentionally does not load this directory's ignored `.env`.
+
+For direct or deployed backend runs, copy only the example for the process being launched and replace its placeholders. Spring Boot does not read `.env` itself, so load variables through the IntelliJ run configuration or export them before starting the application:
+
+- `.env.example` — normal web runtime; restricted database role, no migration or ADMIN credential values.
+- `.env.migration.example` — reviewed one-shot migration process only.
+- `.env.bootstrap.example` — one-shot non-web ADMIN bootstrap only.
 
 `SB_DB_USER` must be the least-privilege `servisimibul_app` login, not `postgres`. Migration credentials are separate and should only be present during an approved migration run. Keep `SB_FLYWAY_ENABLED=false` for the normal application runtime.
 
 Set `SB_TARIFF_STORAGE_DIR` to a backend-only persistent writable directory before using the tariff API. The application may start without it for development tasks unrelated to tariffs, but tariff endpoints then return `tariff_storage_unavailable`. Never point it at the packaged JAR, classpath, frontend, or a temporary deployment filesystem. Each province receives its own directory containing atomic `current.json` and immutable version files.
 
-Local HTTP development must explicitly set `SPRING_PROFILES_ACTIVE=local` and `SB_COOKIE_SECURE=false`, as shown in `.env.example`. Deployed environments use the `prod` profile, which enforces a Secure `SBSESSION` cookie and structured JSON logs.
+Direct local HTTP development must explicitly set `SPRING_PROFILES_ACTIVE=local` and `SB_COOKIE_SECURE=false`, as shown in `.env.example`. The root launcher supplies those settings itself and binds the backend to `127.0.0.1`. Deployed environments use the `prod` profile, which enforces a Secure `SBSESSION` cookie and structured JSON logs.
 
 For the current testing period, the root `dev.ps1` launcher sets `SB_EMAIL_VERIFICATION_REQUIRED=false`. A newly registered local test account is marked verified in the registration transaction, receives no verification token or email, and can log in immediately. Existing accounts are not rewritten. The default value remains `true`, and the production profile plus early runtime guard require verification. Remove the launcher override when live email delivery testing begins.
 
@@ -99,15 +105,14 @@ V1 grants this role access only to the geography tables and their identity seque
 
 ## Tests
 
-Tests require a clean PostgreSQL 17 database with `servisimibul_app`, `anon`, and `authenticated` roles. The GitHub Actions workflow provisions an isolated PostgreSQL service automatically. It never connects to Supabase.
-
-Run locally by pointing the `SB_DB_*` variables at a disposable PostgreSQL database, enabling Flyway, and supplying the separate `SB_DB_MIGRATION_*` administrator variables:
+Tests require a clean PostgreSQL 17 database with `servisimibul_app`, `anon`, and `authenticated` roles. The GitHub Actions workflow provisions an isolated PostgreSQL service automatically. It never connects to Supabase. On Windows, the checked-in harness creates the roles, database, identity marker, generated passwords, and temporary tariff directory automatically:
 
 ```powershell
-.\mvnw.cmd verify
+pwsh -NoLogo -NoProfile -File ..\scripts\Test-IsolatedBackend.ps1
+pwsh -NoLogo -NoProfile -File ..\scripts\Test-IsolatedBackend.ps1 -Tests GeographyCatalogApiTests
 ```
 
-Do not run the test suite against the shared Supabase project: the V1 test expects a clean database.
+The harness accepts `-JavaHome` and `-PostgresBin` overrides, rejects non-loopback JDBC targets, verifies a unique database-instance marker before Maven starts, and removes the cluster in `finally`. Do not run the test suite against the shared Supabase project: the V1 test expects a clean database. See [`docs/13_WINDOWS_ISOLATED_DEVELOPMENT.md`](../docs/13_WINDOWS_ISOLATED_DEVELOPMENT.md).
 
 ## Deployment and probes
 

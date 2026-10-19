@@ -31,6 +31,10 @@ Build the approved Node.js 24/npm Vite React+TypeScript SPA baseline with strict
 
 B-10 completes the conditional operator-approval policy, persona/ownership/CSRF/session/header/CORS/logging regressions, anonymous health-probe authorization, and bounded endpoint-specific single-instance rate limiting. Production launch remains gated on isolated PostgreSQL CI, selected-host topology validation, staging measurements for provisional limits, monitoring/alerts, and a smoke test; implementation alone is not production approval.
 
+## Post-MVP development environment
+
+A-12 replaces the Windows combined launcher's shared-database dependency with a disposable loopback PostgreSQL 17 cluster. It owns generated local credentials, one-shot Flyway migration, restricted runtime startup, environment-example separation, automated cleanup, a full-stack proxy smoke test, and a local wrapper for the complete backend verification suite. Success = no backend `.env` read, no shared Supabase access, runtime uses `servisimibul_app`, both application servers bind to loopback, all backend tests pass on the disposable cluster, the proxied fixture is observed, and cleanup leaves no listener or temp cluster.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.

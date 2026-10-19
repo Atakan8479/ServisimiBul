@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
     server: {
       proxy: {
         '/api': {
-          target: environment.BACKEND_PROXY_TARGET || 'http://localhost:8080',
+          target: environment.BACKEND_PROXY_TARGET || 'http://127.0.0.1:8080',
         },
       },
     },
