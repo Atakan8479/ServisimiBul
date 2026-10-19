@@ -65,7 +65,7 @@ export const routes: RouteObject[] = [
     ErrorBoundary: RouteErrorPage,
     HydrateFallback: LoadingPage,
     children: [
-      { index: true, loader: () => redirect('/admin/applications') },
+      { index: true, loader: () => redirect('/admin/applications'), Component: () => null },
       { path: 'applications', Component: AdminApplicationsPage },
       {
         path: 'applications/:applicationId',
