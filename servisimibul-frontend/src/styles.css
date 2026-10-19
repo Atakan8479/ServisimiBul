@@ -111,6 +111,9 @@ nav {
 }
 
 nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   padding: 0.55rem 0.75rem;
   border-radius: var(--radius-small);
   color: #3c4a41;
@@ -523,6 +526,7 @@ h1 {
 }
 
 .workspace-content {
+  min-width: 0;
   padding: clamp(2rem, 7vw, 5rem);
 }
 
@@ -710,6 +714,7 @@ select[aria-invalid='true'] {
 
 .checkbox-row.compact {
   align-items: center;
+  min-height: 2.75rem;
   padding: 0.55rem;
   border-radius: var(--radius-small);
   font-size: 0.95rem;
@@ -761,6 +766,10 @@ select[aria-invalid='true'] {
 }
 
 .text-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
   border: 0;
   background: transparent;
   color: var(--color-accent);
@@ -869,6 +878,7 @@ button:disabled {
 
 .workspace-page {
   width: min(68rem, 100%);
+  overflow-wrap: anywhere;
 }
 
 .page-lead {
@@ -1157,6 +1167,7 @@ button:disabled {
 
 .school-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   margin-top: 1.5rem;
 }
@@ -1200,10 +1211,19 @@ button:disabled {
 }
 
 .inline-editor summary {
+  display: inline-flex;
+  align-items: center;
   width: fit-content;
+  min-height: 2.75rem;
   cursor: pointer;
   color: var(--color-accent);
   font-weight: 750;
+}
+
+.inline-editor summary:focus-visible {
+  border-radius: var(--radius-small);
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 32%, transparent);
+  outline-offset: 2px;
 }
 
 .inline-editor > form {
@@ -1389,6 +1409,7 @@ button:disabled {
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  min-height: 2.75rem;
   gap: 1rem;
   border: 0;
   padding: 0.25rem 0;
@@ -1644,7 +1665,7 @@ button:disabled {
   }
 
   .workspace-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .workspace-sidebar {
@@ -1653,8 +1674,23 @@ button:disabled {
     padding: 1.25rem;
   }
 
+  .workspace-content {
+    padding: 1rem;
+  }
+
   .workspace-sidebar nav {
     flex-direction: row;
+  }
+
+  .district-groups {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+  }
+
+  .school-card,
+  .empty-state {
+    padding: 1rem;
   }
 
   .sidebar-action {

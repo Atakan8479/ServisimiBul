@@ -207,6 +207,26 @@ describe('admin workspace flows', () => {
     expect(within(card!).getByText('Pasif')).toBeInTheDocument()
   })
 
+  it('associates required school errors with their fields', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/admin/schools', () =>
+        HttpResponse.json(schoolPage([])),
+      ),
+    )
+
+    renderRoute('/admin/schools')
+    fireEvent.click(await screen.findByRole('button', { name: 'Okulu ekle' }))
+
+    const name = screen.getByRole('textbox', { name: /Okul adı/ })
+    const neighborhood = screen.getByRole('combobox', { name: /Mahalle/ })
+    expect(name).toHaveAttribute('aria-invalid', 'true')
+    expect(name).toHaveAccessibleDescription('Okul adı zorunludur.')
+    expect(neighborhood).toHaveAttribute('aria-invalid', 'true')
+    expect(neighborhood).toHaveAccessibleDescription('Mahalle zorunludur.')
+  })
+
   it('saves the tariff against the version that was loaded', async () => {
     let updateBody: unknown
     server.use(

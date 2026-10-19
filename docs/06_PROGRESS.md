@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — A-13 disposable recovery verification ready for review
+## Current stage: Post-MVP follow-up — B-17 UX/accessibility hardening ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-12, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-13 verifies PostgreSQL and UKOME backup/restore behavior using two disposable loopback environments; local implementation and verification are complete, while human code review remains pending. J-04 live protection activation and verification also remain pending.
+Status: Gates 0–8, J-01, J-02, A-01–A-13, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. B-17 hardens route focus and titles, form-error associations, mobile touch targets, and enlarged-text reflow on branch `codex/b-17-ux-accessibility-validation`; local implementation and verification are complete, and human code review remains pending. J-04 live protection activation and verification also remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -53,7 +53,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
 | B-18 Paginated operator school picker | complete | GitHub issue #71; PR #75 merged as `44af9e8`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Reviewed and merged 2026-10-19 |
 | A-12 Isolated Windows development and full-stack test database | complete | PR #76 merged in `d7f9abf`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Reviewed and merged 2026-10-19 |
-| A-13 PostgreSQL and UKOME disposable backup/restore verification | ready for review | Branch `codex/a-13-backup-restore-verification`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Implementation explicitly approved 2026-10-19; code review pending |
+| A-13 PostgreSQL and UKOME disposable backup/restore verification | complete | PR #77 merged as `6aa29de`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Reviewed and merged 2026-10-19 |
+| B-17 UX/accessibility validation and hardening | ready for review | GitHub issue #70; branch `codex/b-17-ux-accessibility-validation`; frontend lint, typecheck, 56 Vitest tests, production build, and 9 Playwright tests passed | Implementation started at Onat's request 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -72,6 +73,16 @@ A-06 adds V6 plus session-owned vehicle and ServiceOffering APIs. Vehicle deacti
 A-10 was intentionally started before its planned Phase 4 dependencies at human request. It adds production and migration profiles, status-only health/readiness, ECS JSON logging, B-03-compatible SMTP connection configuration, secret-safe diagnostics, and the deployment/rollback runbook. A-08, A-09, and B-10 are now merged, but A-10 still does not claim the product is production-ready: provider selection, monitoring/alerts, durable storage proof, migration rehearsal, and deployment/rollback rehearsal remain required.
 
 The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final PostgreSQL 17 Backend workflow `39074679851` passed all 203 tests, including real JDBC readiness loss/recovery, the deployment smoke regression, and all 13 migration-operation checks. Read-only Secret scan workflow `39074679807` also passed. No shared Supabase audit or operation was performed.
+
+## Verified B-17 local evidence — 2026-10-19
+
+- SPA navigation now derives the document title from route metadata and transfers focus to the destination page heading after lazy route content is mounted. Opening the operator coverage editor likewise moves focus to its heading.
+- Required admin-school name and neighborhood errors are associated with their controls through stable descriptions and invalid state. The focused unit regression verifies both relationships.
+- Recurring navigation links, text buttons, compact checkbox labels, disclosure controls, and district toggles meet a 44 CSS-pixel touch-target floor. The mobile coverage list no longer creates a nested vertical scroll region.
+- The admin workspace reflows without horizontal page scrolling at a 320 CSS-pixel viewport with 200% text and a long Turkish operator name. Public, authentication, operator, and admin routes pass axe-core and overflow checks at 1440×900, 768×1024, and 390×844.
+- Approval-disabled admin and operator copy no longer presents internal “pilot” terminology to users. Product behavior and the approved approval-policy switch are unchanged.
+- Node.js 24 verification passed ESLint, strict TypeScript, all 56 Vitest tests, the production build, and all 9 Playwright tests. Playwright also passed route-focus/title, touch-target, reflow, reduced-motion, and the existing 13-journey MVP regressions.
+- Browser automation used the existing deterministic same-origin API double; no account, backend, database, Supabase resource, migration, dependency, lockfile, credential, production setting, or persistent data was changed. Physical-device, screen-reader, Safari, and forced-colors checks remain manual validation items.
 
 ## Verified A-12 evidence — 2026-10-19
 
