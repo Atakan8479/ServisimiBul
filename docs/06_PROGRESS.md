@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — J-04 pending activation; B-16 ready for review
+## Current stage: Post-MVP follow-up — J-04 pending activation; B-18 ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-04 live protection activation and verification remain pending. B-16 now loads operator coverage neighborhoods only for expanded districts and is locally verified on its feature branch.
+Status: Gates 0–8, J-01, J-02, A-01–A-11, B-01–B-14, B-16, the combined local launcher, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-04 live protection activation and verification remain pending. B-18 now pages the operator school picker through the existing catalog API and is locally verified on its feature branch.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -50,7 +50,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-13 Searchable and sortable school results | complete | GitHub issue #58; PR #64 merged as `0ffadfe`; final Backend `39174222379`, Frontend `39174222316`, and Secret scan `39174222353` workflows passed | Merged 2026-10-19 |
 | B-14 Operator discovery readiness and guided onboarding | complete | GitHub issue #59; PR #62 merged as `c073476`; Backend workflow `39150895644`, Frontend workflow `39150895638`, and Secret scan workflow `39150895653` passed | Reviewed and merged 2026-10-18 |
 | J-04 Repository protection and documentation reconciliation | in progress | GitHub issue #65; read-only API audit found unprotected `main`, zero rulesets, ambiguous `test` check names, and no submitted reviews on PRs #60/#62/#63/#64 | Local implementation approved 2026-10-19; remote ruleset activation pending explicit approval |
-| B-16 Lazy operator coverage selection | ready for review | GitHub issue #67; branch `codex/b-16-lazy-neighborhood-coverage`; local lint, typecheck, 52 Vitest tests, production build, and 6 Playwright tests passed | Task selected from Onat's assigned P0 efficiency work, 2026-10-19; review pending |
+| B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
+| B-18 Paginated operator school picker | ready for review | GitHub issue #71; branch `codex/b-18-school-picker-pagination`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Task selected from Onat's assigned P1 efficiency work, 2026-10-19; review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -82,6 +83,14 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - Previously saved selections remain visible and are included when saving even if their districts were never opened. Selection and clearing actions are district-scoped, and each district has independent loading, empty, error, and retry states.
 - Focused coverage tests verify zero neighborhood requests on editor open, one request for the opened district, no duplicate request on collapse/reopen, preservation of unopened coverage, district retry, cancellation during school switching, and per-school selection isolation. The full frontend suite passed ESLint, strict TypeScript, all 52 Vitest tests, the production build, and all 6 Playwright checks, including desktop/tablet/mobile accessibility and the 13-journey MVP flow.
 - Repository-wide Prettier still reports 28 pre-existing files outside the B-16 change; all five B-16 application/test files pass scoped Prettier and `git diff --check`. No dependency, backend, API contract, migration, shared Supabase resource, credential, or production setting was changed.
+
+## Verified B-18 local evidence — 2026-10-19
+
+- The operator school picker now uses the existing paginated school catalog with ten results per page, `name-asc` ordering, and trimmed search queries instead of requesting only the first 50 schools. Linked schools stay separate and cannot be selected again.
+- A selected school remains available when paging or filtering moves it outside the current result set. Stale catalog requests are cancelled, and loading, empty, failure, retry, result-count, and page-navigation states are presented within the picker.
+- Unit tests cover a 61-school catalog, exact search/sort/page composition, selection retention across pages, stale-request cancellation, loading, failure, and retry. Playwright verifies selecting school 51 from a 51-school catalog through six requested pages.
+- Route-level lazy loading was limited to authentication, operator, and admin screens while the public landing page remains eager. The production entry chunk decreased from 542.65 kB minified / 160.68 kB gzip to 472.51 kB / 146.06 kB, removing the Vite 500 kB warning without adding a dependency.
+- The full frontend suite passed ESLint, strict TypeScript, all 55 Vitest tests, the production build, and all 7 Playwright checks. The six changed application/test files pass scoped Prettier and `git diff --check`; repository-wide Prettier still reports 27 pre-existing untouched files. No dependency, backend, API contract, migration, shared Supabase resource, credential, or production setting was changed.
 
 ## Verified J-04 baseline evidence — 2026-10-19
 

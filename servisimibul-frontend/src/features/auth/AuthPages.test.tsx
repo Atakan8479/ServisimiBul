@@ -12,11 +12,11 @@ afterEach(() => {
 })
 
 describe('operator authentication screens', () => {
-  it('explains public profile visibility without requiring consent', () => {
+  it('explains public profile visibility without requiring consent', async () => {
     renderRoute('/operator/register')
 
     expect(
-      screen.getByText('İşletme profilinizin görünürlüğü'),
+      await screen.findByText('İşletme profilinizin görünürlüğü'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/işletme profiliniz herkese açık arama sonuçlarında/),
@@ -42,7 +42,7 @@ describe('operator authentication screens', () => {
 
     renderRoute('/operator/register')
 
-    fireEvent.change(screen.getByLabelText('E-posta'), {
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
       target: { value: 'operator@example.com' },
     })
     fireEvent.change(screen.getByLabelText('Şifre'), {
@@ -76,6 +76,7 @@ describe('operator authentication screens', () => {
 
     renderRoute('/operator/register')
 
+    await screen.findByLabelText('E-posta')
     expect(screen.queryByText(/E-posta doğrulamanız/)).not.toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('E-posta'), {
       target: { value: 'local-operator@example.com' },
@@ -107,7 +108,9 @@ describe('operator authentication screens', () => {
     )
 
     renderRoute('/operator/verify-email?token=email-token')
-    fireEvent.click(screen.getByRole('button', { name: 'E-postayı doğrula' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'E-postayı doğrula' }),
+    )
 
     expect(
       await screen.findByText(
@@ -143,7 +146,7 @@ describe('operator authentication screens', () => {
     )
 
     renderRoute('/operator/login')
-    fireEvent.change(screen.getByLabelText('E-posta'), {
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
       target: { value: 'operator@example.com' },
     })
     fireEvent.change(screen.getByLabelText('Şifre'), {
@@ -188,7 +191,7 @@ describe('operator authentication screens', () => {
     )
 
     renderRoute('/operator/register')
-    fireEvent.change(screen.getByLabelText('E-posta'), {
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
       target: { value: 'operator@example.com' },
     })
     fireEvent.change(screen.getByLabelText('Şifre'), {
