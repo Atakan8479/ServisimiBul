@@ -269,7 +269,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         ).toBeLessThanOrEqual(
           await mobilePage.evaluate(() => document.documentElement.clientWidth),
         )
-        await expect(mobilePage.getByRole('link', { name: 'Giriş' })).toBeVisible()
+        await expect(
+          mobilePage.getByRole('link', { name: 'Giriş' }),
+        ).toBeVisible()
       } finally {
         await mobileContext.close()
       }
