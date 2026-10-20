@@ -91,6 +91,15 @@ class SecurityFoundationTests {
     }
 
     @Test
+    @WithMockUser(roles = "PARENT")
+    void parentRoleCannotReachOperatorOrAdminRoutes() throws Exception {
+        mockMvc.perform(post("/api/v1/operator/test").with(csrf()))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/test").with(csrf()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void publicStateChangingRouteStillRequiresCsrf() throws Exception {
         mockMvc.perform(post("/api/v1/auth/register"))
                 .andExpect(status().isForbidden())

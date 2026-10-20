@@ -173,6 +173,27 @@ describe('operator authentication screens', () => {
     ).toBeInTheDocument()
   })
 
+  it('returns a parent account to public discovery after login', async () => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(parentUser)),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+    )
+
+    renderRoute('/operator/login')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'ServisimiBul' }),
+    ).toBeInTheDocument()
+  })
+
   it('shows server field errors next to the matching registration input', async () => {
     server.use(
       csrfHandler(),
@@ -220,6 +241,14 @@ const operatorUser = {
   role: 'OPERATOR',
   operatorApprovalRequired: true,
   approvalStatus: 'APPROVED',
+}
+
+const parentUser = {
+  id: 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd',
+  email: 'parent@example.test',
+  role: 'PARENT',
+  operatorApprovalRequired: true,
+  approvalStatus: null,
 }
 
 function csrfHandler() {

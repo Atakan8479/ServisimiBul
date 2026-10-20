@@ -6,7 +6,7 @@
 Existing manually created schema is described in `05_REPO_STATE.md`; new migration must reproduce it faithfully or explicitly document reviewed differences. Use `UNIQUE(province_id, district.name)` and `UNIQUE(district_id, neighborhood.name)`; school source code uniqueness is scoped by source, when both provided. No cross-province coverage.
 
 ## Identity and operator
-`AppUser(id UUID, email UNIQUE, password_hash, role ADMIN|OPERATOR, is_enabled, email_verified_at, timestamps)` is stored in the approved `app_user` SQL table.
+`AppUser(id UUID, email UNIQUE, password_hash, role ADMIN|OPERATOR|PARENT, is_enabled, email_verified_at, timestamps)` is stored in the approved `app_user` SQL table. A `PARENT` needs no profile record; anonymous discovery remains available without an account.
 `OperatorProfile(id UUID, user_id UNIQUE FK, optional business_name, contact_phone NOT NULL, optional description, approval_status, is_active, is_publicly_visible, timestamps)`.
 A required public phone does NOT mean profile automatically visible; public visibility still needs the effective approval policy and all independent flags. Keep private authentication email and public contact fields separate.
 `EmailVerificationToken(user_id, token_hash, expires_at, consumed_at)`, `PasswordResetToken(user_id, token_hash, expires_at, consumed_at)`, and `OperatorApplicationReview(operator_id, reviewed_by, decision, reason?, timestamp)` are added during the auth/application stage. Tokens are stored only as hashes and are single-use. Review decisions are exactly `APPROVED` and `CHANGES_REQUESTED`; a correction request requires a reason, and the operator may revise/re-submit. Suspension remains separate.

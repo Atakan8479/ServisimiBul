@@ -22,7 +22,7 @@ Prerequisites are Java 21+, Node.js 24, PostgreSQL 17 tools, and frontend depend
 .\scripts\Start-ControlledPilot.ps1
 ```
 
-The command prints a random loopback URL after migrations, three synthetic schools, four neighborhoods, and a synthetic tariff are ready. Keep the terminal open. Press Ctrl+C after the session and verify that cleanup completes.
+The command prints a random loopback URL and, for a normal run, one generated synthetic parent email/password after migrations, three synthetic schools, four neighborhoods, and a synthetic tariff are ready. Keep the terminal open. Give those temporary credentials only to the supervised parent participant; they disappear with the disposable database. Press Ctrl+C after the session and verify that cleanup completes.
 
 Use one fresh disposable run per operator/parent pair where practical. Never reuse participant passwords or record them in findings.
 
@@ -55,7 +55,7 @@ Expected product truths: the operator need not be a driver, may serve multiple s
 
 ## Parent scenarios
 
-Target five to ten synthetic parent sessions; this is a recruitment target, not an automatic pass condition. Parent discovery requires no account.
+Target five to ten synthetic parent sessions; this is a recruitment target, not an automatic pass condition. Parent discovery requires no account, while the generated parent account is available for authenticated follow-up tasks introduced after REQ-01.
 
 1. Find `J05 Moda Deneme Okulu` by school-location province/district and search with pickup neighborhood `Acıbadem`.
 2. Explain in their own words why the school district and pickup district may differ within İstanbul.

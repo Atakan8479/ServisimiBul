@@ -6,6 +6,13 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, fronten
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
+## Verified REQ-01 parent role foundation — 2026-10-20
+
+- Branch `codex/req-01-parent-role` implements GitHub issue #84 with a `PARENT` identity role, Flyway V9, authenticated parent login/current-user/logout behavior, and frontend login routing back to anonymous discovery. Parent accounts receive neither operator nor admin access, and public discovery still requires no account.
+- The controlled-pilot runner creates one email-verified synthetic parent with a generated password through a local-profile-only bootstrap. The bootstrap fails closed unless both the explicit disposable flag and the isolated `test_harness.database_instance` marker are present; it is disabled and its credentials are removed before normal runtime.
+- Focused isolated backend verification passed 28 tests, the controlled-pilot smoke run passed and deleted its temporary state, frontend Vitest passed all 57 tests, and frontend typecheck, lint, changed-file formatting, and production build passed. The complete 223-test backend run reached two unrelated pre-existing locale-sensitive rate-limiter metric errors (`login_account` became `log?n_account` under Turkish Windows); no #84 test failed.
+- No shared Supabase connection, migration, schema change, bootstrap, or data write occurred. Shared Supabase remains at V8; applying repository V9 requires a separate inspection and explicit approval.
+
 ## Verified explicit shared-Supabase development launcher — 2026-10-20
 
 - Branch `codex/shared-supabase-dev-launcher` adds `dev-supabase.ps1` as an explicit persistent-data alternative while leaving the disposable `dev.ps1` workflow unchanged.

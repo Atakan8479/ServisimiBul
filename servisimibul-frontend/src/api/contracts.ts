@@ -21,7 +21,7 @@ export interface PageResponse<T> {
   totalPages: number
 }
 
-export type UserRole = 'ADMIN' | 'OPERATOR'
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'PARENT'
 
 export interface AuthUser {
   id: string

@@ -268,7 +268,14 @@ export function LoginPage() {
     setFormError(undefined)
     try {
       const user = await login(values)
-      if (user.role !== 'OPERATOR') {
+      if (user.role === 'PARENT') {
+        void navigate('/', {
+          replace: true,
+          viewTransition: typeof document.startViewTransition === 'function',
+        })
+        return
+      }
+      if (user.role === 'ADMIN') {
         void navigate('/admin', {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',

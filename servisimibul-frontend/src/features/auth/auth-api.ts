@@ -4,7 +4,7 @@ import { apiRequest, resetCsrfToken } from '../../api/client'
 export const authUserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),
-  role: z.enum(['ADMIN', 'OPERATOR']),
+  role: z.enum(['ADMIN', 'OPERATOR', 'PARENT']),
   operatorApprovalRequired: z.boolean(),
   approvalStatus: z
     .enum(['DRAFT', 'PENDING', 'CHANGES_REQUESTED', 'APPROVED'])
