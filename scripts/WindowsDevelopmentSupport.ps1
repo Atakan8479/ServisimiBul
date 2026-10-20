@@ -227,13 +227,16 @@ function Start-SbIsolatedPostgres {
     $root = Join-Path ([System.IO.Path]::GetTempPath()) ('ServisimiBul-A12-' + [guid]::NewGuid())
     $data = Join-Path $root 'data'
     $log = Join-Path $root 'postgres.log'
-    $pgCtlOutput = Join-Path $root 'pg-ctl.out'
-    $pgCtlError = Join-Path $root 'pg-ctl.err'
     $adminPassword = New-SbRandomPassword
     $runtimePassword = New-SbRandomPassword
     $passwordFile = Join-Path $root 'init-password.txt'
     $provisionFile = Join-Path $root 'provision.sql'
     $started = $false
+    $cluster = [pscustomobject]@{
+        Tools = $Tools
+        Root = $root
+        DataDirectory = $data
+    }
 
     New-Item -ItemType Directory -Path $root | Out-Null
     try {
@@ -248,14 +251,17 @@ function Start-SbIsolatedPostgres {
 
         $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1" --wait start' -f `
             $data, $log, $port
-        $startProcess = Start-Process -FilePath $Tools.PgCtl -ArgumentList $startArguments `
-            -WindowStyle Hidden -PassThru -RedirectStandardOutput $pgCtlOutput `
-            -RedirectStandardError $pgCtlError
-        if (-not $startProcess.WaitForExit(15000) -or $startProcess.ExitCode -ne 0) {
-            $errorText = Get-Content -LiteralPath $pgCtlError -Raw -ErrorAction SilentlyContinue
-            throw "pg_ctl start failed: $errorText"
+        try {
+            $startProcess = Start-Process -FilePath $Tools.PgCtl -ArgumentList $startArguments `
+                -WindowStyle Hidden -PassThru
+            $startProcess.WaitForExit()
+            $startExitCode = $startProcess.ExitCode
+        } finally {
+            $started = Test-Path -LiteralPath (Join-Path $data 'postmaster.pid')
         }
-        $started = $true
+        if ($startExitCode -ne 0 -or -not $started) {
+            throw 'pg_ctl start failed. See postgres.log in the preserved disposable directory.'
+        }
 
         $cluster = [pscustomobject]@{
             Tools = $Tools
@@ -309,15 +315,18 @@ from test_harness.database_instance;
 
         return $cluster
     } catch {
+        $startupError = $_
         Remove-Item -LiteralPath $passwordFile, $provisionFile -Force -ErrorAction SilentlyContinue
         if ($started) {
-            $stopArguments = '--pgdata="{0}" --mode=immediate --wait stop' -f $data
-            $stopProcess = Start-Process -FilePath $Tools.PgCtl -ArgumentList $stopArguments `
-                -WindowStyle Hidden -PassThru
-            $null = $stopProcess.WaitForExit(15000)
+            try {
+                Stop-SbIsolatedPostgres -Cluster $cluster -Mode 'immediate'
+            } catch {
+                throw "$($startupError.Exception.Message)$([Environment]::NewLine)Cleanup also failed: $($_.Exception.Message)"
+            }
+        } else {
+            Remove-SbIsolatedDirectory -Path $root
         }
-        Remove-SbIsolatedDirectory -Path $root
-        throw
+        throw $startupError
     }
 }
 
@@ -341,14 +350,18 @@ function Remove-SbIsolatedDirectory {
 }
 
 function Stop-SbIsolatedPostgres {
-    param([Parameter(Mandatory = $true)]$Cluster)
+    param(
+        [Parameter(Mandatory = $true)]$Cluster,
+        [ValidateSet('fast', 'immediate')][string]$Mode = 'fast'
+    )
 
     if (Test-Path -LiteralPath $Cluster.DataDirectory) {
-        $stopArguments = '--pgdata="{0}" --mode=fast --wait stop' -f $Cluster.DataDirectory
+        $stopArguments = '--pgdata="{0}" --mode={1} --wait stop' -f $Cluster.DataDirectory, $Mode
         $stopProcess = Start-Process -FilePath $Cluster.Tools.PgCtl -ArgumentList $stopArguments `
             -WindowStyle Hidden -PassThru
-        if (-not $stopProcess.WaitForExit(15000) -or $stopProcess.ExitCode -ne 0) {
-            throw 'Disposable PostgreSQL did not stop cleanly.'
+        $stopProcess.WaitForExit()
+        if ($stopProcess.ExitCode -ne 0) {
+            throw 'Disposable PostgreSQL did not stop cleanly; its directory was preserved.'
         }
     }
     Remove-SbIsolatedDirectory -Path $Cluster.Root

@@ -62,6 +62,12 @@ try {
 }
 Assert-Condition $unsafeSiblingRejected 'A temp-prefix sibling path was not rejected.'
 
+$supportSource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'WindowsDevelopmentSupport.ps1')
+Assert-Condition ($supportSource.Contains("Stop-SbIsolatedPostgres -Cluster `$cluster -Mode 'immediate'")) `
+    'Failed startup does not use the shared safe PostgreSQL cleanup.'
+Assert-Condition (-not $supportSource.Contains('$null = $stopProcess.WaitForExit(15000)')) `
+    'PostgreSQL cleanup can still abandon pg_ctl and delete a live cluster.'
+
 $devSource = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev.ps1')
 Assert-Condition (-not $devSource.Contains('backendEnvPath')) `
     'dev.ps1 still references the former shared .env loader.'
