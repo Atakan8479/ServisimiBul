@@ -86,6 +86,14 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - Node.js 24 verification passed ESLint, strict TypeScript, all 56 Vitest tests, the production build, and all 9 Playwright tests. Playwright also passed route-focus/title, touch-target, reflow, reduced-motion, and the existing 13-journey MVP regressions.
 - Browser automation used the existing deterministic same-origin API double; no account, backend, database, Supabase resource, migration, dependency, lockfile, credential, production setting, or persistent data was changed. Physical-device, screen-reader, Safari, and forced-colors checks remain manual validation items.
 
+## Verified Windows PowerShell 5.1 launcher compatibility fix — 2026-10-20
+
+- `New-SbRandomPassword` now uses the cryptographic RNG instance API supported by both Windows PowerShell 5.1/.NET Framework and PowerShell 7 instead of the unavailable static `RandomNumberGenerator.Fill` method. Password size and encoding remain unchanged.
+- The isolated-development regression executes password generation and verifies two distinct values with the expected 43-character safe encoding. Windows PowerShell 5.1 and PowerShell 7 both passed it; the A-13, J-03, and J-05 PowerShell safety suites also passed under Windows PowerShell 5.1.
+- The first developer-shell retry exposed a second Windows process-handling defect: redirected `pg_ctl` output kept the launcher waiting while PostgreSQL was already running, and the error path attempted deletion before a confirmed stop. Startup and shutdown now isolate `pg_ctl` behind `Start-Process`, failed startup reuses the shared checked cleanup path, and no live cluster is deleted after a timeout.
+- Windows PowerShell 5.1 `dev.ps1 -SmokeTest` then passed all eight Flyway migrations, backend and frontend startup, backend readiness, the Vite root, and the proxied province fixture. It exited with code 0 and left no `ServisimiBul-A12-*` directory. The PowerShell 7 isolated-development regression and the Windows PowerShell 5.1 A-13, J-03, and J-05 safety suites also passed.
+- No application source, dependency, migration, shared Supabase resource, persistent data, credential, or production setting changed.
+
 ## Verified A-12 evidence — 2026-10-19
 
 - PR #76 uses branch `codex/a-12-isolated-windows-dev`, now reconciled with `main` commit `44af9e8`. The existing unrelated `.idea/compiler.xml` change was preserved and excluded.

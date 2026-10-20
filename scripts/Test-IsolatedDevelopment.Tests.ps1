@@ -14,6 +14,13 @@ function Assert-Condition {
     }
 }
 
+$firstPassword = New-SbRandomPassword
+$secondPassword = New-SbRandomPassword
+Assert-Condition ($firstPassword -cmatch '^[A-Za-z0-9]{43}$') `
+    'The generated password does not have the expected safe 43-character encoding.'
+Assert-Condition ($firstPassword -ne $secondPassword) `
+    'Two generated passwords unexpectedly matched.'
+
 $remoteRejected = $false
 try {
     Assert-SbLoopbackJdbcUrl `
@@ -54,6 +61,12 @@ try {
     $unsafeSiblingRejected = $_.Exception.Message -match 'Refusing to remove'
 }
 Assert-Condition $unsafeSiblingRejected 'A temp-prefix sibling path was not rejected.'
+
+$supportSource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'WindowsDevelopmentSupport.ps1')
+Assert-Condition ($supportSource.Contains("Stop-SbIsolatedPostgres -Cluster `$cluster -Mode 'immediate'")) `
+    'Failed startup does not use the shared safe PostgreSQL cleanup.'
+Assert-Condition (-not $supportSource.Contains('$null = $stopProcess.WaitForExit(15000)')) `
+    'PostgreSQL cleanup can still abandon pg_ctl and delete a live cluster.'
 
 $devSource = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev.ps1')
 Assert-Condition (-not $devSource.Contains('backendEnvPath')) `
