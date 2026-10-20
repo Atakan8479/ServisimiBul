@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — J-03 real full-stack E2E ready for review
+## Current stage: Post-MVP follow-up — J-05 controlled pilot UAT preparation ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-13, B-01–B-14, B-16–B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-03 adds real Vite/Spring Boot/PostgreSQL browser validation in disposable environments; local implementation and verification are complete, while human code review remains pending. J-04 live protection activation and verification also remain pending.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -55,7 +55,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | A-12 Isolated Windows development and full-stack test database | complete | PR #76 merged in `d7f9abf`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Reviewed and merged 2026-10-19 |
 | A-13 PostgreSQL and UKOME disposable backup/restore verification | complete | PR #77 merged as `6aa29de`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Reviewed and merged 2026-10-19 |
 | B-17 UX/accessibility validation and hardening | complete | GitHub issue #70; PR #78 merged as `63ea9aa`; frontend lint, typecheck, 56 Vitest tests, production build, and 9 Playwright tests passed | Reviewed and merged 2026-10-20 |
-| J-03 Real full-stack end-to-end testing without mock API | ready for review | Branch `codex/j-03-real-full-stack-e2e`; real Vite/Spring Boot/PostgreSQL 17 journey passed with isolated sessions, CSRF/authz/ownership, approval, discovery, invalidation, tariff, revocation, mobile keyboard, and cleanup coverage | Implementation explicitly approved 2026-10-19; code review pending |
+| J-03 Real full-stack end-to-end testing without mock API | complete | PR #79 merged as `3b19c47`; real Vite/Spring Boot/PostgreSQL 17 journey passed with isolated sessions, CSRF/authz/ownership, approval, discovery, invalidation, tariff, revocation, mobile keyboard, and cleanup coverage | Reviewed and merged 2026-10-20 |
+| J-05 Controlled pilot UAT with synthetic data | preparation ready for review | Branch `codex/j-05-controlled-pilot-uat`; disposable environment, synthetic fixtures, facilitation/runbook, anonymized report, safety checks, smoke, and J-03 regression verified; supervised sessions pending | Implementation approved 2026-10-20; human UAT and code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -114,6 +115,15 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - The new safety suite passed and confirms disposable PostgreSQL use, loopback binding, local-profile verification bypass, approval-required behavior, cleanup, absence of Supabase targets, absence of mock routing, and disabled Playwright traces. Failure artifacts are screenshots only so traces cannot retain session cookies.
 - Frontend ESLint, strict TypeScript, all 56 Vitest tests, and the production build passed on the reconciled tree. The retained mocked suite initially passed six tests and exposed a login-navigation race in the seventh; after adding an authenticated-route wait, that focused pagination test passed in 5.2 seconds. Complete local reruns before and after the B-17 reconciliation reproduced the known Windows Playwright/Vite startup stall before port 4173 opened, so the pull-request Frontend workflow remains the authoritative complete mocked-suite gate.
 - Every disposable run removed its PostgreSQL cluster, tariff volume, generated credentials, and application listeners. No shared Supabase resource, production setting, migration, application dependency, lockfile, SMTP service, paid service, or persistent application data was changed.
+
+## Verified J-05 preparation evidence — 2026-10-20
+
+- Branch `codex/j-05-controlled-pilot-uat` starts from merged J-03 commit `3b19c47`. The existing unrelated `.idea/compiler.xml` change remains preserved and excluded.
+- `scripts/Start-ControlledPilot.ps1` created PostgreSQL 17.11 on a random loopback port, applied Flyway V1–V8 separately, loaded three synthetic schools and four neighborhoods, served Spring Boot and Vite on random loopback ports with email verification and operator approval disabled only in the local profile, and verified all three schools through the Vite proxy.
+- The smoke run exited successfully and deleted its PostgreSQL cluster, tariff volume, credentials, and listeners. PowerShell parsing, the J-05 safety contract, the retained J-03 safety contract, and `git diff --check` passed.
+- Main push workflow `39405903465` failed only at the mobile skip-link focus assertion. The real full-stack test now establishes a deterministic keyboard focus origin before pressing Tab. A first attempted bring-to-front/click fix reproduced the failure locally; the corrected disposable rerun passed the complete real journey in 8.2 seconds (23.2 seconds including application startup) and cleaned up.
+- Frontend ESLint, strict TypeScript, all 56 Vitest tests, and the production build passed. No dependency, lockfile, backend source, Flyway migration, shared Supabase resource, SMTP service, public deployment, production setting, or real participant data changed.
+- `docs/14_CONTROLLED_PILOT_UAT.md` defines consent, safety boundaries, operator/parent scenarios, anonymized evidence, severity/ownership, and local-only exit criteria. `docs/15_CONTROLLED_PILOT_UAT_REPORT.md` intentionally remains NOT EXECUTED and NO-GO for claiming J-05 completion until supervised human sessions occur.
 
 ## J-04 follow-up verification — 2026-10-19
 
