@@ -39,6 +39,8 @@ A-13 uses two independent A-12 clusters to prove the A-09 recovery procedures wi
 
 J-03 adds a separate real full-stack browser layer without replacing the mocked B-11 suite or backend integration tests. It owns a fresh disposable PostgreSQL 17 database, real Spring Boot and Vite processes on loopback, synthetic geography/admin/tariff fixtures, isolated operator/admin/public browser contexts, local-only email-verification bypass, safe diagnostics, and deterministic cleanup. Success = real session/CSRF/authz/ownership, approval, cross-district coverage, discovery without optional vehicles/offerings, visibility and coverage invalidation, UKOME persistence, suspension/session revocation, and limited mobile keyboard behavior pass locally and in relevant CI without contacting Supabase.
 
+J-05 prepares and runs controlled, supervised pilot usability sessions on the J-03/A-12 foundation. It owns local-only synthetic fixtures, participant/facilitator scripts, prohibited-data rules, anonymized finding capture, severity/ownership, and an explicit local go/no-go decision. Automated smoke/E2E evidence does not substitute for human sessions. Success = critical operator and parent journeys observed, no open release blockers/high findings, reproducible follow-ups assigned, disposable cleanup proven, and remaining production gates stated without contacting Supabase or using real participant data.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.

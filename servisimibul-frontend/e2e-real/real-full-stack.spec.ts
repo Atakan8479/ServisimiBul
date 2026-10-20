@@ -250,10 +250,16 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     await test.step('cover a mobile keyboard path without sharing authenticated state', async () => {
       await publicPage.setViewportSize({ width: 390, height: 844 })
       await publicPage.goto('/')
+      await publicPage.bringToFront()
+      await publicPage.evaluate(() => {
+        document.body.tabIndex = -1
+        document.body.focus()
+      })
       await publicPage.keyboard.press('Tab')
       await expect(
         publicPage.getByRole('link', { name: 'İçeriğe geç' }),
       ).toBeFocused()
+      await publicPage.evaluate(() => document.body.removeAttribute('tabindex'))
       expect(
         await publicPage.evaluate(() => document.documentElement.scrollWidth),
       ).toBeLessThanOrEqual(
