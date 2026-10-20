@@ -280,4 +280,8 @@ async function login(page: Page, email: string) {
   await page.getByLabel('E-posta').fill(email)
   await page.getByLabel('Şifre').fill('uzun-ve-guvenli-sifre')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
+  // The login handler navigates asynchronously; the next page must not race it.
+  await expect(page).toHaveURL(
+    email === 'admin@example.com' ? /\/admin(?:\/|$)/ : /\/operator(?:\/|$)/,
+  )
 }
