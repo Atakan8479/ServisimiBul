@@ -18,6 +18,8 @@ $config = Get-Content -Raw -LiteralPath `
     (Join-Path $repositoryRoot 'servisimibul-frontend\playwright.real.config.ts')
 $spec = Get-Content -Raw -LiteralPath `
     (Join-Path $repositoryRoot 'servisimibul-frontend\e2e-real\real-full-stack.spec.ts')
+$workflow = Get-Content -Raw -LiteralPath `
+    (Join-Path $repositoryRoot '.github\workflows\full-stack-e2e.yml')
 
 Assert-Condition ($runner.Contains('Start-SbIsolatedPostgres')) `
     'J-03 does not create an A-12 disposable PostgreSQL instance.'
@@ -41,5 +43,8 @@ Assert-Condition (-not $spec.Contains('.route(')) `
     'The real full-stack suite intercepts requests.'
 Assert-Condition (-not $spec.Contains('installMockApi')) `
     'The real full-stack suite imports the mocked API.'
+Assert-Condition (
+    [regex]::Matches($workflow, 'SB_EMAIL_VERIFICATION_REQUIRED: "true"').Count -eq 2
+) 'J-03 CI does not restore verification for migration-only processes.'
 
 Write-Host 'J-03 real full-stack safety tests passed.'

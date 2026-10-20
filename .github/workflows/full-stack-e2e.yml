@@ -105,6 +105,7 @@ jobs:
           SPRING_FLYWAY_URL: jdbc:postgresql://127.0.0.1:5432/servisimibul_j03
           SPRING_FLYWAY_USER: postgres
           SPRING_FLYWAY_PASSWORD: postgres
+          SB_EMAIL_VERIFICATION_REQUIRED: "true"
         run: ./mvnw --batch-mode -Dspring-boot.run.profiles=migration spring-boot:run
       - name: Seed deterministic local-only fixtures
         env:
@@ -119,6 +120,7 @@ jobs:
           SB_ADMIN_BOOTSTRAP_ENABLED: "true"
           SB_ADMIN_1_EMAIL: j03.admin.one@example.test
           SB_ADMIN_2_EMAIL: j03.admin.two@example.test
+          SB_EMAIL_VERIFICATION_REQUIRED: "true"
         run: ./mvnw --batch-mode -Dspring-boot.run.profiles=migration spring-boot:run
       - name: Install frontend and browser dependencies
         working-directory: servisimibul-frontend
