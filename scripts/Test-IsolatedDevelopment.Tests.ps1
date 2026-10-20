@@ -14,6 +14,13 @@ function Assert-Condition {
     }
 }
 
+$firstPassword = New-SbRandomPassword
+$secondPassword = New-SbRandomPassword
+Assert-Condition ($firstPassword -cmatch '^[A-Za-z0-9]{43}$') `
+    'The generated password does not have the expected safe 43-character encoding.'
+Assert-Condition ($firstPassword -ne $secondPassword) `
+    'Two generated passwords unexpectedly matched.'
+
 $remoteRejected = $false
 try {
     Assert-SbLoopbackJdbcUrl `
