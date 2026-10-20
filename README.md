@@ -23,7 +23,7 @@ Install JDK 21 or newer, Node.js 24, PostgreSQL 17 binaries, and the frontend pa
 .\dev.ps1
 ```
 
-The launcher does not read `servisimibul-backend/.env` or connect to Supabase. It creates a disposable PostgreSQL 17 cluster under the Windows temporary directory, provisions separate generated migration and `servisimibul_app` credentials, applies Flyway V1–V8 in a one-shot process, and starts both applications on `127.0.0.1`. Privileged credentials are removed before the web process starts. Ctrl+C stops both applications and deletes the cluster.
+The launcher does not read `servisimibul-backend/.env` or connect to Supabase. It creates a disposable PostgreSQL 17 cluster under the Windows temporary directory, provisions separate generated migration and `servisimibul_app` credentials, applies all repository Flyway migrations in a one-shot process, and starts both applications on `127.0.0.1`. Privileged credentials are removed before the web process starts. Ctrl+C stops both applications and deletes the cluster.
 
 For the current testing period the launcher also auto-verifies newly registered local accounts and bypasses operator approval; production retains the safe verification and approval defaults. Open `http://127.0.0.1:5173`; Vite proxies `/api` to Spring Boot on port 8080.
 

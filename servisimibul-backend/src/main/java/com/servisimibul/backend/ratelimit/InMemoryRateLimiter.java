@@ -17,6 +17,7 @@ import java.util.ArrayDeque;
 import java.util.EnumMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 
 @Component
@@ -151,7 +152,7 @@ public class InMemoryRateLimiter {
             meterRegistry.counter(
                     "servisimibul.rate_limit.probation_evictions.total",
                     "rule",
-                    rule.name().toLowerCase()
+                    rule.name().toLowerCase(Locale.ROOT)
             ).increment();
         }
         AttemptWindow created = new AttemptWindow();
@@ -189,7 +190,7 @@ public class InMemoryRateLimiter {
         meterRegistry.counter(
                 "servisimibul.rate_limit.saturation.total",
                 "rule",
-                rule.name().toLowerCase()
+                rule.name().toLowerCase(Locale.ROOT)
         ).increment();
     }
 

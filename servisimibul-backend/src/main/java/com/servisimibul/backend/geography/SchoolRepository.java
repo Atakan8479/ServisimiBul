@@ -1,9 +1,11 @@
 package com.servisimibul.backend.geography;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -101,6 +103,15 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
             "neighborhood.district.province"
     })
     Optional<School> findByIdAndActiveTrue(UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {
+            "neighborhood",
+            "neighborhood.district",
+            "neighborhood.district.province"
+    })
+    @Query("select school from School school where school.id = :id")
+    Optional<School> findDetailedForUpdateById(@Param("id") UUID id);
 
     @EntityGraph(attributePaths = {
             "neighborhood",
