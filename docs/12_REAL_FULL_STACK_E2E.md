@@ -10,7 +10,7 @@ Prerequisites are Java 21 or newer, Node.js 24, `npm ci` in `servisimibul-fronte
 .\scripts\Test-RealFullStack.ps1
 ```
 
-Use `-JavaHome` or `-PostgresBin` when automatic discovery is insufficient. The runner creates random database credentials and ports, applies Flyway V1–V8 with the disposable database administrator, seeds only synthetic J-03 geography, creates two synthetic administrators through the existing one-shot bootstrap, and runs Playwright serially. Cleanup removes the database cluster, tariff versions, and generated credentials even after a failure.
+Use `-JavaHome` or `-PostgresBin` when automatic discovery is insufficient. The runner creates random database credentials and ports, applies all repository Flyway migrations with the disposable database administrator, seeds only synthetic J-03 geography, creates two synthetic administrators through the existing one-shot bootstrap, and runs Playwright serially. Cleanup removes the database cluster, tariff versions, and generated credentials even after a failure.
 
 ## Test layers
 

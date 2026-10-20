@@ -87,6 +87,8 @@ public class SecurityConfiguration {
                                 "/api/v1/neighborhoods",
                                 "/api/v1/schools",
                                 "/api/v1/schools/*",
+                                "/api/v1/demands",
+                                "/api/v1/demands/*",
                                 "/api/v1/operators",
                                 "/api/v1/operators/*",
                                 "/api/v1/tariffs",
@@ -102,6 +104,12 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/demands",
+                                "/api/v1/demands/*/support"
+                        ).hasRole("PARENT")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/demands/*/support").hasRole("PARENT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/demands/*/support").hasRole("PARENT")
                         .requestMatchers("/api/v1/operator/**").hasRole("OPERATOR")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()

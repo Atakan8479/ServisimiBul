@@ -21,6 +21,8 @@ Exactly two initial admins are created by an explicitly enabled, one-shot backen
 
 `PARENT` is a distinct authenticated role with no operator or admin authority. There is no public parent-registration endpoint in REQ-01. The temporary synthetic parent bootstrap is available only under the `local` profile and must verify both an explicit disposable-database flag and the isolated test-harness database marker before writing a hashed, email-verified account.
 
+Demand list/detail reads are anonymous and return aggregate participation plus only the signed-in parent's own support when the principal is a `PARENT`. They never return creator/supporter identities, emails, student data, or pickup addresses. Demand and support mutations require a `PARENT` session and CSRF; parent identity always comes from the authenticated session.
+
 Anonymous public endpoints should not persist a session unnecessarily; verify behavior in tests. Use environment variables and minimal session attributes. Implement account ownership checks server-side. Rate limit login, registration, verification, password recovery, and public search as appropriate. Suspension must deny future authentication, revoke existing sessions, and immediately remove the operator from public discovery.
 
 ## Operator application contract
@@ -48,6 +50,12 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `GET /api/v1/operators?schoolId=...&neighborhoodId=...&page=0&size=20`
 - `GET /api/v1/operators/{id}`
 - `GET /api/v1/tariffs?provinceCode=...` (official JSON only)
+- `GET /api/v1/demands?schoolId=...&neighborhoodId=...&academicYear=...&sort=newest&page=0&size=20`
+- `GET /api/v1/demands/{id}`
+
+Demand listing returns only OPEN rows and accepts `sort=newest|most-supported`; both orders use creation timestamp and demand UUID tie-breakers. Omitting `academicYear` selects the configured current year. Detail reads may expose a non-open row so duplicate creation can return its canonical identity. Both reads expose aggregate supporter, morning, afternoon, and all six reason counts; an authenticated parent additionally receives only their own nullable support.
+
+`POST /api/v1/demands` accepts `{schoolId,neighborhoodId,needsMorning,needsAfternoon,reasons}` and never accepts an academic year or parent identifier. It returns `{created,demand}` with 201 for a new row or 200 for an existing exact row; the latter never creates/reactivates support. `POST /api/v1/demands/{id}/support` creates or reactivates the caller's stable support row and is idempotent for an already-active row. `PUT` on the same support path atomically replaces directions/reasons, and `DELETE` withdraws without deleting; repeated withdrawal remains successful. Support mutations on CLOSED or ARCHIVED demands return 409.
 
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`

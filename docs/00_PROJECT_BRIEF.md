@@ -3,7 +3,7 @@
 ## Mission and users
 ServisimiBul is a Turkish school transportation operator discovery web platform. Start with an Istanbul pilot, leave room for expansion to other provinces. Parents anonymously select school, district, and neighborhood; view potential operator matches and contact them directly. Neighborhood match is NOT a guarantee that pickup from a precise address is possible.
 
-Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No student records. Two initial admins must be bootstrapped securely, never through public registration. An operator may own vehicles and serve several schools; operator and driver need not be the same person.
+Registered roles: `ADMIN`, `OPERATOR`, and `PARENT`. Public discovery still requires no account, and public parent registration is not yet available. No student records. Two initial admins must be bootstrapped securely, never through public registration. An operator may own vehicles and serve several schools; operator and driver need not be the same person.
 
 ## MVP mandatory capabilities
 - PostgreSQL persistence, JPA/Hibernate, Flyway migrations, stable dev/test configuration.
@@ -14,6 +14,7 @@ Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No st
 - Operator profile includes an optional business name and a mandatory publicly reachable phone; operator can control whether the entire profile is shown.
 - OperatorSchool linkage and per-school OperatorSchoolCoverage. Different districts of the same province are valid coverage for a school.
 - Anonymous parent search by school + neighborhood; operator contact view; pagination; responsive public and admin/operator UIs.
+- Anonymous demand browsing plus authenticated parent creation/support for a unique school + pickup-neighborhood + academic-year demand. Demand participation stores only direction needs and approved reason codes, never student or address data.
 - Price reference: official UKOME fee bands from editable persistent JSON; only verified official tariffs, no price estimates based on neighborhood.
 
 ## Optional-detail capability; not required for discovery
@@ -21,7 +22,7 @@ Registered roles: `ADMIN` and `OPERATOR`. Parents do NOT register for MVP. No st
 - No ServiceOffering must be necessary for operator search visibility.
 
 ## Not MVP
-Bookings, payments, live GPS tracking, mapped routes/optimization, parent or student accounts, internal chat, ratings/reviews, native mobile app.
+Bookings, payments, live GPS tracking, mapped routes/optimization, student accounts, public parent registration, internal chat, ratings/reviews, native mobile app.
 
 ## Quality constraints
 Modular monolith; clear controller/service/repository/entity/DTO/security separation or feature modules. Tests for ownership, authorization, duplicate relationships, publication conditions, school/coverage validity, migration integrity. Avoid collecting home addresses or children's personal data. Consider KVKK and accessible, mobile-first UI. No microservices, Redis or PostGIS without demonstrated need.

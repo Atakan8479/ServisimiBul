@@ -6,6 +6,14 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, fronten
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
+## Verified REQ-02 transport-demand persistence — 2026-10-20
+
+- Branch `codex/req-02-demands` implements GitHub issue #85 with Flyway V10 demand, stable parent-support, and support-reason persistence; public paginated reads; parent-only CSRF-protected mutations; configurable academic year; eligible-support aggregates; and concurrency-safe duplicate demand creation.
+- Validation covers active schools, same-province pickup neighborhoods (including another district), at least one unique approved reason, morning and/or afternoon direction, and one canonical demand per school, neighborhood, and academic year. A duplicate create returns the canonical demand without silently adding another parent as a supporter.
+- Focused demand/configuration/concurrency verification passed 12 tests. The complete isolated PostgreSQL 17 verification passed all 231 backend tests, migration replay through V10, Hibernate schema validation, RLS/privilege checks, security regressions, and packaging.
+- The full run also exposed and verified a locale-neutral fix for existing rate-limiter metric tags on Turkish Windows (`Locale.ROOT`); its focused 10-test suite passed.
+- No shared Supabase connection, migration, schema change, or data write occurred. Shared Supabase remains at V8; applying repository V9 and then V10 requires separate inspection and explicit approval.
+
 ## Verified REQ-01 parent role foundation — 2026-10-20
 
 - Branch `codex/req-01-parent-role` implements GitHub issue #84 with a `PARENT` identity role, Flyway V9, authenticated parent login/current-user/logout behavior, and frontend login routing back to anonymous discovery. Parent accounts receive neither operator nor admin access, and public discovery still requires no account.
@@ -71,6 +79,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-17 UX/accessibility validation and hardening | complete | GitHub issue #70; PR #78 merged as `63ea9aa`; frontend lint, typecheck, 56 Vitest tests, production build, and 9 Playwright tests passed | Reviewed and merged 2026-10-20 |
 | J-03 Real full-stack end-to-end testing without mock API | complete | PR #79 merged as `3b19c47`; real Vite/Spring Boot/PostgreSQL 17 journey passed with isolated sessions, CSRF/authz/ownership, approval, discovery, invalidation, tariff, revocation, mobile keyboard, and cleanup coverage | Reviewed and merged 2026-10-20 |
 | J-05 Controlled pilot UAT with synthetic data | preparation ready for review | Branch `codex/j-05-controlled-pilot-uat`; disposable environment, synthetic fixtures, facilitation/runbook, anonymized report, safety checks, smoke, and J-03 regression verified; supervised sessions pending | Implementation approved 2026-10-20; human UAT and code review pending |
+| REQ-02 Transport-demand persistence and support API | ready for review | GitHub issue #85; branch `codex/req-02-demands`; focused 12/12 and complete isolated backend 231/231 passed | Implementation requested 2026-10-20; code review and shared-database migration pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 

@@ -41,6 +41,10 @@ J-03 adds a separate real full-stack browser layer without replacing the mocked 
 
 J-05 prepares and runs controlled, supervised pilot usability sessions on the J-03/A-12 foundation. It owns local-only synthetic fixtures, participant/facilitator scripts, prohibited-data rules, anonymized finding capture, severity/ownership, and an explicit local go/no-go decision. Automated smoke/E2E evidence does not substitute for human sessions. Success = critical operator and parent journeys observed, no open release blockers/high findings, reproducible follow-ups assigned, disposable cleanup proven, and remaining production gates stated without contacting Supabase or using real participant data.
 
+## Parent demand workflow
+
+REQ-01 adds the isolated `PARENT` role foundation. REQ-02 owns Flyway V10 plus anonymous demand reads and parent-only creation/support lifecycle with server-authoritative year, uniqueness, aggregate counts, and concurrency tests. REQ-03 owns the accessible frontend board and must use the REQ-02 API without client-side duplicate or paging logic. Shared Supabase V9/V10 migration remains a separately inspected and approved operation.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.
