@@ -4,7 +4,7 @@ import {
   type LoaderFunctionArgs,
   type RouteObject,
 } from 'react-router-dom'
-import { PublicLayout } from '../components/layouts'
+import { PublicLayout, RouteAccessibility } from '../components/layouts'
 import {
   LoadingPage,
   NotFoundPage,
@@ -14,15 +14,21 @@ import { ApiError } from '../api/client'
 import { PublicDiscoveryPage } from '../features/discovery/PublicDiscoveryPage'
 import { currentUser } from '../features/auth/auth-api'
 
-export const routes: RouteObject[] = [
+const applicationRoutes: RouteObject[] = [
   {
     path: '/',
     Component: PublicLayout,
+    handle: { pageTitle: 'ServisimiBul' },
     ErrorBoundary: RouteErrorPage,
     children: [
-      { index: true, Component: PublicDiscoveryPage },
+      {
+        index: true,
+        Component: PublicDiscoveryPage,
+        handle: { pageTitle: 'ServisimiBul' },
+      },
       {
         path: 'operator/register',
+        handle: { pageTitle: 'İşletmeci kaydı' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
           Component: (await import('../features/auth/AuthPages')).RegisterPage,
@@ -30,6 +36,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'operator/verify-email',
+        handle: { pageTitle: 'E-posta doğrulama' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
           Component: (await import('../features/auth/AuthPages'))
@@ -38,6 +45,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'operator/login',
+        handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
           Component: (await import('../features/auth/AuthPages')).LoginPage,
@@ -48,6 +56,7 @@ export const routes: RouteObject[] = [
   {
     id: 'operator',
     path: '/operator',
+    handle: { pageTitle: 'Genel bakış' },
     loader: operatorLoader,
     lazy: async () => ({
       Component: (await import('../features/operator/OperatorWorkspaceLayout'))
@@ -58,6 +67,7 @@ export const routes: RouteObject[] = [
     children: [
       {
         index: true,
+        handle: { pageTitle: 'Genel bakış' },
         lazy: async () => ({
           Component: (await import('../features/operator/OperatorOverviewPage'))
             .OperatorOverviewPage,
@@ -65,6 +75,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'profile',
+        handle: { pageTitle: 'Profil' },
         lazy: async () => ({
           Component: (await import('../features/operator/OperatorProfilePage'))
             .OperatorProfilePage,
@@ -72,6 +83,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'schools',
+        handle: { pageTitle: 'Okullar ve kapsam' },
         lazy: async () => ({
           Component: (await import('../features/operator/OperatorSchoolsPage'))
             .OperatorSchoolsPage,
@@ -79,6 +91,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'offerings',
+        handle: { pageTitle: 'Araçlar ve servisler' },
         lazy: async () => ({
           Component: (
             await import('../features/operator/OperatorOfferingsPage')
@@ -90,6 +103,7 @@ export const routes: RouteObject[] = [
   {
     id: 'admin',
     path: '/admin',
+    handle: { pageTitle: 'Yönetim' },
     loader: adminLoader,
     lazy: async () => ({
       Component: (await import('../features/admin/AdminWorkspaceLayout'))
@@ -105,6 +119,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'applications',
+        handle: { pageTitle: 'İşletmeciler' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminApplicationsPage'))
             .AdminApplicationsPage,
@@ -112,6 +127,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'applications/:applicationId',
+        handle: { pageTitle: 'İşletmeci ayrıntısı' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminApplicationsPage'))
             .AdminApplicationDetailPage,
@@ -119,6 +135,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'schools',
+        handle: { pageTitle: 'Okullar' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminSchoolsPage'))
             .AdminSchoolsPage,
@@ -126,6 +143,7 @@ export const routes: RouteObject[] = [
       },
       {
         path: 'tariffs',
+        handle: { pageTitle: 'Resmî tarifeler' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminTariffsPage'))
             .AdminTariffsPage,
@@ -133,7 +151,15 @@ export const routes: RouteObject[] = [
       },
     ],
   },
-  { path: '*', Component: NotFoundPage },
+  {
+    path: '*',
+    Component: NotFoundPage,
+    handle: { pageTitle: 'Sayfa bulunamadı' },
+  },
+]
+
+export const routes: RouteObject[] = [
+  { Component: RouteAccessibility, children: applicationRoutes },
 ]
 
 export const router = createBrowserRouter(routes)

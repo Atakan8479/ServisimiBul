@@ -57,12 +57,30 @@ for (const viewport of viewports) {
     ).toBeVisible()
     await audit(page, 'operator schools')
 
+    await page.goto('/operator/offerings')
+    await expect(
+      page.getByRole('heading', { name: 'Servis ayrıntılarınız' }),
+    ).toBeVisible()
+    await audit(page, 'operator offerings')
+
     await login(page, 'admin@example.com')
     await page.goto('/admin/applications')
     await expect(
       page.getByRole('heading', { name: 'Başvurular' }),
     ).toBeVisible()
     await audit(page, 'admin applications')
+
+    await page.getByRole('link', { name: 'Başvuruyu incele' }).click()
+    await expect(
+      page.getByRole('heading', { name: 'Örnek Servis' }),
+    ).toBeVisible()
+    await audit(page, 'admin application detail')
+
+    await page.goto('/admin/schools')
+    await expect(
+      page.getByRole('heading', { name: 'Okulları yönetin' }),
+    ).toBeVisible()
+    await audit(page, 'admin schools')
 
     await page.goto('/admin/tariffs')
     await expect(
@@ -72,6 +90,117 @@ for (const viewport of viewports) {
     expect(consoleProblems).toEqual([])
   })
 }
+
+test('route changes restore page context and mobile controls meet the touch target floor', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  state.operatorSchoolAdded = true
+  state.generalCoverage = [101]
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await installMockApi(page, state)
+  await login(page, 'operator@example.com')
+
+  const overviewHeading = page.getByRole('heading', {
+    name: 'Aramalarda görünmeye hazır mısınız?',
+  })
+  await expect(overviewHeading).toBeFocused()
+  await expect(page).toHaveTitle('Genel bakış | ServisimiBul')
+
+  await page.getByRole('link', { name: 'Okullar ve kapsam' }).click()
+  const schoolsHeading = page.getByRole('heading', { name: 'Hizmet ağınız' })
+  await expect(schoolsHeading).toBeFocused()
+  await expect(page).toHaveTitle('Okullar ve kapsam | ServisimiBul')
+
+  await page.getByRole('button', { name: 'Kapsamı düzenle' }).click()
+  await expect(
+    page.getByRole('heading', {
+      name: 'Örnek Okulu için hizmet mahalleleri',
+    }),
+  ).toBeFocused()
+  await page.getByRole('button', { name: 'Kadıköy' }).click()
+  await expect(page.getByRole('checkbox', { name: 'Moda' })).toBeVisible()
+
+  const undersizedControls = await page
+    .locator(
+      '.workspace-sidebar nav a, button:not([disabled]), summary, label.checkbox-row.compact',
+    )
+    .evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const rectangle = element.getBoundingClientRect()
+        if (rectangle.width === 0 || rectangle.height === 0) return []
+        return rectangle.width + 0.5 < 44 || rectangle.height + 0.5 < 44
+          ? [
+              {
+                label: element.textContent?.trim(),
+                width: rectangle.width,
+                height: rectangle.height,
+              },
+            ]
+          : []
+      }),
+    )
+  expect(undersizedControls).toEqual([])
+
+  const districtListStyle = await page
+    .locator('.district-groups')
+    .evaluate((element) => ({
+      maxHeight: getComputedStyle(element).maxHeight,
+      overflowY: getComputedStyle(element).overflowY,
+    }))
+  expect(districtListStyle).toEqual({ maxHeight: 'none', overflowY: 'visible' })
+})
+
+test('long Turkish content reflows at a 320px CSS viewport with enlarged text', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  state.businessName =
+    'İstanbul Özel Eğitim Kurumları Öğrenci Taşımacılığı Kooperatifi Hizmetleri'
+
+  await page.setViewportSize({ width: 320, height: 720 })
+  await installMockApi(page, state)
+  await login(page, 'admin@example.com')
+  await page.goto('/admin/applications')
+  await expect(page.getByText(state.businessName)).toBeVisible()
+  await page.locator('html').evaluate((element) => {
+    element.style.fontSize = '200%'
+  })
+
+  const overflow = await page.evaluate(
+    () => document.documentElement.scrollWidth - window.innerWidth,
+  )
+  const overflowingElements = await page
+    .locator('body *')
+    .evaluateAll((elements) =>
+      elements.flatMap((element) => {
+        const rectangle = element.getBoundingClientRect()
+        if (rectangle.left >= -1 && rectangle.right <= window.innerWidth + 1) {
+          return []
+        }
+        return [
+          {
+            className: element.className,
+            tagName: element.tagName,
+            text: element.textContent?.trim().slice(0, 80),
+            left: rectangle.left,
+            right: rectangle.right,
+          },
+        ]
+      }),
+    )
+  expect(
+    overflow,
+    JSON.stringify(overflowingElements, null, 2),
+  ).toBeLessThanOrEqual(1)
+})
 
 test('reduced-motion mode removes decorative and page-transition motion', async ({
   page,

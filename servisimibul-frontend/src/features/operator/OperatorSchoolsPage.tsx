@@ -481,11 +481,11 @@ export function OperatorSchoolsPage() {
               <div className="button-row">
                 <button
                   className="primary-button"
-                  onClick={() =>
-                    setEditingCoverageId((current) =>
-                      current === relationship.id ? undefined : relationship.id,
-                    )
-                  }
+                  onClick={() => {
+                    const opening = editingCoverageId !== relationship.id
+                    setEditingCoverageId(opening ? relationship.id : undefined)
+                    setPendingFocusId(opening ? relationship.id : undefined)
+                  }}
                   type="button"
                 >
                   {editingCoverageId === relationship.id

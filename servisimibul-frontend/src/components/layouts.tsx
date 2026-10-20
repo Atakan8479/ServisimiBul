@@ -1,4 +1,11 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import {
+  NavLink,
+  Outlet,
+  useLocation,
+  useMatches,
+  useNavigation,
+} from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
 
 export function PublicLayout() {
@@ -26,4 +33,54 @@ export function PublicLayout() {
       </main>
     </div>
   )
+}
+
+export function RouteAccessibility() {
+  const location = useLocation()
+  const matches = useMatches()
+  const navigation = useNavigation()
+  const previousRoutePath = useRef(location.pathname)
+  const previousHeading = useRef<HTMLElement | null>(null)
+  let pageTitle = 'ServisimiBul'
+
+  matches.forEach((match) => {
+    const title = (match.handle as { pageTitle?: string } | undefined)
+      ?.pageTitle
+    if (title) pageTitle = title
+  })
+
+  useEffect(() => {
+    if (navigation.state !== 'idle') return
+
+    document.title =
+      pageTitle === 'ServisimiBul' ? pageTitle : `${pageTitle} | ServisimiBul`
+    const routeChanged = previousRoutePath.current !== location.pathname
+    previousRoutePath.current = location.pathname
+    if (!routeChanged) {
+      previousHeading.current = document.querySelector('main h1')
+      return
+    }
+
+    const focusNewHeading = () => {
+      const heading = document.querySelector<HTMLElement>('main h1')
+      if (!heading || heading === previousHeading.current) return false
+      heading.tabIndex = -1
+      heading.focus()
+      previousHeading.current = heading
+      return true
+    }
+    if (focusNewHeading()) return
+
+    const observer = new MutationObserver(() => {
+      if (focusNewHeading()) observer.disconnect()
+    })
+    observer.observe(document.body, { childList: true, subtree: true })
+    const timeout = window.setTimeout(() => observer.disconnect(), 2_000)
+    return () => {
+      observer.disconnect()
+      window.clearTimeout(timeout)
+    }
+  }, [location.pathname, navigation.state, pageTitle])
+
+  return <Outlet />
 }

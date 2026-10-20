@@ -130,7 +130,9 @@ describe('operator workspace flows', () => {
 
     renderRoute('/operator/profile')
 
-    expect(await screen.findByText('Pilot modu etkin')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Yönetici onayı gerekmiyor'),
+    ).toBeInTheDocument()
     expect(
       screen.getByText(
         'Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.',

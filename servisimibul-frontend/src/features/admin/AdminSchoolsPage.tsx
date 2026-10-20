@@ -141,7 +141,13 @@ export function AdminSchoolsPage() {
     setError(undefined)
     setNotice(undefined)
     setFieldErrors({})
-    if (!form.name.trim() || !form.neighborhoodId) {
+    const requiredErrors: Record<string, string> = {}
+    if (!form.name.trim()) requiredErrors.name = 'Okul adı zorunludur.'
+    if (!form.neighborhoodId) {
+      requiredErrors.neighborhoodId = 'Mahalle zorunludur.'
+    }
+    if (Object.keys(requiredErrors).length > 0) {
+      setFieldErrors(requiredErrors)
       setError('Okul adı ve mahalle zorunludur.')
       return
     }
@@ -263,6 +269,9 @@ export function AdminSchoolsPage() {
         <label className="form-field">
           <span>Okul adı</span>
           <input
+            aria-describedby={
+              fieldErrors.name ? 'admin-school-name-error' : undefined
+            }
             aria-invalid={Boolean(fieldErrors.name)}
             onChange={(event) =>
               setForm((current) => ({ ...current, name: event.target.value }))
@@ -270,7 +279,9 @@ export function AdminSchoolsPage() {
             value={form.name}
           />
           {fieldErrors.name && (
-            <small className="field-error">{fieldErrors.name}</small>
+            <small className="field-error" id="admin-school-name-error">
+              {fieldErrors.name}
+            </small>
           )}
         </label>
         <div className="location-grid">
@@ -306,6 +317,11 @@ export function AdminSchoolsPage() {
           <label className="form-field">
             <span>Mahalle</span>
             <select
+              aria-describedby={
+                fieldErrors.neighborhoodId
+                  ? 'admin-school-neighborhood-error'
+                  : undefined
+              }
               aria-invalid={Boolean(fieldErrors.neighborhoodId)}
               disabled={!form.districtId}
               onChange={(event) =>
@@ -324,7 +340,10 @@ export function AdminSchoolsPage() {
               ))}
             </select>
             {fieldErrors.neighborhoodId && (
-              <small className="field-error">
+              <small
+                className="field-error"
+                id="admin-school-neighborhood-error"
+              >
                 {fieldErrors.neighborhoodId}
               </small>
             )}
