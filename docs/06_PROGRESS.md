@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Post-MVP follow-up — A-13 disposable recovery verification ready for review
+## Current stage: Post-MVP follow-up — J-03 real full-stack E2E ready for review
 
-Status: Gates 0–8, J-01, J-02, A-01–A-12, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. A-13 verifies PostgreSQL and UKOME backup/restore behavior using two disposable loopback environments; local implementation and verification are complete, while human code review remains pending. J-04 live protection activation and verification also remain pending.
+Status: Gates 0–8, J-01, J-02, A-01–A-13, B-01–B-14, B-16, B-18, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. J-03 adds real Vite/Spring Boot/PostgreSQL browser validation in disposable environments; local implementation and verification are complete, while human code review remains pending. J-04 live protection activation and verification also remain pending.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
@@ -53,7 +53,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | B-16 Lazy operator coverage selection | complete | GitHub issue #67; PR #74 merged as `028b6e4`; Backend `39265122707`, Frontend `39265122619`, and Secret scan `39265122803` passed | Reviewed and merged 2026-10-19 |
 | B-18 Paginated operator school picker | complete | GitHub issue #71; PR #75 merged as `44af9e8`; local lint, typecheck, 55 Vitest tests, production build, and 7 Playwright tests passed | Reviewed and merged 2026-10-19 |
 | A-12 Isolated Windows development and full-stack test database | complete | PR #76 merged in `d7f9abf`; disposable PostgreSQL 17.11 lifecycle and full-stack smoke passed; backend 218/218; merged-state frontend lint/typecheck/55 tests/build passed | Reviewed and merged 2026-10-19 |
-| A-13 PostgreSQL and UKOME disposable backup/restore verification | ready for review | Branch `codex/a-13-backup-restore-verification`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Implementation explicitly approved 2026-10-19; code review pending |
+| A-13 PostgreSQL and UKOME disposable backup/restore verification | complete | PR #77 merged as `6aa29de`; two-cluster PostgreSQL 17.11 restore, 13/13 migration/security checks, restored backend/public discovery, tariff manifest restore, new-version rollback, and full backend 219/219 passed | Reviewed and merged 2026-10-19 |
+| J-03 Real full-stack end-to-end testing without mock API | ready for review | Branch `codex/j-03-real-full-stack-e2e`; real Vite/Spring Boot/PostgreSQL 17 journey passed with isolated sessions, CSRF/authz/ownership, approval, discovery, invalidation, tariff, revocation, mobile keyboard, and cleanup coverage | Implementation explicitly approved 2026-10-19; code review pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 
@@ -93,6 +94,15 @@ The provider-independent A-10 follow-up merged in PR #54 as `cf24a9b`. Final Pos
 - The focused tariff recovery test, A-13 PowerShell safety suite, and complete Java 21-targeted Maven verification passed. The full backend suite ran 219 tests with zero failures, errors, or skips and produced the Spring Boot JAR. The safety suite rejects remote/wrong targets, same-instance restores, unsafe cleanup paths, and modified tariff files. The full successful local drill took 47.623 seconds; this disposable measurement is not a production RTO.
 - The first restore attempt failed safely because the custom archive includes `CREATE SCHEMA public` while the pristine target already had the default empty schema. The final drill verifies target identity and zero public tables before removing only that disposable schema; `pg_restore` remains single-transaction and never uses `--clean`.
 - Generated credentials, clusters, logs, archive, manifests, and tariff volumes were deleted after the run. The ignored evidence JSON is written under the backend `target` directory. No shared Supabase resource, cloud service, production setting, migration, dependency, lockfile, or persistent application data was changed.
+
+## Verified J-03 local evidence — 2026-10-20
+
+- Branch `codex/j-03-real-full-stack-e2e` starts from merged A-13 commit `6aa29de`. The existing unrelated `.idea/compiler.xml` change remains preserved and excluded.
+- The Windows runner created a fresh PostgreSQL 17.11 cluster with random credentials and ports, applied Flyway V1–V8 through the disposable administrator, validated Hibernate through `servisimibul_app`, loaded synthetic geography/tariff data, and created two synthetic ADMIN identities through the existing one-shot bootstrap. Spring Boot and Vite were restricted to random loopback ports.
+- The real Playwright journey passed in 9.8 seconds, with 58.6 seconds total including server startup. It used separate operator, ADMIN, and anonymous contexts and no request interception. Coverage includes local-only verified registration, real session cookies and CSRF rejection, role denial and ownership-safe not-found behavior, correction/resubmission/approval, same-province cross-district coverage, discovery without Vehicle or ServiceOffering, visibility and empty-coverage invalidation/restoration, immutable UKOME update/public read, mobile keyboard/overflow checks, suspension, session revocation, and public removal.
+- The new safety suite passed and confirms disposable PostgreSQL use, loopback binding, local-profile verification bypass, approval-required behavior, cleanup, absence of Supabase targets, absence of mock routing, and disabled Playwright traces. Failure artifacts are screenshots only so traces cannot retain session cookies.
+- Frontend ESLint, strict TypeScript, all 55 Vitest tests, and the production build passed. The retained mocked suite initially passed six tests and exposed a login-navigation race in the seventh; after adding an authenticated-route wait, that focused pagination test passed in 5.2 seconds. A complete local rerun then reproduced the known Windows Playwright/Vite startup stall before port 4173 opened, so the pull-request Frontend workflow remains the authoritative complete mocked-suite gate.
+- Every disposable run removed its PostgreSQL cluster, tariff volume, generated credentials, and application listeners. No shared Supabase resource, production setting, migration, application dependency, lockfile, SMTP service, paid service, or persistent application data was changed.
 
 ## J-04 follow-up verification — 2026-10-19
 

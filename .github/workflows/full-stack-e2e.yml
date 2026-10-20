@@ -1,0 +1,143 @@
+name: Real full-stack E2E
+
+on:
+  pull_request:
+    paths:
+      - "servisimibul-backend/**"
+      - "servisimibul-frontend/**"
+      - "scripts/fixtures/j03/**"
+      - "scripts/Test-RealFullStack*.ps1"
+      - ".github/workflows/full-stack-e2e.yml"
+  push:
+    branches: [main]
+    paths:
+      - "servisimibul-backend/**"
+      - "servisimibul-frontend/**"
+      - "scripts/fixtures/j03/**"
+      - "scripts/Test-RealFullStack*.ps1"
+      - ".github/workflows/full-stack-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-full-stack-e2e:
+    name: Real full-stack E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SB_DB_JDBC_URL: jdbc:postgresql://127.0.0.1:5432/servisimibul_j03
+      SB_DB_USER: servisimibul_app
+      SB_DB_PASSWORD: test-only
+      SPRING_DATASOURCE_URL: jdbc:postgresql://127.0.0.1:5432/servisimibul_j03
+      SPRING_DATASOURCE_USERNAME: servisimibul_app
+      SPRING_DATASOURCE_PASSWORD: test-only
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_SQL_INIT_MODE: never
+      SB_COOKIE_SECURE: "false"
+      SB_EMAIL_VERIFICATION_REQUIRED: "false"
+      OPERATOR_APPROVAL_REQUIRED: "true"
+      SB_MAIL_ENABLED: "false"
+      SB_FLYWAY_ENABLED: "false"
+      SPRING_FLYWAY_ENABLED: "false"
+      SPRING_PROFILES_ACTIVE: local
+      SERVER_ADDRESS: 127.0.0.1
+      SERVER_PORT: "8081"
+      J03_BACKEND_PORT: "8081"
+      J03_FRONTEND_PORT: "4174"
+      J03_ADMIN_EMAIL: j03.admin.one@example.test
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: servisimibul-backend/pom.xml
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: servisimibul-frontend/package-lock.json
+      - name: Prepare isolated identities and tariff volume
+        shell: bash
+        run: |
+          admin_password="$(openssl rand -base64 24 | tr '/+' 'AB')"
+          echo "::add-mask::$admin_password"
+          echo "J03_ADMIN_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+          echo "SB_ADMIN_1_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+          echo "SB_ADMIN_2_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+          tariff_dir="$RUNNER_TEMP/j03-tariffs"
+          cp -R scripts/fixtures/j03/tariffs "$tariff_dir"
+          echo "SB_TARIFF_STORAGE_DIR=$tariff_dir" >> "$GITHUB_ENV"
+      - name: Provision disposable PostgreSQL roles and database
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE servisimibul_app LOGIN PASSWORD 'test-only' NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+            CREATE ROLE anon NOLOGIN;
+            CREATE ROLE authenticated NOLOGIN;"
+          psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE DATABASE servisimibul_j03"
+      - name: Apply Flyway migrations
+        working-directory: servisimibul-backend
+        env:
+          SPRING_PROFILES_ACTIVE: migration
+          SB_FLYWAY_ENABLED: "true"
+          SPRING_FLYWAY_ENABLED: "true"
+          SB_DB_MIGRATION_JDBC_URL: jdbc:postgresql://127.0.0.1:5432/servisimibul_j03
+          SB_DB_MIGRATION_USER: postgres
+          SB_DB_MIGRATION_PASSWORD: postgres
+          SPRING_FLYWAY_URL: jdbc:postgresql://127.0.0.1:5432/servisimibul_j03
+          SPRING_FLYWAY_USER: postgres
+          SPRING_FLYWAY_PASSWORD: postgres
+        run: ./mvnw --batch-mode -Dspring-boot.run.profiles=migration spring-boot:run
+      - name: Seed deterministic local-only fixtures
+        env:
+          PGPASSWORD: test-only
+        run: >-
+          psql -h 127.0.0.1 -U servisimibul_app -d servisimibul_j03
+          -v ON_ERROR_STOP=1 --file scripts/fixtures/j03/seed.sql
+      - name: Bootstrap synthetic administrators
+        working-directory: servisimibul-backend
+        env:
+          SPRING_PROFILES_ACTIVE: migration
+          SB_ADMIN_BOOTSTRAP_ENABLED: "true"
+          SB_ADMIN_1_EMAIL: j03.admin.one@example.test
+          SB_ADMIN_2_EMAIL: j03.admin.two@example.test
+        run: ./mvnw --batch-mode -Dspring-boot.run.profiles=migration spring-boot:run
+      - name: Install frontend and browser dependencies
+        working-directory: servisimibul-frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run real full-stack browser tests
+        working-directory: servisimibul-frontend
+        env:
+          SB_ADMIN_1_EMAIL: ""
+          SB_ADMIN_1_PASSWORD: ""
+          SB_ADMIN_2_EMAIL: ""
+          SB_ADMIN_2_PASSWORD: ""
+        run: npm run test:e2e:real
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: real-full-stack-e2e-screenshots
+          path: servisimibul-frontend/test-results/**/*.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -37,6 +37,8 @@ A-12 replaces the Windows combined launcher's shared-database dependency with a 
 
 A-13 uses two independent A-12 clusters to prove the A-09 recovery procedures without a cloud or shared-database operation. It owns a PostgreSQL 17 custom archive, transactional restore into a pristine disposable target, V1–V8/inventory/RLS/grant/data verification, restored-backend startup, independent UKOME volume manifests, and rollback as a new immutable tariff version. Success = wrong/remote targets fail closed, all 13 migration checks pass after restore, relational discovery and tariff reads pass through the restored backend, historical tariff versions remain unchanged, and all temporary state is removed.
 
+J-03 adds a separate real full-stack browser layer without replacing the mocked B-11 suite or backend integration tests. It owns a fresh disposable PostgreSQL 17 database, real Spring Boot and Vite processes on loopback, synthetic geography/admin/tariff fixtures, isolated operator/admin/public browser contexts, local-only email-verification bypass, safe diagnostics, and deterministic cleanup. Success = real session/CSRF/authz/ownership, approval, cross-district coverage, discovery without optional vehicles/offerings, visibility and coverage invalidation, UKOME persistence, suspension/session revocation, and limited mobile keyboard behavior pass locally and in relevant CI without contacting Supabase.
+
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.
 B: authentication, authorization, API DTO/controller and security tests.
