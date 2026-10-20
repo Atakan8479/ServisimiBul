@@ -393,6 +393,9 @@ async function login(page: Page, email: string) {
     await page.getByLabel('Beni hatırla').check()
   }
   await page.getByRole('button', { name: 'Giriş yap' }).click()
+  await expect(page).toHaveURL(
+    email === 'operator@example.com' ? /\/operator$/ : /\/admin(?:\/|$)/,
+  )
 }
 
 async function search(page: Page, district: string, neighborhood: string) {

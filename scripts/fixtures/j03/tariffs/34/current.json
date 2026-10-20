@@ -1,0 +1,16 @@
+{
+  "provinceCode": "34",
+  "provinceName": "İstanbul",
+  "authority": "İBB UKOME",
+  "academicYear": "2026-2027",
+  "currency": "TRY",
+  "effectiveFrom": "2026-09-01",
+  "effectiveTo": "2027-08-31",
+  "sourceTitle": "J03 sentetik UKOME kararı",
+  "officialSourceUrl": "https://example.gov.tr/j03-ukome",
+  "version": "j03-v1",
+  "bands": [
+    { "minDistanceKm": 0, "maxDistanceKm": 3, "amountKurus": 120000 },
+    { "minDistanceKm": 3, "maxDistanceKm": null, "amountKurus": 150000 }
+  ]
+}
