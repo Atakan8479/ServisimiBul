@@ -108,6 +108,30 @@ class SessionAuthenticationApiTests {
     }
 
     @Test
+    void verifiedParentCanLoginReadIdentityAndLogout() throws Exception {
+        AppUser parent = AppUser.newParent(
+                "parent-session@example.com",
+                passwordEncoder.encode(PASSWORD)
+        );
+        parent.verifyEmail(OffsetDateTime.now());
+        userRepository.saveAndFlush(parent);
+
+        LoginResult login = login(parent.getEmail(), false);
+
+        mockMvc.perform(get("/api/v1/auth/me").cookie(login.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.role").value("PARENT"))
+                .andExpect(jsonPath("$.approvalStatus").doesNotExist());
+
+        mockMvc.perform(post("/api/v1/auth/logout")
+                        .cookie(login.cookie())
+                        .header(login.csrfHeader(), login.csrfToken()))
+                .andExpect(status().isNoContent());
+
+        assertThat(sessionRepository.findByPrincipalName(parent.getEmail())).isEmpty();
+    }
+
+    @Test
     void successfulLoginRotatesThePreLoginSessionAndInvalidatesItsOldIdentifier()
             throws Exception {
         AppUser user = createVerifiedUser("rotation-user@example.com");

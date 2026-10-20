@@ -19,6 +19,8 @@ Password recovery uses the same non-enumerating response rule. Reset tokens are 
 
 Exactly two initial admins are created by an explicitly enabled, one-shot backend bootstrap command using temporary environment credentials. It is not exposed over HTTP, refuses any public ADMIN registration path, requires exactly two configured admin identities, does not log secrets, and does not replace an existing admin password when rerun.
 
+`PARENT` is a distinct authenticated role with no operator or admin authority. There is no public parent-registration endpoint in REQ-01. The temporary synthetic parent bootstrap is available only under the `local` profile and must verify both an explicit disposable-database flag and the isolated test-harness database marker before writing a hashed, email-verified account.
+
 Anonymous public endpoints should not persist a session unnecessarily; verify behavior in tests. Use environment variables and minimal session attributes. Implement account ownership checks server-side. Rate limit login, registration, verification, password recovery, and public search as appropriate. Suspension must deny future authentication, revoke existing sessions, and immediately remove the operator from public discovery.
 
 ## Operator application contract

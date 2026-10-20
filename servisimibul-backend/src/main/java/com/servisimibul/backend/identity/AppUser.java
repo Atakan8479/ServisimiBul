@@ -70,6 +70,10 @@ public class AppUser {
         return new AppUser(email, passwordHash, UserRole.ADMIN);
     }
 
+    public static AppUser newParent(String email, String passwordHash) {
+        return new AppUser(email, passwordHash, UserRole.PARENT);
+    }
+
     public boolean isEmailVerified() {
         return emailVerifiedAt != null;
     }
