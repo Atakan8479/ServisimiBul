@@ -248,23 +248,33 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     })
 
     await test.step('cover a mobile keyboard path without sharing authenticated state', async () => {
-      await publicPage.setViewportSize({ width: 390, height: 844 })
-      await publicPage.goto('/')
-      await publicPage.bringToFront()
-      await publicPage.evaluate(() => {
-        document.body.tabIndex = -1
-        document.body.focus()
+      // A fresh page avoids retained focus from the preceding real discovery journey.
+      // A real browser Tab must focus the skip link; programmatic focus would hide regressions.
+      const mobileContext = await browser.newContext({
+        viewport: { width: 390, height: 844 },
       })
-      await publicPage.keyboard.press('Tab')
-      await expect(
-        publicPage.getByRole('link', { name: 'İçeriğe geç' }),
-      ).toBeFocused()
-      await publicPage.evaluate(() => document.body.removeAttribute('tabindex'))
-      expect(
-        await publicPage.evaluate(() => document.documentElement.scrollWidth),
-      ).toBeLessThanOrEqual(
-        await publicPage.evaluate(() => document.documentElement.clientWidth),
-      )
+      try {
+        const mobilePage = await mobileContext.newPage()
+        await mobilePage.goto('/')
+        const skipLink = mobilePage.getByRole('link', { name: 'İçeriğe geç' })
+        await expect(skipLink).toBeAttached()
+        await expect(
+          mobilePage.getByRole('heading', { name: 'ServisimiBul' }),
+        ).toBeVisible()
+        await mobilePage.bringToFront()
+        await mobilePage.keyboard.press('Tab')
+        await expect(skipLink).toBeFocused()
+        expect(
+          await mobilePage.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(
+          await mobilePage.evaluate(() => document.documentElement.clientWidth),
+        )
+        await expect(
+          mobilePage.getByRole('link', { name: 'Giriş' }),
+        ).toBeVisible()
+      } finally {
+        await mobileContext.close()
+      }
     })
 
     await test.step('suspend the operator, revoke the session, and remove discovery', async () => {
