@@ -27,6 +27,14 @@ The launcher does not read `servisimibul-backend/.env` or connect to Supabase. I
 
 For the current testing period the launcher also auto-verifies newly registered local accounts and bypasses operator approval; production retains the safe verification and approval defaults. Open `http://127.0.0.1:5173`; Vite proxies `/api` to Spring Boot on port 8080.
 
+To run the same local frontend/backend pair against the persistent shared Supabase data, first configure the ignored `servisimibul-backend/.env` from its runtime example, then use the explicit shared-data launcher:
+
+```powershell
+.\dev-supabase.ps1
+```
+
+This command accepts only the restricted `servisimibul_app` runtime role over a non-loopback TLS JDBC URL. It keeps Flyway and ADMIN bootstrap disabled, binds both servers to `127.0.0.1`, and never sends backend `.env` values to Vite. For the current testing period, new registrations are immediately verified and operator approval waiting is bypassed under the guarded `local` profile. Unlike `dev.ps1`, all registrations and application edits persist in shared Supabase and are visible to both developers. Stop it with Ctrl+C.
+
 Run the repeatable full-stack smoke path or the complete backend suite with:
 
 ```powershell

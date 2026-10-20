@@ -6,6 +6,13 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, fronten
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
 
+## Verified explicit shared-Supabase development launcher — 2026-10-20
+
+- Branch `codex/shared-supabase-dev-launcher` adds `dev-supabase.ps1` as an explicit persistent-data alternative while leaving the disposable `dev.ps1` workflow unchanged.
+- The launcher loads the ignored backend runtime `.env` only for the backend child process, accepts only `servisimibul_app` (including its Supabase pooler-qualified form), requires a non-loopback PostgreSQL JDBC URL with `sslmode=require`, and binds Spring Boot and Vite to `127.0.0.1`.
+- Flyway, migration credentials, ADMIN bootstrap, bootstrap credentials, and SMTP delivery are forcibly disabled or removed. The guarded local testing overrides continue to auto-verify new registrations and bypass operator approval waiting; all resulting application writes persist in shared Supabase and are visible to both developers.
+- Synthetic safety tests passed in Windows PowerShell 5.1 and PowerShell 7, and standalone launcher syntax validation passed. The real ignored `.env` was not read, no application process was started, and no Supabase connection, read, write, migration, bootstrap, schema operation, or credential inspection occurred during verification.
+
 | Gate | Status | Evidence/PR | Human approval |
 |---|---|---|---|
 | 0 Context + repo read-only review | complete | Repository/docs/backend review, 2026-10-11 | Workflow continued to Gate 1 |
