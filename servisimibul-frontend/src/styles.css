@@ -1551,6 +1551,7 @@ button:disabled {
 .demand-intro p,
 .demand-detail-header p,
 .demand-detail-card > p,
+.demand-service-panel > .section-heading p,
 .demand-support-panel > .section-heading p {
   color: var(--color-muted);
   line-height: 1.65;
@@ -1558,6 +1559,7 @@ button:disabled {
 
 .demand-filter-panel,
 .demand-create-panel,
+.demand-service-panel,
 .demand-support-panel,
 .demand-detail-card {
   margin-top: 2rem;
@@ -1739,7 +1741,16 @@ button:disabled {
   gap: 1.25rem;
 }
 
-.demand-support-form fieldset {
+.demand-service-response-form {
+  display: grid;
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-support-form fieldset,
+.demand-service-response-form fieldset {
   min-width: 0;
   margin: 0;
   padding: 1rem;
@@ -1747,7 +1758,8 @@ button:disabled {
   border-radius: var(--radius-small);
 }
 
-.demand-support-form legend {
+.demand-support-form legend,
+.demand-service-response-form legend {
   padding-inline: 0.35rem;
   font-weight: 800;
 }
@@ -1829,6 +1841,124 @@ button:disabled {
 
 .demand-support-actions {
   margin-top: 1rem;
+}
+
+.demand-service-heading {
+  align-items: flex-start;
+}
+
+.demand-service-heading h2,
+.demand-service-heading p,
+.demand-service-empty h3,
+.demand-service-empty p,
+.demand-service-publish h3,
+.demand-service-publish p,
+.demand-service-guidance h3,
+.demand-service-owned p {
+  margin: 0;
+}
+
+.demand-service-heading p,
+.demand-service-empty p,
+.demand-service-publish p,
+.demand-service-owned p {
+  margin-top: 0.45rem;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.demand-response-loading {
+  margin-top: 1.25rem;
+  color: var(--color-muted);
+}
+
+.demand-service-response-list {
+  display: grid;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demand-service-response-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding-block: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-service-response-list li:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.demand-service-operator {
+  display: grid;
+  gap: 0.3rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.demand-service-operator span {
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+.demand-service-directions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.demand-service-directions span {
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: var(--color-surface-soft);
+  color: var(--color-accent-strong);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.demand-service-empty {
+  margin-top: 1.25rem;
+  padding-block: 1.25rem;
+  border-block: 1px solid var(--color-border);
+}
+
+.demand-service-panel > .pagination {
+  justify-content: center;
+  margin-top: 1.25rem;
+}
+
+.demand-service-publish,
+.demand-service-owned {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-service-guidance {
+  display: grid;
+  justify-items: start;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, var(--color-warning) 9%, white);
+}
+
+.demand-service-guidance ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  color: #624109;
+  line-height: 1.5;
 }
 
 @keyframes skeleton-shift {
@@ -2063,9 +2193,23 @@ button:disabled {
   .existing-demand-callout,
   .operator-check-heading,
   .demand-load-error,
-  .operator-check-list li {
+  .operator-check-list li,
+  .demand-service-publish,
+  .demand-service-owned {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .demand-service-response-list li {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .demand-service-response-list .button-link,
+  .demand-service-publish > button,
+  .demand-service-owned > button {
+    width: 100%;
+    justify-content: center;
   }
 
   .demand-counts {

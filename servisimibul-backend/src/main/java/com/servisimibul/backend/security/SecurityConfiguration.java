@@ -89,6 +89,7 @@ public class SecurityConfiguration {
                                 "/api/v1/schools/*",
                                 "/api/v1/demands",
                                 "/api/v1/demands/*",
+                                "/api/v1/demands/*/responses",
                                 "/api/v1/operators",
                                 "/api/v1/operators/*",
                                 "/api/v1/tariffs",

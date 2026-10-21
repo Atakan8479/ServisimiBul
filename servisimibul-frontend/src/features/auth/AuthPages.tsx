@@ -288,7 +288,9 @@ export function LoginPage() {
       const destination =
         next === '/operator' || next?.startsWith('/operator/')
           ? next
-          : '/operator'
+          : isDemandResponsePath(next)
+            ? next
+            : '/operator'
       void navigate(destination, {
         replace: true,
         viewTransition: typeof document.startViewTransition === 'function',
@@ -338,7 +340,16 @@ export function LoginPage() {
         </button>
       </form>
       <p className="auth-switch">
-        {isDemandPath(searchParams.get('next')) ? (
+        {isDemandResponsePath(searchParams.get('next')) ? (
+          <>
+            Servis bildirimi yayınlamak için işletmeci hesabınızla giriş yapın.
+            Hesabınız yoksa{' '}
+            <Link to="/operator/register" viewTransition>
+              kayıt olun
+            </Link>
+            .
+          </>
+        ) : isDemandPath(searchParams.get('next')) ? (
           <>
             Veli hesapları pilot kapsamında doğrulanarak açılır. Yeni hesap için
             proje ekibiyle iletişime geçin.
@@ -363,6 +374,12 @@ function isDemandPath(path: string | null): path is string {
       path.startsWith('/demands?') ||
       path.startsWith('/demands/')),
   )
+}
+
+function isDemandResponsePath(path: string | null): path is string {
+  if (!isDemandPath(path)) return false
+  const url = new URL(path, window.location.origin)
+  return url.searchParams.get('action') === 'response'
 }
 
 const registrationFields = [

@@ -64,6 +64,16 @@ export interface MockApiState {
     needsAfternoon: boolean
     reasons: string[]
   }
+  serviceResponse: null | {
+    id: string
+    status: 'ACTIVE' | 'WITHDRAWN'
+    offersMorning: boolean
+    offersAfternoon: boolean
+    publicationVersion: number
+    publicationEventId: string
+    publishedAt: string
+    withdrawnAt: string | null
+  }
 }
 
 export function createMockApiState(): MockApiState {
@@ -84,6 +94,7 @@ export function createMockApiState(): MockApiState {
     tariff: tariff('v1'),
     demandCreated: false,
     parentSupport: null,
+    serviceResponse: null,
   }
 }
 
@@ -449,6 +460,81 @@ export async function installMockApi(page: Page, state: MockApiState) {
         ? json(route, demandResponse(state, role))
         : problem(route, 404, 'demand_not_found')
     }
+    if (path === `/demands/${demandId}/responses` && method === 'GET') {
+      const response = state.serviceResponse
+      return json(
+        route,
+        pageResponse(
+          response?.status === 'ACTIVE' && serviceResponseEligible(state)
+            ? [publicServiceResponse(state, response)]
+            : [],
+          20,
+        ),
+      )
+    }
+    if (path === `/operator/demands/${demandId}/response` && method === 'GET') {
+      return requireRole(route, role, 'OPERATOR', () => {
+        const blockers = serviceResponseBlockers(state)
+        return json(route, {
+          demandId,
+          eligible: blockers.length === 0,
+          blockers,
+          response: state.serviceResponse
+            ? operatorServiceResponse(state, blockers.length === 0)
+            : null,
+        })
+      })
+    }
+    if (
+      path === `/operator/demands/${demandId}/response` &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const blockers = serviceResponseBlockers(state)
+        if (blockers.length > 0) {
+          return problem(route, 409, 'operator_not_eligible')
+        }
+        if (state.serviceResponse?.status === 'ACTIVE') {
+          return json(route, {
+            published: false,
+            response: operatorServiceResponse(state, true),
+          })
+        }
+        const body = await request.postDataJSON()
+        const publicationVersion =
+          (state.serviceResponse?.publicationVersion ?? 0) + 1
+        state.serviceResponse = {
+          id: 'de3abec5-1adc-4267-a7f1-dc06e8164655',
+          status: 'ACTIVE',
+          offersMorning: body.offersMorning,
+          offersAfternoon: body.offersAfternoon,
+          publicationVersion,
+          publicationEventId:
+            publicationVersion === 1
+              ? 'c1f54a9d-cf2e-4206-9016-644372685b74'
+              : 'e2f8ee8a-970c-451b-bd7f-287dc02f5ed6',
+          publishedAt: createdAt,
+          withdrawnAt: null,
+        }
+        return json(route, {
+          published: true,
+          response: operatorServiceResponse(state, true),
+        })
+      })
+    }
+    if (
+      path === `/operator/demands/${demandId}/response` &&
+      method === 'DELETE'
+    ) {
+      return requireRole(route, role, 'OPERATOR', () => {
+        if (!state.serviceResponse) {
+          return problem(route, 404, 'demand_service_response_not_found')
+        }
+        state.serviceResponse.status = 'WITHDRAWN'
+        state.serviceResponse.withdrawnAt = createdAt
+        return json(route, operatorServiceResponse(state, false))
+      })
+    }
     if (
       path === `/demands/${demandId}/support` &&
       (method === 'POST' || method === 'PUT')
@@ -537,6 +623,51 @@ function demandResponse(state: MockApiState, role: Role | undefined) {
             id: 'b6586a84-6094-4ddb-80ea-e36756cf1915',
             ...support,
           },
+  }
+}
+
+function serviceResponseEligible(state: MockApiState) {
+  return serviceResponseBlockers(state).length === 0
+}
+
+function serviceResponseBlockers(state: MockApiState) {
+  const blockers: string[] = []
+  if (!state.verified) blockers.push('ACCOUNT_EMAIL_UNVERIFIED')
+  if (!state.active) blockers.push('ACCOUNT_DISABLED', 'PROFILE_INACTIVE')
+  if (!state.publiclyVisible) blockers.push('PROFILE_HIDDEN')
+  if (state.approvalStatus !== 'APPROVED') blockers.push('APPROVAL_REQUIRED')
+  if (!state.operatorSchoolAdded) blockers.push('SCHOOL_NOT_LINKED')
+  else if (!state.generalCoverage.includes(201))
+    blockers.push('COVERAGE_MISSING')
+  return blockers
+}
+
+function operatorServiceResponse(
+  state: MockApiState,
+  currentlyPublic: boolean,
+) {
+  const response = state.serviceResponse
+  if (!response) throw new Error('Mock service response is missing')
+  return {
+    ...response,
+    currentlyPublic: response.status === 'ACTIVE' && currentlyPublic,
+  }
+}
+
+function publicServiceResponse(
+  state: MockApiState,
+  response: NonNullable<MockApiState['serviceResponse']>,
+) {
+  return {
+    id: response.id,
+    publicationEventId: response.publicationEventId,
+    publicationVersion: response.publicationVersion,
+    operatorId,
+    businessName: state.businessName,
+    contactPhone: state.contactPhone,
+    offersMorning: response.offersMorning,
+    offersAfternoon: response.offersAfternoon,
+    publishedAt: response.publishedAt,
   }
 }
 

@@ -1,6 +1,8 @@
 package com.servisimibul.backend.demand.exception;
 
 import com.servisimibul.backend.demand.controller.DemandController;
+import com.servisimibul.backend.demand.controller.OperatorDemandServiceResponseController;
+import com.servisimibul.backend.demand.controller.PublicDemandServiceResponseController;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -22,7 +24,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @Order(Ordered.HIGHEST_PRECEDENCE)
-@RestControllerAdvice(assignableTypes = DemandController.class)
+@RestControllerAdvice(assignableTypes = {
+        DemandController.class,
+        OperatorDemandServiceResponseController.class,
+        PublicDemandServiceResponseController.class
+})
 public class DemandApiExceptionHandler {
 
     @ExceptionHandler(DemandApiException.class)

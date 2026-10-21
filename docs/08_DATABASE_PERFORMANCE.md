@@ -44,7 +44,7 @@ Revisit indexes only with new `EXPLAIN ANALYZE` evidence from materially larger 
 
 ## RLS and grant audit
 
-The PostgreSQL integration suite now enumerates all 19 application tables and all three application sequences and fails when the catalog contains an unaudited object. It verifies:
+The PostgreSQL integration suite now enumerates all 21 application tables (including V10 demand data and V11 demand-response history) and all three application sequences and fails when the catalog contains an unaudited object. It verifies:
 
 - every application table has RLS enabled and is not owned by the runtime role;
 - every table has exactly one permissive `ALL` policy restricted to `servisimibul_app`, with `USING (true)` and `WITH CHECK (true)`;
@@ -56,6 +56,6 @@ The PostgreSQL integration suite now enumerates all 19 application tables and al
 
 ## Migration replay
 
-Backend CI starts with an empty PostgreSQL 17 database, provisions only the required restricted roles, and applies Flyway V1 through V10 using the migration identity. The application then starts through `servisimibul_app` with Hibernate `ddl-auto=validate`. The suite asserts every resolved V1–V10 migration is in `SUCCESS` state and that a second `flyway.migrate()` executes zero migrations.
+Backend CI starts with an empty PostgreSQL 17 database, provisions only the required restricted roles, and applies Flyway V1 through V11 using the migration identity. The application then starts through `servisimibul_app` with Hibernate `ddl-auto=validate`. The suite asserts every resolved V1–V11 migration is in `SUCCESS` state and that a second `flyway.migrate()` executes zero migrations.
 
 Workflow `38788568472` passed 93 tests with zero failures, errors, or skips. No Docker daemon is required by the project or for ordinary development; GitHub Actions uses its own isolated PostgreSQL service for this database-dependent verification.
