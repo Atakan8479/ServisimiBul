@@ -57,7 +57,6 @@ export function DemandLocationPicker({
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
   }, [onSelectionChange])
-  const hydratedLocationKey = useRef<string | undefined>(undefined)
 
   const loadSchoolPage = useCallback(
     async (
@@ -131,9 +130,6 @@ export function DemandLocationPicker({
     ) {
       return
     }
-    const key = `${initialSchoolId}/${initialPickupDistrictId}/${initialNeighborhoodId}`
-    if (hydratedLocationKey.current === key) return
-    hydratedLocationKey.current = key
     const timer = window.setTimeout(() => {
       const request = ++requestVersion.current
       setLoadingPickup(true)
