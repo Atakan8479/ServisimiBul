@@ -43,7 +43,7 @@ J-05 prepares and runs controlled, supervised pilot usability sessions on the J-
 
 ## Parent demand workflow
 
-REQ-01 adds the isolated `PARENT` role foundation. REQ-02 owns Flyway V10 plus anonymous demand reads and parent-only creation/support lifecycle with server-authoritative year, uniqueness, aggregate counts, and concurrency tests. REQ-03 owns the accessible frontend board and must use the REQ-02 API without client-side duplicate or paging logic. Shared Supabase V9/V10 migration remains a separately inspected and approved operation.
+REQ-01 adds the isolated `PARENT` role foundation. REQ-02 owns Flyway V10 plus anonymous demand reads and parent-only creation/support lifecycle with server-authoritative year, uniqueness, aggregate counts, and concurrency tests. REQ-03 owns the accessible frontend board and must use the REQ-02 API without client-side duplicate or paging logic. REQ-04 owns Flyway V11 and the public-comment backend contract: supporting-parent/eligible-operator authorship, pseudonymous/publication-safe identity, server pagination, author deletion, and baseline spam controls. Its frontend integration follows REQ-03 to avoid parallel edits to the demand-board UI. REQ-08 owns admin hide/unhide audit. Shared Supabase V9–V11 migrations remain separately inspected and approved operations.
 
 ## Two-developer coordination
 A: database, geo catalog, schema constraints, admin catalog/query performance.

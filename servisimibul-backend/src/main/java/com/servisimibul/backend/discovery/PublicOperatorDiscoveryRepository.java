@@ -87,6 +87,39 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
     );
 
     @Query("""
+            select distinct profile
+            from OperatorProfile profile
+            join fetch profile.user user
+            where user.id in :userIds
+              and user.emailVerifiedAt is not null
+              and user.enabled = true
+              and user.role = :userRole
+              and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
+              and profile.active = true
+              and profile.publiclyVisible = true
+              and exists (
+                  select coverage.id
+                  from OperatorSchoolCoverage coverage
+                  join coverage.operatorSchool operatorSchool
+                  join operatorSchool.school school
+                  where operatorSchool.operator = profile
+                    and operatorSchool.active = true
+                    and school.active = true
+                    and school.id = :schoolId
+                    and coverage.neighborhood.id = :neighborhoodId
+                    and coverage.neighborhood.district.province.id = school.neighborhood.district.province.id
+              )
+            """)
+    List<OperatorProfile> findPublishedOperatorsByUserIds(
+            @Param("userIds") Collection<UUID> userIds,
+            @Param("schoolId") UUID schoolId,
+            @Param("neighborhoodId") Long neighborhoodId,
+            @Param("userRole") UserRole userRole,
+            @Param("approvalStatus") OperatorApprovalStatus approvalStatus,
+            @Param("approvalRequired") boolean approvalRequired
+    );
+
+    @Query("""
             select operatorSchool.operator.id as operatorId,
                    offering.id as offeringId,
                    offering.availableSeats as availableSeats,

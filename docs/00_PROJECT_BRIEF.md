@@ -15,6 +15,7 @@ Registered roles: `ADMIN`, `OPERATOR`, and `PARENT`. Public discovery still requ
 - OperatorSchool linkage and per-school OperatorSchoolCoverage. Different districts of the same province are valid coverage for a school.
 - Anonymous parent search by school + neighborhood; operator contact view; pagination; responsive public and admin/operator UIs.
 - Anonymous demand browsing plus authenticated parent creation/support for a unique school + pickup-neighborhood + academic-year demand. Demand participation stores only direction needs and approved reason codes, never student or address data.
+- Public demand comments from supporting parents and eligible operators, with pseudonymous parents, publication-safe operator identity, basic spam controls, and author deletion.
 - Price reference: official UKOME fee bands from editable persistent JSON; only verified official tariffs, no price estimates based on neighborhood.
 
 ## Optional-detail capability; not required for discovery
@@ -22,7 +23,7 @@ Registered roles: `ADMIN`, `OPERATOR`, and `PARENT`. Public discovery still requ
 - No ServiceOffering must be necessary for operator search visibility.
 
 ## Not MVP
-Bookings, payments, live GPS tracking, mapped routes/optimization, student accounts, public parent registration, internal chat, ratings/reviews, native mobile app.
+Bookings, payments, live GPS tracking, mapped routes/optimization, student accounts, public parent registration, private/internal chat, ratings/reviews, native mobile app.
 
 ## Quality constraints
 Modular monolith; clear controller/service/repository/entity/DTO/security separation or feature modules. Tests for ownership, authorization, duplicate relationships, publication conditions, school/coverage validity, migration integrity. Avoid collecting home addresses or children's personal data. Consider KVKK and accessible, mobile-first UI. No microservices, Redis or PostGIS without demonstrated need.

@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -74,6 +75,13 @@ class CsrfRegressionTests {
                 com.servisimibul.backend.identity.UserRole.ADMIN,
                 true
         ));
+        RequestPostProcessor parent = user(new AuthenticatedUser(
+                MISSING_ID,
+                "parent@example.com",
+                "hash",
+                com.servisimibul.backend.identity.UserRole.PARENT,
+                true
+        ));
         return List.of(
                 new CsrfCase("authentication", () -> json(post("/api/v1/auth/register"), "{}")),
                 new CsrfCase("email verification", () ->
@@ -100,6 +108,15 @@ class CsrfRegressionTests {
                         json(post("/api/v1/operator/vehicles").with(operator), "{}")),
                 new CsrfCase("offering", () ->
                         json(post("/api/v1/operator/offerings").with(operator), "{}")),
+                new CsrfCase("demand comment create", () -> json(
+                        post("/api/v1/demands/{id}/comments", MISSING_ID).with(parent),
+                        "{\"body\":\"yorum\"}"
+                )),
+                new CsrfCase("demand comment delete", () -> delete(
+                        "/api/v1/demands/{demandId}/comments/{commentId}",
+                        MISSING_ID,
+                        MISSING_ID
+                ).with(parent)),
                 new CsrfCase("admin operator", () ->
                         post("/api/v1/admin/operators/{id}/approve", MISSING_ID).with(admin)),
                 new CsrfCase("admin school", () ->

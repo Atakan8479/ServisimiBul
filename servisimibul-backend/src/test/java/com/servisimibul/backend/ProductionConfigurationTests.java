@@ -65,7 +65,11 @@ class ProductionConfigurationTests {
                 .containsEntry("app.rate-limit.registration-ip.requests",
                         "${SB_RATE_LIMIT_REGISTRATION_IP_REQUESTS:20}")
                 .containsEntry("app.rate-limit.public-search-ip.requests",
-                        "${SB_RATE_LIMIT_PUBLIC_SEARCH_IP_REQUESTS:120}");
+                        "${SB_RATE_LIMIT_PUBLIC_SEARCH_IP_REQUESTS:120}")
+                .containsEntry("app.rate-limit.comment-account.requests",
+                        "${SB_RATE_LIMIT_COMMENT_ACCOUNT_REQUESTS:5}")
+                .containsEntry("app.rate-limit.comment-account.window",
+                        "${SB_RATE_LIMIT_COMMENT_ACCOUNT_WINDOW:10m}");
     }
 
     @Test

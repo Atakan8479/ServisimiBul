@@ -57,6 +57,14 @@ Demand listing returns only OPEN rows and accepts `sort=newest|most-supported`; 
 
 `POST /api/v1/demands` accepts `{schoolId,neighborhoodId,needsMorning,needsAfternoon,reasons}` and never accepts an academic year or parent identifier. It returns `{created,demand}` with 201 for a new row or 200 for an existing exact row; the latter never creates/reactivates support. `POST /api/v1/demands/{id}/support` creates or reactivates the caller's stable support row and is idempotent for an already-active row. `PUT` on the same support path atomically replaces directions/reasons, and `DELETE` withdraws without deleting; repeated withdrawal remains successful. Support mutations on CLOSED or ARCHIVED demands return 409.
 
+### Demand comments
+
+- `GET /api/v1/demands/{demandId}/comments?page=0&size=20` is anonymous, newest-first, stable, and returns only `PUBLISHED` comments; maximum size is 50.
+- `POST /api/v1/demands/{demandId}/comments` accepts only `{body}` and derives the author from the authenticated session. An ACTIVE supporting `PARENT`, or an enabled/verified/active operator allowed by the effective approval policy, may post only while the demand is OPEN. CSRF is required.
+- `DELETE /api/v1/demands/{demandId}/comments/{commentId}` hard-deletes only the caller's own comment and requires CSRF. Another user's comment is exposed as not found.
+
+Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exact body is rejected for 10 minutes; a configurable single-instance limit defaults to 5 attempts/account/10 minutes and returns 429 with `Retry-After`. Parent output is always `Veli` and contains no parent identifier. Operator output exposes a business name and operator-profile ID only when the existing public-discovery predicate matches the demand; otherwise it uses `Servis işletmecisi` with no link. Admin hide/unhide audit is deferred to REQ-08.
+
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
 - `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`

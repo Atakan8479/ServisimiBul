@@ -294,6 +294,7 @@ class InMemoryRateLimiterTests {
                 limit,
                 limit,
                 limit,
+                limit,
                 limit
         );
     }
@@ -320,7 +321,8 @@ class InMemoryRateLimiterTests {
                 account,
                 ip,
                 account,
-                ip
+                ip,
+                account
         );
     }
 }
