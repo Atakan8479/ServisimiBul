@@ -12,7 +12,13 @@ export const supportReasons = [
 
 const supportReasonSchema = z.enum(supportReasons)
 const demandStatusSchema = z.enum(['OPEN', 'CLOSED', 'ARCHIVED'])
-const supportStatusSchema = z.enum(['ACTIVE', 'WITHDRAWN'])
+const supportStatusSchema = z.enum([
+  'ACTIVE',
+  'AWAITING_FEEDBACK',
+  'SATISFIED',
+  'INACTIVE_EXPIRED',
+  'WITHDRAWN',
+])
 
 const supportSchema = z.object({
   id: z.string().uuid(),
@@ -25,6 +31,8 @@ const supportSchema = z.object({
 const demandSchema = z.object({
   id: z.string().uuid(),
   status: demandStatusSchema,
+  closureReason: z.enum(['FULFILLED', 'INACTIVE', 'ADMIN']).nullable(),
+  closedAt: z.string().datetime({ offset: true }).nullable(),
   academicYear: z.string(),
   createdAt: z.string().datetime({ offset: true }),
   updatedAt: z.string().datetime({ offset: true }),
@@ -145,6 +153,36 @@ const publishServiceResponseSchema = z.object({
   published: z.boolean(),
   response: operatorServiceResponseSchema,
 })
+
+const feedbackStatusSchema = z.enum([
+  'AWAITING_FEEDBACK',
+  'SATISFIED',
+  'NOT_SATISFIED',
+  'INACTIVE_EXPIRED',
+  'SUPERSEDED',
+])
+
+const feedbackSchema = z.object({
+  publicationEventId: z.string().uuid(),
+  operatorId: z.string().uuid(),
+  operatorBusinessName: z.string().nullable(),
+  offersMorning: z.boolean(),
+  offersAfternoon: z.boolean(),
+  publishedAt: z.string().datetime({ offset: true }),
+  status: feedbackStatusSchema,
+  openedAt: z.string().datetime({ offset: true }).nullable(),
+  reminderDueAt: z.string().datetime({ offset: true }).nullable(),
+  reminderTriggeredAt: z.string().datetime({ offset: true }).nullable(),
+  expiresAt: z.string().datetime({ offset: true }),
+  evaluatedAt: z.string().datetime({ offset: true }).nullable(),
+  canEvaluate: z.boolean(),
+})
+
+const feedbackListSchema = z.object({
+  demandId: z.string().uuid(),
+  feedback: z.array(feedbackSchema),
+  disclaimer: z.string(),
+})
 export type SupportReason = z.infer<typeof supportReasonSchema>
 export type Demand = z.infer<typeof demandSchema>
 export type DemandPage = z.infer<typeof demandPageSchema>
@@ -162,6 +200,8 @@ export type ServiceResponseEligibility = z.infer<
   typeof serviceResponseEligibilitySchema
 >
 export type ServiceResponseBlocker = (typeof serviceResponseBlockers)[number]
+export type DemandFeedback = z.infer<typeof feedbackSchema>
+export type DemandFeedbackList = z.infer<typeof feedbackListSchema>
 
 export interface SupportValues {
   needsMorning: boolean
@@ -305,5 +345,26 @@ export function withdrawDemandServiceResponse(demandId: string) {
     method: 'DELETE',
     requiresSession: true,
     schema: operatorServiceResponseSchema,
+  })
+}
+
+export function openDemandFeedback(demandId: string) {
+  return apiRequest(`/demands/${demandId}/feedback/open`, {
+    method: 'POST',
+    requiresSession: true,
+    schema: feedbackListSchema,
+  })
+}
+
+export function decideDemandFeedback(
+  demandId: string,
+  publicationEventId: string,
+  satisfied: boolean,
+) {
+  return apiRequest(`/demands/${demandId}/feedback/${publicationEventId}`, {
+    method: 'PUT',
+    requiresSession: true,
+    json: { satisfied },
+    schema: feedbackListSchema,
   })
 }

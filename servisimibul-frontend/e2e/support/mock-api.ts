@@ -646,6 +646,8 @@ function demandResponse(state: MockApiState, role: Role | undefined) {
   return {
     id: demandId,
     status: 'OPEN',
+    closureReason: null,
+    closedAt: null,
     academicYear: '2026-2027',
     createdAt,
     updatedAt: createdAt,

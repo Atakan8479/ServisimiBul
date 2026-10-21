@@ -48,6 +48,7 @@ public class DemandServiceResponseService {
     private final OperatorSchoolRepository operatorSchoolRepository;
     private final OperatorSchoolCoverageRepository coverageRepository;
     private final OperatorApprovalPolicy approvalPolicy;
+    private final DemandFeedbackService feedbackService;
     private final Clock clock;
 
     @Transactional(readOnly = true)
@@ -142,7 +143,8 @@ public class DemandServiceResponseService {
             );
             response = responseRepository.saveAndFlush(response);
         }
-        persistPublicationEvent(response);
+        DemandServicePublicationEvent event = persistPublicationEvent(response);
+        feedbackService.publicationCreated(event);
         return new PublishResponse(true, toOperatorResponse(response, true));
     }
 
@@ -162,6 +164,7 @@ public class DemandServiceResponseService {
                 ));
         response.withdraw(OffsetDateTime.now(clock));
         responseRepository.saveAndFlush(response);
+        feedbackService.responseWithdrawn(response);
         return toOperatorResponse(response, false);
     }
 
@@ -273,8 +276,8 @@ public class DemandServiceResponseService {
         return new Direction(Boolean.TRUE.equals(morning), Boolean.TRUE.equals(afternoon));
     }
 
-    private void persistPublicationEvent(DemandServiceResponse response) {
-        eventRepository.saveAndFlush(new DemandServicePublicationEvent(
+    private DemandServicePublicationEvent persistPublicationEvent(DemandServiceResponse response) {
+        return eventRepository.saveAndFlush(new DemandServicePublicationEvent(
                 publicationEventId(response.getId(), response.getPublicationVersion()),
                 response,
                 response.getPublicationVersion(),

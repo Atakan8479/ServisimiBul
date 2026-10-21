@@ -212,6 +212,8 @@ describe('operator authentication screens', () => {
         HttpResponse.json({
           id: demandId,
           status: 'OPEN',
+          closureReason: null,
+          closedAt: null,
           academicYear: '2026-2027',
           createdAt: '2026-10-20T09:00:00Z',
           updatedAt: '2026-10-20T09:00:00Z',

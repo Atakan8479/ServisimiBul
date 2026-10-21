@@ -21,7 +21,7 @@ Exactly two initial admins are created by an explicitly enabled, one-shot backen
 
 `PARENT` is a distinct authenticated role with no operator or admin authority. There is no public parent-registration endpoint in REQ-01. The temporary synthetic parent bootstrap is available only under the `local` profile and must verify both an explicit disposable-database flag and the isolated test-harness database marker before writing a hashed, email-verified account.
 
-Demand list/detail reads are anonymous and return aggregate participation plus only the signed-in parent's own support when the principal is a `PARENT`. They never return creator/supporter identities, emails, student data, or pickup addresses. Demand and support mutations require a `PARENT` session and CSRF; parent identity always comes from the authenticated session.
+Demand list/detail reads are anonymous and return aggregate participation plus only the signed-in parent's own support when the principal is a `PARENT`. They never return creator/supporter identities, emails, student data, or pickup addresses. Demand, support, and feedback mutations require a `PARENT` session and CSRF; parent identity always comes from the authenticated session.
 
 Demand-response list reads are also anonymous and must not create a session. They return only currently eligible ACTIVE response declarations with the public business name, contact phone, morning/afternoon directions, stable publication event identifier/version, and timestamp. Operator response reads and mutations require an OPERATOR session; POST/DELETE require CSRF, and ownership always comes from the principal. Every write and public read re-evaluates current eligibility. No request accepts an operator, response, vehicle, or offering identifier to establish authority.
 
@@ -58,14 +58,22 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 
 Demand listing returns only OPEN rows and accepts `sort=newest|most-supported`; both orders use creation timestamp and demand UUID tie-breakers. Omitting `academicYear` selects the configured current year. Detail reads may expose a non-open row so duplicate creation can return its canonical identity. Both reads expose aggregate supporter, morning, afternoon, and all six reason counts; an authenticated parent additionally receives only their own nullable support.
 
-`POST /api/v1/demands` accepts `{schoolId,neighborhoodId,needsMorning,needsAfternoon,reasons}` and never accepts an academic year or parent identifier. It returns `{created,demand}` with 201 for a new row or 200 for an existing exact row; the latter never creates/reactivates support. `POST /api/v1/demands/{id}/support` creates or reactivates the caller's stable support row and is idempotent for an already-active row. `PUT` on the same support path atomically replaces directions/reasons, and `DELETE` withdraws without deleting; repeated withdrawal remains successful. Support mutations on CLOSED or ARCHIVED demands return 409.
+`POST /api/v1/demands` accepts `{schoolId,neighborhoodId,needsMorning,needsAfternoon,reasons}` and never accepts an academic year or parent identifier. It returns `{created,demand}` with 201 for a new row or 200 for an existing exact row; the latter never creates/reactivates support. `POST /api/v1/demands/{id}/support` creates or reactivates the caller's stable support row and is idempotent for an already-participating row. It may reopen only a demand closed for `INACTIVE`; `FULFILLED`, `ADMIN`, and `ARCHIVED` rows remain closed. `PUT` atomically replaces directions/reasons, and `DELETE` withdraws without deleting.
 
 Demand response listing has stable `publishedAt DESC, response UUID DESC` ordering and includes only an OPEN demand's currently eligible ACTIVE rows. It exposes no authentication email, school-relationship identifier, vehicle, offering, seat, or price data. Responses are explicitly operator-declared and not platform-verified or guaranteed.
+
+### Parent service feedback
+
+- `GET /api/v1/demands/{demandId}/feedback` returns only the authenticated parent's own publication opportunities and history.
+- `POST /api/v1/demands/{demandId}/feedback/open` records the first feedback-screen open idempotently and establishes the configured reminder/expiry timestamps. CSRF is required.
+- `PUT /api/v1/demands/{demandId}/feedback/{publicationEventId}` accepts only `{satisfied:boolean}`, requires CSRF, and resolves only an awaiting opportunity owned by the caller.
+
+All feedback routes require a `PARENT` session. No route accepts a parent/support identifier for authority. The scheduler locks and rechecks current state before reminders or expiry, so an explicit answer, newer publication, withdrawal, or reactivation wins over stale work. Reminder state is in-app only; REQ-06 sends no email or push.
 
 ### Demand comments
 
 - `GET /api/v1/demands/{demandId}/comments?page=0&size=20` is anonymous, newest-first, stable, and returns only `PUBLISHED` comments; maximum size is 50.
-- `POST /api/v1/demands/{demandId}/comments` accepts only `{body}` and derives the author from the authenticated session. An ACTIVE supporting `PARENT`, or an enabled/verified/active operator allowed by the effective approval policy, may post only while the demand is OPEN. CSRF is required.
+- `POST /api/v1/demands/{demandId}/comments` accepts only `{body}` and derives the author from the authenticated session. An ACTIVE or AWAITING_FEEDBACK supporting `PARENT`, or an enabled/verified/active operator allowed by the effective approval policy, may post only while the demand is OPEN. CSRF is required.
 - `DELETE /api/v1/demands/{demandId}/comments/{commentId}` hard-deletes only the caller's own comment and requires CSRF. Another user's comment is exposed as not found.
 
 Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exact body is rejected for 10 minutes; a configurable single-instance limit defaults to 5 attempts/account/10 minutes and returns 429 with `Retry-After`. Parent output is always `Veli` and contains no parent identifier. Operator output exposes a business name and operator-profile ID only when the existing public-discovery predicate matches the demand; otherwise it uses `Servis işletmecisi` with no link. Admin hide/unhide audit is deferred to REQ-08.

@@ -108,9 +108,14 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/demands",
-                                "/api/v1/demands/*/support"
+                                "/api/v1/demands/*/support",
+                                "/api/v1/demands/*/feedback/open"
                         ).hasRole("PARENT")
-                        .requestMatchers(HttpMethod.PUT, "/api/v1/demands/*/support").hasRole("PARENT")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/demands/*/feedback").hasRole("PARENT")
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/demands/*/support",
+                                "/api/v1/demands/*/feedback/*"
+                        ).hasRole("PARENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/demands/*/support").hasRole("PARENT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/demands/*/comments")
                         .hasAnyRole("PARENT", "OPERATOR")

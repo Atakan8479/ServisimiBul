@@ -32,6 +32,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
+import java.time.Duration;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,6 +42,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -78,6 +81,14 @@ class DemandServiceResponseApiTests {
     private DemandServiceResponseRepository responseRepository;
     @Autowired
     private DemandServicePublicationEventRepository eventRepository;
+    @Autowired
+    private DemandSupportRepository supportRepository;
+    @Autowired
+    private DemandServiceFeedbackRepository feedbackRepository;
+    @Autowired
+    private DemandLifecycleEventRepository lifecycleEventRepository;
+    @Autowired
+    private com.servisimibul.backend.demand.service.DemandFeedbackService feedbackService;
 
     @Test
     void eligibleOperatorPublishesImmediatelyAndLifecycleIsIdempotent() throws Exception {
@@ -97,6 +108,12 @@ class DemandServiceResponseApiTests {
         JsonNode firstResponse = body(first).path("response");
         UUID responseId = UUID.fromString(firstResponse.path("id").asText());
         UUID firstEventId = UUID.fromString(firstResponse.path("publicationEventId").asText());
+        UUID supportId = supportRepository.findOwned(
+                fixture.demand().getId(),
+                fixture.parent().getId()
+        ).orElseThrow().getId();
+        DemandServiceFeedback firstFeedback = feedbackRepository
+                .findDetailedBySupportId(supportId).getFirst();
 
         mockMvc.perform(get(publicPath(fixture.demand())))
                 .andExpect(status().isOk())
@@ -136,6 +153,8 @@ class DemandServiceResponseApiTests {
         mockMvc.perform(get(publicPath(fixture.demand())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(0));
+        assertThat(feedbackRepository.findById(firstFeedback.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandServiceFeedbackStatus.SUPERSEDED);
 
         MvcResult republished = mockMvc.perform(post(operatorPath(fixture.demand()))
                         .with(as(fixture.operatorUser()))
@@ -154,6 +173,18 @@ class DemandServiceResponseApiTests {
         );
         assertThat(secondEventId).isNotEqualTo(firstEventId);
         assertThat(eventRepository.countByResponseId(responseId)).isEqualTo(2);
+        List<DemandServiceFeedback> allFeedback = feedbackRepository.findDetailedBySupportId(supportId);
+        assertThat(allFeedback).hasSize(2);
+        assertThat(allFeedback).extracting(DemandServiceFeedback::getStatus)
+                .containsExactlyInAnyOrder(
+                        DemandServiceFeedbackStatus.SUPERSEDED,
+                        DemandServiceFeedbackStatus.AWAITING_FEEDBACK
+                );
+        feedbackService.processDue(firstFeedback.getId());
+        assertThat(supportRepository.findOwned(
+                fixture.demand().getId(),
+                fixture.parent().getId()
+        ).orElseThrow().getStatus()).isEqualTo(DemandSupportStatus.AWAITING_FEEDBACK);
     }
 
     @Test
@@ -232,7 +263,11 @@ class DemandServiceResponseApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totalElements").value(1));
 
-        jdbcTemplate.update("update demand set status = 'CLOSED' where id = ?", owner.demand().getId());
+        jdbcTemplate.update("""
+                update demand
+                set status = 'CLOSED', closure_reason = 'ADMIN', closed_at = now()
+                where id = ?
+                """, owner.demand().getId());
         entityManager.clear();
         mockMvc.perform(get(publicPath(owner.demand())))
                 .andExpect(status().isOk())
@@ -299,6 +334,176 @@ class DemandServiceResponseApiTests {
                 .andExpect(jsonPath("$.code").value("operator_approval_required"));
     }
 
+    @Test
+    void publicationCreatesFeedbackWithoutClosingDemandAndParentCanRejectIt() throws Exception {
+        Fixture fixture = fixture("feedback-reject@example.com", true);
+
+        publish(fixture);
+        DemandSupport support = supportRepository.findOwned(
+                fixture.demand().getId(),
+                fixture.parent().getId()
+        ).orElseThrow();
+        List<DemandServiceFeedback> feedback = feedbackRepository.findDetailedBySupportId(
+                support.getId()
+        );
+        assertThat(feedback).hasSize(1);
+        DemandServiceFeedback opportunity = feedback.getFirst();
+        assertThat(support.getStatus()).isEqualTo(DemandSupportStatus.AWAITING_FEEDBACK);
+        assertThat(fixture.demand().isOpen()).isTrue();
+        assertThat(Duration.between(
+                opportunity.getPublicationEvent().getPublishedAt(),
+                opportunity.getExpiresAt()
+        )).isEqualTo(Duration.ofDays(45));
+
+        MvcResult opened = mockMvc.perform(post(feedbackPath(fixture.demand()) + "/open")
+                        .with(as(fixture.parent()))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback[0].status").value("AWAITING_FEEDBACK"))
+                .andExpect(jsonPath("$.feedback[0].openedAt").exists())
+                .andReturn();
+        JsonNode openedFeedback = body(opened).path("feedback").get(0);
+        OffsetDateTime openedAt = OffsetDateTime.parse(openedFeedback.path("openedAt").asText());
+        assertThat(Duration.between(
+                openedAt,
+                OffsetDateTime.parse(openedFeedback.path("reminderDueAt").asText())
+        )).isEqualTo(Duration.ofDays(7));
+        assertThat(Duration.between(
+                openedAt,
+                OffsetDateTime.parse(openedFeedback.path("expiresAt").asText())
+        )).isEqualTo(Duration.ofDays(14));
+
+        mockMvc.perform(put(feedbackPath(fixture.demand()) + "/" + opportunity.getPublicationEvent().getId())
+                        .with(as(fixture.parent()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"satisfied\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback[0].status").value("NOT_SATISFIED"));
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(supportRepository.findOwned(
+                fixture.demand().getId(),
+                fixture.parent().getId()
+        ).orElseThrow().getStatus()).isEqualTo(DemandSupportStatus.ACTIVE);
+        assertThat(demandRepository.findById(fixture.demand().getId()).orElseThrow().isOpen()).isTrue();
+    }
+
+    @Test
+    void explicitSatisfactionClosesFulfilledAndFeedbackEndpointsAreProtected() throws Exception {
+        Fixture fixture = fixture("feedback-satisfied@example.com", true);
+        publish(fixture);
+        DemandServiceFeedback feedback = feedbackRepository.findDetailedBySupportId(
+                supportRepository.findOwned(fixture.demand().getId(), fixture.parent().getId())
+                        .orElseThrow().getId()
+        ).getFirst();
+
+        mockMvc.perform(get(feedbackPath(fixture.demand())))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get(feedbackPath(fixture.demand())).with(as(fixture.operatorUser())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put(feedbackPath(fixture.demand()) + "/" + feedback.getPublicationEvent().getId())
+                        .with(as(fixture.parent()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"satisfied\":true}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(put(feedbackPath(fixture.demand()) + "/" + feedback.getPublicationEvent().getId())
+                        .with(as(fixture.parent()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"satisfied\":true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.feedback[0].status").value("SATISFIED"));
+        entityManager.flush();
+        entityManager.clear();
+        Demand closed = demandRepository.findById(fixture.demand().getId()).orElseThrow();
+        assertThat(closed.getStatus()).isEqualTo(DemandStatus.CLOSED);
+        assertThat(closed.getClosureReason()).isEqualTo(DemandClosureReason.FULFILLED);
+        assertThat(lifecycleEventRepository.countByDemandIdAndEventType(
+                closed.getId(),
+                DemandLifecycleEventType.CLOSED_FULFILLED
+        )).isOne();
+    }
+
+    @Test
+    void reminderAndExpiryAreIdempotentAndInactiveDemandCanBeReopened() throws Exception {
+        Fixture fixture = fixture("feedback-expiry@example.com", true);
+        publish(fixture);
+        DemandSupport support = supportRepository.findOwned(
+                fixture.demand().getId(),
+                fixture.parent().getId()
+        ).orElseThrow();
+        DemandServiceFeedback feedback = feedbackRepository.findDetailedBySupportId(support.getId()).getFirst();
+
+        jdbcTemplate.update("""
+                update demand_service_feedback
+                set opened_at = now() - interval '8 days',
+                    reminder_due_at = now() - interval '1 day',
+                    expires_at = now() + interval '6 days'
+                where id = ?
+                """, feedback.getId());
+        entityManager.clear();
+        feedbackService.processDue(feedback.getId());
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(feedbackRepository.findById(feedback.getId()).orElseThrow().getReminderTriggeredAt())
+                .isNotNull();
+
+        jdbcTemplate.update("""
+                update demand_service_feedback set expires_at = now() - interval '1 minute' where id = ?
+                """, feedback.getId());
+        entityManager.clear();
+        feedbackService.processDue(feedback.getId());
+        feedbackService.processDue(feedback.getId());
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(feedbackRepository.findById(feedback.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandServiceFeedbackStatus.INACTIVE_EXPIRED);
+        Demand inactive = demandRepository.findById(fixture.demand().getId()).orElseThrow();
+        assertThat(inactive.getClosureReason()).isEqualTo(DemandClosureReason.INACTIVE);
+        assertThat(lifecycleEventRepository.countByDemandIdAndEventType(
+                inactive.getId(),
+                DemandLifecycleEventType.CLOSED_INACTIVE
+        )).isOne();
+
+        mockMvc.perform(post("/api/v1/demands/" + inactive.getId() + "/support")
+                        .with(as(fixture.parent()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"needsMorning":true,"needsAfternoon":false,"reasons":["NO_SUITABLE_SERVICE"]}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andExpect(jsonPath("$.currentUserSupport.status").value("ACTIVE"));
+        assertThat(lifecycleEventRepository.countByDemandIdAndEventType(
+                inactive.getId(),
+                DemandLifecycleEventType.REOPENED
+        )).isOne();
+
+        Fixture unseenFixture = fixture("feedback-unseen-expiry@example.com", true);
+        publish(unseenFixture);
+        DemandServiceFeedback unseen = feedbackRepository.findDetailedBySupportId(
+                supportRepository.findOwned(
+                        unseenFixture.demand().getId(),
+                        unseenFixture.parent().getId()
+                ).orElseThrow().getId()
+        ).getFirst();
+        assertThat(unseen.getOpenedAt()).isNull();
+        jdbcTemplate.update("""
+                update demand_service_feedback set expires_at = now() - interval '1 minute' where id = ?
+                """, unseen.getId());
+        entityManager.clear();
+        feedbackService.processDue(unseen.getId());
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(feedbackRepository.findById(unseen.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandServiceFeedbackStatus.INACTIVE_EXPIRED);
+        assertThat(demandRepository.findById(unseenFixture.demand().getId()).orElseThrow()
+                .getClosureReason()).isEqualTo(DemandClosureReason.INACTIVE);
+    }
+
     private void publish(Fixture fixture) throws Exception {
         mockMvc.perform(post(operatorPath(fixture.demand()))
                         .with(as(fixture.operatorUser()))
@@ -314,7 +519,10 @@ class DemandServiceResponseApiTests {
     }
 
     private Fixture fixture(String email, boolean withCoverage, boolean approved) {
-        Province province = provinceRepository.save(new Province(uniqueCode(), "Istanbul"));
+        Province province = provinceRepository.save(new Province(
+                uniqueCode(),
+                "Istanbul " + UUID.randomUUID().toString().substring(0, 8)
+        ));
         District schoolDistrict = districtRepository.save(new District(province, "Kadikoy"));
         District pickupDistrict = districtRepository.save(new District(province, "Uskudar"));
         Neighborhood schoolNeighborhood = neighborhoodRepository.save(
@@ -326,16 +534,25 @@ class DemandServiceResponseApiTests {
         School school = schoolRepository.saveAndFlush(
                 new School(schoolNeighborhood, "Response School", null, null, null)
         );
+        AppUser parent = verifiedParent("creator-" + email);
         Demand demand = demandRepository.saveAndFlush(new Demand(
                 school,
                 pickup,
                 "2026-2027",
-                verifiedParent("creator-" + email)
+                parent
+        ));
+        supportRepository.saveAndFlush(new DemandSupport(
+                demand,
+                parent,
+                true,
+                true,
+                java.util.Set.of(SupportReason.NO_SUITABLE_SERVICE)
         ));
         OperatorFixture operator = createOperator(email, school, pickup, withCoverage, approved);
         return new Fixture(
                 demand,
                 pickup,
+                parent,
                 operator.user(),
                 operator.profile(),
                 operator.operatorSchool()
@@ -357,6 +574,7 @@ class DemandServiceResponseApiTests {
         return new Fixture(
                 existing.demand(),
                 existing.pickup(),
+                existing.parent(),
                 operator.user(),
                 operator.profile(),
                 operator.operatorSchool()
@@ -410,6 +628,10 @@ class DemandServiceResponseApiTests {
         return "/api/v1/demands/%s/responses".formatted(demand.getId());
     }
 
+    private String feedbackPath(Demand demand) {
+        return "/api/v1/demands/%s/feedback".formatted(demand.getId());
+    }
+
     private String directionBody(boolean morning, boolean afternoon) {
         return """
                 {"offersMorning":%s,"offersAfternoon":%s}
@@ -440,6 +662,7 @@ class DemandServiceResponseApiTests {
     private record Fixture(
             Demand demand,
             Neighborhood pickup,
+            AppUser parent,
             AppUser operatorUser,
             OperatorProfile profile,
             OperatorSchool operatorSchool

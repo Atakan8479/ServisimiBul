@@ -1,5 +1,6 @@
 package com.servisimibul.backend.demand.dto;
 
+import com.servisimibul.backend.demand.DemandClosureReason;
 import com.servisimibul.backend.demand.DemandStatus;
 import com.servisimibul.backend.demand.DemandSupportStatus;
 import com.servisimibul.backend.demand.SupportReason;
@@ -83,6 +84,8 @@ public final class DemandDtos {
     public record DemandResponse(
             UUID id,
             DemandStatus status,
+            DemandClosureReason closureReason,
+            OffsetDateTime closedAt,
             String academicYear,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt,

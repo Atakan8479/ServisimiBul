@@ -1,10 +1,19 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Demand marketplace — REQ-04 demand comments ready for review
+## Current stage: Demand marketplace — REQ-06 parent feedback implemented locally, stacked on REQ-04
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-03, REQ-05, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-04 is implemented and verified with the merged REQ-05 schema and demand-detail UI on `codex/req-04-demand-comments`; PR #97 is ready for review. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-03, REQ-05, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-04 is implemented and verified on `codex/req-04-demand-comments`; PR #97 is ready for review. REQ-06 is implemented and verified on `codex/req-06-parent-feedback`, stacked from #97 so it can own V13 without colliding with REQ-04's V12; review is approved through a stacked PR targeting the REQ-04 branch until #97 merges. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
+
+## Verified REQ-06 parent feedback and demand resolution — 2026-10-22
+
+- Branch `codex/req-06-parent-feedback` implements GitHub issue #89 on top of the open REQ-04 branch. Flyway V13 adds per-support/publication feedback, expanded support lifecycle states, demand closure reason/time, and append-only closure/reopen history with the established RLS and least-privilege contract.
+- Every real eligible publication creates one feedback opportunity without closing the demand. First screen open sets configurable 7-day reminder and 14-day expiry timestamps; unopened opportunities expire after 45 days. Explicit satisfaction, explicit rejection, operator withdrawal, newer publication, parent withdrawal/reactivation, and stale scheduler work are kept distinct and idempotent.
+- The demand closes only after no ACTIVE/AWAITING_FEEDBACK support remains: at least one explicit satisfaction records FULFILLED, otherwise inactivity/withdrawal records INACTIVE. A same-row support reactivation may reopen only an INACTIVE closure. The parent UI records screen open, shows reminder/history states, exposes the two required decisions, and retains the no-booking/no-guarantee boundary.
+- Complete isolated PostgreSQL 17 verification passed all 253 backend tests, migration replay through V13, Hibernate schema validation, RLS/privilege checks, security regressions, and packaging. The focused response/feedback suite passed all 8 tests, including 7/14/45 timing, unseen expiry, stale publication safety, restart-style idempotence, closure/reopening, CSRF, and role authorization.
+- Frontend verification passed strict TypeScript, ESLint, all 76 Vitest tests, the production build, scoped Prettier for every touched frontend file, and all 11 Playwright tests. The repository-wide Prettier command still reports 56 pre-existing files outside this change; no bulk unrelated formatting was applied.
+- No shared Supabase connection, migration, schema change, or data write occurred. Shared Supabase remains at V8; applying repository V9–V13 requires separate inspection and explicit approval. REQ-06 review is approved as a stacked PR against the open REQ-04 branch; it must be reconciled with `main` after PR #97 merges.
 
 ## Verified REQ-04 demand comments — 2026-10-21
 
@@ -108,6 +117,7 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | REQ-03 Demand board and parent support frontend | complete | GitHub issue #86; PR #95 merged as `2120704`; final branch verification passed | Reviewed and merged 2026-10-21 |
 | REQ-04 Demand comments and baseline moderation | ready for review | GitHub issue #87; branch `codex/req-04-demand-comments`; PR #97; 250 backend, 75 Vitest, and 11 Playwright tests passed | Contract and implementation approved 2026-10-21; review and merge pending |
 | REQ-05 Demand-specific operator service responses | complete | GitHub issue #88; PR #96 merged as `55e4316` | Reviewed and merged 2026-10-21; shared-database migration remains separately approval-gated |
+| REQ-06 Parent feedback, demand resolution, and inactivity expiry | ready for stacked review | GitHub issue #89; branch `codex/req-06-parent-feedback`; backend 253/253, frontend 76/76, Playwright 11/11 passed | Open against `codex/req-04-demand-comments`, then reconcile with `main` after PR #97 merges; shared V9–V13 migration remains separately approval-gated |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 

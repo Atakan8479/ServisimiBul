@@ -1,4 +1,4 @@
--- A-09 read-only post-migration verification for the repository's V1-V12 schema.
+-- A-09 read-only post-migration verification for the repository's V1-V13 schema.
 -- Run as the controlled migration/administration identity against the explicitly
 -- confirmed target. Every row must report PASS. This script changes no state.
 
@@ -16,6 +16,8 @@ expected_tables(table_name) as (
         ('app_user'),
         ('demand'),
         ('demand_comment'),
+        ('demand_lifecycle_event'),
+        ('demand_service_feedback'),
         ('demand_support'),
         ('demand_support_reason'),
         ('demand_service_publication_event'),
@@ -63,12 +65,12 @@ checks(sort_order, check_name, passed, detail) as (
 
     union all
     select 20,
-           'Flyway versions V1-V12 applied successfully',
+           'Flyway versions V1-V13 applied successfully',
            coalesce((
                select array_agg(version order by installed_rank) filter (where success)
                from public.flyway_schema_history
                where version is not null
-           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12']::varchar[]
+           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12','13']::varchar[]
            and not exists (
                select 1 from public.flyway_schema_history where not success
            ),

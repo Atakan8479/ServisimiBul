@@ -29,6 +29,8 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
             value = """
                     select demand.id as id,
                            demand.status as status,
+                           demand.closureReason as closureReason,
+                           demand.closedAt as closedAt,
                            demand.academicYear as academicYear,
                            demand.createdAt as createdAt,
                            demand.updatedAt as updatedAt,
@@ -51,7 +53,10 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
                     join district.province province
                     left join DemandSupport support
                       on support.demand = demand
-                     and support.status = com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE
+                     and support.status in (
+                       com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE,
+                       com.servisimibul.backend.demand.DemandSupportStatus.AWAITING_FEEDBACK
+                     )
                      and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
                      and support.parent.enabled = true
                      and support.parent.emailVerifiedAt is not null
@@ -85,6 +90,8 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
     @Query("""
             select demand.id as id,
                    demand.status as status,
+                   demand.closureReason as closureReason,
+                   demand.closedAt as closedAt,
                    demand.academicYear as academicYear,
                    demand.createdAt as createdAt,
                    demand.updatedAt as updatedAt,
@@ -107,7 +114,10 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
             join district.province province
             left join DemandSupport support
               on support.demand = demand
-             and support.status = com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE
+             and support.status in (
+               com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE,
+               com.servisimibul.backend.demand.DemandSupportStatus.AWAITING_FEEDBACK
+             )
              and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
              and support.parent.enabled = true
              and support.parent.emailVerifiedAt is not null
@@ -123,7 +133,10 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
             from DemandSupport support
             join support.reasons reason
             where support.demand.id in :demandIds
-              and support.status = com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE
+              and support.status in (
+                com.servisimibul.backend.demand.DemandSupportStatus.ACTIVE,
+                com.servisimibul.backend.demand.DemandSupportStatus.AWAITING_FEEDBACK
+              )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
               and support.parent.emailVerifiedAt is not null
@@ -135,6 +148,10 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
         UUID getId();
 
         DemandStatus getStatus();
+
+        DemandClosureReason getClosureReason();
+
+        OffsetDateTime getClosedAt();
 
         String getAcademicYear();
 
