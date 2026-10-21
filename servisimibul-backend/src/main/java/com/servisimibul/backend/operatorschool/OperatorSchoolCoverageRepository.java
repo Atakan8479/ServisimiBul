@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Collection;
 import java.util.UUID;
+import java.util.Optional;
 
 public interface OperatorSchoolCoverageRepository extends JpaRepository<OperatorSchoolCoverage, UUID> {
 
@@ -38,6 +39,26 @@ public interface OperatorSchoolCoverageRepository extends JpaRepository<Operator
             """)
     List<OperatorSchoolCoverage> findAllDetailedByOperatorSchoolId(
             @Param("operatorSchoolId") UUID operatorSchoolId
+    );
+
+    @Query("""
+            select coverage
+            from OperatorSchoolCoverage coverage
+            join fetch coverage.neighborhood neighborhood
+            join fetch neighborhood.district district
+            join fetch district.province coverageProvince
+            join fetch coverage.operatorSchool operatorSchool
+            join fetch operatorSchool.school school
+            join fetch school.neighborhood schoolNeighborhood
+            join fetch schoolNeighborhood.district schoolDistrict
+            join fetch schoolDistrict.province schoolProvince
+            where operatorSchool.id = :operatorSchoolId
+              and neighborhood.id = :neighborhoodId
+              and coverageProvince.id = schoolProvince.id
+            """)
+    Optional<OperatorSchoolCoverage> findValidCoverage(
+            @Param("operatorSchoolId") UUID operatorSchoolId,
+            @Param("neighborhoodId") Long neighborhoodId
     );
 
     @Modifying

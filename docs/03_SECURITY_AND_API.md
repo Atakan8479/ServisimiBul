@@ -23,6 +23,8 @@ Exactly two initial admins are created by an explicitly enabled, one-shot backen
 
 Demand list/detail reads are anonymous and return aggregate participation plus only the signed-in parent's own support when the principal is a `PARENT`. They never return creator/supporter identities, emails, student data, or pickup addresses. Demand and support mutations require a `PARENT` session and CSRF; parent identity always comes from the authenticated session.
 
+Demand-response list reads are also anonymous and must not create a session. They return only currently eligible ACTIVE response declarations with the public business name, contact phone, morning/afternoon directions, stable publication event identifier/version, and timestamp. Operator response reads and mutations require an OPERATOR session; POST/DELETE require CSRF, and ownership always comes from the principal. Every write and public read re-evaluates current eligibility. No request accepts an operator, response, vehicle, or offering identifier to establish authority.
+
 Anonymous public endpoints should not persist a session unnecessarily; verify behavior in tests. Use environment variables and minimal session attributes. Implement account ownership checks server-side. Rate limit login, registration, verification, password recovery, and public search as appropriate. Suspension must deny future authentication, revoke existing sessions, and immediately remove the operator from public discovery.
 
 ## Operator application contract
@@ -52,10 +54,13 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `GET /api/v1/tariffs?provinceCode=...` (official JSON only)
 - `GET /api/v1/demands?schoolId=...&neighborhoodId=...&academicYear=...&sort=newest&page=0&size=20`
 - `GET /api/v1/demands/{id}`
+- `GET /api/v1/demands/{id}/responses?page=0&size=20`
 
 Demand listing returns only OPEN rows and accepts `sort=newest|most-supported`; both orders use creation timestamp and demand UUID tie-breakers. Omitting `academicYear` selects the configured current year. Detail reads may expose a non-open row so duplicate creation can return its canonical identity. Both reads expose aggregate supporter, morning, afternoon, and all six reason counts; an authenticated parent additionally receives only their own nullable support.
 
 `POST /api/v1/demands` accepts `{schoolId,neighborhoodId,needsMorning,needsAfternoon,reasons}` and never accepts an academic year or parent identifier. It returns `{created,demand}` with 201 for a new row or 200 for an existing exact row; the latter never creates/reactivates support. `POST /api/v1/demands/{id}/support` creates or reactivates the caller's stable support row and is idempotent for an already-active row. `PUT` on the same support path atomically replaces directions/reasons, and `DELETE` withdraws without deleting; repeated withdrawal remains successful. Support mutations on CLOSED or ARCHIVED demands return 409.
+
+Demand response listing has stable `publishedAt DESC, response UUID DESC` ordering and includes only an OPEN demand's currently eligible ACTIVE rows. It exposes no authentication email, school-relationship identifier, vehicle, offering, seat, or price data. Responses are explicitly operator-declared and not platform-verified or guaranteed.
 
 ### Demand comments
 
@@ -90,6 +95,9 @@ Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exa
 - `PUT /api/v1/operator/offerings/{id}/coverage`
 - `POST /api/v1/operator/offerings/{id}/publish`
 - `POST /api/v1/operator/offerings/{id}/unpublish`
+- `GET /api/v1/operator/demands/{id}/response`
+- `POST /api/v1/operator/demands/{id}/response`
+- `DELETE /api/v1/operator/demands/{id}/response`
 - `POST /api/v1/operator/application/submit`
 - `POST /api/v1/operator/application/resubmit`
 
@@ -114,6 +122,8 @@ Operator-school self-management never accepts an `operatorId`; ownership comes f
 `GET /api/v1/operator/discovery-readiness` is an authenticated, read-only view for the current session operator. It accepts no operator identifier and remains readable in both approval modes, including while an approval-required application is awaiting review; it does not grant school, coverage, vehicle, or offering management permission. The response reports `discoveryEligible`, account/email, profile-active, public-visibility, effective approval, active-school, and eligible-school-coverage gates plus per-school relationship activity, underlying school activity, valid general-coverage count, and whether that school contributes to discovery. A valid count includes only coverage in the school's province. The overall value means the operator is eligible for at least one configured school/neighborhood combination; it does not promise a match for every parent search.
 
 The readiness result and anonymous discovery share the same publication conditions: verified enabled OPERATOR account, active and publicly visible profile, approval only when the effective policy requires it, and at least one active operator-school relationship to an active school with matching same-province general coverage. Integration tests exercise both approval modes and compare readiness with the actual anonymous search result. Vehicles and ServiceOfferings are optional enrichment and never contribute to this base eligibility result.
+
+The demand-response eligibility read returns the current blockers and the caller's own nullable stable response. Publishing accepts only `{offersMorning,offersAfternoon}` and requires at least one direction. It succeeds immediately when the same full publication predicate matches the demand's exact active school and neighborhood coverage. An already-ACTIVE response returns `published=false` without changing directions, version, or event identity; reactivation updates directions, increments the version, and appends one publication event. DELETE withdraws the owned row without deleting history and is idempotent after the first withdrawal. There is no response-specific admin review step and no Vehicle or ServiceOffering prerequisite.
 
 General coverage replacement accepts `{neighborhoodIds:[...]}`. An empty list clears coverage, repeated neighborhood IDs are rejected, and every referenced neighborhood must exist in the attached school's province; another district in that province is valid. The backend locks the owned operator-school row and replaces the entire set in one transaction. Another operator's relationship is returned as not found rather than disclosed.
 

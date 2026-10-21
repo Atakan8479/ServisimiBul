@@ -85,6 +85,7 @@ describe('public demand board', () => {
       ...locationHandlers(),
       emptyDemandHandler(),
       emptyOperatorHandler(),
+      emptyServiceResponsesHandler(),
       parentHandler(),
       csrfHandler(),
       http.post('/api/v1/demands', async ({ request }) => {
@@ -125,6 +126,7 @@ describe('public demand board', () => {
       ...locationHandlers(),
       emptyDemandHandler(),
       emptyOperatorHandler(),
+      emptyServiceResponsesHandler(),
       parentHandler(),
       csrfHandler(),
       http.post('/api/v1/demands', () =>
@@ -177,6 +179,7 @@ describe('demand board regression cases', () => {
       ...locationHandlers(),
       emptyDemandHandler(),
       emptyOperatorHandler(),
+      emptyServiceResponsesHandler(),
       parentHandler(),
       csrfHandler(),
       http.post('/api/v1/demands', () =>
@@ -206,6 +209,7 @@ describe('demand support management', () => {
     server.use(
       parentHandler(),
       csrfHandler(),
+      emptyServiceResponsesHandler(),
       http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
       http.put(`/api/v1/demands/${demandId}/support`, async ({ request }) => {
         methods.push(request.method)
@@ -434,6 +438,204 @@ describe('demand comments', () => {
   })
 })
 
+describe('demand-specific operator service responses', () => {
+  it('shows eligible operator declarations to anonymous visitors with the safety disclosure', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/responses`, () =>
+        HttpResponse.json(
+          serviceResponsePage([
+            publicServiceResponse({ businessName: 'Moda Öğrenci Servisi' }),
+          ]),
+        ),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+
+    expect(await screen.findByText('Moda Öğrenci Servisi')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /doğrulanmış koltuk, fiyat veya hizmet garantisi değildir/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: '+905321234567 numarasını ara' }),
+    ).toHaveAttribute('href', 'tel:+905321234567')
+  })
+
+  it('returns an anonymous operator to the demand response flow after login', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(problem(401, 'Authentication is required'), {
+          status: 401,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        /Servis bildirimi yayınlamak için işletmeci hesabınızla giriş yapın/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('guides an ineligible operator to existing school and coverage management', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      operatorHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(
+          serviceEligibility({
+            eligible: false,
+            blockers: ['COVERAGE_MISSING'],
+          }),
+        ),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Okul ve kapsam yönetimine git' }),
+    ).toHaveAttribute('href', '/operator/schools')
+  })
+
+  it('does not describe an active response as public after eligibility is lost', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      operatorHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(
+          serviceEligibility({
+            eligible: false,
+            blockers: ['PROFILE_HIDDEN'],
+            response: operatorServiceResponse({ currentlyPublic: false }),
+          }),
+        ),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+
+    expect(
+      await screen.findByText('Bildiriminiz şu anda gizli'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /uygunluk yeniden sağlanana kadar velilere gösterilmiyor/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Profil görünürlüğünü düzenle' }),
+    ).toHaveAttribute('href', '/operator/profile')
+  })
+
+  it('publishes immediately and lets the owning operator withdraw the response', async () => {
+    let response: ReturnType<typeof operatorServiceResponse> | null = null
+    let publishBody: unknown
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/responses`, () =>
+        HttpResponse.json(
+          serviceResponsePage(
+            response?.status === 'ACTIVE' ? [publicServiceResponse()] : [],
+          ),
+        ),
+      ),
+      operatorHandler(),
+      csrfHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(serviceEligibility({ eligible: true, response })),
+      ),
+      http.post(
+        `/api/v1/operator/demands/${demandId}/response`,
+        async ({ request }) => {
+          publishBody = await request.json()
+          response = operatorServiceResponse()
+          return HttpResponse.json({ published: true, response })
+        },
+      ),
+      http.delete(`/api/v1/operator/demands/${demandId}/response`, () => {
+        response = operatorServiceResponse({
+          status: 'WITHDRAWN',
+          withdrawnAt: '2026-10-21T11:00:00Z',
+          currentlyPublic: false,
+        })
+        return HttpResponse.json(response)
+      }),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Servis bildirimini yayınla',
+      }),
+    )
+
+    expect(
+      await screen.findByText('Servis bildiriminiz velilere hemen yayınlandı.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Bildiriminiz yayında')).toBeInTheDocument()
+    expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
+    expect(publishBody).toEqual({
+      offersMorning: true,
+      offersAfternoon: false,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildirimi geri çek' }))
+    expect(
+      await screen.findByText(/Servis bildiriminiz geri çekildi/),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Henüz servis bildirimi yok',
+      }),
+    ).toBeInTheDocument()
+  })
+})
+
 const demandId = '481be36b-c8ee-4c03-868e-47bbc19b7735'
 const supportId = 'b6586a84-6094-4ddb-80ea-e36756cf1915'
 const commentId = '6b78776f-ad3f-4580-9d69-839a14786aed'
@@ -535,6 +737,12 @@ function emptyOperatorHandler() {
   )
 }
 
+function emptyServiceResponsesHandler() {
+  return http.get(`/api/v1/demands/${demandId}/responses`, () =>
+    HttpResponse.json(serviceResponsePage([])),
+  )
+}
+
 function emptyCommentsHandler() {
   return http.get(`/api/v1/demands/${demandId}/comments`, () =>
     HttpResponse.json(commentPage([])),
@@ -573,6 +781,18 @@ function commentPage(content: unknown[], page = 0, totalPages?: number) {
   }
 }
 
+function operatorHandler() {
+  return http.get('/api/v1/auth/me', () =>
+    HttpResponse.json({
+      id: '6e2973ac-0302-49a8-b519-563ec9861272',
+      email: 'operator@example.test',
+      role: 'OPERATOR',
+      operatorApprovalRequired: true,
+      approvalStatus: 'APPROVED',
+    }),
+  )
+}
+
 function parentHandler() {
   return http.get('/api/v1/auth/me', () =>
     HttpResponse.json({
@@ -585,18 +805,6 @@ function parentHandler() {
   )
 }
 
-function operatorHandler() {
-  return http.get('/api/v1/auth/me', () =>
-    HttpResponse.json({
-      id: 'a18f7e80-4978-4e80-9a42-6fe9e6f08a10',
-      email: 'operator@example.test',
-      role: 'OPERATOR',
-      operatorApprovalRequired: true,
-      approvalStatus: 'APPROVED',
-    }),
-  )
-}
-
 function csrfHandler() {
   return http.get('/api/v1/auth/csrf', () =>
     HttpResponse.json({
@@ -605,6 +813,56 @@ function csrfHandler() {
       token: 'csrf-token',
     }),
   )
+}
+
+function serviceResponsePage(content: unknown[]) {
+  return {
+    content,
+    page: 0,
+    size: 20,
+    totalElements: content.length,
+    totalPages: content.length ? 1 : 0,
+  }
+}
+
+function publicServiceResponse(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'de3abec5-1adc-4267-a7f1-dc06e8164655',
+    publicationEventId: 'c1f54a9d-cf2e-4206-9016-644372685b74',
+    publicationVersion: 1,
+    operatorId: '99dd588e-2b72-419e-aa29-28fb97f8ad20',
+    businessName: null,
+    contactPhone: '+905321234567',
+    offersMorning: true,
+    offersAfternoon: false,
+    publishedAt: '2026-10-21T10:00:00Z',
+    ...overrides,
+  }
+}
+
+function operatorServiceResponse(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'de3abec5-1adc-4267-a7f1-dc06e8164655',
+    status: 'ACTIVE' as const,
+    offersMorning: true,
+    offersAfternoon: false,
+    publicationVersion: 1,
+    publicationEventId: 'c1f54a9d-cf2e-4206-9016-644372685b74',
+    publishedAt: '2026-10-21T10:00:00Z',
+    withdrawnAt: null,
+    currentlyPublic: true,
+    ...overrides,
+  }
+}
+
+function serviceEligibility(overrides: Record<string, unknown> = {}) {
+  return {
+    demandId,
+    eligible: true,
+    blockers: [],
+    response: null,
+    ...overrides,
+  }
 }
 
 function problem(status: number, detail: string) {

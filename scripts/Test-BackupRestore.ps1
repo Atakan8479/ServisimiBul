@@ -287,7 +287,7 @@ try {
     Assert-SbDisposableClusterIdentity -Cluster $sourceCluster
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
 
-    Write-Host 'Applying Flyway V1-V11 to the isolated source...'
+    Write-Host 'Applying Flyway V1-V12 to the isolated source...'
     Invoke-A13Migration -Cluster $sourceCluster -JavaRuntime $javaRuntime `
         -TariffDirectory $tariffSourceDirectory
 

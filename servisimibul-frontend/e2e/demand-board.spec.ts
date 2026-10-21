@@ -85,3 +85,51 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(page.getByText('Yorumunuz silindi.')).toBeVisible()
   expect(state.demandComments).toHaveLength(0)
 })
+
+test('eligible operator publishes and withdraws a demand-specific service response', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  state.businessName = 'Moda Öğrenci Servisi'
+  state.operatorSchoolAdded = true
+  state.generalCoverage = [201]
+  state.demandCreated = true
+  await installMockApi(page, state)
+
+  await page.goto(`/demands/481be36b-c8ee-4c03-868e-47bbc19b7735`)
+  await page.getByRole('button', { name: 'Bu talep için servis ekle' }).click()
+  await expect(page).toHaveURL(/\/operator\/login\?next=/)
+  await expect(
+    page.getByText(/Servis bildirimi yayınlamak için işletmeci hesabınızla/),
+  ).toBeVisible()
+
+  await page.getByLabel('E-posta').fill('operator@example.com')
+  await page.getByLabel('Şifre').fill('operator password')
+  await page.getByRole('button', { name: 'Giriş yap' }).click()
+  await expect(
+    page.getByRole('group', { name: 'Hangi yönlerde servis sunuyorsunuz?' }),
+  ).toBeVisible()
+  await page.getByLabel(/^Öğleden sonra/).check()
+  await page.getByRole('button', { name: 'Servis bildirimini yayınla' }).click()
+
+  await expect(
+    page.getByText('Servis bildiriminiz velilere hemen yayınlandı.'),
+  ).toBeVisible()
+  await expect(page.getByText('Moda Öğrenci Servisi')).toBeVisible()
+  await expect(page.getByText('Bildiriminiz yayında')).toBeVisible()
+  expect(state.serviceResponse).toMatchObject({
+    status: 'ACTIVE',
+    offersMorning: true,
+    offersAfternoon: true,
+    publicationVersion: 1,
+  })
+
+  await page.getByRole('button', { name: 'Bildirimi geri çek' }).click()
+  await expect(page.getByText(/Servis bildiriminiz geri çekildi/)).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Henüz servis bildirimi yok' }),
+  ).toBeVisible()
+  expect(state.serviceResponse?.status).toBe('WITHDRAWN')
+})
