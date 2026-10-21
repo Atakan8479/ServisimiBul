@@ -54,7 +54,9 @@ export function DemandLocationPicker({
   const [error, setError] = useState<string>()
   const requestVersion = useRef(0)
   const onSelectionChangeRef = useRef(onSelectionChange)
-  onSelectionChangeRef.current = onSelectionChange
+  useEffect(() => {
+    onSelectionChangeRef.current = onSelectionChange
+  }, [onSelectionChange])
   const hydratedLocationKey = useRef<string | undefined>(undefined)
 
   const loadSchoolPage = useCallback(
