@@ -65,6 +65,7 @@ export function DemandBoardPage() {
       : undefined
   }, [searchParams])
   const initialLocationRef = useRef(initialLocation)
+  const initialHydrationFailed = useRef(false)
 
   const loadDemands = useCallback(
     async (
@@ -130,9 +131,23 @@ export function DemandBoardPage() {
       setSelection(nextSelection)
       resetCreationFlow()
       if (
+        !nextSelection &&
+        initialLocation &&
+        !hydratedInitialSelection.current &&
+        !initialHydrationFailed.current
+      ) {
+        // An invalid shared link must not leave the board stuck loading.
+        initialHydrationFailed.current = true
+        setAppliedSelection(undefined)
+        setReturnNotice('Kaydedilen okul ve mahalle artık bulunamadı. Lütfen yeniden seçin.')
+        setSearchParams({}, { replace: true })
+        void loadDemands(undefined, academicYear, sort, 0)
+      }
+      if (
         nextSelection &&
         initialLocation &&
-        !hydratedInitialSelection.current
+        !hydratedInitialSelection.current &&
+        !initialHydrationFailed.current
       ) {
         hydratedInitialSelection.current = true
         setAppliedSelection(nextSelection)
@@ -150,6 +165,7 @@ export function DemandBoardPage() {
       loadDemands,
       resetCreationFlow,
       searchParams,
+      setSearchParams,
       sort,
     ],
   )
@@ -272,7 +288,9 @@ export function DemandBoardPage() {
         state: {
           notice: response.created
             ? 'Talebiniz oluşturuldu ve desteğiniz eklendi.'
-            : 'Bu konum için talep zaten vardı. Desteğiniz otomatik eklenmedi; katılmak için aşağıdaki ayrı işlemi kullanın.',
+            : response.demand.status !== 'OPEN'
+              ? 'Bu konum ve dönem için daha önce açılmış talep katılıma kapalı. Yeni kayıt oluşturulmadı; yeniden açılması için proje ekibiyle iletişime geçin.'
+              : 'Bu konum için talep zaten vardı. Desteğiniz otomatik eklenmedi; katılmak için aşağıdaki ayrı işlemi kullanın.',
         },
         viewTransition: typeof document.startViewTransition === 'function',
       })
@@ -299,7 +317,10 @@ export function DemandBoardPage() {
   }
 
   const exactDemand =
-    appliedSelection && demands?.content.length === 1
+    appliedSelection && demands?.content.length === 1 &&
+    demands.content[0].school.id === appliedSelection.school.id &&
+    demands.content[0].neighborhood.id === appliedSelection.neighborhood.id &&
+    demands.content[0].academicYear === (academicYear.trim() || demands.content[0].academicYear)
       ? demands.content[0]
       : undefined
 

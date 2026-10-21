@@ -53,6 +53,9 @@ export function DemandLocationPicker({
   const [loadingPickup, setLoadingPickup] = useState(false)
   const [error, setError] = useState<string>()
   const requestVersion = useRef(0)
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  onSelectionChangeRef.current = onSelectionChange
+  const hydratedLocationKey = useRef<string>()
 
   const loadSchoolPage = useCallback(
     async (
@@ -114,22 +117,29 @@ export function DemandLocationPicker({
     }
   }, [])
 
+  const initialSchoolId = initialLocation?.schoolId
+  const initialPickupDistrictId = initialLocation?.pickupDistrictId
+  const initialNeighborhoodId = initialLocation?.neighborhoodId
+
   useEffect(() => {
-    if (!initialLocation) return
+    if (!initialSchoolId || !initialPickupDistrictId || !initialNeighborhoodId) return
+    const key = `${initialSchoolId}/${initialPickupDistrictId}/${initialNeighborhoodId}`
+    if (hydratedLocationKey.current === key) return
+    hydratedLocationKey.current = key
     const timer = window.setTimeout(() => {
       const request = ++requestVersion.current
       setLoadingPickup(true)
       setError(undefined)
-      void getSchool(initialLocation.schoolId)
+      void getSchool(initialSchoolId)
         .then(async (school) => {
           const districts = await getDistricts(school.provinceId)
           const pickupDistrict = districts.find(
-            (district) => district.id === initialLocation.pickupDistrictId,
+            (district) => district.id === initialPickupDistrictId,
           )
           if (!pickupDistrict) throw new Error('pickup district missing')
           const nextNeighborhoods = await getNeighborhoods(pickupDistrict.id)
           const neighborhood = nextNeighborhoods.find(
-            (item) => item.id === initialLocation.neighborhoodId,
+            (item) => item.id === initialNeighborhoodId,
           )
           if (!neighborhood) throw new Error('neighborhood missing')
           if (request !== requestVersion.current) return
@@ -141,14 +151,14 @@ export function DemandLocationPicker({
           setPickupDistrictId(String(pickupDistrict.id))
           setNeighborhoods(nextNeighborhoods)
           setNeighborhoodId(String(neighborhood.id))
-          onSelectionChange({ school, pickupDistrict, neighborhood })
+          onSelectionChangeRef.current({ school, pickupDistrict, neighborhood })
         })
         .catch(() => {
           if (request === requestVersion.current) {
             setError(
               'Kaydedilen okul ve mahalle seçimi yüklenemedi. Lütfen yeniden seçin.',
             )
-            onSelectionChange(undefined)
+            onSelectionChangeRef.current(undefined)
           }
         })
         .finally(() => {
@@ -159,7 +169,7 @@ export function DemandLocationPicker({
       window.clearTimeout(timer)
       requestVersion.current += 1
     }
-  }, [initialLocation, onSelectionChange])
+  }, [initialSchoolId, initialPickupDistrictId, initialNeighborhoodId])
 
   function clearPickup() {
     setPickupDistricts([])

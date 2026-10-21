@@ -150,6 +150,46 @@ describe('public demand board', () => {
   })
 })
 
+describe('demand board regression cases', () => {
+  it('unblocks the list after an invalid shared location link', async () => {
+    server.use(
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }]),
+      ),
+      http.get(`/api/v1/schools/${school.id}`, () =>
+        HttpResponse.json(problem(404, 'School not found'), { status: 404 }),
+      ),
+      emptyDemandHandler(),
+    )
+    renderRoute(filteredBoardPath)
+    expect(await screen.findByText(/Kaydedilen okul ve mahalle artık bulunamadı/)).toBeInTheDocument()
+    expect(await screen.findByText('Bu seçim için açık talep yok')).toBeInTheDocument()
+  })
+
+  it('shows a closed duplicate without offering an impossible join', async () => {
+    const closed = demand({ status: 'CLOSED', currentUserSupport: null })
+    server.use(
+      ...locationHandlers(),
+      emptyDemandHandler(),
+      emptyOperatorHandler(),
+      parentHandler(),
+      csrfHandler(),
+      http.post('/api/v1/demands', () =>
+        HttpResponse.json({ created: false, demand: closed }),
+      ),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(closed),
+      ),
+    )
+    renderRoute(filteredBoardPath)
+    await openCreateForm()
+    fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
+    fireEvent.click(screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }))
+    expect(await screen.findByText(/daha önce açılmış talep katılıma kapalı/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Benim de ihtiyacım var' })).not.toBeInTheDocument()
+  })
+})
+
 describe('demand support management', () => {
   it('edits, withdraws and reactivates the current parent support', async () => {
     let current = demand({ currentUserSupport: activeSupport })

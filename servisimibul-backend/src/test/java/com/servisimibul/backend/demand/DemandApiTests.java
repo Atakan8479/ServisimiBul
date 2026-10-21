@@ -124,7 +124,7 @@ class DemandApiTests {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody(geography.school().getId(), geography.pickup().getId())
-                                .replace("{", "{\\\"academicYear\\\":\\\"2027-2028\\\",")))
+                                .replace("{", "{\"academicYear\":\"2027-2028\",")))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.academicYear").exists());
 
@@ -136,7 +136,7 @@ class DemandApiTests {
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(createBody(geography.school().getId(), geography.pickup().getId())
-                                .replace("{", "{\\\"academicYear\\\":\\\"2026-2027\\\",")))
+                                .replace("{", "{\"academicYear\":\"2026-2027\",")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.demand.academicYear").value("2026-2027"));
     }
