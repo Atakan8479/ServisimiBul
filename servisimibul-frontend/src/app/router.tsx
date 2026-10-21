@@ -27,6 +27,24 @@ const applicationRoutes: RouteObject[] = [
         handle: { pageTitle: 'ServisimiBul' },
       },
       {
+        path: 'demands',
+        handle: { pageTitle: 'Servis talep panosu' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/demand/DemandBoardPage'))
+            .DemandBoardPage,
+        }),
+      },
+      {
+        path: 'demands/:demandId',
+        handle: { pageTitle: 'Talep ayrıntısı' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/demand/DemandDetailPage'))
+            .DemandDetailPage,
+        }),
+      },
+      {
         path: 'operator/register',
         handle: { pageTitle: 'İşletmeci kaydı' },
         HydrateFallback: LoadingPage,

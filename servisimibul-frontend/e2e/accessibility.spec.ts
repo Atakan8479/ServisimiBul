@@ -1,6 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
-import { createMockApiState, installMockApi } from './support/mock-api'
+import {
+  createMockApiState,
+  demandId,
+  installMockApi,
+} from './support/mock-api'
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -32,6 +36,19 @@ for (const viewport of viewports) {
 
     await page.goto('/')
     await audit(page, 'public discovery')
+
+    state.demandCreated = true
+    await page.goto('/demands')
+    await expect(
+      page.getByRole('heading', { name: 'Servis talep panosu' }),
+    ).toBeVisible()
+    await audit(page, 'public demand board')
+
+    await page.goto(`/demands/${demandId}`)
+    await expect(
+      page.getByRole('heading', { name: 'Örnek Okulu' }),
+    ).toBeVisible()
+    await audit(page, 'public demand detail')
 
     await page.goto('/operator/register')
     await audit(page, 'registration')
@@ -282,6 +299,6 @@ async function login(page: Page, email: string) {
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   // The login handler navigates asynchronously; the next page must not race it.
   await expect(page).toHaveURL(
-    email === 'admin@example.com' ? /\/admin(?:\/|$)/ : /\/operator(?:\/|$)/,
+    email === 'admin@example.com' ? /\/admin(?:\/|$)/ : /\/operator\/?(?:\?|$)/,
   )
 }

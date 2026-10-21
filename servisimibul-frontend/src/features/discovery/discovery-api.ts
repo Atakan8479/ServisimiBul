@@ -120,6 +120,10 @@ export function getSchools({
   })
 }
 
+export function getSchool(id: string): Promise<School> {
+  return apiRequest(`/schools/${id}`, { schema: schoolSchema })
+}
+
 export function getDistricts(provinceId: number): Promise<District[]> {
   return apiRequest(`/districts?provinceId=${provinceId}`, {
     schema: z.array(districtSchema),
