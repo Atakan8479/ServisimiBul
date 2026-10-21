@@ -266,6 +266,7 @@ export function DemandBoardPage() {
         appliedSelection.school.id,
         appliedSelection.neighborhood.id,
         values,
+        academicYear.trim() || undefined,
       )
       void navigate(`/demands/${response.demand.id}`, {
         state: {
@@ -288,9 +289,11 @@ export function DemandBoardPage() {
         return
       }
       setAccessError(
-        error instanceof ApiError
-          ? error.problem.detail
-          : 'Talep oluşturulamadı. Bilgileri koruduk; tekrar deneyin.',
+        error instanceof ApiError && error.problem.fieldErrors?.academicYear
+          ? 'Seçilen eğitim yılı artık yeni taleplere açık değil. Sunucunun güncel eğitim yılına dönüp tekrar deneyin.'
+          : error instanceof ApiError
+            ? error.problem.detail
+            : 'Talep oluşturulamadı. Bilgileri koruduk; tekrar deneyin.',
       )
     }
   }

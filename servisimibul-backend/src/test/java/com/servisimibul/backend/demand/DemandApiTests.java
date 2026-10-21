@@ -115,6 +115,33 @@ class DemandApiTests {
     }
 
     @Test
+    void createRejectsOtherAcademicYearInsteadOfSilentlyCreatingCurrentYear() throws Exception {
+        AppUser parent = createParent("year-guard@example.com");
+        GeographyFixture geography = createGeography();
+
+        mockMvc.perform(post("/api/v1/demands")
+                        .with(as(parent))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody(geography.school().getId(), geography.pickup().getId())
+                                .replace("{", "{\\\"academicYear\\\":\\\"2027-2028\\\",")))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.fieldErrors.academicYear").exists());
+
+        assertThat(demandRepository.count()).isZero();
+        assertThat(supportRepository.count()).isZero();
+
+        mockMvc.perform(post("/api/v1/demands")
+                        .with(as(parent))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody(geography.school().getId(), geography.pickup().getId())
+                                .replace("{", "{\\\"academicYear\\\":\\\"2026-2027\\\",")))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.demand.academicYear").value("2026-2027"));
+    }
+
+    @Test
     void supportIsIdempotentAndWithdrawReactivatesTheSameRow() throws Exception {
         AppUser creator = createParent("support-creator@example.com");
         AppUser supporter = createParent("supporter@example.com");

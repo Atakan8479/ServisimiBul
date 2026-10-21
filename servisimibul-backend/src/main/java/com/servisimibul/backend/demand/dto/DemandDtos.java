@@ -19,7 +19,8 @@ public final class DemandDtos {
             @NotNull Long neighborhoodId,
             @NotNull Boolean needsMorning,
             @NotNull Boolean needsAfternoon,
-            @NotNull List<@NotNull SupportReason> reasons
+            @NotNull List<@NotNull SupportReason> reasons,
+            String academicYear
     ) {
         public CreateRequest {
             if (reasons != null) {
