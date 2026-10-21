@@ -156,7 +156,7 @@ class DemandServiceResponseConcurrencyTests {
 
     private void createCommittedFixture() {
         transactionTemplate.executeWithoutResult(status -> {
-            Province province = provinceRepository.save(new Province("34-r5c", "Istanbul"));
+            Province province = provinceRepository.save(new Province("96", "Istanbul"));
             District district = districtRepository.save(new District(province, "Kadikoy"));
             Neighborhood neighborhood = neighborhoodRepository.save(
                     new Neighborhood(district, "Moda")

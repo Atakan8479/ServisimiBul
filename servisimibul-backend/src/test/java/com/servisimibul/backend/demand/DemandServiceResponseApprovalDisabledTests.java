@@ -64,7 +64,7 @@ class DemandServiceResponseApprovalDisabledTests {
 
     @Test
     void verifiedDraftOperatorPublishesWhenApprovalWaitingIsDisabled() throws Exception {
-        Province province = provinceRepository.save(new Province("34-r5", "Istanbul"));
+        Province province = provinceRepository.save(new Province("95", "Istanbul"));
         District district = districtRepository.save(new District(province, "Kadikoy"));
         Neighborhood neighborhood = neighborhoodRepository.saveAndFlush(
                 new Neighborhood(district, "Moda")

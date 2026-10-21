@@ -427,7 +427,7 @@ class DemandServiceResponseApiTests {
     }
 
     private String uniqueCode() {
-        return UUID.randomUUID().toString().substring(0, 8);
+        return UUID.randomUUID().toString().substring(0, 2);
     }
 
     private record OperatorFixture(

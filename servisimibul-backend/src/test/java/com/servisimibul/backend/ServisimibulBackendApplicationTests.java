@@ -30,10 +30,10 @@ class ServisimibulBackendApplicationTests {
     private static final List<String> APPLICATION_TABLES = List.of(
             "app_user",
             "demand",
-            "demand_support",
-            "demand_support_reason",
             "demand_service_publication_event",
             "demand_service_response",
+            "demand_support",
+            "demand_support_reason",
             "district",
             "email_verification_token",
             "neighborhood",
@@ -367,7 +367,7 @@ class ServisimibulBackendApplicationTests {
 
         assertThat(migrations.stream()
                 .map(migration -> migration.getVersion().getVersion())
-                .toList()).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
+                .toList()).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
         assertThat(migrations).allMatch(migration -> migration.getState() == MigrationState.SUCCESS);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }
