@@ -9,6 +9,8 @@ npm run dev
 
 Copy `.env.example` to an ignored `.env.local` only when the backend does not run at `http://localhost:8080`. `BACKEND_PROXY_TARGET` is read by Vite's local server and is not exposed to browser code. Never put database credentials, session secrets, admin credentials, or Supabase service keys in frontend environment files.
 
+The public surface provides anonymous operator discovery and an anonymous demand board with school/neighborhood filtering and aggregate demand details. Creating a demand or joining, editing, withdrawing, or reactivating support requires a verified `PARENT` session and CSRF protection; public parent registration is intentionally not exposed. New-demand flow checks existing operators first and never silently joins a parent when the canonical demand already exists.
+
 The operator workspace provides registration, email verification, login, profile/application management, school/general-coverage, vehicle, and offering screens. The admin workspace provides application review, pilot-school management, and official-tariff editing. Frontend route guards and selected identifiers are usability features only; Spring Security, ownership checks, and coverage validation remain authoritative.
 
 The B-11 Playwright suite uses deterministic mocked same-origin API responses and synthetic identities. It never needs backend credentials or shared Supabase. Local Windows runs use installed Microsoft Edge; CI installs disposable Playwright Chromium. See `docs/11_E2E_ACCESSIBILITY_VALIDATION.md` for the evidence boundary and journey matrix.
