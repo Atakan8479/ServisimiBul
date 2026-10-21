@@ -110,6 +110,16 @@ public class DemandService {
 
     @Transactional
     public CreateResponse create(CreateRequest request, UUID parentId) {
+        // The server remains the source of truth for the writable academic year.
+        // A frontend filter for a historical/future year must never silently create
+        // a demand in the configured current year.
+        if (request.academicYear() != null && !request.academicYear().isBlank()
+                && !properties.academicYear().equals(validateAcademicYear(request.academicYear().strip()))) {
+            throw DemandApiException.validation(
+                    "academicYear",
+                    "demand creation is only available for the current academic year"
+            );
+        }
         SupportValues values = validateSupport(
                 request.needsMorning(),
                 request.needsAfternoon(),

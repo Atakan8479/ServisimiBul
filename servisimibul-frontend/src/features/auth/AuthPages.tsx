@@ -269,7 +269,9 @@ export function LoginPage() {
     try {
       const user = await login(values)
       if (user.role === 'PARENT') {
-        void navigate('/', {
+        const next = searchParams.get('next')
+        const destination = isDemandPath(next) ? next : '/demands'
+        void navigate(destination, {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
         })
@@ -336,12 +338,30 @@ export function LoginPage() {
         </button>
       </form>
       <p className="auth-switch">
-        Hesabınız yok mu?{' '}
-        <Link to="/operator/register" viewTransition>
-          Kayıt olun
-        </Link>
+        {isDemandPath(searchParams.get('next')) ? (
+          <>
+            Veli hesapları pilot kapsamında doğrulanarak açılır. Yeni hesap için
+            proje ekibiyle iletişime geçin.
+          </>
+        ) : (
+          <>
+            Hesabınız yok mu?{' '}
+            <Link to="/operator/register" viewTransition>
+              Kayıt olun
+            </Link>
+          </>
+        )}
       </p>
     </AuthCard>
+  )
+}
+
+function isDemandPath(path: string | null): path is string {
+  return Boolean(
+    path &&
+    (path === '/demands' ||
+      path.startsWith('/demands?') ||
+      path.startsWith('/demands/')),
   )
 }
 

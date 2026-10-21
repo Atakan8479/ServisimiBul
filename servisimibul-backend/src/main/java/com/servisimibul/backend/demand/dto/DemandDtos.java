@@ -19,8 +19,19 @@ public final class DemandDtos {
             @NotNull Long neighborhoodId,
             @NotNull Boolean needsMorning,
             @NotNull Boolean needsAfternoon,
-            @NotNull List<@NotNull SupportReason> reasons
+            @NotNull List<@NotNull SupportReason> reasons,
+            String academicYear
     ) {
+        public CreateRequest(
+                UUID schoolId,
+                Long neighborhoodId,
+                Boolean needsMorning,
+                Boolean needsAfternoon,
+                List<SupportReason> reasons
+        ) {
+            this(schoolId, neighborhoodId, needsMorning, needsAfternoon, reasons, null);
+        }
+
         public CreateRequest {
             if (reasons != null) {
                 reasons = List.copyOf(reasons);

@@ -173,11 +173,20 @@ describe('operator authentication screens', () => {
     ).toBeInTheDocument()
   })
 
-  it('returns a parent account to public discovery after login', async () => {
+  it('returns a parent account to the demand board after login', async () => {
     server.use(
       csrfHandler(),
       http.post('/api/v1/auth/login', () => HttpResponse.json(parentUser)),
       http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/demands', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
     )
 
     renderRoute('/operator/login')
@@ -190,7 +199,62 @@ describe('operator authentication screens', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'ServisimiBul' }),
+      await screen.findByRole('heading', { name: 'Servis talep panosu' }),
+    ).toBeInTheDocument()
+  })
+
+  it('preserves a safe demand return path for a parent account', async () => {
+    const demandId = '481be36b-c8ee-4c03-868e-47bbc19b7735'
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(parentUser)),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json({
+          id: demandId,
+          status: 'OPEN',
+          academicYear: '2026-2027',
+          createdAt: '2026-10-20T09:00:00Z',
+          updatedAt: '2026-10-20T09:00:00Z',
+          school: {
+            id: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
+            name: 'Örnek İlkokulu',
+          },
+          neighborhood: {
+            id: 201,
+            name: 'Acıbadem',
+            districtId: 11,
+            districtName: 'Üsküdar',
+            provinceId: 34,
+            provinceCode: '34',
+            provinceName: 'İstanbul',
+          },
+          supporterCount: 1,
+          morningCount: 1,
+          afternoonCount: 0,
+          reasonCounts: [],
+          currentUserSupport: null,
+        }),
+      ),
+      http.get('/api/v1/auth/me', () => HttpResponse.json(parentUser)),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+    )
+
+    renderRoute(
+      `/operator/login?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
+    )
+    expect(
+      await screen.findByText(/Veli hesapları pilot kapsamında/),
+    ).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Talebe katıl' }),
     ).toBeInTheDocument()
   })
 

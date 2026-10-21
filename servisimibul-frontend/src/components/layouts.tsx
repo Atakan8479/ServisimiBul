@@ -23,6 +23,9 @@ export function PublicLayout() {
           <NavLink to="/" viewTransition>
             Ana sayfa
           </NavLink>
+          <NavLink to="/demands" viewTransition>
+            Talep panosu
+          </NavLink>
           <NavLink to="/operator/login" viewTransition>
             Giriş
           </NavLink>

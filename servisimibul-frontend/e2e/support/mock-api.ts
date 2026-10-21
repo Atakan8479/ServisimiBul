@@ -1,6 +1,6 @@
 import type { Page, Route } from '@playwright/test'
 
-type Role = 'ADMIN' | 'OPERATOR'
+type Role = 'ADMIN' | 'OPERATOR' | 'PARENT'
 type ApprovalStatus = 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED'
 
 const operatorId = '99dd588e-2b72-419e-aa29-28fb97f8ad20'
@@ -10,6 +10,8 @@ const schoolId = '6de54e65-6e04-4168-a1cb-967a98d7ec12'
 const operatorSchoolId = '75ef6bb0-e313-43fb-a01c-c935774434b4'
 const vehicleId = '11111111-1111-4111-8111-111111111111'
 const offeringId = '33333333-3333-4333-8333-333333333333'
+export const demandId = '481be36b-c8ee-4c03-868e-47bbc19b7735'
+const parentUserId = 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd'
 
 const createdAt = '2026-10-18T10:00:00Z'
 
@@ -55,6 +57,13 @@ export interface MockApiState {
     updatedAt: string
   }>
   tariff: ReturnType<typeof tariff>
+  demandCreated: boolean
+  parentSupport: null | {
+    status: 'ACTIVE' | 'WITHDRAWN'
+    needsMorning: boolean
+    needsAfternoon: boolean
+    reasons: string[]
+  }
 }
 
 export function createMockApiState(): MockApiState {
@@ -73,6 +82,8 @@ export function createMockApiState(): MockApiState {
     vehicles: [],
     offerings: [],
     tariff: tariff('v1'),
+    demandCreated: false,
+    parentSupport: null,
   }
 }
 
@@ -102,7 +113,12 @@ export async function installMockApi(page: Page, state: MockApiState) {
     }
     if (path === '/auth/login' && method === 'POST') {
       const body = await request.postDataJSON()
-      role = body.email === 'admin@example.com' ? 'ADMIN' : 'OPERATOR'
+      role =
+        body.email === 'admin@example.com'
+          ? 'ADMIN'
+          : body.email === 'parent@example.com'
+            ? 'PARENT'
+            : 'OPERATOR'
       if (role === 'OPERATOR' && (!state.verified || !state.active)) {
         role = undefined
         return problem(route, 401, 'invalid_credentials')
@@ -243,6 +259,9 @@ export async function installMockApi(page: Page, state: MockApiState) {
         totalElements: matchingSchools.length,
         totalPages: Math.ceil(matchingSchools.length / pageSize),
       })
+    }
+    if (path === `/schools/${schoolId}` && method === 'GET') {
+      return json(route, school())
     }
     if (path === '/districts' && method === 'GET') {
       return json(route, [
@@ -396,6 +415,61 @@ export async function installMockApi(page: Page, state: MockApiState) {
         ),
       )
     }
+    if (path === '/demands' && method === 'GET') {
+      return json(
+        route,
+        pageResponse(
+          state.demandCreated ? [demandResponse(state, role)] : [],
+          10,
+        ),
+      )
+    }
+    if (path === '/demands' && method === 'POST') {
+      return requireRole(route, role, 'PARENT', async () => {
+        const body = await request.postDataJSON()
+        const created = !state.demandCreated
+        if (created) {
+          state.demandCreated = true
+          state.parentSupport = {
+            status: 'ACTIVE',
+            needsMorning: body.needsMorning,
+            needsAfternoon: body.needsAfternoon,
+            reasons: body.reasons,
+          }
+        }
+        return json(
+          route,
+          { created, demand: demandResponse(state, role) },
+          created ? 201 : 200,
+        )
+      })
+    }
+    if (path === `/demands/${demandId}` && method === 'GET') {
+      return state.demandCreated
+        ? json(route, demandResponse(state, role))
+        : problem(route, 404, 'demand_not_found')
+    }
+    if (
+      path === `/demands/${demandId}/support` &&
+      (method === 'POST' || method === 'PUT')
+    ) {
+      return requireRole(route, role, 'PARENT', async () => {
+        const body = await request.postDataJSON()
+        state.parentSupport = {
+          status: 'ACTIVE',
+          needsMorning: body.needsMorning,
+          needsAfternoon: body.needsAfternoon,
+          reasons: body.reasons,
+        }
+        return json(route, demandResponse(state, role))
+      })
+    }
+    if (path === `/demands/${demandId}/support` && method === 'DELETE') {
+      return requireRole(route, role, 'PARENT', () => {
+        if (state.parentSupport) state.parentSupport.status = 'WITHDRAWN'
+        return empty(route)
+      })
+    }
     if (path === '/tariffs' && method === 'GET') {
       return json(route, state.tariff)
     }
@@ -413,11 +487,56 @@ export async function installMockApi(page: Page, state: MockApiState) {
 
 function authUser(role: Role, state: MockApiState) {
   return {
-    id: role === 'ADMIN' ? adminUserId : operatorUserId,
-    email: role === 'ADMIN' ? 'admin@example.com' : 'operator@example.com',
+    id:
+      role === 'ADMIN'
+        ? adminUserId
+        : role === 'PARENT'
+          ? parentUserId
+          : operatorUserId,
+    email:
+      role === 'ADMIN'
+        ? 'admin@example.com'
+        : role === 'PARENT'
+          ? 'parent@example.com'
+          : 'operator@example.com',
     role,
     operatorApprovalRequired: true,
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
+  }
+}
+
+function demandResponse(state: MockApiState, role: Role | undefined) {
+  const support = role === 'PARENT' ? state.parentSupport : null
+  const active = support?.status === 'ACTIVE'
+  return {
+    id: demandId,
+    status: 'OPEN',
+    academicYear: '2026-2027',
+    createdAt,
+    updatedAt: createdAt,
+    school: { id: schoolId, name: 'Örnek Okulu' },
+    neighborhood: {
+      id: 201,
+      name: 'Acıbadem',
+      districtId: 11,
+      districtName: 'Üsküdar',
+      provinceId: 34,
+      provinceCode: '34',
+      provinceName: 'İstanbul',
+    },
+    supporterCount: active ? 1 : 0,
+    morningCount: active && support.needsMorning ? 1 : 0,
+    afternoonCount: active && support.needsAfternoon ? 1 : 0,
+    reasonCounts: active
+      ? support.reasons.map((reason) => ({ reason, count: 1 }))
+      : [],
+    currentUserSupport:
+      support === null
+        ? null
+        : {
+            id: 'b6586a84-6094-4ddb-80ea-e36756cf1915',
+            ...support,
+          },
   }
 }
 
