@@ -26,6 +26,7 @@ public final class DemandCommentDtos {
             UUID id,
             String body,
             AuthorResponse author,
+            boolean canDelete,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt
     ) {

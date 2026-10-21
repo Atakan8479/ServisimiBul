@@ -1,10 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Demand marketplace — REQ-03 demand-board frontend ready for review
+## Current stage: Demand marketplace — REQ-04 demand comments ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-02, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-03 is implemented and locally verified on `codex/req-03-demand-board`; code review, CI, and merge remain pending. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-03, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-04 is implemented and locally verified on `codex/req-04-demand-comments`; code review, CI, and merge remain pending. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
+
+## Verified REQ-04 demand comments — 2026-10-21
+
+- Branch `codex/req-04-demand-comments` implements GitHub issue #87 with anonymous paginated reads, supporting-parent and eligible-operator posting on open demands, parent pseudonyms, publication-safe operator identity, and author-only hard deletion.
+- Flyway V11 adds the comment table, constraints, indexes, grants, and row-level-security posture. The API validates trimmed 2–1000-character plain text and applies exact-body duplicate protection plus per-account rate limiting. The frontend renders text without HTML interpretation and warns against sharing student names, phone numbers, or exact home addresses.
+- The accepted responsive comments section reuses the existing demand-detail system, restores keyboard focus when its form closes, and reloads page zero after deletion so comments shifted across a pagination boundary remain visible.
+- Complete isolated PostgreSQL 17 verification passed all 243 backend tests, Flyway V1–V11 replay, Hibernate validation, and packaging. Frontend ESLint, strict TypeScript, all 70 Vitest tests, the production build, scoped Prettier, and all 10 Playwright checks passed; browser coverage includes desktop/tablet/mobile accessibility, overflow, reduced motion, comment create/delete, and existing MVP journeys.
+- No shared Supabase connection, migration, schema change, or data write occurred. Shared Supabase remains at V8; applying repository V9–V11 requires separate inspection and explicit approval.
 
 ## Verified REQ-03 demand board frontend — 2026-10-21
 
@@ -88,7 +96,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | J-03 Real full-stack end-to-end testing without mock API | complete | PR #79 merged as `3b19c47`; real Vite/Spring Boot/PostgreSQL 17 journey passed with isolated sessions, CSRF/authz/ownership, approval, discovery, invalidation, tariff, revocation, mobile keyboard, and cleanup coverage | Reviewed and merged 2026-10-20 |
 | J-05 Controlled pilot UAT with synthetic data | preparation ready for review | Branch `codex/j-05-controlled-pilot-uat`; disposable environment, synthetic fixtures, facilitation/runbook, anonymized report, safety checks, smoke, and J-03 regression verified; supervised sessions pending | Implementation approved 2026-10-20; human UAT and code review pending |
 | REQ-02 Transport-demand persistence and support API | complete | GitHub issue #85; PR #94 merged as `b161181`; focused 12/12 and complete isolated backend 231/231 passed | Reviewed and merged 2026-10-21; shared-database migration remains separately approval-gated |
-| REQ-03 Demand board and parent support frontend | ready for review | GitHub issue #86; branch `codex/req-03-demand-board`; typecheck/lint/format/build, 63 Vitest tests, and all 10 Playwright tests passed | Implementation requested 2026-10-21; code review and CI pending |
+| REQ-03 Demand board and parent support frontend | complete | GitHub issue #86; PR #95 merged as `2120704`; typecheck/lint/format/build, 63 Vitest tests, and all 10 Playwright tests passed | Reviewed and merged 2026-10-21 |
+| REQ-04 Demand comments and baseline moderation | ready for review | GitHub issue #87; branch `codex/req-04-demand-comments`; complete isolated backend 243/243, frontend lint/typecheck/scoped format/build, 70 Vitest tests, and 10 Playwright checks passed | Contract approved and implementation requested 2026-10-21; code review and CI pending |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 

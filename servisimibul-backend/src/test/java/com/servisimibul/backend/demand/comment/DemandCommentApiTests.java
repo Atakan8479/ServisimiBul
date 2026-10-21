@@ -112,6 +112,7 @@ class DemandCommentApiTests {
                 .andExpect(jsonPath("$.author.role").value("PARENT"))
                 .andExpect(jsonPath("$.author.displayName").value("Veli"))
                 .andExpect(jsonPath("$.author.operatorProfileId").doesNotExist())
+                .andExpect(jsonPath("$.canDelete").value(true))
                 .andReturn();
         assertThat(created.getResponse().getContentAsString()).doesNotContain(parent.getEmail());
 
@@ -119,7 +120,8 @@ class DemandCommentApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
                 .andExpect(jsonPath("$.content[0].body").value(body))
-                .andExpect(jsonPath("$.content[0].author.displayName").value("Veli"));
+                .andExpect(jsonPath("$.content[0].author.displayName").value("Veli"))
+                .andExpect(jsonPath("$.content[0].canDelete").value(false));
 
         DemandComment comment = commentRepository.findAll().getFirst();
         comment.hide();
@@ -256,9 +258,11 @@ class DemandCommentApiTests {
                 .andReturn());
         postComment(demand, author, "İkinci yorum").andExpect(status().isCreated());
         mockMvc.perform(get("/api/v1/demands/{id}/comments", demand.getId())
+                        .with(as(author))
                         .param("size", "1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].canDelete").value(true))
                 .andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.totalPages").value(2));
 

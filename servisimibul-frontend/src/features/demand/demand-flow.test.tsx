@@ -1,12 +1,13 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
 
 afterEach(() => resetCsrfToken())
+beforeEach(() => server.use(emptyCommentsHandler()))
 
 describe('public demand board', () => {
   it('hydrates exact school and neighborhood filters and links to the existing demand', async () => {
@@ -268,8 +269,175 @@ describe('demand support management', () => {
   })
 })
 
+describe('demand comments', () => {
+  it('renders public comments as text and never interprets comment markup', async () => {
+    const unsafeText = '<img src=x onerror="alert(1)"> Güvenli metin'
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, () =>
+        HttpResponse.json(commentPage([comment({ body: unsafeText })])),
+      ),
+    )
+
+    const rendered = renderRoute(`/demands/${demandId}`)
+
+    expect(await screen.findByText(unsafeText)).toBeInTheDocument()
+    expect(
+      rendered.container.querySelector('.demand-comment-list img'),
+    ).toBeNull()
+    expect(screen.getByText('Veli')).toBeInTheDocument()
+  })
+
+  it('lets a supporting parent publish and delete their own comment', async () => {
+    let comments: ReturnType<typeof comment>[] = []
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, () =>
+        HttpResponse.json(commentPage(comments)),
+      ),
+      http.post(`/api/v1/demands/${demandId}/comments`, async ({ request }) => {
+        const body = (await request.json()) as { body: string }
+        const created = comment({ body: body.body, canDelete: true })
+        comments = [created]
+        return HttpResponse.json(created, { status: 201 })
+      }),
+      http.delete(`/api/v1/demands/${demandId}/comments/${commentId}`, () => {
+        comments = []
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+    const field = await screen.findByLabelText('Yorumunuz')
+    fireEvent.change(field, {
+      target: { value: 'Servis saatini konuşabiliriz.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Yorumu yayınla' }))
+
+    expect(await screen.findByText('Yorumunuz yayınlandı.')).toBeInTheDocument()
+    expect(
+      screen.getByText('Servis saatini konuşabiliriz.'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Yorumumu sil' }))
+    expect(await screen.findByText('Yorumunuz silindi.')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByText('Servis saatini konuşabiliriz.'),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it('reloads page one after deletion so shifted comments remain visible', async () => {
+    let comments = Array.from({ length: 11 }, (_, index) =>
+      comment({
+        id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+        body: `Yorum ${index + 1}`,
+        canDelete: index === 0,
+      }),
+    )
+    server.use(
+      csrfHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page'))
+        return HttpResponse.json({
+          content: comments.slice(page * 10, page * 10 + 10),
+          page,
+          size: 10,
+          totalElements: comments.length,
+          totalPages: Math.ceil(comments.length / 10),
+        })
+      }),
+      http.delete(
+        `/api/v1/demands/${demandId}/comments/${comments[0].id}`,
+        () => {
+          comments = comments.slice(1)
+          return new HttpResponse(null, { status: 204 })
+        },
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(await screen.findByText('Yorum 1')).toBeInTheDocument()
+    expect(screen.queryByText('Yorum 11')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Yorumumu sil' }))
+
+    expect(await screen.findByText('Yorum 11')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Daha fazla yorum göster' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('explains why a non-supporting parent cannot comment', async () => {
+    server.use(
+      parentHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+
+    expect(
+      await screen.findByText('Yorum yazmak için önce bu talebe destek verin.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+  })
+
+  it('lets an eligible operator open the form and paginates public comments', async () => {
+    server.use(
+      operatorHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page'))
+        return HttpResponse.json(
+          commentPage(
+            [
+              comment({
+                id: page === 0 ? commentId : secondCommentId,
+                body: page === 0 ? 'İlk yorum' : 'İkinci yorum',
+                author: operatorCommentAuthor,
+              }),
+            ],
+            page,
+            2,
+          ),
+        )
+      }),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(await screen.findByText('İlk yorum')).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Daha fazla yorum göster' }),
+    )
+    expect(await screen.findByText('İkinci yorum')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Yorum yaz' }))
+    const field = await screen.findByLabelText('Yorumunuz')
+    await waitFor(() => expect(field).toHaveFocus())
+    fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }))
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Yorum yaz' })).toHaveFocus(),
+    )
+  })
+})
+
 const demandId = '481be36b-c8ee-4c03-868e-47bbc19b7735'
 const supportId = 'b6586a84-6094-4ddb-80ea-e36756cf1915'
+const commentId = '6b78776f-ad3f-4580-9d69-839a14786aed'
+const secondCommentId = 'f4c9c973-6dfd-43c3-83e2-e53a290fd2db'
 
 const school = {
   id: '6de54e65-6e04-4168-a1cb-967a98d7ec12',
@@ -367,6 +535,44 @@ function emptyOperatorHandler() {
   )
 }
 
+function emptyCommentsHandler() {
+  return http.get(`/api/v1/demands/${demandId}/comments`, () =>
+    HttpResponse.json(commentPage([])),
+  )
+}
+
+const operatorCommentAuthor = {
+  role: 'OPERATOR' as const,
+  displayName: 'Mavi Servis',
+  operatorProfileId: '2778473a-5886-454c-a6d8-a2eaa4f585b1',
+}
+
+function comment(overrides: Record<string, unknown> = {}) {
+  return {
+    id: commentId,
+    body: 'Servis talebi hakkında yorum',
+    author: {
+      role: 'PARENT',
+      displayName: 'Veli',
+      operatorProfileId: null,
+    },
+    canDelete: false,
+    createdAt: '2026-10-21T09:30:00Z',
+    updatedAt: '2026-10-21T09:30:00Z',
+    ...overrides,
+  }
+}
+
+function commentPage(content: unknown[], page = 0, totalPages?: number) {
+  return {
+    content,
+    page,
+    size: 10,
+    totalElements: totalPages === undefined ? content.length : totalPages,
+    totalPages: totalPages ?? (content.length ? 1 : 0),
+  }
+}
+
 function parentHandler() {
   return http.get('/api/v1/auth/me', () =>
     HttpResponse.json({
@@ -375,6 +581,18 @@ function parentHandler() {
       role: 'PARENT',
       operatorApprovalRequired: true,
       approvalStatus: null,
+    }),
+  )
+}
+
+function operatorHandler() {
+  return http.get('/api/v1/auth/me', () =>
+    HttpResponse.json({
+      id: 'a18f7e80-4978-4e80-9a42-6fe9e6f08a10',
+      email: 'operator@example.test',
+      role: 'OPERATOR',
+      operatorApprovalRequired: true,
+      approvalStatus: 'APPROVED',
     }),
   )
 }

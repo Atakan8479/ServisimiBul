@@ -18,6 +18,7 @@ import {
 } from './demand-api'
 import { reasonLabel } from './demand-labels'
 import { DemandSupportForm } from './DemandSupportForm'
+import { DemandComments } from './DemandComments'
 
 type SupportMode = 'join' | 'edit' | 'reactivate'
 
@@ -361,6 +362,12 @@ export function DemandDetailPage() {
           </div>
         )}
       </section>
+
+      <DemandComments
+        demandId={demand.id}
+        open={open}
+        parentHasActiveSupport={activeSupport}
+      />
     </section>
   )
 }

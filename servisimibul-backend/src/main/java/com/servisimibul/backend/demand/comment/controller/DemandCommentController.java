@@ -4,10 +4,12 @@ import com.servisimibul.backend.demand.comment.dto.DemandCommentDtos.CommentResp
 import com.servisimibul.backend.demand.comment.dto.DemandCommentDtos.CreateRequest;
 import com.servisimibul.backend.demand.comment.dto.DemandCommentDtos.PageResponse;
 import com.servisimibul.backend.demand.comment.service.DemandCommentService;
+import com.servisimibul.backend.security.AuthenticatedUser;
 import com.servisimibul.backend.security.CurrentUser;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -32,9 +34,10 @@ public class DemandCommentController {
     public PageResponse<CommentResponse> list(
             @PathVariable UUID demandId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
-        return commentService.list(demandId, page, size);
+        return commentService.list(demandId, page, size, user == null ? null : user.id());
     }
 
     @PostMapping

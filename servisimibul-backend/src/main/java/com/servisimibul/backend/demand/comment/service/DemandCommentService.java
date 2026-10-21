@@ -64,7 +64,7 @@ public class DemandCommentService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public PageResponse<CommentResponse> list(UUID demandId, int page, int size) {
+    public PageResponse<CommentResponse> list(UUID demandId, int page, int size, UUID currentUserId) {
         validatePage(page, size);
         Demand demand = demand(demandId);
         Page<DemandComment> comments = commentRepository.findByDemandIdAndStatus(
@@ -75,7 +75,7 @@ public class DemandCommentService {
         Map<UUID, OperatorProfile> publicOperators = publicOperators(demand, comments.getContent());
         return new PageResponse<>(
                 comments.getContent().stream()
-                        .map(comment -> response(comment, publicOperators))
+                        .map(comment -> response(comment, publicOperators, currentUserId))
                         .toList(),
                 comments.getNumber(),
                 comments.getSize(),
@@ -113,7 +113,7 @@ public class DemandCommentService {
         }
 
         DemandComment comment = commentRepository.saveAndFlush(new DemandComment(demand, author, body));
-        return response(comment, publicOperators(demand, List.of(comment)));
+        return response(comment, publicOperators(demand, List.of(comment)), authorId);
     }
 
     @Transactional
@@ -216,7 +216,8 @@ public class DemandCommentService {
 
     private CommentResponse response(
             DemandComment comment,
-            Map<UUID, OperatorProfile> publicOperators
+            Map<UUID, OperatorProfile> publicOperators,
+            UUID currentUserId
     ) {
         AuthorResponse author;
         if (comment.getAuthorRole() == UserRole.PARENT) {
@@ -236,6 +237,7 @@ public class DemandCommentService {
                 comment.getId(),
                 comment.getBody(),
                 author,
+                comment.getAuthor().getId().equals(currentUserId),
                 comment.getCreatedAt(),
                 comment.getUpdatedAt()
         );
