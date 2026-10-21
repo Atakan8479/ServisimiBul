@@ -181,9 +181,7 @@ describe('demand board regression cases', () => {
       http.post('/api/v1/demands', () =>
         HttpResponse.json({ created: false, demand: closed }),
       ),
-      http.get(`/api/v1/demands/${demandId}`, () =>
-        HttpResponse.json(closed),
-      ),
+      http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(closed)),
     )
     renderRoute(filteredBoardPath)
     await openCreateForm()
