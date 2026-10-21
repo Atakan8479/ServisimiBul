@@ -66,10 +66,80 @@ const createResponseSchema = z.object({
   demand: demandSchema,
 })
 
+const demandServiceResponseStatusSchema = z.enum(['ACTIVE', 'WITHDRAWN'])
+
+const publicServiceResponseSchema = z.object({
+  id: z.string().uuid(),
+  publicationEventId: z.string().uuid(),
+  publicationVersion: z.number().int().positive(),
+  operatorId: z.string().uuid(),
+  businessName: z.string().nullable(),
+  contactPhone: z.string(),
+  offersMorning: z.boolean(),
+  offersAfternoon: z.boolean(),
+  publishedAt: z.string().datetime({ offset: true }),
+})
+
+const publicServiceResponsePageSchema = z.object({
+  content: z.array(publicServiceResponseSchema),
+  page: z.number().int().nonnegative(),
+  size: z.number().int().positive(),
+  totalElements: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+})
+
+const operatorServiceResponseSchema = z.object({
+  id: z.string().uuid(),
+  status: demandServiceResponseStatusSchema,
+  offersMorning: z.boolean(),
+  offersAfternoon: z.boolean(),
+  publicationVersion: z.number().int().positive(),
+  publicationEventId: z.string().uuid(),
+  publishedAt: z.string().datetime({ offset: true }),
+  withdrawnAt: z.string().datetime({ offset: true }).nullable(),
+  currentlyPublic: z.boolean(),
+})
+
+export const serviceResponseBlockers = [
+  'ACCOUNT_EMAIL_UNVERIFIED',
+  'ACCOUNT_DISABLED',
+  'PROFILE_INACTIVE',
+  'PROFILE_HIDDEN',
+  'APPROVAL_REQUIRED',
+  'DEMAND_NOT_OPEN',
+  'SCHOOL_INACTIVE',
+  'SCHOOL_NOT_LINKED',
+  'SCHOOL_RELATIONSHIP_INACTIVE',
+  'COVERAGE_MISSING',
+] as const
+
+const serviceResponseEligibilitySchema = z.object({
+  demandId: z.string().uuid(),
+  eligible: z.boolean(),
+  blockers: z.array(z.enum(serviceResponseBlockers)),
+  response: operatorServiceResponseSchema.nullable(),
+})
+
+const publishServiceResponseSchema = z.object({
+  published: z.boolean(),
+  response: operatorServiceResponseSchema,
+})
+
 export type SupportReason = z.infer<typeof supportReasonSchema>
 export type Demand = z.infer<typeof demandSchema>
 export type DemandPage = z.infer<typeof demandPageSchema>
 export type DemandSupport = z.infer<typeof supportSchema>
+export type PublicServiceResponse = z.infer<typeof publicServiceResponseSchema>
+export type PublicServiceResponsePage = z.infer<
+  typeof publicServiceResponsePageSchema
+>
+export type OperatorServiceResponse = z.infer<
+  typeof operatorServiceResponseSchema
+>
+export type ServiceResponseEligibility = z.infer<
+  typeof serviceResponseEligibilitySchema
+>
+export type ServiceResponseBlocker = (typeof serviceResponseBlockers)[number]
 
 export interface SupportValues {
   needsMorning: boolean
@@ -83,6 +153,11 @@ export interface DemandFilters {
   academicYear?: string
   sort: 'newest' | 'most-supported'
   page: number
+}
+
+export interface ServiceResponseValues {
+  offersMorning: boolean
+  offersAfternoon: boolean
 }
 
 export function listDemands(filters: DemandFilters): Promise<DemandPage> {
@@ -148,5 +223,43 @@ export function withdrawDemandSupport(id: string) {
   return apiRequest(`/demands/${id}/support`, {
     method: 'DELETE',
     requiresSession: true,
+  })
+}
+
+export function listDemandServiceResponses(
+  demandId: string,
+  page = 0,
+): Promise<PublicServiceResponsePage> {
+  return apiRequest(`/demands/${demandId}/responses?page=${page}&size=20`, {
+    schema: publicServiceResponsePageSchema,
+  })
+}
+
+export function getServiceResponseEligibility(
+  demandId: string,
+): Promise<ServiceResponseEligibility> {
+  return apiRequest(`/operator/demands/${demandId}/response`, {
+    requiresSession: true,
+    schema: serviceResponseEligibilitySchema,
+  })
+}
+
+export function publishDemandServiceResponse(
+  demandId: string,
+  values: ServiceResponseValues,
+) {
+  return apiRequest(`/operator/demands/${demandId}/response`, {
+    method: 'POST',
+    requiresSession: true,
+    json: values,
+    schema: publishServiceResponseSchema,
+  })
+}
+
+export function withdrawDemandServiceResponse(demandId: string) {
+  return apiRequest(`/operator/demands/${demandId}/response`, {
+    method: 'DELETE',
+    requiresSession: true,
+    schema: operatorServiceResponseSchema,
   })
 }

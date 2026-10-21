@@ -32,6 +32,8 @@ class ServisimibulBackendApplicationTests {
             "demand",
             "demand_support",
             "demand_support_reason",
+            "demand_service_publication_event",
+            "demand_service_response",
             "district",
             "email_verification_token",
             "neighborhood",
@@ -81,7 +83,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("11");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");

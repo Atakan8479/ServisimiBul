@@ -30,6 +30,10 @@ public final class DemandApiException extends RuntimeException {
         return new DemandApiException(HttpStatus.CONFLICT, code, detail, Map.of());
     }
 
+    public static DemandApiException forbidden(String code, String detail) {
+        return new DemandApiException(HttpStatus.FORBIDDEN, code, detail, Map.of());
+    }
+
     public static DemandApiException validation(String field, String message) {
         return new DemandApiException(
                 HttpStatus.BAD_REQUEST,

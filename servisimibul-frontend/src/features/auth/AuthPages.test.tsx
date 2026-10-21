@@ -235,6 +235,15 @@ describe('operator authentication screens', () => {
           currentUserSupport: null,
         }),
       ),
+      http.get(`/api/v1/demands/${demandId}/responses`, () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
       http.get('/api/v1/auth/me', () => HttpResponse.json(parentUser)),
       http.get('/api/v1/provinces', () => HttpResponse.json([])),
     )

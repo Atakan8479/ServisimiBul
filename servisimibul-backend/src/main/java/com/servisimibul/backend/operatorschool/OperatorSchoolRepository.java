@@ -26,6 +26,37 @@ public interface OperatorSchoolRepository extends JpaRepository<OperatorSchool, 
 
     boolean existsByOperatorIdAndSchoolId(UUID operatorId, UUID schoolId);
 
+    @Query("""
+            select operatorSchool
+            from OperatorSchool operatorSchool
+            join fetch operatorSchool.school school
+            join fetch school.neighborhood neighborhood
+            join fetch neighborhood.district district
+            join fetch district.province
+            where operatorSchool.operator.id = :operatorId
+              and school.id = :schoolId
+            """)
+    Optional<OperatorSchool> findDetailedByOperatorIdAndSchoolId(
+            @Param("operatorId") UUID operatorId,
+            @Param("schoolId") UUID schoolId
+    );
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select operatorSchool
+            from OperatorSchool operatorSchool
+            join fetch operatorSchool.school school
+            join fetch school.neighborhood neighborhood
+            join fetch neighborhood.district district
+            join fetch district.province
+            where operatorSchool.operator.id = :operatorId
+              and school.id = :schoolId
+            """)
+    Optional<OperatorSchool> findDetailedForUpdateByOperatorIdAndSchoolId(
+            @Param("operatorId") UUID operatorId,
+            @Param("schoolId") UUID schoolId
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select operatorSchool
