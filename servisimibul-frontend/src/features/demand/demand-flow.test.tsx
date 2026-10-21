@@ -162,8 +162,12 @@ describe('demand board regression cases', () => {
       emptyDemandHandler(),
     )
     renderRoute(filteredBoardPath)
-    expect(await screen.findByText(/Kaydedilen okul ve mahalle artık bulunamadı/)).toBeInTheDocument()
-    expect(await screen.findByText('Bu seçim için açık talep yok')).toBeInTheDocument()
+    expect(
+      await screen.findByText(/Kaydedilen okul ve mahalle artık bulunamadı/),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText('Bu seçim için açık talep yok'),
+    ).toBeInTheDocument()
   })
 
   it('shows a closed duplicate without offering an impossible join', async () => {
@@ -184,9 +188,15 @@ describe('demand board regression cases', () => {
     renderRoute(filteredBoardPath)
     await openCreateForm()
     fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
-    fireEvent.click(screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }))
-    expect(await screen.findByText(/daha önce açılmış talep katılıma kapalı/)).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Benim de ihtiyacım var' })).not.toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+    )
+    expect(
+      await screen.findByText(/daha önce açılmış talep katılıma kapalı/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Benim de ihtiyacım var' }),
+    ).not.toBeInTheDocument()
   })
 })
 

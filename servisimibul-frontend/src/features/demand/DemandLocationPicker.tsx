@@ -55,7 +55,7 @@ export function DemandLocationPicker({
   const requestVersion = useRef(0)
   const onSelectionChangeRef = useRef(onSelectionChange)
   onSelectionChangeRef.current = onSelectionChange
-  const hydratedLocationKey = useRef<string>()
+  const hydratedLocationKey = useRef<string | undefined>(undefined)
 
   const loadSchoolPage = useCallback(
     async (
@@ -122,7 +122,13 @@ export function DemandLocationPicker({
   const initialNeighborhoodId = initialLocation?.neighborhoodId
 
   useEffect(() => {
-    if (!initialSchoolId || !initialPickupDistrictId || !initialNeighborhoodId) return
+    if (
+      !initialSchoolId ||
+      !initialPickupDistrictId ||
+      !initialNeighborhoodId
+    ) {
+      return
+    }
     const key = `${initialSchoolId}/${initialPickupDistrictId}/${initialNeighborhoodId}`
     if (hydratedLocationKey.current === key) return
     hydratedLocationKey.current = key

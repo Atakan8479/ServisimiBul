@@ -317,10 +317,12 @@ export function DemandBoardPage() {
   }
 
   const exactDemand =
-    appliedSelection && demands?.content.length === 1 &&
+    appliedSelection &&
+    demands?.content.length === 1 &&
     demands.content[0].school.id === appliedSelection.school.id &&
     demands.content[0].neighborhood.id === appliedSelection.neighborhood.id &&
-    demands.content[0].academicYear === (academicYear.trim() || demands.content[0].academicYear)
+    demands.content[0].academicYear ===
+      (academicYear.trim() || demands.content[0].academicYear)
       ? demands.content[0]
       : undefined
 

@@ -116,7 +116,12 @@ export function createDemand(
   return apiRequest('/demands', {
     method: 'POST',
     requiresSession: true,
-    json: { schoolId, neighborhoodId, ...values, ...(academicYear ? { academicYear } : {}) },
+    json: {
+      schoolId,
+      neighborhoodId,
+      ...values,
+      ...(academicYear ? { academicYear } : {}),
+    },
     schema: createResponseSchema,
   })
 }
