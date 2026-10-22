@@ -146,7 +146,9 @@ try {
     $output = & pwsh -NoProfile -File $smokeScript -BaseUri $server.BaseUri `
         -AllowHttpForLocalTest -TimeoutSeconds 2 2>&1
     $combinedOutput = $output -join "`n"
-    Assert-Condition ($LASTEXITCODE -eq 0) 'Authenticated smoke fixture returned a non-zero exit code.'
+    Assert-Condition ($LASTEXITCODE -eq 0) `
+        ("Authenticated smoke fixture returned a non-zero exit code: {0}" -f `
+            (($output -join ' | ') -replace [regex]::Escape('smoke-secret'), '[REDACTED]'))
     Assert-Condition ($combinedOutput -match 'Authenticated read-only smoke check passed') `
         'Authenticated smoke fixture did not execute the read-only check.'
     Assert-Condition ($combinedOutput -notmatch 'smoke-secret') `
