@@ -128,6 +128,7 @@ try {
 
     $backendPort = Get-SbFreeTcpPort
     $frontendPort = Get-SbFreeTcpPort
+    $parentPassword = New-SbRandomPassword
     $runtimeEnvironment = $databaseEnvironment.Clone()
     $runtimeEnvironment.SPRING_PROFILES_ACTIVE = 'local'
     $runtimeEnvironment.SB_FLYWAY_ENABLED = 'false'
@@ -153,12 +154,18 @@ try {
     $runtimeEnvironment.APP_AUTH_EMAIL_VERIFICATION_REQUIRED = 'false'
     $runtimeEnvironment.OPERATOR_APPROVAL_REQUIRED = 'true'
     $runtimeEnvironment.APP_OPERATOR_APPROVAL_REQUIRED = 'true'
+    $runtimeEnvironment.SB_TEST_DB_DISPOSABLE = 'true'
+    $runtimeEnvironment.SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'true'
+    $runtimeEnvironment.SB_DEMO_PARENT_EMAIL = 'j03.parent@example.test'
+    $runtimeEnvironment.SB_DEMO_PARENT_PASSWORD = $parentPassword
     $runtimeEnvironment.SERVER_ADDRESS = '127.0.0.1'
     $runtimeEnvironment.SERVER_PORT = [string]$backendPort
     $runtimeEnvironment.J03_BACKEND_PORT = [string]$backendPort
     $runtimeEnvironment.J03_FRONTEND_PORT = [string]$frontendPort
     $runtimeEnvironment.J03_ADMIN_EMAIL = 'j03.admin.one@example.test'
     $runtimeEnvironment.J03_ADMIN_PASSWORD = $adminPassword
+    $runtimeEnvironment.J03_PARENT_EMAIL = 'j03.parent@example.test'
+    $runtimeEnvironment.J03_PARENT_PASSWORD = $parentPassword
 
     Write-Host "Running real Playwright journeys on loopback ports $frontendPort and $backendPort..."
     $previousEnvironment = Set-SbTemporaryEnvironment -Values $runtimeEnvironment

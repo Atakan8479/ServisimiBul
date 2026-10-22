@@ -55,9 +55,11 @@ export function DemandFeedbackPanel({
       await onResolved()
     } catch (caught) {
       setError(
-        caught instanceof ApiError
-          ? caught.problem.detail
-          : 'Geri bildiriminiz kaydedilemedi. Tekrar deneyin.',
+        caught instanceof ApiError && caught.problem.status === 401
+          ? 'Geri bildirim göndermek için veli hesabınızla yeniden giriş yapın.'
+          : caught instanceof ApiError
+            ? caught.problem.detail
+            : 'Geri bildiriminiz kaydedilemedi. Tekrar deneyin.',
       )
     } finally {
       setPendingEventId(undefined)
@@ -89,6 +91,11 @@ export function DemandFeedbackPanel({
 
       {data && (
         <>
+          {data.feedback.length === 0 && (
+            <p className="demand-feedback-loading">
+              Henüz değerlendirilecek servis bildirimi yok.
+            </p>
+          )}
           <ul className="demand-feedback-list">
             {data.feedback.map((item) => (
               <li key={item.publicationEventId}>
@@ -103,7 +110,7 @@ export function DemandFeedbackPanel({
                   <div className="demand-feedback-actions">
                     <button
                       className="primary-button"
-                      disabled={pendingEventId === item.publicationEventId}
+                      disabled={pendingEventId !== undefined}
                       onClick={() => void decide(item, true)}
                       type="button"
                     >
@@ -111,7 +118,7 @@ export function DemandFeedbackPanel({
                     </button>
                     <button
                       className="secondary-button"
-                      disabled={pendingEventId === item.publicationEventId}
+                      disabled={pendingEventId !== undefined}
                       onClick={() => void decide(item, false)}
                       type="button"
                     >

@@ -42,6 +42,7 @@ function Start-SmokeMockServer {
             $Port
         )
         $listener.Start()
+        Write-Output 'READY'
         try {
             for ($index = 0; $index -lt $ExpectedRequests; $index++) {
                 $acceptTask = $listener.AcceptTcpClientAsync()
@@ -110,7 +111,23 @@ function Start-SmokeMockServer {
         }
     }
 
-    Start-Sleep -Milliseconds 300
+    $ready = $false
+    for ($attempt = 0; $attempt -lt 100; $attempt++) {
+        if (@(Receive-Job -Job $job -Keep) -contains 'READY') {
+            $ready = $true
+            break
+        }
+        if ($job.State -in @('Failed', 'Stopped', 'Completed')) {
+            break
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $ready) {
+        $state = $job.State
+        Stop-Job -Job $job -ErrorAction SilentlyContinue
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+        throw "Smoke mock server did not become ready (job state: $state)."
+    }
     return [pscustomobject]@{
         BaseUri = "http://127.0.0.1:$port"
         Job = $job

@@ -372,6 +372,7 @@ export function DemandDetailPage() {
     demand.currentUserSupport?.status === 'WITHDRAWN' ||
     demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const feedbackVisible =
+    demand.currentUserSupport?.status === 'ACTIVE' ||
     demand.currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
     demand.currentUserSupport?.status === 'SATISFIED' ||
     demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'

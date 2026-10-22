@@ -4,6 +4,8 @@ const operatorEmail = 'j03.operator@example.test'
 const operatorPassword = 'J03-operator-password'
 const adminEmail = process.env.J03_ADMIN_EMAIL ?? 'j03.admin.one@example.test'
 const adminPassword = process.env.J03_ADMIN_PASSWORD
+const parentEmail = process.env.J03_PARENT_EMAIL ?? 'j03.parent@example.test'
+const parentPassword = process.env.J03_PARENT_PASSWORD
 
 test('runs the approved MVP journey against the real backend and PostgreSQL', async ({
   browser,
@@ -16,9 +18,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const operatorContext = await browser.newContext()
   const adminContext = await browser.newContext()
   const publicContext = await browser.newContext()
+  const parentContext = await browser.newContext()
   const operatorPage = await operatorContext.newPage()
   const adminPage = await adminContext.newPage()
   const publicPage = await publicContext.newPage()
+  const parentPage = await parentContext.newPage()
 
   adminPage.on('dialog', (dialog) => void dialog.accept())
 
@@ -247,6 +251,86 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
     })
 
+    await test.step('publish a demand service and resolve parent feedback against the real API', async () => {
+      expect(
+        parentPassword,
+        'J03_PARENT_PASSWORD must be supplied by the isolated runner',
+      ).toBeTruthy()
+      await login(parentPage, parentEmail, parentPassword!, 'parent')
+      const parentCsrf = await csrf(parentPage)
+      const created = await parentPage.request.post('/api/v1/demands', {
+        headers: { [parentCsrf.headerName]: parentCsrf.token },
+        data: {
+          schoolId: '10000000-0000-4000-8000-000000000001',
+          neighborhoodId: 340201,
+          needsMorning: true,
+          needsAfternoon: false,
+          reasons: ['NO_SUITABLE_SERVICE'],
+        },
+      })
+      expect(created.status()).toBe(201)
+      const demandId = ((await created.json()) as { demand: { id: string } })
+        .demand.id
+      const responsePath = `/api/v1/operator/demands/${demandId}/response`
+      const operatorCsrf = await csrf(operatorPage)
+      const published = await operatorPage.request.post(responsePath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { offersMorning: true, offersAfternoon: false },
+      })
+      expect(published.status()).toBe(200)
+      expect((await published.json()) as { published: boolean }).toMatchObject({
+        published: true,
+      })
+
+      await parentPage.goto(`/demands/${demandId}`)
+      await parentPage.getByRole('button', { name: 'Karşılanmadı' }).click()
+      await expect(
+        parentPage.getByText(
+          'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+        ),
+      ).toBeVisible()
+      for (const viewport of [
+        { width: 390, height: 844 },
+        { width: 768, height: 1024 },
+        { width: 1440, height: 900 },
+      ]) {
+        await parentPage.setViewportSize(viewport)
+        await parentPage.reload()
+        await expect(
+          parentPage.getByText(
+            'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+          ),
+        ).toBeVisible()
+        expect(
+          await parentPage.evaluate(() => document.documentElement.scrollWidth),
+        ).toBeLessThanOrEqual(
+          await parentPage.evaluate(() => document.documentElement.clientWidth),
+        )
+      }
+
+      const withdrawn = await operatorPage.request.delete(responsePath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+      })
+      expect(withdrawn.status()).toBe(200)
+      const republished = await operatorPage.request.post(responsePath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { offersMorning: true, offersAfternoon: false },
+      })
+      expect(republished.status()).toBe(200)
+      await parentPage.reload()
+      const satisfy = parentPage.getByRole('button', {
+        name: 'Talebim karşılandı',
+      })
+      await satisfy.focus()
+      await expect(satisfy).toBeFocused()
+      await parentPage.keyboard.press('Enter')
+      await expect(parentPage.getByText('Katılıma kapalı')).toBeVisible()
+      const closed = await parentPage.request.get(`/api/v1/demands/${demandId}`)
+      expect((await closed.json()) as { closureReason: string }).toMatchObject({
+        closureReason: 'FULFILLED',
+      })
+    })
+
     await test.step('cover a mobile keyboard path without sharing authenticated state', async () => {
       // A fresh page avoids retained focus from the preceding real discovery journey.
       // A real browser Tab must focus the skip link; programmatic focus would hide regressions.
@@ -302,6 +386,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       operatorContext.close(),
       adminContext.close(),
       publicContext.close(),
+      parentContext.close(),
     ])
   }
 })
@@ -310,7 +395,7 @@ async function login(
   page: Page,
   email: string,
   password: string,
-  expectedRole: 'admin' | 'operator',
+  expectedRole: 'admin' | 'operator' | 'parent',
 ) {
   await page.goto('/operator/login')
   await page.getByLabel('E-posta').fill(email)
@@ -322,7 +407,11 @@ async function login(
   )
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   expect((await response).status()).toBe(200)
-  await expect(page).toHaveURL(new RegExp(`/${expectedRole}(?:/|$)`))
+  await expect(page).toHaveURL(
+    expectedRole === 'parent'
+      ? /\/demands(?:\/|$)/
+      : new RegExp(`/${expectedRole}(?:/|$)`),
+  )
 }
 
 async function search(page: Page, district: string, neighborhood: string) {

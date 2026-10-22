@@ -274,6 +274,118 @@ describe('demand support management', () => {
 })
 
 describe('parent service feedback', () => {
+  it('shows an empty feedback state to an active supporting parent', async () => {
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json({
+          demandId,
+          feedback: [],
+          disclaimer: 'Bildirimdir.',
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(
+      await screen.findByText('Henüz değerlendirilecek servis bildirimi yok.'),
+    ).toBeInTheDocument()
+  })
+
+  it('explains when the parent session expires while opening feedback', async () => {
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json(problem(401, 'Authentication is required'), {
+          status: 401,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'veli hesabınızla yeniden giriş yapın',
+    )
+  })
+
+  it('keeps rejected feedback visible after support returns to active', async () => {
+    const publicationEventId = 'c1f54a9d-cf2e-4206-9016-644372685b74'
+    let current = demand({
+      currentUserSupport: { ...activeSupport, status: 'AWAITING_FEEDBACK' },
+    })
+    let feedback = {
+      demandId,
+      disclaimer: 'İşletmeci bildirimleri uygunluk beyanıdır.',
+      feedback: [
+        {
+          publicationEventId,
+          operatorId: '2778473a-5886-454c-a6d8-a2eaa4f585b1',
+          operatorBusinessName: 'Mavi Servis',
+          offersMorning: true,
+          offersAfternoon: false,
+          publishedAt: '2026-10-20T09:00:00Z',
+          status: 'AWAITING_FEEDBACK',
+          openedAt: '2026-10-21T09:00:00Z',
+          reminderDueAt: '2026-10-28T09:00:00Z',
+          reminderTriggeredAt: null,
+          expiresAt: '2026-11-04T09:00:00Z',
+          evaluatedAt: null as string | null,
+          canEvaluate: true,
+        },
+      ],
+    }
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json(feedback),
+      ),
+      http.put(
+        `/api/v1/demands/${demandId}/feedback/${publicationEventId}`,
+        () => {
+          current = demand({ currentUserSupport: activeSupport })
+          feedback = {
+            ...feedback,
+            feedback: [
+              {
+                ...feedback.feedback[0],
+                status: 'NOT_SATISFIED',
+                evaluatedAt: '2026-10-22T09:00:00Z',
+                canEvaluate: false,
+              },
+            ],
+          }
+          return HttpResponse.json(feedback)
+        },
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Karşılanmadı' }))
+    expect(
+      await screen.findByText(
+        'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: 'Servis ihtiyacınız karşılandı mı?',
+      }),
+    ).toBeInTheDocument()
+  })
+
   it('records the screen open and lets the supporting parent resolve a publication', async () => {
     const publicationEventId = 'c1f54a9d-cf2e-4206-9016-644372685b74'
     let current = demand({

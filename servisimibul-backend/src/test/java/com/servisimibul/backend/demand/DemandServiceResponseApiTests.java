@@ -427,6 +427,62 @@ class DemandServiceResponseApiTests {
     }
 
     @Test
+    void expiredSupportDoesNotVetoFulfillmentConfirmedByRemainingParents() throws Exception {
+        Fixture fixture = fixture("feedback-mixed@example.com", true);
+        AppUser second = verifiedParent("feedback-second@example.com");
+        AppUser third = verifiedParent("feedback-third@example.com");
+        supportRepository.saveAndFlush(new DemandSupport(
+                fixture.demand(), second, true, false,
+                java.util.Set.of(SupportReason.NO_SUITABLE_SERVICE)
+        ));
+        supportRepository.saveAndFlush(new DemandSupport(
+                fixture.demand(), third, true, false,
+                java.util.Set.of(SupportReason.NO_SUITABLE_SERVICE)
+        ));
+        publish(fixture);
+
+        for (AppUser parent : List.of(fixture.parent(), second)) {
+            DemandSupport support = supportRepository.findOwned(
+                    fixture.demand().getId(), parent.getId()
+            ).orElseThrow();
+            UUID eventId = feedbackRepository.findDetailedBySupportId(support.getId())
+                    .getFirst().getPublicationEvent().getId();
+            mockMvc.perform(put(feedbackPath(fixture.demand()) + "/" + eventId)
+                            .with(as(parent))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"satisfied\":true}"))
+                    .andExpect(status().isOk());
+            assertThat(demandRepository.findById(fixture.demand().getId()).orElseThrow().isOpen())
+                    .isTrue();
+        }
+
+        DemandSupport unanswered = supportRepository.findOwned(
+                fixture.demand().getId(), third.getId()
+        ).orElseThrow();
+        DemandServiceFeedback feedback = feedbackRepository.findDetailedBySupportId(
+                unanswered.getId()
+        ).getFirst();
+        jdbcTemplate.update("""
+                update demand_service_feedback
+                set expires_at = now() - interval '1 minute'
+                where id = ?
+                """, feedback.getId());
+        entityManager.clear();
+        feedbackService.processDue(feedback.getId());
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(supportRepository.findOwned(fixture.demand().getId(), third.getId())
+                .orElseThrow().getStatus()).isEqualTo(DemandSupportStatus.INACTIVE_EXPIRED);
+        Demand closed = demandRepository.findById(fixture.demand().getId()).orElseThrow();
+        assertThat(closed.getClosureReason()).isEqualTo(DemandClosureReason.FULFILLED);
+        assertThat(lifecycleEventRepository.countByDemandIdAndEventType(
+                closed.getId(), DemandLifecycleEventType.CLOSED_FULFILLED
+        )).isOne();
+    }
+
+    @Test
     void reminderAndExpiryAreIdempotentAndInactiveDemandCanBeReopened() throws Exception {
         Fixture fixture = fixture("feedback-expiry@example.com", true);
         publish(fixture);
