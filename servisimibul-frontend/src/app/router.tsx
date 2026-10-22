@@ -45,6 +45,24 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'register',
+        handle: { pageTitle: 'Hesap türü seçimi' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/SignupPages'))
+            .SignupChoicePage,
+        }),
+      },
+      {
+        path: 'parent/register',
+        handle: { pageTitle: 'Veli kaydı' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/SignupPages'))
+            .ParentSignupPage,
+        }),
+      },
+      {
         path: 'operator/register',
         handle: { pageTitle: 'İşletmeci kaydı' },
         HydrateFallback: LoadingPage,
