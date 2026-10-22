@@ -11,6 +11,12 @@ import java.util.UUID;
 
 public interface DemandSupportRepository extends JpaRepository<DemandSupport, UUID> {
 
+    boolean existsByDemandIdAndParentIdAndStatus(
+            UUID demandId,
+            UUID parentId,
+            DemandSupportStatus status
+    );
+
     @EntityGraph(attributePaths = "reasons")
     @Query("""
             select distinct support

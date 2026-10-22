@@ -27,6 +27,7 @@ import {
 import { reasonLabel } from './demand-labels'
 import { DemandServiceResponseForm } from './DemandServiceResponseForm'
 import { DemandSupportForm } from './DemandSupportForm'
+import { DemandComments } from './DemandComments'
 
 type SupportMode = 'join' | 'edit' | 'reactivate'
 
@@ -746,6 +747,12 @@ export function DemandDetailPage() {
           </div>
         )}
       </section>
+
+      <DemandComments
+        demandId={demand.id}
+        open={open}
+        parentHasActiveSupport={activeSupport}
+      />
     </section>
   )
 }

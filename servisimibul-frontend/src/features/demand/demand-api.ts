@@ -66,6 +66,27 @@ const createResponseSchema = z.object({
   demand: demandSchema,
 })
 
+const commentSchema = z.object({
+  id: z.string().uuid(),
+  body: z.string(),
+  author: z.object({
+    role: z.enum(['PARENT', 'OPERATOR']),
+    displayName: z.string(),
+    operatorProfileId: z.string().uuid().nullable(),
+  }),
+  canDelete: z.boolean(),
+  createdAt: z.string().datetime({ offset: true }),
+  updatedAt: z.string().datetime({ offset: true }),
+})
+
+const commentPageSchema = z.object({
+  content: z.array(commentSchema),
+  page: z.number().int().nonnegative(),
+  size: z.number().int().positive(),
+  totalElements: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+})
+
 const demandServiceResponseStatusSchema = z.enum(['ACTIVE', 'WITHDRAWN'])
 
 const publicServiceResponseSchema = z.object({
@@ -124,11 +145,12 @@ const publishServiceResponseSchema = z.object({
   published: z.boolean(),
   response: operatorServiceResponseSchema,
 })
-
 export type SupportReason = z.infer<typeof supportReasonSchema>
 export type Demand = z.infer<typeof demandSchema>
 export type DemandPage = z.infer<typeof demandPageSchema>
 export type DemandSupport = z.infer<typeof supportSchema>
+export type DemandComment = z.infer<typeof commentSchema>
+export type DemandCommentPage = z.infer<typeof commentPageSchema>
 export type PublicServiceResponse = z.infer<typeof publicServiceResponseSchema>
 export type PublicServiceResponsePage = z.infer<
   typeof publicServiceResponsePageSchema
@@ -221,6 +243,28 @@ export function updateDemandSupport(id: string, values: SupportValues) {
 
 export function withdrawDemandSupport(id: string) {
   return apiRequest(`/demands/${id}/support`, {
+    method: 'DELETE',
+    requiresSession: true,
+  })
+}
+
+export function listDemandComments(id: string, page: number) {
+  return apiRequest(`/demands/${id}/comments?page=${page}&size=10`, {
+    schema: commentPageSchema,
+  })
+}
+
+export function createDemandComment(id: string, body: string) {
+  return apiRequest(`/demands/${id}/comments`, {
+    method: 'POST',
+    requiresSession: true,
+    json: { body },
+    schema: commentSchema,
+  })
+}
+
+export function deleteDemandComment(demandId: string, commentId: string) {
+  return apiRequest(`/demands/${demandId}/comments/${commentId}`, {
     method: 'DELETE',
     requiresSession: true,
   })

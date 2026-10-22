@@ -69,6 +69,21 @@ test('parent creates and manages an anonymous demand after checking operators', 
     page.getByText('Desteğiniz yeniden etkinleştirildi.'),
   ).toBeVisible()
   expect(state.parentSupport?.status).toBe('ACTIVE')
+
+  await page.getByRole('button', { name: 'Yorum yaz' }).click()
+  await page
+    .getByLabel('Yorumunuz')
+    .fill('Sabah saati için iletişim kurabiliriz.')
+  await page.getByRole('button', { name: 'Yorumu yayınla' }).click()
+  await expect(page.getByText('Yorumunuz yayınlandı.')).toBeVisible()
+  await expect(
+    page.getByText('Sabah saati için iletişim kurabiliriz.'),
+  ).toBeVisible()
+  expect(state.demandComments).toHaveLength(1)
+
+  await page.getByRole('button', { name: 'Yorumumu sil' }).click()
+  await expect(page.getByText('Yorumunuz silindi.')).toBeVisible()
+  expect(state.demandComments).toHaveLength(0)
 })
 
 test('eligible operator publishes and withdraws a demand-specific service response', async ({

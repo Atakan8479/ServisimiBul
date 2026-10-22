@@ -89,6 +89,7 @@ public class SecurityConfiguration {
                                 "/api/v1/schools/*",
                                 "/api/v1/demands",
                                 "/api/v1/demands/*",
+                                "/api/v1/demands/*/comments",
                                 "/api/v1/demands/*/responses",
                                 "/api/v1/operators",
                                 "/api/v1/operators/*",
@@ -111,6 +112,10 @@ public class SecurityConfiguration {
                         ).hasRole("PARENT")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/demands/*/support").hasRole("PARENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/demands/*/support").hasRole("PARENT")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/demands/*/comments")
+                        .hasAnyRole("PARENT", "OPERATOR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/demands/*/comments/*")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/operator/**").hasRole("OPERATOR")
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().denyAll()

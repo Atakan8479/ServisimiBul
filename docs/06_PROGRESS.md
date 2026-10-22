@@ -1,10 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Demand marketplace — REQ-05 demand-specific service responses ready for review
+## Current stage: Demand marketplace — REQ-04 demand comments ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-03, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-05 is implemented and locally verified on `codex/req-05-demand-service-responses`; database-backed CI, code review, and merge remain pending. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-03, REQ-05, frontend design tooling, the operator business-name optionality change, public discovery UI, and the local-only email-verification testing exception are merged. REQ-04 is implemented and verified with the merged REQ-05 schema and demand-detail UI on `codex/req-04-demand-comments`; PR #97 is ready for review. J-05's local-only controlled-pilot environment and UAT method are implemented and verified on its feature branch. Human supervised sessions have not occurred, so J-05 is not complete and its report remains NO-GO for claiming UAT completion. J-04 live protection activation and verification remain unverified.
 
 Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V8 migration and post-migration security audit passed.
+
+## Verified REQ-04 demand comments — 2026-10-21
+
+- Branch `codex/req-04-demand-comments` implements GitHub issue #87 with anonymous paginated reads, supporting-parent and eligible-operator authorship, parent pseudonyms, publication-safe operator identity, author-only deletion, duplicate-body protection, and a five-attempts-per-account/ten-minutes posting limit.
+- Flyway V12 adds comment persistence after merged REQ-05 Flyway V11. The responsive demand-detail experience supports loading more comments, restoring focus after pagination, creating plain-text comments, deleting the caller's comments, privacy guidance, and recoverable loading/error states without changing the REQ-05 response workflow.
+- Complete isolated PostgreSQL 17 verification passed all 250 backend tests, migration replay through V12, Hibernate schema validation, RLS/privilege checks, security regressions, and packaging. The first attempt exposed only a stale generated V11 resource after the migration rename; a Maven clean removed generated output and the clean run passed.
+- Frontend verification passed ESLint, strict TypeScript, all 75 Vitest tests, the production build, and all 11 Playwright tests. The combined suite covers desktop/tablet/mobile accessibility and overflow, 320-pixel reflow, reduced motion, the parent demand journey, operator response flow, and existing MVP journeys.
+- No shared Supabase connection, migration, schema change, or data write occurred. Shared Supabase remains at V8; applying repository V9–V12 requires separate inspection and explicit approval.
 
 ## Verified REQ-05 local evidence — 2026-10-21
 
@@ -98,7 +106,8 @@ Shared Supabase is at Flyway schema version 8 as of 2026-10-17; the controlled V
 | J-05 Controlled pilot UAT with synthetic data | preparation ready for review | Branch `codex/j-05-controlled-pilot-uat`; disposable environment, synthetic fixtures, facilitation/runbook, anonymized report, safety checks, smoke, and J-03 regression verified; supervised sessions pending | Implementation approved 2026-10-20; human UAT and code review pending |
 | REQ-02 Transport-demand persistence and support API | complete | GitHub issue #85; PR #94 merged as `b161181`; focused 12/12 and complete isolated backend 231/231 passed | Reviewed and merged 2026-10-21; shared-database migration remains separately approval-gated |
 | REQ-03 Demand board and parent support frontend | complete | GitHub issue #86; PR #95 merged as `2120704`; final branch verification passed | Reviewed and merged 2026-10-21 |
-| REQ-05 Demand-specific operator service responses | ready for review | GitHub issue #88; branch `codex/req-05-demand-service-responses`; backend package, typecheck/lint/format/build, 70 Vitest tests, and all 11 Playwright tests passed | Implementation requested 2026-10-21; isolated PostgreSQL CI, code review, and merge pending |
+| REQ-04 Demand comments and baseline moderation | ready for review | GitHub issue #87; branch `codex/req-04-demand-comments`; PR #97; 250 backend, 75 Vitest, and 11 Playwright tests passed | Contract and implementation approved 2026-10-21; review and merge pending |
+| REQ-05 Demand-specific operator service responses | complete | GitHub issue #88; PR #96 merged as `55e4316` | Reviewed and merged 2026-10-21; shared-database migration remains separately approval-gated |
 
 J-01 is documentation-only: it changes no Java code, dependency, migration, application configuration, or shared database state. The contract fixes registration, verification/recovery, session/cookie/CSRF behavior, application lifecycle, admin bootstrap, API errors, pagination, and public contact rules before B-02 implementation begins.
 

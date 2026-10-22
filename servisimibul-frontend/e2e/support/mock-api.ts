@@ -64,6 +64,18 @@ export interface MockApiState {
     needsAfternoon: boolean
     reasons: string[]
   }
+  demandComments: Array<{
+    id: string
+    body: string
+    author: {
+      role: 'PARENT' | 'OPERATOR'
+      displayName: string
+      operatorProfileId: string | null
+    }
+    canDelete: boolean
+    createdAt: string
+    updatedAt: string
+  }>
   serviceResponse: null | {
     id: string
     status: 'ACTIVE' | 'WITHDRAWN'
@@ -94,6 +106,7 @@ export function createMockApiState(): MockApiState {
     tariff: tariff('v1'),
     demandCreated: false,
     parentSupport: null,
+    demandComments: [],
     serviceResponse: null,
   }
 }
@@ -459,6 +472,42 @@ export async function installMockApi(page: Page, state: MockApiState) {
       return state.demandCreated
         ? json(route, demandResponse(state, role))
         : problem(route, 404, 'demand_not_found')
+    }
+    if (path === `/demands/${demandId}/comments` && method === 'GET') {
+      return json(route, pageResponse(state.demandComments, 10))
+    }
+    if (path === `/demands/${demandId}/comments` && method === 'POST') {
+      if (role !== 'PARENT' && role !== 'OPERATOR') {
+        return problem(route, 401, 'authentication_required')
+      }
+      if (role === 'PARENT' && state.parentSupport?.status !== 'ACTIVE') {
+        return problem(route, 403, 'active_support_required')
+      }
+      const body = await request.postDataJSON()
+      const comment = {
+        id: '6b78776f-ad3f-4580-9d69-839a14786aed',
+        body: body.body,
+        author: {
+          role,
+          displayName: role === 'PARENT' ? 'Veli' : 'Servis işletmecisi',
+          operatorProfileId: null,
+        },
+        canDelete: true,
+        createdAt,
+        updatedAt: createdAt,
+      }
+      state.demandComments.unshift(comment)
+      return json(route, comment, 201)
+    }
+    if (
+      path.startsWith(`/demands/${demandId}/comments/`) &&
+      method === 'DELETE'
+    ) {
+      const commentId = path.split('/').at(-1)
+      state.demandComments = state.demandComments.filter(
+        (comment) => comment.id !== commentId,
+      )
+      return empty(route)
     }
     if (path === `/demands/${demandId}/responses` && method === 'GET') {
       const response = state.serviceResponse
