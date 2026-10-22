@@ -186,6 +186,12 @@ export function RegisterPage() {
           Giriş yapın
         </Link>
       </p>
+      <p className="auth-switch">
+        Veli misiniz?{' '}
+        <Link to="/parent/register" viewTransition>
+          Veli kaydı hakkında bilgi alın
+        </Link>
+      </p>
     </AuthCard>
   )
 }
@@ -352,7 +358,14 @@ export function LoginPage() {
         ) : isDemandPath(searchParams.get('next')) ? (
           <>
             Veli hesapları pilot kapsamında doğrulanarak açılır. Yeni hesap için
-            proje ekibiyle iletişime geçin.
+            proje ekibiyle iletişime geçin.{' '}
+            <Link
+              to={`/parent/register?next=${encodeURIComponent(searchParams.get('next') ?? '/demands')}`}
+              viewTransition
+            >
+              Veli kaydı hakkında bilgi alın
+            </Link>
+            .
           </>
         ) : (
           <>
