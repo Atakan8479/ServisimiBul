@@ -11,6 +11,31 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
+describe('parent account onboarding', () => {
+  it('separates parent and operator signup without auto-registering a parent', async () => {
+    renderRoute('/register?next=%2Fdemands')
+    expect(await screen.findByRole('heading', { name: 'Nasıl kullanmak istiyorsunuz?' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Veliyim/ })).toHaveAttribute(
+      'href',
+      '/parent/register?next=%2Fdemands',
+    )
+    expect(screen.getByRole('link', { name: /İşletmeciyim/ })).toHaveAttribute(
+      'href',
+      '/operator/register',
+    )
+  })
+
+  it('gives safe pilot guidance instead of submitting a public parent account', async () => {
+    renderRoute('/parent/register?next=%2Fdemands')
+    expect(await screen.findByRole('heading', { name: 'Veli kaydı henüz açık değil' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Hesap oluştur/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Veli hesabımla giriş yap' })).toHaveAttribute(
+      'href',
+      '/operator/login?next=%2Fdemands',
+    )
+  })
+})
+
 describe('operator authentication screens', () => {
   it('explains public profile visibility without requiring consent', async () => {
     renderRoute('/operator/register')
