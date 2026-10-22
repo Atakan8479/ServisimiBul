@@ -87,6 +87,10 @@ jobs:
           echo "J03_ADMIN_PASSWORD=$admin_password" >> "$GITHUB_ENV"
           echo "SB_ADMIN_1_PASSWORD=$admin_password" >> "$GITHUB_ENV"
           echo "SB_ADMIN_2_PASSWORD=$admin_password" >> "$GITHUB_ENV"
+          parent_password="$(openssl rand -base64 24 | tr '/+' 'AB')"
+          echo "::add-mask::$parent_password"
+          echo "J03_PARENT_PASSWORD=$parent_password" >> "$GITHUB_ENV"
+          echo "SB_DEMO_PARENT_PASSWORD=$parent_password" >> "$GITHUB_ENV"
           tariff_dir="$RUNNER_TEMP/j03-tariffs"
           cp -R scripts/fixtures/j03/tariffs "$tariff_dir"
           echo "SB_TARIFF_STORAGE_DIR=$tariff_dir" >> "$GITHUB_ENV"
@@ -100,6 +104,14 @@ jobs:
             CREATE ROLE authenticated NOLOGIN;"
           psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -c "CREATE DATABASE servisimibul_j03"
+          psql -h 127.0.0.1 -U postgres -d servisimibul_j03 -v ON_ERROR_STOP=1 \
+            -c "CREATE SCHEMA test_harness;
+            CREATE TABLE test_harness.database_instance (instance_id text PRIMARY KEY);
+            INSERT INTO test_harness.database_instance VALUES ('j03_ci_disposable');
+            REVOKE ALL ON SCHEMA test_harness FROM PUBLIC;
+            REVOKE ALL ON ALL TABLES IN SCHEMA test_harness FROM PUBLIC;
+            GRANT USAGE ON SCHEMA test_harness TO servisimibul_app;
+            GRANT SELECT ON test_harness.database_instance TO servisimibul_app;"
       - name: Apply Flyway migrations
         working-directory: servisimibul-backend
         env:
@@ -137,6 +149,10 @@ jobs:
       - name: Run real full-stack browser tests
         working-directory: servisimibul-frontend
         env:
+          SB_TEST_DB_DISPOSABLE: "true"
+          SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "true"
+          SB_DEMO_PARENT_EMAIL: j03.parent@example.test
+          J03_PARENT_EMAIL: j03.parent@example.test
           SB_ADMIN_1_EMAIL: ""
           SB_ADMIN_1_PASSWORD: ""
           SB_ADMIN_2_EMAIL: ""

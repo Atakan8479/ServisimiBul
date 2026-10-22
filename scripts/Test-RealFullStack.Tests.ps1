@@ -47,6 +47,10 @@ Assert-Condition (-not $spec.Contains('.route(')) `
     'The real full-stack suite intercepts requests.'
 Assert-Condition (-not $spec.Contains('installMockApi')) `
     'The real full-stack suite imports the mocked API.'
+Assert-Condition ($workflow.Contains('CREATE TABLE test_harness.database_instance')) `
+    'J-03 CI does not mark its PostgreSQL database as disposable.'
+Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "true"')) `
+    'J-03 CI does not enable the synthetic parent only for the local browser run.'
 Assert-Condition (
     [regex]::Matches($workflow, 'SB_EMAIL_VERIFICATION_REQUIRED: "true"').Count -eq 2
 ) 'J-03 CI does not restore verification for migration-only processes.'
