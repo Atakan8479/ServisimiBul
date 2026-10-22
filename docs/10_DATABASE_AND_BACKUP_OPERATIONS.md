@@ -1,14 +1,14 @@
 # A-09 database and backup operations, verified locally by A-13
 
-Originally verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. Repository evidence records the later approved V8 migration and rolled-back post-migration audit on 2026-10-17. A-13 exercised the logical database and tariff procedures only against disposable loopback PostgreSQL 17.11 environments on 2026-10-19; it performed no new Supabase audit. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
+Originally verified against repository commit `f2ec9ea` and the shared Supabase project on 2026-10-16. Repository evidence records the approved V8 migration on 2026-10-17 and the separately approved V9–V12 migration from `main` commit `8454485` on 2026-10-22. A-13 exercised the logical database and tariff procedures against disposable loopback PostgreSQL 17.11 environments on 2026-10-19; the 2026-10-22 operation additionally restored an encrypted pre-V9 logical export and rehearsed V9–V12 against disposable PostgreSQL 17 before the shared migration. This runbook is operational guidance, not authorization to mutate a shared database, restore a backup, load pilot data, delete sessions, change billing, or change production settings. Each such action needs the target, operator, recovery point, and command reviewed immediately before execution; migrations and destructive or production-like actions additionally need explicit human approval.
 
 ## Current operational baseline
 
 - The last approved evidence records the shared `ServisimiBul` project on Supabase PostgreSQL 17.11 and the organization on the Free plan; re-verify both before an operation.
-- Flyway history contained eight successful rows, V1 through V8, after the approved 2026-10-17 migration. `service_offering_coverage` was present.
-- All 16 application tables had RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role had no direct privileges on it.
+- Flyway history contains twelve successful rows, V1 through V12, after the approved 2026-10-22 migration. V13 is absent.
+- All 22 application tables have RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role have no direct privileges on it.
 - `PUBLIC`, `anon`, and `authenticated` have no direct privileges on any current application table or sequence.
-- The geography and school catalog was empty and the two ADMIN accounts existed at the last recorded audit. No restore, backup export, pilot-data write, session deletion, or tariff-volume operation was performed by this follow-up.
+- The latest verified counts are 1 province, 39 districts, 963 neighborhoods, 1 school, 3 users, and zero rows in all six V10–V12 demand tables. The encrypted pre-V9 logical export is retained outside Git pending explicit deletion approval.
 
 ### Historical A-09 pre-V8 baseline
 
@@ -58,7 +58,7 @@ Run the identity query through the controlled administration connection. The res
 if ($LASTEXITCODE -ne 0) { throw 'Database identity check failed' }
 ```
 
-Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. For the currently recorded V8 repository state, [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS`. Any different version or object inventory requires a fresh reviewed plan; do not infer current live state solely from this dated document.
+Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. For the currently recorded V12 repository state, [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS`. Any different version or object inventory requires a fresh reviewed plan; do not infer current live state solely from this dated document.
 
 Stop if the target, role, current version, checksums, schema objects, or active incident differs from the reviewed plan.
 
