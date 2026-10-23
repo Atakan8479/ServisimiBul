@@ -42,6 +42,7 @@ function Start-SmokeMockServer {
             $Port
         )
         $listener.Start()
+        Write-Output 'READY'
         try {
             for ($index = 0; $index -lt $ExpectedRequests; $index++) {
                 $acceptTask = $listener.AcceptTcpClientAsync()
@@ -110,7 +111,23 @@ function Start-SmokeMockServer {
         }
     }
 
-    Start-Sleep -Milliseconds 300
+    $ready = $false
+    for ($attempt = 0; $attempt -lt 100; $attempt++) {
+        if (@(Receive-Job -Job $job -Keep) -contains 'READY') {
+            $ready = $true
+            break
+        }
+        if ($job.State -in @('Failed', 'Stopped', 'Completed')) {
+            break
+        }
+        Start-Sleep -Milliseconds 100
+    }
+    if (-not $ready) {
+        $state = $job.State
+        Stop-Job -Job $job -ErrorAction SilentlyContinue
+        Remove-Job -Job $job -Force -ErrorAction SilentlyContinue
+        throw "Smoke mock server did not become ready (job state: $state)."
+    }
     return [pscustomobject]@{
         BaseUri = "http://127.0.0.1:$port"
         Job = $job
@@ -146,7 +163,9 @@ try {
     $output = & pwsh -NoProfile -File $smokeScript -BaseUri $server.BaseUri `
         -AllowHttpForLocalTest -TimeoutSeconds 2 2>&1
     $combinedOutput = $output -join "`n"
-    Assert-Condition ($LASTEXITCODE -eq 0) 'Authenticated smoke fixture returned a non-zero exit code.'
+    Assert-Condition ($LASTEXITCODE -eq 0) `
+        ("Authenticated smoke fixture returned a non-zero exit code: {0}" -f `
+            (($output -join ' | ') -replace [regex]::Escape('smoke-secret'), '[REDACTED]'))
     Assert-Condition ($combinedOutput -match 'Authenticated read-only smoke check passed') `
         'Authenticated smoke fixture did not execute the read-only check.'
     Assert-Condition ($combinedOutput -notmatch 'smoke-secret') `

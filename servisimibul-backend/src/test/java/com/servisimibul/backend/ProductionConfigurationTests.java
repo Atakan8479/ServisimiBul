@@ -78,6 +78,7 @@ class ProductionConfigurationTests {
 
         assertThat(properties)
                 .containsEntry("spring.main.web-application-type", "none")
+                .containsEntry("app.demand.feedback.scheduler-enabled", "false")
                 .containsEntry("spring.autoconfigure.exclude",
                         "org.springframework.boot.security.autoconfigure.UserDetailsServiceAutoConfiguration")
                 .containsEntry("logging.structured.format.console", "ecs");

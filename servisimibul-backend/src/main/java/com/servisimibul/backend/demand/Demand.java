@@ -59,6 +59,13 @@ public class Demand {
     @Column(nullable = false, length = 20)
     private DemandStatus status = DemandStatus.OPEN;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "closure_reason", length = 20)
+    private DemandClosureReason closureReason;
+
+    @Column(name = "closed_at")
+    private OffsetDateTime closedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -76,5 +83,23 @@ public class Demand {
 
     public boolean isOpen() {
         return status == DemandStatus.OPEN;
+    }
+
+    public void close(DemandClosureReason reason, OffsetDateTime at) {
+        if (!isOpen()) {
+            return;
+        }
+        status = DemandStatus.CLOSED;
+        closureReason = reason;
+        closedAt = at;
+    }
+
+    public void reopen() {
+        if (status != DemandStatus.CLOSED || closureReason != DemandClosureReason.INACTIVE) {
+            throw new IllegalStateException("Only an inactive demand can be reopened");
+        }
+        status = DemandStatus.OPEN;
+        closureReason = null;
+        closedAt = null;
     }
 }

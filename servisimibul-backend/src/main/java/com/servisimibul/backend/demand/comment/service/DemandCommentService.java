@@ -153,10 +153,13 @@ public class DemandCommentService {
             );
         }
         if (author.getRole() == UserRole.PARENT) {
-            if (!supportRepository.existsByDemandIdAndParentIdAndStatus(
+            if (!supportRepository.existsByDemandIdAndParentIdAndStatusIn(
                     demandId,
                     authorId,
-                    DemandSupportStatus.ACTIVE
+                    List.of(
+                            DemandSupportStatus.ACTIVE,
+                            DemandSupportStatus.AWAITING_FEEDBACK
+                    )
             )) {
                 throw DemandCommentApiException.forbidden(
                         "active_support_required",

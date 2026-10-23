@@ -52,6 +52,7 @@ public class DemandService {
     private final NeighborhoodRepository neighborhoodRepository;
     private final AppUserRepository userRepository;
     private final DemandProperties properties;
+    private final DemandFeedbackService feedbackService;
 
     @Transactional(readOnly = true)
     public PageResponse<DemandResponse> list(
@@ -177,9 +178,16 @@ public class DemandService {
                 request.needsAfternoon(),
                 request.reasons()
         );
-        Demand demand = openDemandForUpdate(demandId);
-        DemandSupport support = supportRepository.findOwned(demandId, parentId).orElse(null);
+        Demand demand = demandRepository.findForUpdateById(demandId)
+                .orElseThrow(() -> DemandApiException.notFound(
+                        "demand_not_found",
+                        "Demand was not found"
+                ));
+        DemandSupport support = supportRepository.findOwnedForUpdate(demandId, parentId).orElse(null);
         if (support == null) {
+            if (!demand.isOpen()) {
+                throw DemandApiException.conflict("demand_not_open", "Demand is not open for support");
+            }
             supportRepository.saveAndFlush(new DemandSupport(
                     demand,
                     parent(parentId),
@@ -187,8 +195,13 @@ public class DemandService {
                     values.needsAfternoon(),
                     values.reasons()
             ));
-        } else if (!support.isActive()) {
+        } else if (!support.isEligibleForDemand()) {
+            if (!demand.isOpen() && demand.getClosureReason()
+                    != com.servisimibul.backend.demand.DemandClosureReason.INACTIVE) {
+                throw DemandApiException.conflict("demand_not_reopenable", "Demand cannot be reopened");
+            }
             support.reactivate(values.needsMorning(), values.needsAfternoon(), values.reasons());
+            feedbackService.supportReactivated(demand, support);
             supportRepository.saveAndFlush(support);
         }
         return response(demandId, parentId);
@@ -203,7 +216,7 @@ public class DemandService {
         );
         openDemandForUpdate(demandId);
         DemandSupport support = ownedSupport(demandId, parentId);
-        if (!support.isActive()) {
+        if (!support.isEligibleForDemand()) {
             throw DemandApiException.conflict(
                     "support_withdrawn",
                     "Withdrawn support must be reactivated before editing"
@@ -218,9 +231,10 @@ public class DemandService {
     public void withdrawSupport(UUID demandId, UUID parentId) {
         openDemandForUpdate(demandId);
         DemandSupport support = ownedSupport(demandId, parentId);
-        if (support.isActive()) {
+        if (support.isEligibleForDemand()) {
             support.withdraw();
             supportRepository.saveAndFlush(support);
+            feedbackService.supportWithdrawn(support);
         }
     }
 
@@ -274,6 +288,8 @@ public class DemandService {
         return new DemandResponse(
                 summary.getId(),
                 summary.getStatus(),
+                summary.getClosureReason(),
+                summary.getClosedAt(),
                 summary.getAcademicYear(),
                 summary.getCreatedAt(),
                 summary.getUpdatedAt(),

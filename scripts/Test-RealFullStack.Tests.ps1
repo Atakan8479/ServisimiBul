@@ -29,6 +29,10 @@ Assert-Condition ($runner.Contains("SB_EMAIL_VERIFICATION_REQUIRED = 'false'")) 
     'J-03 does not explicitly select the reviewed local verification bypass.'
 Assert-Condition ($runner.Contains("SPRING_PROFILES_ACTIVE = 'local'")) `
     'J-03 does not constrain the verification bypass to the local profile.'
+Assert-Condition ($runner.Contains("SB_TEST_DB_DISPOSABLE = 'true'")) `
+    'J-03 does not explicitly mark the synthetic parent database as disposable.'
+Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'true'")) `
+    'J-03 does not create its synthetic parent in the isolated local runtime.'
 Assert-Condition ($runner.Contains("OPERATOR_APPROVAL_REQUIRED = 'true'")) `
     'J-03 does not exercise the safe-default approval workflow.'
 Assert-Condition ($runner.Contains('Stop-SbIsolatedPostgres')) `
@@ -43,6 +47,10 @@ Assert-Condition (-not $spec.Contains('.route(')) `
     'The real full-stack suite intercepts requests.'
 Assert-Condition (-not $spec.Contains('installMockApi')) `
     'The real full-stack suite imports the mocked API.'
+Assert-Condition ($workflow.Contains('CREATE TABLE test_harness.database_instance')) `
+    'J-03 CI does not mark its PostgreSQL database as disposable.'
+Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "true"')) `
+    'J-03 CI does not enable the synthetic parent only for the local browser run.'
 Assert-Condition (
     [regex]::Matches($workflow, 'SB_EMAIL_VERIFICATION_REQUIRED: "true"').Count -eq 2
 ) 'J-03 CI does not restore verification for migration-only processes.'

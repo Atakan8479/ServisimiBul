@@ -1,6 +1,7 @@
 package com.servisimibul.backend.demand.exception;
 
 import com.servisimibul.backend.demand.controller.DemandController;
+import com.servisimibul.backend.demand.controller.DemandFeedbackController;
 import com.servisimibul.backend.demand.controller.OperatorDemandServiceResponseController;
 import com.servisimibul.backend.demand.controller.PublicDemandServiceResponseController;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,6 +27,7 @@ import java.util.Map;
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @RestControllerAdvice(assignableTypes = {
         DemandController.class,
+        DemandFeedbackController.class,
         OperatorDemandServiceResponseController.class,
         PublicDemandServiceResponseController.class
 })

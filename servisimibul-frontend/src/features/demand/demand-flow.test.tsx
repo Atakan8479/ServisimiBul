@@ -273,6 +273,205 @@ describe('demand support management', () => {
   })
 })
 
+describe('parent service feedback', () => {
+  it('shows an empty feedback state to an active supporting parent', async () => {
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json({
+          demandId,
+          feedback: [],
+          disclaimer: 'Bildirimdir.',
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(
+      await screen.findByText('Henüz değerlendirilecek servis bildirimi yok.'),
+    ).toBeInTheDocument()
+  })
+
+  it('explains when the parent session expires while opening feedback', async () => {
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json(problem(401, 'Authentication is required'), {
+          status: 401,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'veli hesabınızla yeniden giriş yapın',
+    )
+  })
+
+  it('keeps rejected feedback visible after support returns to active', async () => {
+    const publicationEventId = 'c1f54a9d-cf2e-4206-9016-644372685b74'
+    let current = demand({
+      currentUserSupport: { ...activeSupport, status: 'AWAITING_FEEDBACK' },
+    })
+    let feedback = {
+      demandId,
+      disclaimer: 'İşletmeci bildirimleri uygunluk beyanıdır.',
+      feedback: [
+        {
+          publicationEventId,
+          operatorId: '2778473a-5886-454c-a6d8-a2eaa4f585b1',
+          operatorBusinessName: 'Mavi Servis',
+          offersMorning: true,
+          offersAfternoon: false,
+          publishedAt: '2026-10-20T09:00:00Z',
+          status: 'AWAITING_FEEDBACK',
+          openedAt: '2026-10-21T09:00:00Z',
+          reminderDueAt: '2026-10-28T09:00:00Z',
+          reminderTriggeredAt: null,
+          expiresAt: '2026-11-04T09:00:00Z',
+          evaluatedAt: null as string | null,
+          canEvaluate: true,
+        },
+      ],
+    }
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json(feedback),
+      ),
+      http.put(
+        `/api/v1/demands/${demandId}/feedback/${publicationEventId}`,
+        () => {
+          current = demand({ currentUserSupport: activeSupport })
+          feedback = {
+            ...feedback,
+            feedback: [
+              {
+                ...feedback.feedback[0],
+                status: 'NOT_SATISFIED',
+                evaluatedAt: '2026-10-22T09:00:00Z',
+                canEvaluate: false,
+              },
+            ],
+          }
+          return HttpResponse.json(feedback)
+        },
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Karşılanmadı' }))
+    expect(
+      await screen.findByText(
+        'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', {
+        name: 'Servis ihtiyacınız karşılandı mı?',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('records the screen open and lets the supporting parent resolve a publication', async () => {
+    const publicationEventId = 'c1f54a9d-cf2e-4206-9016-644372685b74'
+    let current = demand({
+      currentUserSupport: {
+        ...activeSupport,
+        status: 'AWAITING_FEEDBACK',
+      },
+    })
+    let openEvents = 0
+    const awaitingFeedback = {
+      demandId,
+      disclaimer:
+        'İşletmeci bildirimleri uygunluk beyanıdır; rezervasyon veya hizmet garantisi değildir.',
+      feedback: [
+        {
+          publicationEventId,
+          operatorId: '2778473a-5886-454c-a6d8-a2eaa4f585b1',
+          operatorBusinessName: 'Mavi Servis',
+          offersMorning: true,
+          offersAfternoon: false,
+          publishedAt: '2026-10-20T09:00:00Z',
+          status: 'AWAITING_FEEDBACK',
+          openedAt: '2026-10-21T09:00:00Z',
+          reminderDueAt: '2026-10-28T09:00:00Z',
+          reminderTriggeredAt: '2026-10-28T09:05:00Z',
+          expiresAt: '2026-11-04T09:00:00Z',
+          evaluatedAt: null,
+          canEvaluate: true,
+        },
+      ],
+    }
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () => {
+        openEvents += 1
+        return HttpResponse.json(awaitingFeedback)
+      }),
+      http.put(
+        `/api/v1/demands/${demandId}/feedback/${publicationEventId}`,
+        async ({ request }) => {
+          expect(await request.json()).toEqual({ satisfied: true })
+          current = demand({
+            status: 'CLOSED',
+            closureReason: 'FULFILLED',
+            closedAt: '2026-10-29T09:00:00Z',
+            currentUserSupport: {
+              ...activeSupport,
+              status: 'SATISFIED',
+            },
+          })
+          return HttpResponse.json({
+            ...awaitingFeedback,
+            feedback: [
+              {
+                ...awaitingFeedback.feedback[0],
+                status: 'SATISFIED',
+                evaluatedAt: '2026-10-29T09:00:00Z',
+                canEvaluate: false,
+              },
+            ],
+          })
+        },
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Servis ihtiyacınız karşılandı mı?',
+      }),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('Mavi Servis')).toBeInTheDocument()
+    expect(screen.getByText(/Hatırlatma:/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Talebim karşılandı' }))
+
+    expect(
+      await screen.findByText('Talebinizin karşılandığını bildirdiniz.'),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('Katılıma kapalı')).toBeInTheDocument()
+    expect(openEvents).toBeGreaterThan(0)
+  })
+})
+
 describe('demand comments', () => {
   it('renders public comments as text and never interprets comment markup', async () => {
     const unsafeText = '<img src=x onerror="alert(1)"> Güvenli metin'
@@ -671,6 +870,8 @@ function demand(overrides: Record<string, unknown> = {}) {
   return {
     id: demandId,
     status: 'OPEN',
+    closureReason: null,
+    closedAt: null,
     academicYear: '2026-2027',
     createdAt: '2026-10-20T09:00:00Z',
     updatedAt: '2026-10-20T09:00:00Z',

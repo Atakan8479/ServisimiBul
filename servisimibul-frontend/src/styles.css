@@ -1553,6 +1553,7 @@ button:disabled {
 .demand-detail-card > p,
 .demand-comments > .section-heading p,
 .demand-service-panel > .section-heading p,
+.demand-feedback-panel > .section-heading p,
 .demand-support-panel > .section-heading p {
   color: var(--color-muted);
   line-height: 1.65;
@@ -1562,6 +1563,7 @@ button:disabled {
 .demand-create-panel,
 .demand-comments,
 .demand-service-panel,
+.demand-feedback-panel,
 .demand-support-panel,
 .demand-detail-card {
   margin-top: 2rem;
@@ -1963,6 +1965,78 @@ button:disabled {
   line-height: 1.5;
 }
 
+.demand-feedback-heading {
+  align-items: flex-start;
+}
+
+.demand-feedback-heading h2,
+.demand-feedback-heading p,
+.demand-feedback-disclaimer {
+  margin: 0;
+}
+
+.demand-feedback-heading p {
+  margin-top: 0.45rem;
+}
+
+.demand-feedback-loading,
+.demand-feedback-disclaimer {
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.demand-feedback-loading {
+  margin: 1.25rem 0 0;
+}
+
+.demand-feedback-list {
+  display: grid;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demand-feedback-list li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-feedback-list li:last-child {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.demand-feedback-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.demand-feedback-copy span,
+.demand-feedback-copy small {
+  color: var(--color-muted);
+  line-height: 1.45;
+}
+
+.demand-feedback-copy small {
+  font-size: 0.86rem;
+}
+
+.demand-feedback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.demand-feedback-disclaimer {
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
 .demand-comments > .section-heading p {
   max-width: 62ch;
 }
@@ -2302,6 +2376,16 @@ button:disabled {
   .demand-service-response-list li {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .demand-feedback-list li {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .demand-feedback-actions {
+    display: grid;
+    justify-content: stretch;
   }
 
   .demand-service-response-list .button-link,

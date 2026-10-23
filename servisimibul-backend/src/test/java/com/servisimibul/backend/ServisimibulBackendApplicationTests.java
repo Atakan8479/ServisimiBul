@@ -31,6 +31,8 @@ class ServisimibulBackendApplicationTests {
             "app_user",
             "demand",
             "demand_comment",
+            "demand_lifecycle_event",
+            "demand_service_feedback",
             "demand_service_publication_event",
             "demand_service_response",
             "demand_support",
@@ -84,7 +86,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("12");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
@@ -368,7 +370,9 @@ class ServisimibulBackendApplicationTests {
 
         assertThat(migrations.stream()
                 .map(migration -> migration.getVersion().getVersion())
-                .toList()).containsExactly("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12");
+                .toList()).containsExactly(
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"
+                );
         assertThat(migrations).allMatch(migration -> migration.getState() == MigrationState.SUCCESS);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
     }

@@ -108,4 +108,34 @@ public class DemandSupport {
     public boolean isActive() {
         return status == DemandSupportStatus.ACTIVE;
     }
+
+    public void awaitFeedback() {
+        if (status == DemandSupportStatus.ACTIVE || status == DemandSupportStatus.AWAITING_FEEDBACK) {
+            status = DemandSupportStatus.AWAITING_FEEDBACK;
+        }
+    }
+
+    public void satisfy() {
+        if (status != DemandSupportStatus.AWAITING_FEEDBACK) {
+            throw new IllegalStateException("Only awaiting support can be satisfied");
+        }
+        status = DemandSupportStatus.SATISFIED;
+    }
+
+    public void activate() {
+        if (status != DemandSupportStatus.SATISFIED && status != DemandSupportStatus.WITHDRAWN) {
+            status = DemandSupportStatus.ACTIVE;
+        }
+    }
+
+    public void expire() {
+        if (status == DemandSupportStatus.ACTIVE || status == DemandSupportStatus.AWAITING_FEEDBACK) {
+            status = DemandSupportStatus.INACTIVE_EXPIRED;
+        }
+    }
+
+    public boolean isEligibleForDemand() {
+        return status == DemandSupportStatus.ACTIVE
+                || status == DemandSupportStatus.AWAITING_FEEDBACK;
+    }
 }

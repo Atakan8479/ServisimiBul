@@ -28,6 +28,7 @@ import { reasonLabel } from './demand-labels'
 import { DemandServiceResponseForm } from './DemandServiceResponseForm'
 import { DemandSupportForm } from './DemandSupportForm'
 import { DemandComments } from './DemandComments'
+import { DemandFeedbackPanel } from './DemandFeedbackPanel'
 
 type SupportMode = 'join' | 'edit' | 'reactivate'
 
@@ -163,9 +164,11 @@ export function DemandDetailPage() {
       const support = demand?.currentUserSupport
       setSupportMode(
         mode ??
-          (support?.status === 'ACTIVE'
+          (support?.status === 'ACTIVE' ||
+          support?.status === 'AWAITING_FEEDBACK'
             ? 'edit'
-            : support?.status === 'WITHDRAWN'
+            : support?.status === 'WITHDRAWN' ||
+                support?.status === 'INACTIVE_EXPIRED'
               ? 'reactivate'
               : 'join'),
       )
@@ -362,9 +365,20 @@ export function DemandDetailPage() {
   }
 
   const activeReasons = demand.reasonCounts.filter((item) => item.count > 0)
-  const activeSupport = demand.currentUserSupport?.status === 'ACTIVE'
-  const withdrawnSupport = demand.currentUserSupport?.status === 'WITHDRAWN'
+  const activeSupport =
+    demand.currentUserSupport?.status === 'ACTIVE' ||
+    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+  const withdrawnSupport =
+    demand.currentUserSupport?.status === 'WITHDRAWN' ||
+    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
+  const feedbackVisible =
+    demand.currentUserSupport?.status === 'ACTIVE' ||
+    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
+    demand.currentUserSupport?.status === 'SATISFIED' ||
+    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const open = demand.status === 'OPEN'
+  const canManageSupport =
+    open || (withdrawnSupport && demand.closureReason === 'INACTIVE')
   const initialValues = demand.currentUserSupport
     ? {
         needsMorning: demand.currentUserSupport.needsMorning,
@@ -676,6 +690,10 @@ export function DemandDetailPage() {
         )}
       </section>
 
+      {feedbackVisible && (
+        <DemandFeedbackPanel demandId={demand.id} onResolved={loadDemand} />
+      )}
+
       <section className="demand-support-panel" aria-labelledby="support-title">
         <div className="section-heading">
           <div>
@@ -686,7 +704,11 @@ export function DemandDetailPage() {
             </p>
           </div>
           {activeSupport && (
-            <span className="status-pill success">Destekliyorsunuz</span>
+            <span className="status-pill success">
+              {demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+                ? 'Yanıtınız bekleniyor'
+                : 'Destekliyorsunuz'}
+            </span>
           )}
           {withdrawnSupport && (
             <span className="status-pill neutral">Geri çekildi</span>
@@ -695,11 +717,15 @@ export function DemandDetailPage() {
 
         {!open && (
           <div className="status-banner neutral">
-            Bu talep yeni destek ve güncellemelere kapalıdır.
+            {demand.closureReason === 'INACTIVE' && withdrawnSupport
+              ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
+              : demand.closureReason === 'FULFILLED'
+                ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
+                : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
           </div>
         )}
 
-        {open && !supportMode && (
+        {canManageSupport && !supportMode && (
           <div className="button-row demand-support-actions">
             <button
               className="primary-button"
@@ -725,7 +751,7 @@ export function DemandDetailPage() {
           </div>
         )}
 
-        {open && supportMode && (
+        {canManageSupport && supportMode && (
           <DemandSupportForm
             initialValues={initialValues}
             submitLabel={

@@ -45,6 +45,10 @@ class DemandServiceResponseConcurrencyTests {
     @Autowired
     private DemandServicePublicationEventRepository eventRepository;
     @Autowired
+    private DemandServiceFeedbackRepository feedbackRepository;
+    @Autowired
+    private DemandSupportRepository supportRepository;
+    @Autowired
     private DemandServiceResponseRepository responseRepository;
     @Autowired
     private OperatorSchoolCoverageRepository coverageRepository;
@@ -70,6 +74,7 @@ class DemandServiceResponseConcurrencyTests {
     private UUID operatorSchoolId;
     private UUID operatorProfileId;
     private UUID parentId;
+    private UUID supportId;
     private UUID schoolId;
     private Long neighborhoodId;
     private Long districtId;
@@ -78,6 +83,11 @@ class DemandServiceResponseConcurrencyTests {
     @AfterEach
     void cleanUpCommittedFixture() {
         transactionTemplate.executeWithoutResult(status -> {
+            if (supportId != null) {
+                feedbackRepository.findDetailedBySupportId(supportId)
+                        .forEach(feedbackRepository::delete);
+                feedbackRepository.flush();
+            }
             eventRepository.deleteAll();
             eventRepository.flush();
             responseRepository.deleteAll();
@@ -87,6 +97,10 @@ class DemandServiceResponseConcurrencyTests {
                 coverageRepository.flush();
                 operatorSchoolRepository.deleteById(operatorSchoolId);
                 operatorSchoolRepository.flush();
+            }
+            if (supportId != null) {
+                supportRepository.deleteById(supportId);
+                supportRepository.flush();
             }
             if (demandId != null) {
                 demandRepository.deleteById(demandId);
@@ -152,6 +166,7 @@ class DemandServiceResponseConcurrencyTests {
 
         assertThat(responseRepository.count()).isOne();
         assertThat(eventRepository.count()).isOne();
+        assertThat(feedbackRepository.findDetailedBySupportId(supportId)).hasSize(1);
     }
 
     private void createCommittedFixture() {
@@ -174,6 +189,10 @@ class DemandServiceResponseConcurrencyTests {
             Demand demand = demandRepository.save(
                     new Demand(school, neighborhood, "2026-2027", parent)
             );
+            DemandSupport support = supportRepository.save(new DemandSupport(
+                    demand, parent, true, false,
+                    java.util.Set.of(SupportReason.NO_SUITABLE_SERVICE)
+            ));
 
             AppUser operator = AppUser.newOperator(
                     "response-concurrent-operator@example.com",
@@ -199,6 +218,7 @@ class DemandServiceResponseConcurrencyTests {
             operatorSchoolId = operatorSchool.getId();
             operatorProfileId = profile.getId();
             parentId = parent.getId();
+            supportId = support.getId();
             schoolId = school.getId();
             neighborhoodId = neighborhood.getId();
             districtId = district.getId();
