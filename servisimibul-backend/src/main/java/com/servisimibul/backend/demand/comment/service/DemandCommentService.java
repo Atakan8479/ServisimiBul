@@ -1,5 +1,6 @@
 package com.servisimibul.backend.demand.comment.service;
 
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.demand.Demand;
 import com.servisimibul.backend.demand.DemandRepository;
 import com.servisimibul.backend.demand.DemandSupportRepository;
@@ -60,6 +61,7 @@ public class DemandCommentService {
     private final OperatorProfileRepository operatorProfileRepository;
     private final PublicOperatorDiscoveryRepository discoveryRepository;
     private final OperatorApprovalPolicy approvalPolicy;
+    private final ParentEmailVerificationProperties parentEmailVerification;
     private final InMemoryRateLimiter rateLimiter;
     private final Clock clock;
 
@@ -146,7 +148,9 @@ public class DemandCommentService {
                         "comment_author_not_found",
                         "Comment author was not found"
                 ));
-        if (!author.isEnabled() || !author.isEmailVerified()) {
+        boolean verificationRequired = author.getRole() != UserRole.PARENT
+                || parentEmailVerification.required();
+        if (!author.isEnabled() || (verificationRequired && !author.isEmailVerified())) {
             throw DemandCommentApiException.forbidden(
                     "comment_author_ineligible",
                     "An enabled, verified account is required to comment"

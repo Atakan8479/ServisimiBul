@@ -1,6 +1,7 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.auth.config.ParentRegistrationProperties;
 import com.servisimibul.backend.auth.dto.EmailRequest;
 import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -30,6 +32,7 @@ public class AuthService {
 
     private final AuthInputValidator validator;
     private final EmailVerificationProperties emailVerification;
+    private final ParentEmailVerificationProperties parentEmailVerification;
     private final ParentRegistrationProperties parentRegistration;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
@@ -72,8 +75,7 @@ public class AuthService {
 
     public void registerParent(ParentRegisterRequest request, String remoteAddress) {
         if (!parentRegistration.enabled()
-                || !emailVerification.required()
-                || !emailSender.isAvailable()) {
+                || (parentEmailVerification.required() && !emailSender.isAvailable())) {
             throw new ParentRegistrationUnavailableException();
         }
 
@@ -81,19 +83,19 @@ public class AuthService {
         String password = validator.password(request.password(), "password");
         rateLimiter.requireAllowance(RateLimitRule.REGISTRATION_IP, remoteAddress);
 
-        String rawToken = tokenGenerator.generate();
+        String rawToken = parentEmailVerification.required() ? tokenGenerator.generate() : null;
         boolean created;
         try {
             created = persistence.registerParent(
                     email,
                     password,
-                    tokenHasher.hash(rawToken),
+                    Optional.ofNullable(rawToken).map(tokenHasher::hash),
                     now()
             );
         } catch (DataIntegrityViolationException duplicateRegistration) {
             created = false;
         }
-        if (created) {
+        if (created && rawToken != null) {
             safelySend(() -> emailSender.sendVerification(email, rawToken));
         }
     }

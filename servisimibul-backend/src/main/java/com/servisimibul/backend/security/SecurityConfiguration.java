@@ -1,5 +1,6 @@
 package com.servisimibul.backend.security;
 
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import jakarta.servlet.DispatcherType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -64,9 +65,12 @@ public class SecurityConfiguration {
             HttpSecurity http,
             SecurityContextRepository securityContextRepository,
             Clock clock,
+            ParentEmailVerificationProperties parentEmailVerification,
             RestSecurityErrorHandler securityErrorHandler
     ) throws Exception {
         SessionLifetimeFilter sessionLifetimeFilter = new SessionLifetimeFilter(clock);
+        ParentVerificationSessionFilter parentVerificationSessionFilter =
+                new ParentVerificationSessionFilter(parentEmailVerification);
         http
                 .securityContext(context -> context
                         .securityContextRepository(securityContextRepository)
@@ -143,6 +147,7 @@ public class SecurityConfiguration {
                             .maxAgeInSeconds(31_536_000));
                 })
                 .addFilterAfter(sessionLifetimeFilter, SecurityContextHolderFilter.class)
+                .addFilterAfter(parentVerificationSessionFilter, SessionLifetimeFilter.class)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
 

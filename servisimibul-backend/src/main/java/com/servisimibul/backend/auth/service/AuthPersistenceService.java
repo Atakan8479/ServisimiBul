@@ -64,7 +64,7 @@ class AuthPersistenceService {
     boolean registerParent(
             String email,
             String password,
-            String tokenHash,
+            Optional<String> tokenHash,
             OffsetDateTime now
     ) {
         String passwordHash = passwordEncoder.encode(password);
@@ -73,9 +73,9 @@ class AuthPersistenceService {
         }
 
         AppUser user = userRepository.save(AppUser.newParent(email, passwordHash));
-        verificationTokenRepository.saveAndFlush(
-                new EmailVerificationToken(user, tokenHash, now.plusHours(24))
-        );
+        tokenHash.ifPresent(hash -> verificationTokenRepository.saveAndFlush(
+                new EmailVerificationToken(user, hash, now.plusHours(24))
+        ));
         return true;
     }
 

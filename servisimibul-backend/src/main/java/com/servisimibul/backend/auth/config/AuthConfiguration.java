@@ -11,6 +11,7 @@ import java.time.Clock;
 @EnableConfigurationProperties({
         AuthEmailProperties.class,
         EmailVerificationProperties.class,
+        ParentEmailVerificationProperties.class,
         ParentRegistrationProperties.class
 })
 @EnableAsync
