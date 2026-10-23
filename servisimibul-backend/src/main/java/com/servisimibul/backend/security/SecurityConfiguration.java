@@ -98,6 +98,7 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/auth/register",
+                                "/api/v1/auth/parent/register",
                                 "/api/v1/auth/verify-email",
                                 "/api/v1/auth/resend-verification",
                                 "/api/v1/auth/forgot-password",

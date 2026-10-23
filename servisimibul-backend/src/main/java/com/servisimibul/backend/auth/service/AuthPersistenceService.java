@@ -61,6 +61,24 @@ class AuthPersistenceService {
         return true;
     }
 
+    boolean registerParent(
+            String email,
+            String password,
+            String tokenHash,
+            OffsetDateTime now
+    ) {
+        String passwordHash = passwordEncoder.encode(password);
+        if (userRepository.findByEmail(email).isPresent()) {
+            return false;
+        }
+
+        AppUser user = userRepository.save(AppUser.newParent(email, passwordHash));
+        verificationTokenRepository.saveAndFlush(
+                new EmailVerificationToken(user, tokenHash, now.plusHours(24))
+        );
+        return true;
+    }
+
     Optional<String> issueVerificationToken(String email, String tokenHash, OffsetDateTime now) {
         Optional<AppUser> candidate = userRepository.findByEmailForUpdate(email)
                 .filter(user -> !user.isEmailVerified());

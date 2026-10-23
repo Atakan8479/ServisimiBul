@@ -64,6 +64,7 @@ Approval state is important: never turn a proposal into a settled decision witho
 1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
 2. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
 3. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
+4. **GitHub issue #102:** choose and approve a usable parent verification/activation path while SMTP delivery is disabled. Until then, public parent registration remains disabled by default and must stay disabled in shared and production environments.
 
 ## Decision change procedure
 When an approved decision changes: update this document, related domain/API/roadmap files, acceptance tests and task scope in the same reviewed PR. Never silently overwrite the old rule.

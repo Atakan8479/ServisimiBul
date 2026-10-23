@@ -4,6 +4,7 @@ import com.servisimibul.backend.auth.dto.CsrfResponse;
 import com.servisimibul.backend.auth.dto.CurrentUserResponse;
 import com.servisimibul.backend.auth.dto.EmailRequest;
 import com.servisimibul.backend.auth.dto.LoginRequest;
+import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
@@ -49,6 +50,15 @@ public class AuthController {
             HttpServletRequest httpRequest
     ) {
         authService.register(request, clientIdentityResolver.resolve(httpRequest));
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/parent/register")
+    ResponseEntity<Void> registerParent(
+            @Valid @RequestBody ParentRegisterRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        authService.registerParent(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.accepted().build();
     }
 

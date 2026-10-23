@@ -1,11 +1,14 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
+import com.servisimibul.backend.auth.config.ParentRegistrationProperties;
 import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.exception.EmailUnavailableException;
+import com.servisimibul.backend.auth.exception.ParentRegistrationUnavailableException;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
 import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
@@ -27,6 +30,7 @@ public class AuthService {
 
     private final AuthInputValidator validator;
     private final EmailVerificationProperties emailVerification;
+    private final ParentRegistrationProperties parentRegistration;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
     private final InMemoryRateLimiter rateLimiter;
@@ -62,6 +66,34 @@ public class AuthService {
             created = false;
         }
         if (created && verificationRequired) {
+            safelySend(() -> emailSender.sendVerification(email, rawToken));
+        }
+    }
+
+    public void registerParent(ParentRegisterRequest request, String remoteAddress) {
+        if (!parentRegistration.enabled()
+                || !emailVerification.required()
+                || !emailSender.isAvailable()) {
+            throw new ParentRegistrationUnavailableException();
+        }
+
+        String email = validator.email(request.email());
+        String password = validator.password(request.password(), "password");
+        rateLimiter.requireAllowance(RateLimitRule.REGISTRATION_IP, remoteAddress);
+
+        String rawToken = tokenGenerator.generate();
+        boolean created;
+        try {
+            created = persistence.registerParent(
+                    email,
+                    password,
+                    tokenHasher.hash(rawToken),
+                    now()
+            );
+        } catch (DataIntegrityViolationException duplicateRegistration) {
+            created = false;
+        }
+        if (created) {
             safelySend(() -> emailSender.sendVerification(email, rawToken));
         }
     }

@@ -1,10 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Demand marketplace — REQ-06 parent feedback ready for reviewed merge
+## Current stage: Parent identity — Issue #100 registration security foundation ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-05, frontend design tooling, and the parent/operator signup UX (PR #103) are merged. REQ-06 is implemented on `codex/req-06-parent-feedback`, PR #98 targets `main` and awaits updated CI and human review. Shared Supabase is verified at V12; V13 remains unapplied and requires separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, frontend design tooling, and the parent/operator signup UX (PR #103) are merged. Issue #100 is implemented on `codex/issue-100-parent-registration` and awaits review. Shared Supabase is verified at V12; V13 remains unapplied and requires separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
 Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13 remains unapplied.
+
+## Verified Issue #100 parent registration security foundation — 2026-10-23
+
+- Branch `codex/issue-100-parent-registration` adds backend-only `POST /api/v1/auth/parent/register`. The request accepts only email and password, assigns `PARENT` on the server, and creates no operator profile.
+- The endpoint preserves the existing CSRF, email/password validation, generic duplicate response, registration-IP rate limit, BCrypt password storage, and hashed single-use 24-hour verification-token behavior. Unverified parents cannot log in, and the local operator verification bypass cannot auto-verify parents.
+- `SB_PARENT_REGISTRATION_ENABLED` defaults to `false`. Registration also fails closed unless verification is required and a real email sender is available. Issue #102 remains the explicit blocker for approving an activation path while SMTP is disabled; shared and production environments must not enable the endpoint before that decision.
+- Focused isolated PostgreSQL 17 verification passed 93 authentication/session/security tests. The complete isolated backend suite then passed all 260 tests with Flyway V1–V13 replay, Hibernate validation, and 0 failures, 0 errors, 0 skipped.
+- No dependency, Flyway migration, frontend file, shared Supabase setting, schema, or data was changed. The single shared security-configuration edit is one exact public matcher for the new registration route and must be coordinated with Issue #91.
 
 ## Verified REQ-06 parent feedback and demand resolution — 2026-10-22
 
