@@ -1,5 +1,6 @@
 package com.servisimibul.backend.demand.service;
 
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.demand.Demand;
 import com.servisimibul.backend.demand.DemandRepository;
 import com.servisimibul.backend.demand.DemandRepository.DemandReasonCount;
@@ -52,6 +53,7 @@ public class DemandService {
     private final NeighborhoodRepository neighborhoodRepository;
     private final AppUserRepository userRepository;
     private final DemandProperties properties;
+    private final ParentEmailVerificationProperties parentEmailVerification;
     private final DemandFeedbackService feedbackService;
 
     @Transactional(readOnly = true)
@@ -83,6 +85,7 @@ public class DemandService {
                 neighborhoodId,
                 selectedYear,
                 mostSupported,
+                parentEmailVerification.required(),
                 PageRequest.of(page, size)
         );
         List<UUID> ids = summaries.getContent().stream().map(DemandSummary::getId).toList();
@@ -267,7 +270,10 @@ public class DemandService {
     }
 
     private DemandResponse response(UUID id, UUID currentParentId) {
-        DemandSummary summary = demandRepository.findSummaryById(id)
+        DemandSummary summary = demandRepository.findSummaryById(
+                        id,
+                        parentEmailVerification.required()
+                )
                 .orElseThrow(() -> DemandApiException.notFound(
                         "demand_not_found",
                         "Demand was not found"
@@ -324,7 +330,10 @@ public class DemandService {
             return Map.of();
         }
         Map<UUID, Map<SupportReason, Long>> result = new java.util.HashMap<>();
-        for (DemandReasonCount count : demandRepository.countReasons(demandIds)) {
+        for (DemandReasonCount count : demandRepository.countReasons(
+                demandIds,
+                parentEmailVerification.required()
+        )) {
             result.computeIfAbsent(count.getDemandId(), ignored -> new EnumMap<>(SupportReason.class))
                     .put(count.getReason(), count.getTotal());
         }

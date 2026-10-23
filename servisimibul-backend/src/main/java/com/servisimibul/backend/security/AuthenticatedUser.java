@@ -21,6 +21,7 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
     private final String email;
     private final UserRole role;
     private final boolean enabled;
+    private final boolean emailVerified;
     private String passwordHash;
 
     public AuthenticatedUser(
@@ -30,11 +31,23 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
             UserRole role,
             boolean enabled
     ) {
+        this(id, email, passwordHash, role, enabled, true);
+    }
+
+    public AuthenticatedUser(
+            UUID id,
+            String email,
+            String passwordHash,
+            UserRole role,
+            boolean enabled,
+            boolean emailVerified
+    ) {
         this.id = id;
         this.email = email;
         this.passwordHash = passwordHash;
         this.role = role;
         this.enabled = enabled;
+        this.emailVerified = emailVerified;
     }
 
     public UUID id() {
@@ -43,6 +56,10 @@ public final class AuthenticatedUser implements UserDetails, CredentialsContaine
 
     public UserRole role() {
         return role;
+    }
+
+    public boolean emailVerified() {
+        return emailVerified;
     }
 
     @Override

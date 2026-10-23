@@ -59,7 +59,8 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
                      )
                      and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
                      and support.parent.enabled = true
-                     and support.parent.emailVerifiedAt is not null
+                     and (:parentVerificationRequired = false
+                          or support.parent.emailVerifiedAt is not null)
                     where demand.status = com.servisimibul.backend.demand.DemandStatus.OPEN
                       and demand.academicYear = :academicYear
                       and (:schoolId is null or school.id = :schoolId)
@@ -84,6 +85,7 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
             @Param("neighborhoodId") Long neighborhoodId,
             @Param("academicYear") String academicYear,
             @Param("mostSupported") boolean mostSupported,
+            @Param("parentVerificationRequired") boolean parentVerificationRequired,
             Pageable pageable
     );
 
@@ -120,11 +122,15 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
              )
              and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
              and support.parent.enabled = true
-             and support.parent.emailVerifiedAt is not null
+             and (:parentVerificationRequired = false
+                  or support.parent.emailVerifiedAt is not null)
             where demand.id = :id
             group by demand.id, school.id, neighborhood.id, district.id, province.id
             """)
-    Optional<DemandSummary> findSummaryById(@Param("id") UUID id);
+    Optional<DemandSummary> findSummaryById(
+            @Param("id") UUID id,
+            @Param("parentVerificationRequired") boolean parentVerificationRequired
+    );
 
     @Query("""
             select support.demand.id as demandId,
@@ -139,10 +145,14 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
-              and support.parent.emailVerifiedAt is not null
+              and (:parentVerificationRequired = false
+                   or support.parent.emailVerifiedAt is not null)
             group by support.demand.id, reason
             """)
-    List<DemandReasonCount> countReasons(@Param("demandIds") List<UUID> demandIds);
+    List<DemandReasonCount> countReasons(
+            @Param("demandIds") List<UUID> demandIds,
+            @Param("parentVerificationRequired") boolean parentVerificationRequired
+    );
 
     interface DemandSummary {
         UUID getId();

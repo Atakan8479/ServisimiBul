@@ -22,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(properties = {
         "app.auth.email-verification.required=false",
+        "app.auth.parent-registration.enabled=true",
         "servisimibul.email.enabled=false",
         "spring.datasource.hikari.maximum-pool-size=2"
 })
@@ -69,5 +70,21 @@ class LocalEmailVerificationBypassTests {
                 UsernamePasswordAuthenticationToken.unauthenticated(EMAIL, PASSWORD)
         );
         assertThat(authentication.isAuthenticated()).isTrue();
+    }
+
+    @Test
+    void localVerificationBypassDoesNotAutoVerifyPublicParentRegistration() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/parent/register")
+                        .with(csrf())
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "email":"local-parent-registration@example.com",
+                                  "password":"correct horse battery staple"
+                                }
+                                """))
+                .andExpect(status().isServiceUnavailable());
+
+        assertThat(userRepository.findByEmail("local-parent-registration@example.com")).isEmpty();
     }
 }
