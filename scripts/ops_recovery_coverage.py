@@ -21,7 +21,7 @@ PLATFORM_GAPS = (
 def inventory(toc: str) -> dict:
     result = {"schemas": set(), "tables": set(), "table_data": set()}
     for line in toc.splitlines():
-        match = re.match(r"^\s*\d+;\s+\d+\s+\d+\s+(SCHEMA|TABLE|TABLE DATA)\s+([^\s]+)\s+([^\s]+)", line)
+        match = re.match(r"^\s*\d+;\s+\d+\s+\d+\s+(SCHEMA|TABLE DATA|TABLE)\s+([^\s]+)\s+([^\s]+)", line)
         if not match:
             continue
         kind, schema, name = match.groups()
