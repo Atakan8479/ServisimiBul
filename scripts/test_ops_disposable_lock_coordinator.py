@@ -1,4 +1,7 @@
 import importlib.util
+import threading
+import tempfile
+import subprocess
 import os
 import sys
 import time
@@ -23,6 +26,40 @@ class OfflineLeaseTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get("SB_LOCK_TEST_DSN"), "No disposable test DSN supplied")
 class IsolatedLeaseIntegration(unittest.TestCase):
+    def test_lock_session_loss_terminates_child(self):
+        import psycopg
+        url = os.environ["SB_LOCK_TEST_DSN"]
+        password = os.environ["PGPASSWORD"]
+        system_id = os.environ["SB_LOCK_TEST_SYSTEM_ID"]
+        ref = "abcdefghijklmnopqrst"
+        with tempfile.TemporaryDirectory() as tmp:
+            marker = os.path.join(tmp, "started")
+            script = ("from pathlib import Path;import time;"
+                      "Path(" + repr(marker) + ").write_text('started');time.sleep(35)")
+            def kill_session():
+                with psycopg.connect(url, password=password, autocommit=True) as admin:
+                    deadline = time.monotonic() + 9
+                    while time.monotonic() < deadline:
+                        found = admin.execute(
+                            "select pid from pg_locks where granted and locktype='advisory' and objid=%s::oid",
+                            (lock_key(ref) & 0xffffffff,),
+                        ).fetchone()
+                        if found and os.path.isfile(marker):
+                            admin.execute("select pg_terminate_backend(%s)", (found[0],))
+                            return
+                        time.sleep(0.07)
+                    raise AssertionError("Failed to observe disposable lock holder")
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(kill_session)
+                start = time.monotonic()
+                with self.assertRaisesRegex(RuntimeError, "connection lost"):
+                    run_isolated("127.0.0.1", int(os.environ["SB_LOCK_TEST_PORT"]),
+                                 os.environ["SB_LOCK_TEST_DATABASE"],
+                                 os.environ["SB_LOCK_TEST_USER"], ref, system_id,
+                                 [sys.executable, "-c", script], 0.1)
+                future.result(timeout=12)
+                self.assertLess(time.monotonic() - start, 15)
+
     def test_conflict_and_release(self):
         import psycopg
         url = os.environ["SB_LOCK_TEST_DSN"]
