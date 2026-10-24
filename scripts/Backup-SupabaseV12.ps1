@@ -129,10 +129,13 @@ try {
 }
 try {
     $toc=@(& $client.Restore '--list' $tempArchive 2>&1)
-    if ($LASTEXITCODE -ne 0 -or
-        @($toc|Where-Object{[string]$_ -match '^;[[:space:]]*Format: CUSTOM'}).Count -ne 1 -or
-        @($toc|Where-Object{[string]$_ -match '\bTABLE public flyway_schema_history\b'}).Count -lt 1) {
-        throw 'Archive verification failed; required Flyway history table is absent.'
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Backup archive could not be read by pg_restore.'
+    }
+    $tocStatus=Get-SbBackupArchiveTocStatus -Lines ([string[]]$toc)
+    if (-not $tocStatus.ValidFormat -or -not $tocStatus.FlywayTable -or -not $tocStatus.FlywayData) {
+        throw ("Archive verification failed: validCustomFormat={0}, flywayTable={1}, flywayData={2}, publicTableCount={3}. Do not use this archive." -f
+            $tocStatus.ValidFormat,$tocStatus.FlywayTable,$tocStatus.FlywayData,$tocStatus.TableCount)
     }
     $after=Invoke-SbSupabaseMigrationPreflight -Endpoint $migration -RuntimeEndpoint $runtime -ExpectedSystemIdentifier $ExpectedSystemIdentifier -Artifacts $artifacts -Client $client.Psql
     if ($after.Version -ne $before.Version -or $after.SystemIdentifier -cne $before.SystemIdentifier) {
