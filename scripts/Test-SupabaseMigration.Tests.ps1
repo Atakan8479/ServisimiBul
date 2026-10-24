@@ -68,6 +68,19 @@ try{
     Remove-Item -LiteralPath $clientFixture -Force -ErrorAction SilentlyContinue
 }
 
+$tocFixture=@(
+    '; Format: CUSTOM',
+    '123; 1259 456 TABLE public flyway_schema_history postgres',
+    '124; 0 456 TABLE DATA public flyway_schema_history postgres',
+    '125; 1259 777 TABLE public app_user postgres'
+)
+$tocVerified=Get-SbBackupArchiveTocStatus -Lines $tocFixture
+Assert-SbCondition ($tocVerified.ValidFormat -and $tocVerified.FlywayTable -and $tocVerified.FlywayData -and $tocVerified.TableCount -eq 2) 'Valid Flyway archive TOC rejected.'
+$tocMissingData=Get-SbBackupArchiveTocStatus -Lines @($tocFixture|Where-Object{$_ -notmatch 'TABLE DATA'})
+Assert-SbCondition (-not $tocMissingData.FlywayData) 'Missing Flyway history data was not detected.'
+$tocWrongSchema=Get-SbBackupArchiveTocStatus -Lines @($tocFixture -replace 'TABLE public flyway_schema_history','TABLE other flyway_schema_history')
+Assert-SbCondition (-not $tocWrongSchema.FlywayTable) 'Wrong-schema Flyway TOC was accepted.'
+
 $artifacts=@(Get-SbMigrationArtifacts -RepositoryRoot $repositoryRoot)
 Assert-SbCondition ($artifacts.Count-eq 14 -and $artifacts[12].Version-ceq'13' -and $artifacts[13].Version-ceq'14') 'Pending migrations are not ordered V13 then V14.'
 Assert-SbCondition (@($artifacts|Where-Object{$null-eq$_.Checksum}).Count-eq 0) 'A repository migration checksum is missing.'
