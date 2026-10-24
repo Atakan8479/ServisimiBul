@@ -82,6 +82,13 @@ Assert-Rejected { Assert-SbRuntimeConnection -Endpoint $poolerRuntime -Password 
 $script:preflightOutput='postgres|servisimibul_app|t'
 Assert-SbRuntimeConnection -Endpoint $directRuntime -Password 'synthetic-password' -Client unused
 
+# PostgreSQL boolean casts to text emit 'true'/'false', not single letters.
+# Ensure fixed SQL normalizes every boolean field consumed by strict parsing.
+$supportSql=Get-Content -Raw -LiteralPath $supportPath
+Assert-SbCondition ($supportSql.Contains("CASE WHEN pg_is_in_recovery() THEN 't' ELSE 'f' END")) 'Recovery boolean must be normalized.'
+Assert-SbCondition ($supportSql.Contains("CASE WHEN rolbypassrls THEN 't' ELSE 'f' END")) 'Role booleans must be normalized.'
+Assert-SbCondition ($supportSql.Contains("CASE WHEN success THEN 't' ELSE 'f' END")) 'Flyway success boolean must be normalized.'
+
 $historyLines=@('IDENTITY|postgres|postgres|170011|f|123456789012345678|t','RUNTIME|servisimibul_app|f|f|f|f|f')
 for($index=0;$index-lt 12;$index++){$historyLines += "HISTORY|$($index+1)|$($artifacts[$index].Version)|$($artifacts[$index].Script)|$($artifacts[$index].Checksum)|t"}
 $validPreflight=(@($historyLines)+@('COLLISIONS|0','ACTIVITY|0'))-join"`n"
