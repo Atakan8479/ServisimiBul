@@ -128,7 +128,14 @@ COMMIT;
 '@
     }finally{if($previous){$env:PGPASSWORD=$previous.Value}else{Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue}}
     $lines=@($output -split "`r?`n"|Where-Object{$_ -match '^[^|]+\|[^|]+\|[tf]$'})
-    if($lines.Count-ne 1 -or $lines[0]-cne("postgres|$($Endpoint.BaseUser)|t")){throw 'Restricted runtime connection identity, database, or TLS could not be verified.'}
+    # The session pooler's pg_stat_ssl is its upstream leg, NOT client TLS.
+    # libpq already enforces client TLS via validated PGSSLMODE.
+    $expected="postgres|$($Endpoint.BaseUser)|"
+    $direct=($Endpoint.Mode -ceq 'direct')
+    if($lines.Count-ne 1 -or ($lines[0]-cne($expected+'t') -and
+        ($direct -or $lines[0]-cne($expected+'f')))){
+        throw 'Restricted runtime connection identity, database, or TLS could not be verified.'
+    }
 }
 
 function Invoke-SbSupabaseMigrationPreflight {
@@ -150,7 +157,11 @@ COMMIT;
     $lines=@($output -split "`r?`n"|Where-Object{$_ -match '^(IDENTITY|RUNTIME|HISTORY|COLLISIONS|ACTIVITY)\|'})
     $identity=@($lines|Where-Object{$_ -like 'IDENTITY|*'}); if($identity.Count-ne 1){throw 'Could not verify a unique database identity.'}
     $p=$identity[0].Split('|')
-    if($p.Count-ne 7 -or $p[1]-cne'postgres' -or $p[2]-cne$Endpoint.BaseUser -or [int]$p[3]-lt 170000 -or [int]$p[3]-ge 180000 -or $p[4]-cne'f' -or $p[5]-cne$ExpectedSystemIdentifier -or $p[6]-cne't'){
+    # Direct TLS must be visible to PostgreSQL. For a session pooler,
+    # pg_stat_ssl measures only the Supavisor-to-Postgres connection.
+    $backendTlsOk=($p.Count-eq 7 -and ($p[6]-ceq't' -or
+        ($Endpoint.Mode -ceq 'session-pooler' -and $p[6]-ceq'f')))
+    if($p.Count-ne 7 -or $p[1]-cne'postgres' -or $p[2]-cne$Endpoint.BaseUser -or [int]$p[3]-lt 170000 -or [int]$p[3]-ge 180000 -or $p[4]-cne'f' -or $p[5]-cne$ExpectedSystemIdentifier -or -not $backendTlsOk){
         throw 'Database, migration role, PostgreSQL version, primary status, system identity, or TLS does not match the approved target.'
     }
     $runtime=@($lines|Where-Object{$_ -like 'RUNTIME|*'}); if($runtime.Count-ne 1 -or $runtime[0]-cne'RUNTIME|servisimibul_app|f|f|f|f|f'){throw 'Restricted servisimibul_app role is missing or elevated.'}
