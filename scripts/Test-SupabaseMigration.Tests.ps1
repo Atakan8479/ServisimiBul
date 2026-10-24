@@ -40,6 +40,8 @@ Assert-SbCondition ($directMigration.SslMode-ceq'verify-full' -and $poolerMigrat
 
 $clientFixture=Join-Path ([IO.Path]::GetTempPath()) ("servisimibul-psql-fixture-"+[guid]::NewGuid().ToString('N')+'.cmd')
 $savedSslMode=Get-Item Env:PGSSLMODE -ErrorAction SilentlyContinue
+$savedHostAddr=Get-Item Env:PGHOSTADDR -ErrorAction SilentlyContinue
+$savedService=Get-Item Env:PGSERVICE -ErrorAction SilentlyContinue
 try{
     [IO.File]::WriteAllText($clientFixture,"@echo %PGSSLMODE%`r`n@exit /b 0`r`n")
     $env:PGSSLMODE='disable'
@@ -52,7 +54,8 @@ try{
     Assert-SbCondition ($env:PGSERVICE-ceq'malicious-profile') 'PGSERVICE was not restored.'
 }finally{
     if($savedSslMode){$env:PGSSLMODE=$savedSslMode.Value}else{Remove-Item Env:PGSSLMODE -ErrorAction SilentlyContinue}
-    Remove-Item Env:PGHOSTADDR,Env:PGSERVICE -ErrorAction SilentlyContinue
+    if($savedHostAddr){$env:PGHOSTADDR=$savedHostAddr.Value}else{Remove-Item Env:PGHOSTADDR -ErrorAction SilentlyContinue}
+    if($savedService){$env:PGSERVICE=$savedService.Value}else{Remove-Item Env:PGSERVICE -ErrorAction SilentlyContinue}
     Remove-Item -LiteralPath $clientFixture -Force -ErrorAction SilentlyContinue
 }
 
