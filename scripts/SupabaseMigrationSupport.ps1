@@ -189,7 +189,28 @@ function Assert-SbApplyEvidence {
     $backup=Read-SbEvidenceJson $BackupEvidencePath 'Backup'
     if($backup.projectRef-cne$ProjectRef -or $backup.database-cne'postgres' -or [int]$backup.postgresMajor-ne 17 -or [int]$backup.flywayVersion-ne 12 -or -not(Test-Path -LiteralPath $backup.archivePath -PathType Leaf)){throw 'Backup evidence does not match the V12 PostgreSQL 17 target.'}
     $hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $backup.archivePath).Hash.ToLowerInvariant();if($hash-cne([string]$backup.archiveSha256).ToLowerInvariant()){throw 'Backup checksum validation failed.'}
-    $restore=Read-SbEvidenceJson $RestoreEvidencePath 'Restore test';if(-not$restore.isolated -or [int]$restore.postgresMajor-ne 17 -or [int]$restore.flywayVersion-ne 12 -or [int]$restore.verificationChecksPassed-ne 13 -or ([string]$restore.backupSha256).ToLowerInvariant()-cne$hash){throw 'Disposable restore-test evidence is missing or inconsistent.'}
+    # Validate that the archive is actually readable by PostgreSQL tooling,
+    # not merely an arbitrary file with a matching SHA-256.
+    $restoreTool=Get-Command pg_restore.exe -ErrorAction SilentlyContinue
+    if(-not$restoreTool){$restoreTool=Get-Command pg_restore -ErrorAction SilentlyContinue}
+    if(-not$restoreTool){throw 'PostgreSQL pg_restore is required to inspect backup archive.'}
+    $archiveList=@(& $restoreTool.Source --list $backup.archivePath 2>&1)
+    if($LASTEXITCODE-ne 0 -or @($archiveList|Where-Object{[string]$_ -match '^;[[:space:]]*Format: CUSTOM'}).Count-ne 1){
+        throw 'Backup archive is not a readable PostgreSQL custom-format archive.'
+    }
+    $restore=Read-SbEvidenceJson $RestoreEvidencePath 'Restore test'
+    if(-not$restore.isolated -or [int]$restore.postgresMajor-ne 17 -or [int]$restore.flywayVersion-ne 12 -or [int]$restore.verificationChecksPassed-ne 13 -or ([string]$restore.backupSha256).ToLowerInvariant()-cne$hash){
+        throw 'Disposable restore-test evidence is missing or inconsistent.'
+    }
+    # V12 restore verification and V14 rehearsal are distinct evidence phases:
+    # the V14-only 13-check verifier cannot pass on an unmodified V12 restore.
+    if([string]$restore.sourceSystemIdentifier-cne[string]$Preflight.SystemIdentifier -or
+       [string]::IsNullOrWhiteSpace([string]$restore.disposableSystemIdentifier) -or
+       [string]$restore.disposableSystemIdentifier-ceq[string]$Preflight.SystemIdentifier -or
+       [int]$restore.rehearsalTargetVersion-ne 14 -or
+       -not$restore.v12RestoreVerified -or -not$restore.v14RehearsalVerified){
+        throw 'Restore evidence must identify a separate disposable database, verified V12 restore, and V14 migration rehearsal.'
+    }
     $approval=Read-SbEvidenceJson $ApprovalEvidencePath 'Approval';if($approval.projectRef-cne$ProjectRef -or $approval.releaseCommit-cne$ReleaseCommit -or $approval.authorization-cne'APPLY_V13_V14' -or [string]::IsNullOrWhiteSpace($approval.approvedBy) -or ([string]$approval.backupSha256).ToLowerInvariant()-cne$hash){throw 'Approval evidence does not bind the target, release, and verified backup.'}
     if([DateTimeOffset]::Parse($approval.expiresAtUtc)-le[DateTimeOffset]::UtcNow){throw 'Approval evidence has expired.'}
     if($Preflight.Version-ne 12){throw 'Apply requires a fresh successful V12 preflight.'}
