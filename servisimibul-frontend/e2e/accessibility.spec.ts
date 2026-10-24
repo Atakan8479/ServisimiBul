@@ -51,7 +51,10 @@ for (const viewport of viewports) {
     await audit(page, 'public demand detail')
 
     await page.goto('/operator/register')
-    await audit(page, 'registration')
+    await audit(page, 'operator registration')
+
+    await page.goto('/parent/register')
+    await audit(page, 'parent registration')
 
     await page.goto('/operator/login')
     await assertVisibleKeyboardFocus(page)

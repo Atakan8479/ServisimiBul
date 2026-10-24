@@ -152,12 +152,14 @@ try {
     $runtimeEnvironment.SB_COOKIE_SECURE = 'false'
     $runtimeEnvironment.SB_EMAIL_VERIFICATION_REQUIRED = 'false'
     $runtimeEnvironment.APP_AUTH_EMAIL_VERIFICATION_REQUIRED = 'false'
+    $runtimeEnvironment.SB_PARENT_REGISTRATION_ENABLED = 'true'
+    $runtimeEnvironment.SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'false'
     $runtimeEnvironment.OPERATOR_APPROVAL_REQUIRED = 'true'
     $runtimeEnvironment.APP_OPERATOR_APPROVAL_REQUIRED = 'true'
     $runtimeEnvironment.SB_TEST_DB_DISPOSABLE = 'true'
-    $runtimeEnvironment.SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'true'
-    $runtimeEnvironment.SB_DEMO_PARENT_EMAIL = 'j03.parent@example.test'
-    $runtimeEnvironment.SB_DEMO_PARENT_PASSWORD = $parentPassword
+    $runtimeEnvironment.SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'false'
+    $runtimeEnvironment.SB_DEMO_PARENT_EMAIL = $null
+    $runtimeEnvironment.SB_DEMO_PARENT_PASSWORD = $null
     $runtimeEnvironment.SERVER_ADDRESS = '127.0.0.1'
     $runtimeEnvironment.SERVER_PORT = [string]$backendPort
     $runtimeEnvironment.J03_BACKEND_PORT = [string]$backendPort

@@ -6,6 +6,8 @@ const adminEmail = process.env.J03_ADMIN_EMAIL ?? 'j03.admin.one@example.test'
 const adminPassword = process.env.J03_ADMIN_PASSWORD
 const parentEmail = process.env.J03_PARENT_EMAIL ?? 'j03.parent@example.test'
 const parentPassword = process.env.J03_PARENT_PASSWORD
+const parentDemandPath =
+  '/demands?schoolId=10000000-0000-4000-8000-000000000001&pickupDistrictId=3402&neighborhoodId=340201&intent=create'
 
 test('runs the approved MVP journey against the real backend and PostgreSQL', async ({
   browser,
@@ -41,6 +43,42 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(
         operatorPage.getByRole('heading', { name: 'Hesabınız hazır' }),
       ).toBeVisible()
+    })
+
+    await test.step('register a parent and return safely to the intended demand', async () => {
+      expect(
+        parentPassword,
+        'J03_PARENT_PASSWORD must be supplied by the isolated runner',
+      ).toBeTruthy()
+      await parentPage.goto(
+        `/parent/register?next=${encodeURIComponent(parentDemandPath)}`,
+      )
+      await parentPage.getByLabel('E-posta').fill(parentEmail)
+      await parentPage.getByLabel('Şifre').fill(parentPassword!)
+      const registration = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/auth/parent/register'),
+      )
+      await parentPage
+        .getByRole('button', { name: 'Veli hesabı oluştur' })
+        .click()
+      expect((await registration).status()).toBe(202)
+      await expect(parentPage).toHaveURL(
+        /\/operator\/login\?.*registered=parent/,
+      )
+      await expect(parentPage.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+
+      await parentPage.getByLabel('E-posta').fill(parentEmail)
+      await parentPage.getByLabel('Şifre').fill(parentPassword!)
+      await parentPage.getByRole('button', { name: 'Giriş yap' }).click()
+      await expect
+        .poll(() => {
+          const url = new URL(parentPage.url())
+          return `${url.pathname}${url.search}`
+        })
+        .toBe(parentDemandPath)
+      await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
     })
 
     await test.step('use a real session and reject a mutation without CSRF', async () => {
@@ -263,25 +301,31 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     })
 
     await test.step('publish a demand service and resolve parent feedback against the real API', async () => {
-      expect(
-        parentPassword,
-        'J03_PARENT_PASSWORD must be supplied by the isolated runner',
-      ).toBeTruthy()
-      await login(parentPage, parentEmail, parentPassword!, 'parent')
-      const parentCsrf = await csrf(parentPage)
-      const created = await parentPage.request.post('/api/v1/demands', {
-        headers: { [parentCsrf.headerName]: parentCsrf.token },
-        data: {
-          schoolId: '10000000-0000-4000-8000-000000000001',
-          neighborhoodId: 340201,
-          needsMorning: true,
-          needsAfternoon: false,
-          reasons: ['NO_SUITABLE_SERVICE'],
-        },
-      })
-      expect(created.status()).toBe(201)
-      const demandId = ((await created.json()) as { demand: { id: string } })
-        .demand.id
+      await parentPage.goto(parentDemandPath)
+      await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
+      await parentPage
+        .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
+        .click()
+      await expect(
+        parentPage.getByRole('heading', { name: '1 mevcut servis bulundu' }),
+      ).toBeVisible()
+      await parentPage
+        .getByRole('button', { name: 'Yine de servise ihtiyacım var' })
+        .click()
+      await parentPage.getByLabel('Uygun servis bulamıyorum').check()
+      const created = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/demands'),
+      )
+      await parentPage
+        .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
+        .click()
+      expect((await created).status()).toBe(201)
+      await expect(
+        parentPage.getByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
+      ).toBeVisible()
+      const demandId = new URL(parentPage.url()).pathname.split('/').at(-1)!
       const responsePath = `/api/v1/operator/demands/${demandId}/response`
       const operatorCsrf = await csrf(operatorPage)
       const published = await operatorPage.request.post(responsePath, {

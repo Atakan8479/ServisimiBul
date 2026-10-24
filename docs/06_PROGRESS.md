@@ -1,10 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Parent identity — Issue #100 registration security foundation ready for review
+## Current stage: Parent identity — Issue #104 frontend journey ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, frontend design tooling, and the parent/operator signup UX (PR #103) are merged. Issue #100 is implemented on `codex/issue-100-parent-registration` and awaits review. Shared Supabase is verified at V12; V13 remains unapplied and requires separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, REQ-08, frontend design tooling, the parent/operator signup UX (PR #103), and Issue #100's backend parent-registration foundation (PR #105) are merged. Issue #104 is implemented on `codex/issue-104-parent-registration-frontend` for review. Shared Supabase is verified at V12; V13–V14 remain unapplied and require separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13 remains unapplied.
+Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13–V14 remain unapplied.
+
+## Verified Issue #104 parent registration frontend — 2026-10-24
+
+- `/parent/register` is now a real email/password form using the existing API client and CSRF flow. A generic `202` response moves the parent to the shared login without claiming email ownership; successful login returns only to a validated local `/demands` path.
+- Parent and operator registration remain separate. The parent request sends only email and password, while login keeps the backend-provided role authoritative. The screen preserves field values for recoverable failures and presents distinct validation, duplicate-safe, rate-limit, unavailable-service, and network outcomes.
+- Vitest/MSW covers registration, CSRF, generic duplicates, validation, `429`, `503`, network recovery, unsafe-return rejection, immediate login, and the preserved demand destination. The complete serial frontend suite passed 89 tests; ESLint, strict TypeScript, and the production build passed.
+- Mocked Playwright passed all 11 tests, including the complete registration/login/demand journey and WCAG 2.2 AA plus overflow checks at 1440×900, 768×1024, and 390×844. The real Spring/Vite/Playwright journey passed 1/1 against a fresh disposable PostgreSQL 17 database after registering the parent through the actual endpoint; the synthetic parent bootstrap is disabled.
+- No dependency, lockfile, backend authentication source, Flyway migration, Supabase script, shared Supabase state, production configuration, or global stylesheet changed. The repository-wide Windows Prettier check still reports pre-existing line-ending warnings, so only touched frontend/workflow files were formatted.
 
 ## Verified Issue #100 parent registration security foundation — 2026-10-23
 

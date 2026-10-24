@@ -17,6 +17,7 @@ const createdAt = '2026-10-18T10:00:00Z'
 
 export interface MockApiState {
   registered: boolean
+  parentRegistered: boolean
   verified: boolean
   approvalStatus: ApprovalStatus
   active: boolean
@@ -91,6 +92,7 @@ export interface MockApiState {
 export function createMockApiState(): MockApiState {
   return {
     registered: false,
+    parentRegistered: false,
     verified: false,
     approvalStatus: 'DRAFT',
     active: true,
@@ -129,6 +131,10 @@ export async function installMockApi(page: Page, state: MockApiState) {
     }
     if (path === '/auth/register' && method === 'POST') {
       state.registered = true
+      return empty(route, 202)
+    }
+    if (path === '/auth/parent/register' && method === 'POST') {
+      state.parentRegistered = true
       return empty(route, 202)
     }
     if (path === '/auth/verify-email' && method === 'POST') {

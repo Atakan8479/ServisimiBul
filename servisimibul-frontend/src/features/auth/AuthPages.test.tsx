@@ -12,7 +12,7 @@ afterEach(() => {
 })
 
 describe('parent account onboarding', () => {
-  it('separates parent and operator signup without auto-registering a parent', async () => {
+  it('separates parent and operator signup routes', async () => {
     renderRoute('/register?next=%2Fdemands')
     expect(
       await screen.findByRole('heading', {
@@ -29,19 +29,181 @@ describe('parent account onboarding', () => {
     )
   })
 
-  it('gives safe pilot guidance instead of submitting a public parent account', async () => {
-    renderRoute('/parent/register?next=%2Fdemands')
-    expect(
-      await screen.findByRole('heading', {
-        name: 'Veli kaydı henüz açık değil',
+  it('registers a parent with CSRF and returns through login to the intended demand page', async () => {
+    let requestBody: unknown
+    let csrfHeader: string | null = null
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/parent/register', async ({ request }) => {
+        requestBody = await request.json()
+        csrfHeader = request.headers.get('X-CSRF-TOKEN')
+        return new HttpResponse(null, { status: 202 })
       }),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(parentUser)),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/demands', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/parent/register?next=%2Fdemands')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
+
+    expect(
+      await screen.findByText(
+        'Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/doğrulama bağlantısı/i)).not.toBeInTheDocument()
+    expect(requestBody).toEqual({
+      email: 'parent@example.test',
+      password: 'unique parent password',
+    })
+    expect(csrfHeader).toBe('csrf-token')
+
+    fireEvent.change(screen.getByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Servis talep panosu' }),
+    ).toBeInTheDocument()
+  })
+
+  it('uses the duplicate-safe accepted response without claiming mailbox ownership', async () => {
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/parent/register',
+        () => new HttpResponse(null, { status: 202 }),
+      ),
+    )
+
+    renderRoute('/parent/register?next=https%3A%2F%2Fevil.example')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'existing@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
+
+    expect(
+      await screen.findByText(/Kayıt isteğiniz alındı/),
     ).toBeInTheDocument()
     expect(
-      screen.queryByRole('button', { name: /Hesap oluştur/ }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
+    ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+  })
+
+  it.each([
+    [429, 'Çok fazla kayıt denemesi yapıldı.'],
+    [503, 'Veli kaydı şu anda kullanılamıyor.'],
+  ])('shows a recoverable message for HTTP %i', async (status, message) => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/parent/register', () =>
+        HttpResponse.json(
+          {
+            title: 'Registration unavailable',
+            status,
+            detail: 'Server detail',
+            code:
+              status === 429
+                ? 'RATE_LIMITED'
+                : 'PARENT_REGISTRATION_UNAVAILABLE',
+          },
+          { status },
+        ),
+      ),
+    )
+
+    renderRoute('/parent/register')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
+  })
+
+  it('shows server validation beside the parent field and preserves input', async () => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/parent/register', () =>
+        HttpResponse.json(
+          {
+            title: 'Validation failed',
+            status: 400,
+            detail: 'One or more request fields are invalid',
+            code: 'VALIDATION_FAILED',
+            fieldErrors: [
+              { field: 'email', message: 'E-posta kabul edilmedi.' },
+            ],
+          },
+          { status: 400 },
+        ),
+      ),
+    )
+
+    renderRoute('/parent/register')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
+
     expect(
-      screen.getByRole('link', { name: 'Veli hesabımla giriş yap' }),
-    ).toHaveAttribute('href', '/operator/login?next=%2Fdemands')
+      await screen.findByText('E-posta kabul edilmedi.'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('E-posta')).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    )
+    expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
+  })
+
+  it('shows a retryable network failure without clearing the form', async () => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/parent/register', () => HttpResponse.error()),
+    )
+
+    renderRoute('/parent/register')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sunucuya ulaşılamadı.',
+    )
+    expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })
 })
 
@@ -280,6 +442,15 @@ describe('operator authentication screens', () => {
           totalPages: 0,
         }),
       ),
+      http.get(`/api/v1/demands/${demandId}/comments`, () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
       http.get('/api/v1/auth/me', () => HttpResponse.json(parentUser)),
       http.get('/api/v1/provinces', () => HttpResponse.json([])),
     )
@@ -288,8 +459,11 @@ describe('operator authentication screens', () => {
       `/operator/login?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
     )
     expect(
-      await screen.findByText(/Veli hesapları pilot kapsamında/),
-    ).toBeInTheDocument()
+      await screen.findByRole('link', { name: 'veli hesabı oluşturun' }),
+    ).toHaveAttribute(
+      'href',
+      `/parent/register?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
+    )
     fireEvent.change(screen.getByLabelText('E-posta'), {
       target: { value: 'parent@example.test' },
     })

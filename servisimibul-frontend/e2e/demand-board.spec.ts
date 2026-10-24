@@ -25,7 +25,15 @@ test('parent creates and manages an anonymous demand after checking operators', 
   ).toBeVisible()
   await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
   await expect(page).toHaveURL(/\/operator\/login\?next=/)
-  await expect(page.getByText(/Veli hesapları pilot kapsamında/)).toBeVisible()
+  await page.getByRole('link', { name: 'veli hesabı oluşturun' }).click()
+  await expect(page).toHaveURL(/\/parent\/register\?next=/)
+
+  await page.getByLabel('E-posta').fill('parent@example.com')
+  await page.getByLabel('Şifre').fill('parent password')
+  await page.getByRole('button', { name: 'Veli hesabı oluştur' }).click()
+  await expect(page).toHaveURL(/\/operator\/login\?.*registered=parent/)
+  await expect(page.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+  expect(state.parentRegistered).toBe(true)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
   await page.getByLabel('Şifre').fill('parent password')

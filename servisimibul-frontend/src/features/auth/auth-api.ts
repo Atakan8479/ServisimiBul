@@ -20,6 +20,11 @@ export interface RegisterOperatorRequest {
   contactPhone: string
 }
 
+export interface RegisterParentRequest {
+  email: string
+  password: string
+}
+
 export interface LoginRequest {
   email: string
   password: string
@@ -28,6 +33,10 @@ export interface LoginRequest {
 
 export function registerOperator(request: RegisterOperatorRequest) {
   return apiRequest('/auth/register', { method: 'POST', json: request })
+}
+
+export function registerParent(request: RegisterParentRequest) {
+  return apiRequest('/auth/parent/register', { method: 'POST', json: request })
 }
 
 export function verifyEmail(token: string) {

@@ -53,6 +53,8 @@ jobs:
       SPRING_SQL_INIT_MODE: never
       SB_COOKIE_SECURE: "false"
       SB_EMAIL_VERIFICATION_REQUIRED: "false"
+      SB_PARENT_REGISTRATION_ENABLED: "true"
+      SB_PARENT_EMAIL_VERIFICATION_REQUIRED: "false"
       OPERATOR_APPROVAL_REQUIRED: "true"
       SB_MAIL_ENABLED: "false"
       SB_FLYWAY_ENABLED: "false"
@@ -90,7 +92,6 @@ jobs:
           parent_password="$(openssl rand -base64 24 | tr '/+' 'AB')"
           echo "::add-mask::$parent_password"
           echo "J03_PARENT_PASSWORD=$parent_password" >> "$GITHUB_ENV"
-          echo "SB_DEMO_PARENT_PASSWORD=$parent_password" >> "$GITHUB_ENV"
           tariff_dir="$RUNNER_TEMP/j03-tariffs"
           cp -R scripts/fixtures/j03/tariffs "$tariff_dir"
           echo "SB_TARIFF_STORAGE_DIR=$tariff_dir" >> "$GITHUB_ENV"
@@ -150,8 +151,7 @@ jobs:
         working-directory: servisimibul-frontend
         env:
           SB_TEST_DB_DISPOSABLE: "true"
-          SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "true"
-          SB_DEMO_PARENT_EMAIL: j03.parent@example.test
+          SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "false"
           J03_PARENT_EMAIL: j03.parent@example.test
           SB_ADMIN_1_EMAIL: ""
           SB_ADMIN_1_PASSWORD: ""

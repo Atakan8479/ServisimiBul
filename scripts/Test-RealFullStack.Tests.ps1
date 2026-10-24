@@ -30,9 +30,13 @@ Assert-Condition ($runner.Contains("SB_EMAIL_VERIFICATION_REQUIRED = 'false'")) 
 Assert-Condition ($runner.Contains("SPRING_PROFILES_ACTIVE = 'local'")) `
     'J-03 does not constrain the verification bypass to the local profile.'
 Assert-Condition ($runner.Contains("SB_TEST_DB_DISPOSABLE = 'true'")) `
-    'J-03 does not explicitly mark the synthetic parent database as disposable.'
-Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'true'")) `
-    'J-03 does not create its synthetic parent in the isolated local runtime.'
+    'J-03 does not explicitly mark the parent registration database as disposable.'
+Assert-Condition ($runner.Contains("SB_PARENT_REGISTRATION_ENABLED = 'true'")) `
+    'J-03 does not explicitly enable parent registration in its isolated runtime.'
+Assert-Condition ($runner.Contains("SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'false'")) `
+    'J-03 does not select the approved parent verification policy.'
+Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'false'")) `
+    'J-03 still bootstraps a parent instead of exercising real registration.'
 Assert-Condition ($runner.Contains("OPERATOR_APPROVAL_REQUIRED = 'true'")) `
     'J-03 does not exercise the safe-default approval workflow.'
 Assert-Condition ($runner.Contains('Stop-SbIsolatedPostgres')) `
@@ -49,8 +53,12 @@ Assert-Condition (-not $spec.Contains('installMockApi')) `
     'The real full-stack suite imports the mocked API.'
 Assert-Condition ($workflow.Contains('CREATE TABLE test_harness.database_instance')) `
     'J-03 CI does not mark its PostgreSQL database as disposable.'
-Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "true"')) `
-    'J-03 CI does not enable the synthetic parent only for the local browser run.'
+Assert-Condition ($workflow.Contains('SB_PARENT_REGISTRATION_ENABLED: "true"')) `
+    'J-03 CI does not enable parent registration for its isolated browser run.'
+Assert-Condition ($workflow.Contains('SB_PARENT_EMAIL_VERIFICATION_REQUIRED: "false"')) `
+    'J-03 CI does not select the approved parent verification policy.'
+Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "false"')) `
+    'J-03 CI still bootstraps a parent instead of exercising real registration.'
 Assert-Condition (
     [regex]::Matches($workflow, 'SB_EMAIL_VERIFICATION_REQUIRED: "true"').Count -eq 2
 ) 'J-03 CI does not restore verification for migration-only processes.'
