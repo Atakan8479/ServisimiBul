@@ -173,6 +173,12 @@ try{
     Remove-Item -LiteralPath $evidenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+$restoreScript = Get-Content -Raw -LiteralPath $restoreEvidencePath
+Assert-SbCondition ($restoreScript.Contains('Get-SbBackupArchiveTocStatus')) 'Restore must validate the same archive TOC as the backup.'
+Assert-SbCondition ($restoreScript.Contains('FlywayTable') -and $restoreScript.Contains('FlywayData')) 'Restore must verify Flyway schema and history data.'
+Assert-SbCondition ($restoreScript.Contains('merge-base --is-ancestor') -and $restoreScript.Contains('diff --quiet')) 'A newer rehearsal must compare reviewed release inputs to the pinned backup commit.'
+Assert-SbCondition ($restoreScript.Contains('rehearsalToolCommit')) 'Restore evidence must record exact tool revision.'
+
 $restoreSource=Get-Content -Raw -LiteralPath $restoreEvidencePath
 Assert-SbCondition ($restoreSource.Contains('Assert-SbDisposableClusterIdentity')) 'Restore rehearsal must verify disposable target.'
 Assert-SbCondition ($restoreSource.Contains('Start-SbIsolatedPostgres')) 'Restore rehearsal must create isolated PostgreSQL.'
