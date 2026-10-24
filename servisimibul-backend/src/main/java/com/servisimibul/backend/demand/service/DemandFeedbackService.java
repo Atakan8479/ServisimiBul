@@ -1,5 +1,6 @@
 package com.servisimibul.backend.demand.service;
 
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.demand.Demand;
 import com.servisimibul.backend.demand.DemandClosureReason;
 import com.servisimibul.backend.demand.DemandLifecycleEvent;
@@ -42,6 +43,7 @@ public class DemandFeedbackService {
     private final DemandServiceFeedbackRepository feedbackRepository;
     private final DemandLifecycleEventRepository lifecycleEventRepository;
     private final DemandFeedbackProperties properties;
+    private final ParentEmailVerificationProperties parentEmailVerification;
     private final Clock clock;
 
     /** Called inside the demand-locked publication transaction. */
@@ -50,7 +52,8 @@ public class DemandFeedbackService {
         List<DemandSupport> supports = supportRepository.findEligibleForPublication(
                 response.getDemand().getId(),
                 event.isOffersMorning(),
-                event.isOffersAfternoon()
+                event.isOffersAfternoon(),
+                parentEmailVerification.required()
         );
         for (DemandSupport support : supports) {
             if (!feedbackRepository.existsBySupportIdAndPublicationEventId(
@@ -239,7 +242,10 @@ public class DemandFeedbackService {
 
     private void closeIfExhausted(Demand demand, OffsetDateTime at) {
         if (!demand.isOpen()
-                || supportRepository.countEligibleByDemandId(demand.getId()) > 0) {
+                || supportRepository.countEligibleByDemandId(
+                        demand.getId(),
+                        parentEmailVerification.required()
+                ) > 0) {
             return;
         }
         DemandClosureReason reason = supportRepository.existsByDemandIdAndStatus(

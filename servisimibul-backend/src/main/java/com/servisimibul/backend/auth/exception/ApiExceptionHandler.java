@@ -115,6 +115,20 @@ class ApiExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(ParentRegistrationUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleParentRegistrationUnavailable(
+            ParentRegistrationUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Parent registration unavailable",
+                exception.getMessage(),
+                "PARENT_REGISTRATION_UNAVAILABLE",
+                request
+        ));
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     ResponseEntity<ProblemDetail> handleInvalidCredentials(
             InvalidCredentialsException exception,

@@ -1,10 +1,19 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Demand marketplace — REQ-06 parent feedback ready for reviewed merge
+## Current stage: Parent identity — Issue #100 registration security foundation ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-05, frontend design tooling, and the parent/operator signup UX (PR #103) are merged. REQ-06 is implemented on `codex/req-06-parent-feedback`, PR #98 targets `main` and awaits updated CI and human review. Shared Supabase is verified at V12; V13 remains unapplied and requires separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, frontend design tooling, and the parent/operator signup UX (PR #103) are merged. Issue #100 is implemented on `codex/issue-100-parent-registration` and awaits review. Shared Supabase is verified at V12; V13 remains unapplied and requires separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
 Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13 remains unapplied.
+
+## Verified Issue #100 parent registration security foundation — 2026-10-23
+
+- Branch `codex/issue-100-parent-registration` adds backend-only `POST /api/v1/auth/parent/register`. The request accepts only email and password, assigns `PARENT` on the server, and creates no operator profile.
+- The endpoint preserves CSRF, email/password validation, the generic duplicate response, registration-IP limits, BCrypt, and role isolation. D052 now permits the explicit no-email pilot mode: no token or email is produced, `email_verified_at` stays NULL, and an enabled PARENT may log in and use parent demand operations without gaining OPERATOR or ADMIN access.
+- `SB_PARENT_REGISTRATION_ENABLED` still defaults to `false`, while the separate `SB_PARENT_EMAIL_VERIFICATION_REQUIRED` defaults to `true`. Turning verification back on blocks unverified parent login and invalidates an existing unverified-parent session on its next request. OPERATOR and ADMIN verification remains unchanged.
+- Focused isolated PostgreSQL 17 verification passed 102 registration, authentication, session, demand, CSRF, rate-limit, disabled-account, and strict-transition tests with 0 failures, 0 errors, 0 skipped. The complete isolated PostgreSQL 17 backend suite then passed 263 tests with 0 failures, 0 errors, and 0 skipped; final CI results remain pending the final PR head.
+- The accepted pilot limitation is explicit: parent email is not ownership proof, address squatting is possible, unverified accounts cannot use email password recovery, and existing parents must verify and sign in again when the policy is enabled later.
+- No dependency, Flyway migration, frontend file, shared Supabase setting, schema, or data was changed. Shared security changes are limited to the exact public registration matcher and the request-time parent-verification session guard; Issue #91 moderation behavior is unchanged.
 
 ## Verified REQ-06 parent feedback and demand resolution — 2026-10-22
 
