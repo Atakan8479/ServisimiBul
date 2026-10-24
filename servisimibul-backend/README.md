@@ -35,6 +35,11 @@ Production code is grouped by feature first, then by technical responsibility:
 | `offering/dto` | Vehicle and offering create/patch requests and safe responses |
 | `offering/service` | Ownership, normalization, capacity, seat, draft/publication, and deactivation workflows |
 | `offering/exception` | Vehicle/offering-specific safe Problem Details responses |
+| `demand` and `demand/comment` | Demand, support, response, feedback, lifecycle, and public-comment entities/repositories |
+| `demand/controller`, `demand/dto`, `demand/service` | Anonymous demand reads plus parent/operator-owned demand workflows |
+| `moderation` | Grouped content reports, moderation cases, append-only audit events, and repositories |
+| `moderation/controller`, `moderation/dto`, `moderation/service` | Parent/operator reporting and ADMIN-only queue, filters, and reasoned post-publication actions |
+| `moderation/exception` | Moderation-specific safe Problem Details responses that never disclose reporter identity |
 | `tariff/controller` | Anonymous current-tariff read and ADMIN replacement endpoints |
 | `tariff/dto` | Official tariff document, band, and optimistic-update records |
 | `tariff/service` | Tariff validation, normalization, and workflow orchestration |

@@ -89,6 +89,14 @@ public interface DemandServiceFeedbackRepository extends JpaRepository<DemandSer
             """)
     List<DemandServiceFeedback> findAwaitingByResponseId(@Param("responseId") UUID responseId);
 
+    @Query("""
+            select feedback
+            from DemandServiceFeedback feedback
+            where feedback.publicationEvent.response.demand.id = :demandId
+              and feedback.status = com.servisimibul.backend.demand.DemandServiceFeedbackStatus.AWAITING_FEEDBACK
+            """)
+    List<DemandServiceFeedback> findAwaitingByDemandId(@Param("demandId") UUID demandId);
+
     boolean existsBySupportIdAndStatus(UUID supportId, DemandServiceFeedbackStatus status);
 
     boolean existsBySupportIdAndPublicationEventId(UUID supportId, UUID publicationEventId);

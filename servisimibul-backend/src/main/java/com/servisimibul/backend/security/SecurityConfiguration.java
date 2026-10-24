@@ -106,6 +106,8 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reports")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/v1/demands",
                                 "/api/v1/demands/*/support",
