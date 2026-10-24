@@ -10,6 +10,8 @@ on:
       - "scripts/Test-SupabaseReleaseReadiness*.ps1"
       - "scripts/ops_github_approval.py"
       - "scripts/test_ops_github_approval.py"
+      - "scripts/ops_disposable_lock_coordinator.py"
+      - "scripts/test_ops_disposable_lock_coordinator.py"
       - ".github/workflows/ops-independent-approval-audit.yml"
       - ".github/workflows/ops-migration-safety.yml"
   workflow_dispatch:
@@ -32,6 +34,7 @@ jobs:
       - name: Independent approval offline tests
         shell: pwsh
         run: python -m unittest discover -s scripts -p test_ops_github_approval.py
+          python -m unittest discover -s scripts -p test_ops_disposable_lock_coordinator.py
       - name: PowerShell 7 offline tests
         shell: pwsh
         run: ./scripts/Test-SupabaseMigration.Tests.ps1
