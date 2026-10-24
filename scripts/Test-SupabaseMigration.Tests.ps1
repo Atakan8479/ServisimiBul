@@ -43,11 +43,16 @@ $savedSslMode=Get-Item Env:PGSSLMODE -ErrorAction SilentlyContinue
 try{
     [IO.File]::WriteAllText($clientFixture,"@echo %PGSSLMODE%`r`n@exit /b 0`r`n")
     $env:PGSSLMODE='disable'
+    $env:PGHOSTADDR='192.0.2.21'
+    $env:PGSERVICE='malicious-profile'
     $tlsOutput=Invoke-SbMigrationSql -Endpoint $poolerMigration -Sql 'SELECT 1;' -Client $clientFixture
     Assert-SbCondition ($tlsOutput-ceq'require') 'psql did not receive the validated TLS mode.'
     Assert-SbCondition ($env:PGSSLMODE-ceq'disable') 'SQL verification did not restore the caller TLS mode.'
+    Assert-SbCondition ($env:PGHOSTADDR-ceq'192.0.2.21') 'PGHOSTADDR was not restored.'
+    Assert-SbCondition ($env:PGSERVICE-ceq'malicious-profile') 'PGSERVICE was not restored.'
 }finally{
     if($savedSslMode){$env:PGSSLMODE=$savedSslMode.Value}else{Remove-Item Env:PGSSLMODE -ErrorAction SilentlyContinue}
+    Remove-Item Env:PGHOSTADDR,Env:PGSERVICE -ErrorAction SilentlyContinue
     Remove-Item -LiteralPath $clientFixture -Force -ErrorAction SilentlyContinue
 }
 
@@ -109,7 +114,7 @@ try{
         projectRef=$projectRef;database='postgres';postgresMajor=17;flywayVersion=12
         archivePath=$archivePath;archiveSha256=$archiveHash
     }|ConvertTo-Json|Set-Content -LiteralPath $backupPath -Encoding UTF8
-    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -Preflight $verified } 'Restore test evidence file is required'
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -Preflight $verified } 'custom-format archive|pg_restore'
 
     @{
         isolated=$true;postgresMajor=17;flywayVersion=12;verificationChecksPassed=13
