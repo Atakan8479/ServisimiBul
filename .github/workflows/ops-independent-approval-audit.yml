@@ -1,0 +1,37 @@
+name: OPS-01 independent approval audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      pull_request:
+        description: "Exact reviewed pull request number"
+        required: true
+        type: string
+      head_sha:
+        description: "Exact 40-character reviewed PR head commit"
+        required: true
+        type: string
+      project_ref:
+        description: "Explicit approved Supabase project ref"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Offline fail-closed approval tests
+        run: python3 -m unittest discover -s scripts -p test_ops_github_approval.py
+      - name: Validate independent PR review (advisory; no database access)
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ inputs.pull_request }}
+          HEAD_SHA: ${{ inputs.head_sha }}
+          PROJECT_REF: ${{ inputs.project_ref }}
+        run: python3 scripts/ops_github_approval.py "$PR_NUMBER" "$HEAD_SHA" "$PROJECT_REF"
