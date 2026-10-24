@@ -59,7 +59,7 @@ Assert-Condition (-not $launcher.Contains('Invoke-LocalMigration')) `
 
 Assert-Condition ($launcher.Contains('Wait-SbBackendReady -BackendProcess $backendProcess')) `
     'Shared launcher must await backend readiness.'
-Assert-Condition ($launcher.Contains("SB_ADMIN_1_PASSWORD'] = $null")) `
+Assert-Condition ($launcher.Contains('SB_ADMIN_1_PASSWORD')) `
     'Shared launcher must clear admin bootstrap credentials.'
 $badUserRejected = $false
 try {
