@@ -5,9 +5,51 @@ const operatorPassword = 'J03-operator-password'
 const adminEmail = process.env.J03_ADMIN_EMAIL ?? 'j03.admin.one@example.test'
 const adminPassword = process.env.J03_ADMIN_PASSWORD
 const parentEmail = process.env.J03_PARENT_EMAIL ?? 'j03.parent@example.test'
+const secondParentEmail = 'j03.parent.two@example.test'
 const parentPassword = process.env.J03_PARENT_PASSWORD
 const parentDemandPath =
   '/demands?schoolId=10000000-0000-4000-8000-000000000001&pickupDistrictId=3402&neighborhoodId=340201&intent=create'
+
+interface DemandState {
+  id: string
+  status: 'OPEN' | 'CLOSED'
+  closureReason: 'FULFILLED' | 'INACTIVE' | null
+  supporterCount: number
+  morningCount: number
+  afternoonCount: number
+  currentUserSupport: {
+    id: string
+    status: string
+    needsMorning: boolean
+    needsAfternoon: boolean
+    reasons: string[]
+  } | null
+}
+
+interface DemandCreation {
+  created: boolean
+  demand: DemandState
+}
+
+interface PublishedResponse {
+  published: boolean
+  response: {
+    id: string
+    status: string
+    offersMorning: boolean
+    offersAfternoon: boolean
+    publicationVersion: number
+    publicationEventId: string
+  }
+}
+
+interface FeedbackList {
+  feedback: Array<{
+    publicationEventId: string
+    status: string
+    canEvaluate: boolean
+  }>
+}
 
 test('runs the approved MVP journey against the real backend and PostgreSQL', async ({
   browser,
@@ -21,10 +63,12 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const adminContext = await browser.newContext()
   const publicContext = await browser.newContext()
   const parentContext = await browser.newContext()
+  const secondParentContext = await browser.newContext()
   const operatorPage = await operatorContext.newPage()
   const adminPage = await adminContext.newPage()
   const publicPage = await publicContext.newPage()
   const parentPage = await parentContext.newPage()
+  const secondParentPage = await secondParentContext.newPage()
 
   adminPage.on('dialog', (dialog) => void dialog.accept())
 
@@ -79,6 +123,24 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         })
         .toBe(parentDemandPath)
       await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
+
+      const secondParentCsrf = await csrf(secondParentPage)
+      const secondRegistration = await secondParentPage.request.post(
+        '/api/v1/auth/parent/register',
+        {
+          headers: {
+            [secondParentCsrf.headerName]: secondParentCsrf.token,
+          },
+          data: { email: secondParentEmail, password: parentPassword },
+        },
+      )
+      expect(secondRegistration.status()).toBe(202)
+      await login(
+        secondParentPage,
+        secondParentEmail,
+        parentPassword!,
+        'parent',
+      )
     })
 
     await test.step('use a real session and reject a mutation without CSRF', async () => {
@@ -300,6 +362,349 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
     })
 
+    let sharedDemandId = ''
+    let firstParentSupportId = ''
+    let secondParentSupportId = ''
+    const firstParentSupport = {
+      needsMorning: true,
+      needsAfternoon: false,
+      reasons: ['NO_SUITABLE_SERVICE'],
+    }
+    const secondParentSupport = {
+      needsMorning: false,
+      needsAfternoon: true,
+      reasons: ['NO_AVAILABLE_SEATS'],
+    }
+
+    await test.step('concurrently create one demand for two real parents without leaking ownership', async () => {
+      const firstCsrf = await csrf(parentPage)
+      const secondCsrf = await csrf(secondParentPage)
+      const demandKey = {
+        schoolId: '10000000-0000-4000-8000-000000000001',
+        neighborhoodId: 340101,
+      }
+      const [firstCreation, secondCreation] = await Promise.all([
+        parentPage.request.post('/api/v1/demands', {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: { ...demandKey, ...firstParentSupport },
+        }),
+        secondParentPage.request.post('/api/v1/demands', {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: { ...demandKey, ...secondParentSupport },
+        }),
+      ])
+      expect([firstCreation.status(), secondCreation.status()].sort()).toEqual([
+        200, 201,
+      ])
+      const creations = [
+        (await firstCreation.json()) as DemandCreation,
+        (await secondCreation.json()) as DemandCreation,
+      ]
+      expect(creations.map(({ created }) => created).sort()).toEqual([
+        false,
+        true,
+      ])
+      expect(new Set(creations.map(({ demand }) => demand.id)).size).toBe(1)
+      sharedDemandId = creations[0].demand.id
+
+      let firstState = await demand(parentPage, sharedDemandId)
+      let secondState = await demand(secondParentPage, sharedDemandId)
+      expect(firstState.supporterCount).toBe(1)
+      expect(secondState.supporterCount).toBe(1)
+
+      if (!firstState.currentUserSupport) {
+        const joined = await parentPage.request.post(
+          `/api/v1/demands/${sharedDemandId}/support`,
+          {
+            headers: { [firstCsrf.headerName]: firstCsrf.token },
+            data: firstParentSupport,
+          },
+        )
+        expect(joined.status()).toBe(200)
+      } else {
+        const joined = await secondParentPage.request.post(
+          `/api/v1/demands/${sharedDemandId}/support`,
+          {
+            headers: { [secondCsrf.headerName]: secondCsrf.token },
+            data: secondParentSupport,
+          },
+        )
+        expect(joined.status()).toBe(200)
+      }
+
+      firstState = await demand(parentPage, sharedDemandId)
+      secondState = await demand(secondParentPage, sharedDemandId)
+      firstParentSupportId = firstState.currentUserSupport!.id
+      secondParentSupportId = secondState.currentUserSupport!.id
+      expect(firstParentSupportId).not.toBe(secondParentSupportId)
+      expect(firstState).toMatchObject({
+        supporterCount: 2,
+        morningCount: 1,
+        afternoonCount: 1,
+        currentUserSupport: firstParentSupport,
+      })
+      expect(secondState).toMatchObject({
+        supporterCount: 2,
+        currentUserSupport: secondParentSupport,
+      })
+
+      const anonymous = await demand(publicPage, sharedDemandId)
+      expect(anonymous.currentUserSupport).toBeNull()
+      expect(JSON.stringify(anonymous)).not.toContain(parentEmail)
+      expect(JSON.stringify(anonymous)).not.toContain(secondParentEmail)
+    })
+
+    await test.step('isolate support ownership and close then reopen an inactive demand', async () => {
+      const secondCsrf = await csrf(secondParentPage)
+      const editedSupport = {
+        needsMorning: true,
+        needsAfternoon: true,
+        reasons: ['PRICE_TOO_HIGH'],
+      }
+      const edited = await secondParentPage.request.put(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: editedSupport,
+        },
+      )
+      expect(edited.status()).toBe(200)
+      expect((await edited.json()) as DemandState).toMatchObject({
+        currentUserSupport: {
+          id: secondParentSupportId,
+          ...editedSupport,
+        },
+      })
+      expect(await demand(parentPage, sharedDemandId)).toMatchObject({
+        currentUserSupport: {
+          id: firstParentSupportId,
+          ...firstParentSupport,
+        },
+      })
+
+      const missingCsrf = await secondParentPage.request.put(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        { data: secondParentSupport },
+      )
+      expect(missingCsrf.status()).toBe(403)
+
+      const operatorCsrf = await csrf(operatorPage)
+      const operatorDenied = await operatorPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: firstParentSupport,
+        },
+      )
+      expect(operatorDenied.status()).toBe(403)
+      const parentDenied = await secondParentPage.request.post(
+        `/api/v1/operator/demands/${sharedDemandId}/response`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: { offersMorning: true, offersAfternoon: false },
+        },
+      )
+      expect(parentDenied.status()).toBe(403)
+
+      const withdrewSecond = await secondParentPage.request.delete(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        { headers: { [secondCsrf.headerName]: secondCsrf.token } },
+      )
+      expect(withdrewSecond.status()).toBe(204)
+      expect(await demand(parentPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 1,
+      })
+      const reactivatedSecond = await secondParentPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: secondParentSupport,
+        },
+      )
+      expect(reactivatedSecond.status()).toBe(200)
+      expect((await reactivatedSecond.json()) as DemandState).toMatchObject({
+        supporterCount: 2,
+        currentUserSupport: { id: secondParentSupportId },
+      })
+
+      const firstCsrf = await csrf(parentPage)
+      const withdrewFirst = await parentPage.request.delete(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        { headers: { [firstCsrf.headerName]: firstCsrf.token } },
+      )
+      expect(withdrewFirst.status()).toBe(204)
+      const withdrewLast = await secondParentPage.request.delete(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        { headers: { [secondCsrf.headerName]: secondCsrf.token } },
+      )
+      expect(withdrewLast.status()).toBe(204)
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'CLOSED',
+        closureReason: 'INACTIVE',
+        supporterCount: 0,
+      })
+
+      const reopened = await parentPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: firstParentSupport,
+        },
+      )
+      expect(reopened.status()).toBe(200)
+      expect((await reopened.json()) as DemandState).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 1,
+        currentUserSupport: { id: firstParentSupportId },
+      })
+      const rejoined = await secondParentPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/support`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: secondParentSupport,
+        },
+      )
+      expect(rejoined.status()).toBe(200)
+      expect((await rejoined.json()) as DemandState).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 2,
+        currentUserSupport: { id: secondParentSupportId },
+      })
+    })
+
+    await test.step('keep publication idempotent and close only after every active parent is satisfied', async () => {
+      const responsePath = `/api/v1/operator/demands/${sharedDemandId}/response`
+      const operatorCsrf = await csrf(operatorPage)
+      const firstPublication = await operatorPage.request.post(responsePath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { offersMorning: true, offersAfternoon: false },
+      })
+      expect(firstPublication.status()).toBe(200)
+      const firstPublished =
+        (await firstPublication.json()) as PublishedResponse
+      expect(firstPublished).toMatchObject({
+        published: true,
+        response: {
+          status: 'ACTIVE',
+          offersMorning: true,
+          offersAfternoon: false,
+          publicationVersion: 1,
+        },
+      })
+
+      const duplicatePublication = await operatorPage.request.post(
+        responsePath,
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: { offersMorning: false, offersAfternoon: true },
+        },
+      )
+      expect(duplicatePublication.status()).toBe(200)
+      expect(
+        (await duplicatePublication.json()) as PublishedResponse,
+      ).toMatchObject({
+        published: false,
+        response: {
+          id: firstPublished.response.id,
+          publicationEventId: firstPublished.response.publicationEventId,
+          offersMorning: true,
+          offersAfternoon: false,
+          publicationVersion: 1,
+        },
+      })
+
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const withdrawn = await operatorPage.request.delete(responsePath, {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        })
+        expect(withdrawn.status()).toBe(200)
+        expect((await withdrawn.json()) as { status: string }).toMatchObject({
+          status: 'WITHDRAWN',
+        })
+      }
+      const hiddenResponses = await publicPage.request.get(
+        `/api/v1/demands/${sharedDemandId}/responses`,
+      )
+      expect(hiddenResponses.status()).toBe(200)
+      expect(
+        (await hiddenResponses.json()) as { totalElements: number },
+      ).toMatchObject({ totalElements: 0 })
+
+      const republished = await operatorPage.request.post(responsePath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { offersMorning: true, offersAfternoon: true },
+      })
+      expect(republished.status()).toBe(200)
+      const secondPublished = (await republished.json()) as PublishedResponse
+      expect(secondPublished).toMatchObject({
+        published: true,
+        response: {
+          id: firstPublished.response.id,
+          offersMorning: true,
+          offersAfternoon: true,
+          publicationVersion: 2,
+        },
+      })
+      expect(secondPublished.response.publicationEventId).not.toBe(
+        firstPublished.response.publicationEventId,
+      )
+
+      const firstCsrf = await csrf(parentPage)
+      const secondCsrf = await csrf(secondParentPage)
+      const firstOpened = await parentPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/feedback/open`,
+        { headers: { [firstCsrf.headerName]: firstCsrf.token } },
+      )
+      const secondOpened = await secondParentPage.request.post(
+        `/api/v1/demands/${sharedDemandId}/feedback/open`,
+        { headers: { [secondCsrf.headerName]: secondCsrf.token } },
+      )
+      expect(firstOpened.status()).toBe(200)
+      expect(secondOpened.status()).toBe(200)
+      const firstFeedback = (
+        (await firstOpened.json()) as FeedbackList
+      ).feedback.find(({ canEvaluate }) => canEvaluate)!
+      const secondFeedback = (
+        (await secondOpened.json()) as FeedbackList
+      ).feedback.find(({ canEvaluate }) => canEvaluate)!
+      expect(firstFeedback).toBeDefined()
+      expect(secondFeedback).toBeDefined()
+      expect(firstFeedback.publicationEventId).toBe(
+        secondPublished.response.publicationEventId,
+      )
+      expect(secondFeedback.publicationEventId).toBe(
+        secondPublished.response.publicationEventId,
+      )
+
+      const firstSatisfied = await parentPage.request.put(
+        `/api/v1/demands/${sharedDemandId}/feedback/${firstFeedback.publicationEventId}`,
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: { satisfied: true },
+        },
+      )
+      expect(firstSatisfied.status()).toBe(200)
+      expect(await demand(parentPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 1,
+      })
+
+      const secondSatisfied = await secondParentPage.request.put(
+        `/api/v1/demands/${sharedDemandId}/feedback/${secondFeedback.publicationEventId}`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: { satisfied: true },
+        },
+      )
+      expect(secondSatisfied.status()).toBe(200)
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'CLOSED',
+        closureReason: 'FULFILLED',
+        supporterCount: 0,
+      })
+    })
+
     await test.step('publish a demand service and resolve parent feedback against the real API', async () => {
       await parentPage.goto(parentDemandPath)
       await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
@@ -479,6 +884,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       adminContext.close(),
       publicContext.close(),
       parentContext.close(),
+      secondParentContext.close(),
     ])
   }
 })
@@ -547,4 +953,10 @@ async function csrf(
   const response = await page.request.get('/api/v1/auth/csrf')
   expect(response.ok()).toBe(true)
   return (await response.json()) as { headerName: string; token: string }
+}
+
+async function demand(page: Page, id: string): Promise<DemandState> {
+  const response = await page.request.get(`/api/v1/demands/${id}`)
+  expect(response.status()).toBe(200)
+  return (await response.json()) as DemandState
 }
