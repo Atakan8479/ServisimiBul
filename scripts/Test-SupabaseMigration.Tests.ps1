@@ -77,6 +77,12 @@ for($index=0;$index-lt 12;$index++){$historyLines += "HISTORY|$($index+1)|$($art
 $validPreflight=(@($historyLines)+@('COLLISIONS|0','ACTIVITY|0'))-join"`n"
 $script:preflightOutput=$validPreflight
 function Invoke-SbMigrationSql { return $script:preflightOutput }
+# Direct requires server-observed TLS; pooler may terminate TLS upstream.
+$script:preflightOutput=$validPreflight.Replace('|123456789012345678|t','|123456789012345678|f')
+$verifiedPooler=Invoke-SbSupabaseMigrationPreflight -Endpoint $poolerMigration -RuntimeEndpoint $poolerRuntime -ExpectedSystemIdentifier '123456789012345678' -Artifacts $artifacts -Client 'unused'
+Assert-SbCondition ($verifiedPooler.Version-eq 12) 'Session-pooler upstream TLS terminator rejected.'
+Assert-Rejected { Invoke-SbSupabaseMigrationPreflight -Endpoint $directMigration -RuntimeEndpoint $directRuntime -ExpectedSystemIdentifier '123456789012345678' -Artifacts $artifacts -Client unused } 'TLS'
+$script:preflightOutput=$validPreflight
 $verified=Invoke-SbSupabaseMigrationPreflight -Endpoint $directMigration -RuntimeEndpoint $directRuntime -ExpectedSystemIdentifier '123456789012345678' -Artifacts $artifacts -Client 'unused'
 Assert-SbCondition ($verified.Version-eq 12) 'Valid V12 preflight was rejected.'
 
