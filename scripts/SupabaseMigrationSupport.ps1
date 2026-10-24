@@ -117,10 +117,7 @@ function Invoke-SbMigrationSql {
 
 function Get-SbBackupArchiveTocStatus {
     param([Parameter(Mandatory=$true)][string[]]$Lines)
-    # PostgreSQL pg_restore -l emits semicolon-prefixed metadata and TOC lines:
-    # 123; 1259 456 TABLE public flyway_schema_history postgres
-    # 456; 0 123 TABLE DATA public flyway_schema_history postgres
-    $format=@($Lines|Where-Object{$_ -match '^\s*;\s*Format:\s*CUSTOM\s*
+    $format = @($Lines | Where-Object { $_ -match '^;[ ]*Format:[ ]*CUSTOM[ ]*
     param($Endpoint,[Parameter(Mandatory=$true)][string]$Password,[Parameter(Mandatory=$true)][string]$Client)
     $previous=Get-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
     try{
@@ -238,16 +235,11 @@ function Assert-SbPostMigrationVerification {
     $results=@($output -split "`r?`n"|Where-Object{$_ -match '\|(PASS|FAIL)\|'})
     if($results.Count-ne 13 -or @($results|Where-Object{$_ -match '\|FAIL\|'}).Count-ne 0){throw 'Post-migration verification did not return exactly 13 PASS results.'}
 }
-}).Count
-    $tables=@($Lines|Where-Object{$_ -match '^\s*\d+;\s+\d+\s+\d+\s+TABLE\s+public\s+\S+'})
-    $flywayTable=@($tables|Where-Object{$_ -match '^\s*\d+;\s+\d+\s+\d+\s+TABLE\s+public\s+flyway_schema_history(?:\s|$)'}).Count
-    $flywayData=@($Lines|Where-Object{$_ -match '^\s*\d+;\s+\d+\s+\d+\s+TABLE DATA\s+public\s+flyway_schema_history(?:\s|$)'}).Count
-    [pscustomobject]@{
-        ValidFormat=($format -eq 1)
-        FlywayTable=($flywayTable -eq 1)
-        FlywayData=($flywayData -eq 1)
-        TableCount=$tables.Count
-    }
+ }).Count
+    $tables = @($Lines | Where-Object { $_ -match '^[0-9]+;[ ]+[0-9]+[ ]+[0-9]+[ ]+TABLE[ ]+public[ ]+[^ ]+' })
+    $schema = @($tables | Where-Object { $_ -match '^[0-9]+;[ ]+[0-9]+[ ]+[0-9]+[ ]+TABLE[ ]+public[ ]+flyway_schema_history([ ]|$)' }).Count
+    $data = @($Lines | Where-Object { $_ -match '^[0-9]+;[ ]+[0-9]+[ ]+[0-9]+[ ]+TABLE DATA[ ]+public[ ]+flyway_schema_history([ ]|$)' }).Count
+    return [pscustomobject]@{ ValidFormat=($format -eq 1); FlywayTable=($schema -eq 1); FlywayData=($data -eq 1); TableCount=$tables.Count }
 }
 
 function Assert-SbRuntimeConnection {
