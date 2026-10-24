@@ -120,6 +120,12 @@ try {
     foreach($name in $previousPg.Keys) {
         Set-Item -LiteralPath ('Env:'+$name) -Value $previousPg[$name]
     }
+    if (Test-Path -LiteralPath $tempArchive) {
+        # Preserve only successfully validated backups; incomplete archives must not be reused.
+        if ($LASTEXITCODE -ne 0) {
+            Remove-Item -LiteralPath $tempArchive -Force -ErrorAction SilentlyContinue
+        }
+    }
 }
 try {
     $toc=@(& $client.Restore '--list' $tempArchive 2>&1)
