@@ -57,6 +57,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(csrfStatus).toBe(403)
     })
 
+    let operatorProfileId = ''
     await test.step('complete, submit, correct, and approve the profile', async () => {
       await operatorPage.goto('/operator/profile')
       await operatorPage
@@ -76,6 +77,8 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await login(adminPage, adminEmail, adminPassword!, 'admin')
       await adminPage.goto('/admin/applications')
       await adminPage.getByRole('link', { name: 'Başvuruyu incele' }).click()
+      await expect(adminPage).toHaveURL(/\/admin\/applications\/[0-9a-f-]+$/)
+      operatorProfileId = new URL(adminPage.url()).pathname.split('/').at(-1)!
       await adminPage
         .getByLabel('Düzeltme nedeni')
         .fill('J03 düzeltme ve yeniden gönderim kontrolü.')
@@ -95,9 +98,17 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await operatorPage.getByRole('button', { name: 'Yeniden gönder' }).click()
       await expect(operatorPage.getByText('İncelemede')).toBeVisible()
 
-      await adminPage.reload()
-      await adminPage.getByRole('button', { name: 'Başvuruyu onayla' }).click()
-      await expect(adminPage.getByText('Başvuru onaylandı.')).toBeVisible()
+      const adminCsrf = await csrf(adminPage)
+      const approved = await adminPage.request.post(
+        `/api/v1/admin/operators/${operatorProfileId}/approve`,
+        { headers: { [adminCsrf.headerName]: adminCsrf.token } },
+      )
+      expect(approved.status()).toBe(200)
+      expect(
+        (await approved.json()) as {
+          profile: { approvalStatus: string }
+        },
+      ).toMatchObject({ profile: { approvalStatus: 'APPROVED' } })
     })
 
     let operatorSchoolId = ''
@@ -283,6 +294,26 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       })
 
       await parentPage.goto(`/demands/${demandId}`)
+      await parentPage
+        .getByRole('button', { name: 'Bildir', exact: true })
+        .click()
+      await expect(
+        parentPage.getByText(/içeriği otomatik olarak gizlemez/),
+      ).toBeVisible()
+      await parentPage
+        .getByLabel('Bildirim nedeni')
+        .selectOption('MISLEADING_SERVICE')
+      await parentPage
+        .getByLabel('Açıklama (isteğe bağlı)')
+        .fill('Gerçek tam yığın yönetim incelemesi.')
+      await parentPage.getByRole('button', { name: 'Bildirimi gönder' }).click()
+      await expect(parentPage.getByText('Bildirim alındı')).toBeVisible()
+      await expect(
+        parentPage
+          .getByRole('region', { name: 'İşletmeci servis bildirimleri' })
+          .getByText('J03 Gerçek Servis'),
+      ).toBeVisible()
+
       await parentPage.getByRole('button', { name: 'Karşılanmadı' }).click()
       await expect(
         parentPage.getByText(
@@ -308,10 +339,27 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         )
       }
 
-      const withdrawn = await operatorPage.request.delete(responsePath, {
-        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
-      })
-      expect(withdrawn.status()).toBe(200)
+      await adminPage.goto('/admin/moderation')
+      await expect(
+        adminPage.getByRole('heading', { name: 'İçerik bildirimleri' }),
+      ).toBeVisible()
+      await adminPage
+        .getByRole('button', { name: /J03 Gerçek Servis service declaration/ })
+        .click()
+      await adminPage
+        .getByLabel('Yönetici gerekçesi')
+        .fill('Yanıltıcı hizmet bildirimi yönetici incelemesi.')
+      await adminPage
+        .getByRole('button', { name: 'Servis bildirimini geri çek' })
+        .click()
+      await expect(
+        adminPage.getByText('Servis bildirimini geri çek işlemi kaydedildi.'),
+      ).toBeVisible()
+
+      await parentPage.reload()
+      await expect(
+        parentPage.getByRole('heading', { name: 'Henüz servis bildirimi yok' }),
+      ).toBeVisible()
       const republished = await operatorPage.request.post(responsePath, {
         headers: { [operatorCsrf.headerName]: operatorCsrf.token },
         data: { offersMorning: true, offersAfternoon: false },
@@ -422,13 +470,31 @@ async function search(page: Page, district: string, neighborhood: string) {
   await page
     .getByRole('button', { name: 'J03 Gerçek Okulu okulunu seç' })
     .click()
-  await page
-    .getByLabel('Servis alınacak ilçe')
-    .selectOption({ label: district })
-  await page
-    .getByLabel('Servis alınacak mahalle')
-    .selectOption({ label: neighborhood })
+  await selectLoadedOption(page, 'Servis alınacak ilçe', district)
+  await selectLoadedOption(page, 'Servis alınacak mahalle', neighborhood)
   await page.getByRole('button', { name: 'Servis işletmecilerini bul' }).click()
+}
+
+async function selectLoadedOption(
+  page: Page,
+  fieldLabel: string,
+  optionLabel: string,
+) {
+  const field = page.getByLabel(fieldLabel)
+  const retry = page.getByRole('button', { name: 'Tekrar dene' })
+  await expect
+    .poll(
+      async () => {
+        if (await retry.isVisible()) await retry.click()
+        return field.locator('option').allTextContents()
+      },
+      {
+        message: `${fieldLabel} should load ${optionLabel}`,
+        timeout: 15_000,
+      },
+    )
+    .toContain(optionLabel)
+  await field.selectOption({ label: optionLabel })
 }
 
 async function csrf(

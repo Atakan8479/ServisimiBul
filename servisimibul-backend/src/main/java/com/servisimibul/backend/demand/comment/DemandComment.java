@@ -75,4 +75,8 @@ public class DemandComment {
     public void hide() {
         status = DemandCommentStatus.HIDDEN;
     }
+
+    public void restore() {
+        status = DemandCommentStatus.PUBLISHED;
+    }
 }

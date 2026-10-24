@@ -29,6 +29,7 @@ import { DemandServiceResponseForm } from './DemandServiceResponseForm'
 import { DemandSupportForm } from './DemandSupportForm'
 import { DemandComments } from './DemandComments'
 import { DemandFeedbackPanel } from './DemandFeedbackPanel'
+import { ReportControl } from '../moderation/ReportControl'
 
 type SupportMode = 'join' | 'edit' | 'reactivate'
 
@@ -401,9 +402,18 @@ export function DemandDetailPage() {
             {demand.neighborhood.districtName} · {demand.neighborhood.name}
           </p>
         </div>
-        <span className={`status-pill ${open ? 'success' : 'neutral'}`}>
-          {open ? 'Açık talep' : 'Katılıma kapalı'}
-        </span>
+        <div className="demand-detail-header-actions">
+          <span className={`status-pill ${open ? 'success' : 'neutral'}`}>
+            {open ? 'Açık talep' : 'Katılıma kapalı'}
+          </span>
+          {open && (
+            <ReportControl
+              label="Talebi bildir"
+              targetId={demand.id}
+              targetType="DEMAND"
+            />
+          )}
+        </div>
       </header>
 
       {notice && (
@@ -514,12 +524,19 @@ export function DemandDetailPage() {
                       {response.offersMorning && <span>Sabah</span>}
                       {response.offersAfternoon && <span>Öğleden sonra</span>}
                     </div>
-                    <a
-                      className="button-link"
-                      href={`tel:${response.contactPhone}`}
-                    >
-                      {response.contactPhone} numarasını ara
-                    </a>
+                    <div className="demand-service-response-actions">
+                      <a
+                        className="button-link"
+                        href={`tel:${response.contactPhone}`}
+                      >
+                        {response.contactPhone} numarasını ara
+                      </a>
+                      <ReportControl
+                        label="Bildir"
+                        targetId={response.id}
+                        targetType="SERVICE_RESPONSE"
+                      />
+                    </div>
                   </li>
                 ))}
               </ul>

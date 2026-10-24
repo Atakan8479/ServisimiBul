@@ -185,6 +185,14 @@ const applicationRoutes: RouteObject[] = [
             .AdminTariffsPage,
         }),
       },
+      {
+        path: 'moderation',
+        handle: { pageTitle: 'İçerik bildirimleri' },
+        lazy: async () => ({
+          Component: (await import('../features/admin/AdminModerationPage'))
+            .AdminModerationPage,
+        }),
+      },
     ],
   },
   {

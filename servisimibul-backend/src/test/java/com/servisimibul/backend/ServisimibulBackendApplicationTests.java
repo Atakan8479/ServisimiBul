@@ -29,6 +29,7 @@ class ServisimibulBackendApplicationTests {
 
     private static final List<String> APPLICATION_TABLES = List.of(
             "app_user",
+            "content_report",
             "demand",
             "demand_comment",
             "demand_lifecycle_event",
@@ -39,6 +40,8 @@ class ServisimibulBackendApplicationTests {
             "demand_support_reason",
             "district",
             "email_verification_token",
+            "moderation_audit_event",
+            "moderation_case",
             "neighborhood",
             "operator_application_review",
             "operator_profile",
@@ -86,7 +89,7 @@ class ServisimibulBackendApplicationTests {
     @Test
     @Transactional
     void migrationCreatesUsableProtectedGeographySchema() {
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("13");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("14");
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbcTemplate.queryForObject("select current_user", String.class))
                 .isEqualTo("servisimibul_app");
@@ -371,7 +374,7 @@ class ServisimibulBackendApplicationTests {
         assertThat(migrations.stream()
                 .map(migration -> migration.getVersion().getVersion())
                 .toList()).containsExactly(
-                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"
+                        "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14"
                 );
         assertThat(migrations).allMatch(migration -> migration.getState() == MigrationState.SUCCESS);
         assertThat(flyway.migrate().migrationsExecuted).isZero();
