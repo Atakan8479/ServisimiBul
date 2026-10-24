@@ -267,3 +267,7 @@ Record the observation date, dashboard period, current value, trend, threshold, 
 10. Rotate temporary credentials, close access, document actual RPO/RTO, and schedule corrective work plus the next restore drill.
 
 The operational objective is a database recovery point no older than 24 hours once irreplaceable pilot data exists, plus a tariff backup after every approved tariff change. A-13 measured 47.623 seconds for its small disposable fixture; production recovery time remains unvalidated until an environment-representative, separately approved exercise is completed.
+
+### OPS-01 guarded Windows migration tooling — first increment
+
+Issue #107 introduces `scripts/migrate-supabase.ps1`. The initial implementation is **read-only preflight only**: `-Apply` fails closed, no Flyway migration is executed, and the operator supplies an exact project reference plus a separate migration endpoint. The tool checks PostgreSQL 17 identity and the expected V12 Flyway history. It is **not yet a complete or approved shared migration runbook**, does not replace the verified backup/restore gate, and must not be used to apply V13/V14. `scripts/Test-SupabaseMigration.Tests.ps1` provides offline PowerShell syntax and fail-closed checks. Next increments must implement complete source/migration checksum comparison, exclusive operation controls, restorable backup evidence, an authorized apply path and all 13 read-only post-migration checks before enabling any shared write.
