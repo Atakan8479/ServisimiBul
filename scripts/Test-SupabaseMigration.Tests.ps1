@@ -6,11 +6,12 @@ $ErrorActionPreference = 'Stop'
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $path = Join-Path $PSScriptRoot 'migrate-supabase.ps1'
 $supportPath = Join-Path $PSScriptRoot 'SupabaseMigrationSupport.ps1'
+$restoreEvidencePath = Join-Path $PSScriptRoot 'Test-SupabaseMigration.RestoreEvidence.ps1'
 function Assert-SbCondition {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw $Message }
 }
-foreach ($scriptPath in @($path, $supportPath)) {
+foreach ($scriptPath in @($path, $supportPath, $restoreEvidencePath)) {
     $tokens=$null; $errors=$null
     $ast=[System.Management.Automation.Language.Parser]::ParseFile($scriptPath,[ref]$tokens,[ref]$errors)
     Assert-SbCondition ($null-ne$ast -and $errors.Count-eq 0) "PowerShell parsing failed for $scriptPath."
@@ -128,6 +129,12 @@ try{
     Remove-Item -LiteralPath $evidenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+$restoreSource=Get-Content -Raw -LiteralPath $restoreEvidencePath
+Assert-SbCondition ($restoreSource.Contains('Assert-SbDisposableClusterIdentity')) 'Restore rehearsal must verify disposable target.'
+Assert-SbCondition ($restoreSource.Contains('Start-SbIsolatedPostgres')) 'Restore rehearsal must create isolated PostgreSQL.'
+Assert-SbCondition ($restoreSource.Contains('v12RestoreVerified')) 'V12 restore check missing.'
+Assert-SbCondition ($restoreSource.Contains('v14RehearsalVerified')) 'V14 rehearsal check missing.'
+Assert-SbCondition ($restoreSource.Contains('Assert-SbPostMigrationVerification')) '13 post-migration checks missing.'
 $source=(Get-Content -Raw $path)+(Get-Content -Raw $supportPath)
 foreach($forbidden in @('baselineOnMigrate=true','flyway repair','flyway clean','--clean','SB_ADMIN_BOOTSTRAP_ENABLED=true')){Assert-SbCondition (-not$source.Contains($forbidden)) "Forbidden operation detected: $forbidden"}
 Assert-SbCondition ($source.Contains('BEGIN TRANSACTION READ ONLY;')) 'Preflight is not explicitly read-only.'
