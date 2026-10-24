@@ -8,6 +8,9 @@ on:
       - "scripts/SupabaseReleaseReadinessSupport.ps1"
       - "scripts/Test-SupabaseMigration*.ps1"
       - "scripts/Test-SupabaseReleaseReadiness*.ps1"
+      - "scripts/ops_github_approval.py"
+      - "scripts/test_ops_github_approval.py"
+      - ".github/workflows/ops-independent-approval-audit.yml"
       - ".github/workflows/ops-migration-safety.yml"
   workflow_dispatch:
 
@@ -26,6 +29,9 @@ jobs:
         run: |
           ./scripts/Test-SupabaseMigration.Tests.ps1
           ./scripts/Test-SupabaseReleaseReadiness.Tests.ps1
+      - name: Independent approval offline tests
+        shell: pwsh
+        run: python -m unittest discover -s scripts -p test_ops_github_approval.py
       - name: PowerShell 7 offline tests
         shell: pwsh
         run: ./scripts/Test-SupabaseMigration.Tests.ps1
