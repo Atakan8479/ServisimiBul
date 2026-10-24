@@ -45,7 +45,18 @@ function Assert-SbOps01RestoreInput {
     $hash = (Get-FileHash -LiteralPath $archivePath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($hash -cne ([string]$backup.archiveSha256).ToLowerInvariant()) { throw 'Backup checksum mismatch.' }
     $head = (& git -C $Root rev-parse HEAD 2>$null).Trim()
-    if ($LASTEXITCODE -ne 0 -or $head -cnotmatch '^[0-9a-f]{40}
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($head)) {
+        throw 'Could not read checked-out revision.'
+    }
+    $releasePaths = @('servisimibul-backend','.mvn','mvnw.cmd','docs/10_MIGRATION_VERIFICATION.sql','scripts/WindowsDevelopmentSupport.ps1','scripts/BackupRestoreSupport.ps1')
+    if ($head -cne $backup.releaseCommit) {
+        & git -C $Root merge-base --is-ancestor $backup.releaseCommit HEAD
+        if ($LASTEXITCODE -ne 0) { throw 'Backup revision is not an ancestor of checkout.' }
+        & git -C $Root diff --quiet $backup.releaseCommit HEAD -- $releasePaths
+        if ($LASTEXITCODE -ne 0) { throw 'Application or migration inputs differ from the backup revision.' }
+    }
+    & git -C $Root diff --quiet HEAD -- $releasePaths
+    if ($LASTEXITCODE -ne 0) { throw 'Reviewed release inputs have local modifications.' }
     return [pscustomobject]@{ Backup=$backup; Archive=$archivePath; Hash=$hash; Output=$outputPath }
 }
 
@@ -78,12 +89,10 @@ $input = Assert-SbOps01RestoreInput -InputPath $BackupEvidencePath -OutputPath $
 $tools = Resolve-SbPostgres17Tools -PostgresBin $PostgresBin
 $java = Resolve-SbJavaRuntime -RequestedHome $JavaHome
 $list = @(& $tools.PgRestore '--list' $input.Archive 2>&1)
-if ($LASTEXITCODE -ne 0) {
-    throw 'Backup cannot be read by PostgreSQL pg_restore.'
-}
+if ($LASTEXITCODE -ne 0) { throw 'PostgreSQL pg_restore could not read the backup.' }
 $tocStatus = Get-SbBackupArchiveTocStatus -Lines ([string[]]$list)
 if (-not $tocStatus.ValidFormat -or -not $tocStatus.FlywayTable -or -not $tocStatus.FlywayData) {
-    throw 'Backup must contain a valid custom-format archive with Flyway history table and data.'
+    throw 'Backup Flyway schema or data was not verified.'
 }
 $pgEnvironment = @{}
 foreach ($entry in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)) {
@@ -126,127 +135,6 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
         projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
         disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
         isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true; rehearsalToolCommit=$head
-        rehearsalTargetVersion=14; v14RehearsalVerified=$true; verificationChecksPassed=13
-        testedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
-    }
-    $evidence | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $input.Output -Encoding UTF8
-    Write-Host 'Restored V12, rehearsed V13/V14 twice and passed all 13 checks in a disposable database.'
-    Write-Host 'Restore evidence saved outside the repository. No shared database was modified.'
-} finally {
-    try {
-        if ($cluster) { Stop-SbIsolatedPostgres -Cluster $cluster }
-    } finally {
-    foreach ($entry in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)) {
-        Remove-Item -LiteralPath ('Env:'+$entry.Name) -ErrorAction SilentlyContinue
-    }
-    foreach ($name in $pgEnvironment.Keys) {
-        Set-Item -LiteralPath ('Env:'+$name) -Value $pgEnvironment[$name]
-    }
-    }
-}
-) {
-        throw 'Cannot identify checked-out restore rehearsal revision.'
-    }
-    # Backups are pinned to their original commit. A later tools-only fix may
-    # run against the same application/migration bytes, never a changed release.
-    $reviewedPaths = @(
-        'servisimibul-backend',
-        '.mvn',
-        'mvnw.cmd',
-        'docs/10_MIGRATION_VERIFICATION.sql',
-        'scripts/WindowsDevelopmentSupport.ps1',
-        'scripts/BackupRestoreSupport.ps1'
-    )
-    if ($head -cne $backup.releaseCommit) {
-        & git -C $Root merge-base --is-ancestor $backup.releaseCommit HEAD
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Backup release commit must be an ancestor of the restore rehearsal revision.'
-        }
-        & git -C $Root diff --quiet $backup.releaseCommit HEAD -- @reviewedPaths
-        if ($LASTEXITCODE -ne 0) {
-            throw 'Application, migration, runtime support, or verification SQL changed since backup; a new backup/review is required.'
-        }
-    }
-    & git -C $Root diff --quiet HEAD -- @reviewedPaths
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Reviewed application and migration inputs have local changes.'
-    }
-    return [pscustomobject]@{ Backup=$backup; Archive=$archivePath; Hash=$hash; Output=$outputPath }
-}
-
-function Invoke-SbOps01DisposableMigration {
-    param($Cluster,$JavaRuntime,[string]$TariffDir)
-    $envMap = @{
-        JAVA_HOME=$JavaRuntime.Home; SPRING_PROFILES_ACTIVE='migration'
-        SB_DB_JDBC_URL=$Cluster.RuntimeJdbcUrl; SB_DB_USER=$Cluster.RuntimeUser; SB_DB_PASSWORD=$Cluster.RuntimePassword
-        SPRING_DATASOURCE_URL=$Cluster.RuntimeJdbcUrl; SPRING_DATASOURCE_USERNAME=$Cluster.RuntimeUser; SPRING_DATASOURCE_PASSWORD=$Cluster.RuntimePassword
-        SB_DB_MIGRATION_JDBC_URL=$Cluster.AdminJdbcUrl; SB_DB_MIGRATION_USER=$Cluster.AdminUser; SB_DB_MIGRATION_PASSWORD=$Cluster.AdminPassword
-        SPRING_FLYWAY_URL=$Cluster.AdminJdbcUrl; SPRING_FLYWAY_USER=$Cluster.AdminUser; SPRING_FLYWAY_PASSWORD=$Cluster.AdminPassword
-        SB_FLYWAY_ENABLED='true'; SPRING_FLYWAY_ENABLED='true'; SPRING_FLYWAY_TARGET=$null
-        SPRING_JPA_HIBERNATE_DDL_AUTO='validate'; SPRING_SQL_INIT_MODE='never'
-        SB_ADMIN_BOOTSTRAP_ENABLED='false'; SERVISIMIBUL_ADMIN_BOOTSTRAP_ENABLED='false'
-        SB_ADMIN_1_EMAIL=$null; SB_ADMIN_1_PASSWORD=$null; SB_ADMIN_2_EMAIL=$null; SB_ADMIN_2_PASSWORD=$null
-        SB_MAIL_ENABLED='false'; SERVISIMIBUL_EMAIL_ENABLED='false'; SB_DEMAND_FEEDBACK_SCHEDULER_ENABLED='false'
-        SB_TARIFF_STORAGE_DIR=$TariffDir
-    }
-    $prior = Set-SbTemporaryEnvironment -Values $envMap
-    try {
-        Push-Location $backendDirectory
-        try {
-            & '.\mvnw.cmd' --batch-mode '-Dspring-boot.run.profiles=migration' '-Dspring-boot.run.arguments=--spring.main.web-application-type=none' spring-boot:run
-            if ($LASTEXITCODE -ne 0) { throw 'Disposable migration rehearsal failed; shared Supabase was not modified.' }
-        } finally { Pop-Location }
-    } finally { Restore-SbEnvironment -Previous $prior }
-}
-
-$input = Assert-SbOps01RestoreInput -InputPath $BackupEvidencePath -OutputPath $EvidenceOutputPath -Root $repositoryRoot
-$tools = Resolve-SbPostgres17Tools -PostgresBin $PostgresBin
-$java = Resolve-SbJavaRuntime -RequestedHome $JavaHome
-$list = @(& $tools.PgRestore '--list' $input.Archive 2>&1)
-if ($LASTEXITCODE -ne 0 -or @($list | Where-Object { [string]$_ -match '^;[[:space:]]*Format: CUSTOM' }).Count -ne 1) {
-    throw 'Backup must be a readable PostgreSQL custom-format archive.'
-}
-$pgEnvironment = @{}
-foreach ($entry in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)) {
-    $pgEnvironment[$entry.Name] = $entry.Value
-    Remove-Item -LiteralPath ('Env:'+$entry.Name) -ErrorAction SilentlyContinue
-}
-$cluster=$null
-try {
-    $cluster=Start-SbIsolatedPostgres -Tools $tools
-    Assert-SbDisposableClusterIdentity -Cluster $cluster
-    $identifier=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql 'SELECT system_identifier FROM pg_control_system();' | Select-Object -Last 1).ToString().Trim()
-    if ($identifier -cnotmatch '^[0-9]{10,30}$' -or $identifier -ceq $input.Backup.sourceSystemIdentifier) {
-        throw 'Could not prove a separate disposable PostgreSQL system identity.'
-    }
-    $env:PGPASSWORD=$cluster.AdminPassword
-    $null=@(& $tools.PgRestore '--exit-on-error' '--single-transaction' '--no-owner' '--host=127.0.0.1' "--port=$($cluster.Port)" "--username=$($cluster.AdminUser)" "--dbname=$($cluster.Database)" '--schema=public' $input.Archive 2>&1)
-    if ($LASTEXITCODE -ne 0) { throw 'Restore into disposable PostgreSQL failed. No live target was modified.' }
-    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-    Assert-SbDisposableClusterIdentity -Cluster $cluster
-    $sql=@'
-SELECT coalesce(string_agg(version,',' ORDER BY installed_rank),'none') || '|' ||
-(SELECT count(*) FROM public.flyway_schema_history WHERE NOT success)
-FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
-'@
-    $history=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
-    if ($history -cne '1,2,3,4,5,6,7,8,9,10,11,12|0') { throw 'Restored V12 Flyway history is inconsistent.' }
-    Write-Host 'V12 restoration verified in disposable PostgreSQL.'
-
-    $tariffs=Join-Path $cluster.Root 'tariffs'
-    $null=New-Item -ItemType Directory -Path $tariffs
-    Invoke-SbOps01DisposableMigration -Cluster $cluster -JavaRuntime $java -TariffDir $tariffs
-    Invoke-SbOps01DisposableMigration -Cluster $cluster -JavaRuntime $java -TariffDir $tariffs
-    $final=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
-    if ($final -cne '1,2,3,4,5,6,7,8,9,10,11,12,13,14|0') { throw 'V14 rehearsal produced unexpected history.' }
-    $endpoint=[pscustomobject]@{Host='127.0.0.1';Port=$cluster.Port;Database=$cluster.Database;User=$cluster.AdminUser;SslMode=$null}
-    $env:PGPASSWORD=$cluster.AdminPassword
-    Assert-SbPostMigrationVerification -Endpoint $endpoint -Client $tools.Psql -VerificationFile (Join-Path $repositoryRoot 'docs\10_MIGRATION_VERIFICATION.sql')
-    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-    $evidence=[ordered]@{
-        projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
-        disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
-        isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true
         rehearsalTargetVersion=14; v14RehearsalVerified=$true; verificationChecksPassed=13
         testedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
     }
