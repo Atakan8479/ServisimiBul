@@ -12,7 +12,7 @@ function Assert-SbCondition {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw $Message }
 }
-foreach ($scriptPath in @($path, $supportPath, $restoreEvidencePath, $backupScriptPath)) {
+foreach ($scriptPath in @($path, $supportPath, $restoreEvidencePath, $backupScriptPath, (Join-Path $PSScriptRoot 'Test-SupabaseMigration.LockIntegration.ps1'))) {
     $tokens=$null; $errors=$null
     $ast=[System.Management.Automation.Language.Parser]::ParseFile($scriptPath,[ref]$tokens,[ref]$errors)
     Assert-SbCondition ($null-ne$ast -and $errors.Count-eq 0) "PowerShell parsing failed for $scriptPath."
