@@ -55,14 +55,16 @@ public interface DemandSupportRepository extends JpaRepository<DemandSupport, UU
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
-              and support.parent.emailVerifiedAt is not null
+              and (:parentVerificationRequired = false
+                   or support.parent.emailVerifiedAt is not null)
               and ((:offersMorning = true and support.needsMorning = true)
                    or (:offersAfternoon = true and support.needsAfternoon = true))
             """)
     List<DemandSupport> findEligibleForPublication(
             @Param("demandId") UUID demandId,
             @Param("offersMorning") boolean offersMorning,
-            @Param("offersAfternoon") boolean offersAfternoon
+            @Param("offersAfternoon") boolean offersAfternoon,
+            @Param("parentVerificationRequired") boolean parentVerificationRequired
     );
 
     @Query("""
@@ -75,9 +77,13 @@ public interface DemandSupportRepository extends JpaRepository<DemandSupport, UU
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
-              and support.parent.emailVerifiedAt is not null
+              and (:parentVerificationRequired = false
+                   or support.parent.emailVerifiedAt is not null)
             """)
-    long countEligibleByDemandId(@Param("demandId") UUID demandId);
+    long countEligibleByDemandId(
+            @Param("demandId") UUID demandId,
+            @Param("parentVerificationRequired") boolean parentVerificationRequired
+    );
 
     boolean existsByDemandIdAndStatus(UUID demandId, DemandSupportStatus status);
 

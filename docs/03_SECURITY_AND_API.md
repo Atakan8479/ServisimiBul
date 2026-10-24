@@ -19,7 +19,15 @@ Password recovery uses the same non-enumerating response rule. Reset tokens are 
 
 Exactly two initial admins are created by an explicitly enabled, one-shot backend bootstrap command using temporary environment credentials. It is not exposed over HTTP, refuses any public ADMIN registration path, requires exactly two configured admin identities, does not log secrets, and does not replace an existing admin password when rerun.
 
-`PARENT` is a distinct authenticated role with no operator or admin authority. There is no public parent-registration endpoint in REQ-01. The temporary synthetic parent bootstrap is available only under the `local` profile and must verify both an explicit disposable-database flag and the isolated test-harness database marker before writing a hashed, email-verified account.
+`PARENT` is a distinct authenticated role with no operator or admin authority. REQ-01 introduced no public parent-registration endpoint. Issue #100 adds `POST /api/v1/auth/parent/register`, accepting only `email` and `password` and assigning `PARENT` server-side. It reuses the operator registration email normalization, password policy, generic duplicate response, CSRF protection, registration-IP rate limit, and BCrypt storage, but creates no operator profile.
+
+Parent enrollment and verification are separate policies. `SB_PARENT_REGISTRATION_ENABLED` defaults to `false`; `SB_PARENT_EMAIL_VERIFICATION_REQUIRED` defaults to `true`. When parent verification is required, registration uses the existing hashed, single-use 24-hour verification-token and email flow, and unverified parents cannot authenticate. When it is explicitly disabled, registration generates no token, sends no email, leaves `email_verified_at` NULL, and permits only enabled PARENT accounts to authenticate. OPERATOR and ADMIN verification behavior is unchanged. If verification is later enabled, an unverified persisted parent principal is rejected on the next request and its session is invalidated; the parent must complete verification and sign in again.
+
+The controlled no-email pilot configuration is exactly `SB_PARENT_REGISTRATION_ENABLED=true`, `SB_PARENT_EMAIL_VERIFICATION_REQUIRED=false`, and `SB_MAIL_ENABLED=false`. For Windows isolated development, set those process variables before running `dev.ps1`. For persistent shared-data development, put them in the ignored `servisimibul-backend/.env` before running `dev-supabase.ps1`; that launcher writes real application data to shared Supabase but does not migrate it. Never commit the real `.env`, and do not change `SB_EMAIL_VERIFICATION_REQUIRED` as part of the PARENT policy.
+
+An unverified parent email is a login identifier only, not evidence that the user owns the mailbox. Someone may register another person's address, and the rightful owner may be unable to claim it while generic duplicate responses prevent enumeration. Existing password recovery deliberately serves only verified accounts, so an unverified parent who loses the password has no email recovery path. Do not send personal information or security decisions to these addresses. Before broader launch, configure and review email delivery, enable parent verification, require existing unverified parents to complete the normal verification flow, and retain the request-time session enforcement during the transition.
+
+The temporary synthetic parent bootstrap remains available only under the `local` profile and must verify both an explicit disposable-database flag and the isolated test-harness database marker before writing a hashed, email-verified account.
 
 Demand list/detail reads are anonymous and return aggregate participation plus only the signed-in parent's own support when the principal is a `PARENT`. They never return creator/supporter identities, emails, student data, or pickup addresses. Demand, support, and feedback mutations require a `PARENT` session and CSRF; parent identity always comes from the authenticated session.
 
@@ -90,6 +98,7 @@ Creating a report never changes target visibility or lifecycle. Only an explicit
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
 - `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`
+- `POST /api/v1/auth/parent/register` — `{email,password}`; role-fixed `PARENT`, generic `202 Accepted`, separately configuration-gated
 - `POST /api/v1/auth/verify-email` — `{token}`
 - `POST /api/v1/auth/resend-verification`
 - `POST /api/v1/auth/forgot-password` — `{email}`; generic `202 Accepted`

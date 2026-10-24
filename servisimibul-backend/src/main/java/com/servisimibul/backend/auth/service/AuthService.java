@@ -1,11 +1,15 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
+import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
+import com.servisimibul.backend.auth.config.ParentRegistrationProperties;
 import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.exception.EmailUnavailableException;
+import com.servisimibul.backend.auth.exception.ParentRegistrationUnavailableException;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
 import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
@@ -18,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -27,6 +32,8 @@ public class AuthService {
 
     private final AuthInputValidator validator;
     private final EmailVerificationProperties emailVerification;
+    private final ParentEmailVerificationProperties parentEmailVerification;
+    private final ParentRegistrationProperties parentRegistration;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
     private final InMemoryRateLimiter rateLimiter;
@@ -62,6 +69,33 @@ public class AuthService {
             created = false;
         }
         if (created && verificationRequired) {
+            safelySend(() -> emailSender.sendVerification(email, rawToken));
+        }
+    }
+
+    public void registerParent(ParentRegisterRequest request, String remoteAddress) {
+        if (!parentRegistration.enabled()
+                || (parentEmailVerification.required() && !emailSender.isAvailable())) {
+            throw new ParentRegistrationUnavailableException();
+        }
+
+        String email = validator.email(request.email());
+        String password = validator.password(request.password(), "password");
+        rateLimiter.requireAllowance(RateLimitRule.REGISTRATION_IP, remoteAddress);
+
+        String rawToken = parentEmailVerification.required() ? tokenGenerator.generate() : null;
+        boolean created;
+        try {
+            created = persistence.registerParent(
+                    email,
+                    password,
+                    Optional.ofNullable(rawToken).map(tokenHasher::hash),
+                    now()
+            );
+        } catch (DataIntegrityViolationException duplicateRegistration) {
+            created = false;
+        }
+        if (created && rawToken != null) {
             safelySend(() -> emailSender.sendVerification(email, rawToken));
         }
     }
