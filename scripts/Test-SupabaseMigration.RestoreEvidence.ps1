@@ -133,11 +133,14 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     Write-Host 'Restored V12, rehearsed V13/V14 twice and passed all 13 checks in a disposable database.'
     Write-Host 'Restore evidence saved outside the repository. No shared database was modified.'
 } finally {
-    if ($cluster) { Stop-SbIsolatedPostgres -Cluster $cluster }
+    try {
+        if ($cluster) { Stop-SbIsolatedPostgres -Cluster $cluster }
+    } finally {
     foreach ($entry in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)) {
         Remove-Item -LiteralPath ('Env:'+$entry.Name) -ErrorAction SilentlyContinue
     }
     foreach ($name in $pgEnvironment.Keys) {
         Set-Item -LiteralPath ('Env:'+$name) -Value $pgEnvironment[$name]
+    }
     }
 }
