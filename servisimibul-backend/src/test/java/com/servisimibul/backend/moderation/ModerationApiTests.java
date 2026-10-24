@@ -19,7 +19,9 @@ import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -54,6 +56,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ModerationApiTests {
 
     @Autowired private MockMvc mockMvc;
@@ -69,6 +72,13 @@ class ModerationApiTests {
     @Autowired private ModerationCaseRepository caseRepository;
     @Autowired private ContentReportRepository reportRepository;
     @Autowired private ModerationAuditEventRepository auditRepository;
+
+    @AfterAll
+    void removeBootstrapAdmins() {
+        userRepository.findByEmail("moderation-admin-one@example.com").ifPresent(userRepository::delete);
+        userRepository.findByEmail("moderation-admin-two@example.com").ifPresent(userRepository::delete);
+        userRepository.flush();
+    }
 
     @Test
     void reportRequiresEligibleAccountAndCsrfWithoutChangingVisibility() throws Exception {
