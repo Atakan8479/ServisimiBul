@@ -36,3 +36,7 @@ Official reference: https://supabase.com/docs/guides/platform/backups
 - [ ] Fresh write-quiescent backup, verified digest and isolated V12→V15 replay
 - [ ] Independently approved downtime/window and tested stop/rollback decision
 - [ ] Reviewed release runner; production `-Apply` remains disabled until all are met
+
+## Disposable lock contention test (Windows PostgreSQL 17)
+
+Run `powershell.exe -NoProfile -File .\\scripts\\Test-SupabaseMigration.LockIntegration.ps1` from the repository checkout with PostgreSQL 17 tools available. It starts a fresh loopback-only disposable cluster, holds a session-level advisory lock in a dedicated `psql` process and checks from a second connection that a nonblocking acquisition is denied. The child process and cluster are cleaned up when the test exits. This is a **cooperative-lock feasibility test**, not a production exclusive gate, and it does not test write freezing or Flyway's own locking. It has not been wired into production operations.
