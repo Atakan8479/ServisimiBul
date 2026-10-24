@@ -24,9 +24,10 @@ describe('public operator discovery', () => {
 
     renderHome()
 
-    expect(await screen.findByRole('option', { name: 'İstanbul' }, { timeout: 4000 })).toBeInTheDocument()
+    const istanbul = await screen.findByRole('option', { name: 'İstanbul' })
+    expect(istanbul).toBeInTheDocument()
     expect(attempts).toBeGreaterThanOrEqual(2)
-    expect(screen.queryByText('İller yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('finds operators across districts and exposes only the public phone', async () => {
