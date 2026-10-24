@@ -3,38 +3,144 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+$repositoryRoot = Split-Path -Parent $PSScriptRoot
 $path = Join-Path $PSScriptRoot 'migrate-supabase.ps1'
-$source = Get-Content -Raw -LiteralPath $path
-$tokens = $null
-$errors = $null
-$ast = [System.Management.Automation.Language.Parser]::ParseFile(
-    $path, [ref]$tokens, [ref]$errors
-)
-if ($errors.Count -ne 0) {
-    throw ('Migration launcher has PowerShell syntax errors: ' + $errors.Count)
-}
+$supportPath = Join-Path $PSScriptRoot 'SupabaseMigrationSupport.ps1'
 function Assert-SbCondition {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw $Message }
 }
-Assert-SbCondition ($null -ne $ast) 'PowerShell parsing failed.'
-Assert-SbCondition ($source.Contains("if (`$Apply) {")) 'Shared apply must be explicitly blocked in this first increment.'
-Assert-SbCondition ($source.Contains('BEGIN READ ONLY;')) 'Preflight queries must use read-only transactions.'
-Assert-SbCondition ($source.Contains("PGPASSWORD")) 'Preflight must use process-scoped PostgreSQL secret.'
-Assert-SbCondition (-not $source.Contains('baselineOnMigrate=true')) 'Unsafe Flyway baseline setting detected.'
-Assert-SbCondition (-not $source.Contains('flyway repair')) 'Unsafe Flyway repair detected.'
-Assert-SbCondition (-not $source.Contains('pg_dump --')) 'Do not perform an unreviewed backup automatically.'
-Assert-SbCondition ($source.Contains('V13/V14')) 'Migration mismatch should be documented.'
-
-# Prove -Apply fails before target/credentials are inspected and without network access.
-$previousPassword = Get-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-try {
-    Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
-    $caught = $null
-    try { & $path -Apply 2>&1 | Out-Null } catch { $caught = $_ }
-    Assert-SbCondition ($null -ne $caught) '-Apply did not fail closed.'
-    Assert-SbCondition ($caught.Exception.Message -match 'not implemented or authorized') '-Apply failure was not the intended safety gate.'
-} finally {
-    if ($previousPassword) { $env:PGPASSWORD = $previousPassword.Value }
+foreach ($scriptPath in @($path, $supportPath)) {
+    $tokens=$null; $errors=$null
+    $ast=[System.Management.Automation.Language.Parser]::ParseFile($scriptPath,[ref]$tokens,[ref]$errors)
+    Assert-SbCondition ($null-ne$ast -and $errors.Count-eq 0) "PowerShell parsing failed for $scriptPath."
 }
-Write-Host 'OPS-01 offline PowerShell syntax and safety tests passed.'
+
+. $supportPath
+$projectRef='abcdefghijklmnopqrst'
+$directMigration=ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres?sslmode=verify-full" -ProjectRef $projectRef -User postgres -Role migration
+$poolerMigration=ConvertTo-SbSupabaseEndpoint -JdbcUrl 'jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require' -ProjectRef $projectRef -User "postgres.$projectRef" -Role migration
+$directRuntime=ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres?sslmode=require" -ProjectRef $projectRef -User servisimibul_app -Role runtime
+$poolerRuntime=ConvertTo-SbSupabaseEndpoint -JdbcUrl 'jdbc:postgresql://aws-0-eu-central-1.pooler.supabase.com:5432/postgres?sslmode=require' -ProjectRef $projectRef -User "servisimibul_app.$projectRef" -Role runtime
+Assert-SbSameDatabaseTarget $directMigration $directRuntime
+Assert-SbSameDatabaseTarget $poolerMigration $poolerRuntime
+
+function Assert-Rejected { param([scriptblock]$Action,[string]$Pattern)
+    $caught=$null;try{& $Action}catch{$caught=$_}
+    Assert-SbCondition ($null-ne$caught -and $caught.Exception.Message-match$Pattern) "Expected rejection matching $Pattern."
+    Assert-SbCondition (-not $caught.Exception.Message.Contains('synthetic-password')) 'A failure exposed a password.'
+}
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/other?sslmode=require" -ProjectRef $projectRef -User postgres -Role migration } '/postgres'
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres" -ProjectRef $projectRef -User postgres -Role migration } 'sslmode'
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres?sslmode=require" -ProjectRef $projectRef -User servisimibul_app -Role migration } 'identity'
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl 'jdbc:postgresql://db.wrongproject00000000.supabase.co:5432/postgres?sslmode=require' -ProjectRef $projectRef -User postgres -Role migration } 'project direct'
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://postgres:synthetic-password@db.$projectRef.supabase.co:5432/postgres?sslmode=require" -ProjectRef $projectRef -User postgres -Role migration } 'credentials'
+Assert-Rejected { ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres?sslmode=disable&sslmode=require" -ProjectRef $projectRef -User postgres -Role migration } 'must not be repeated'
+Assert-SbCondition ($directMigration.SslMode-ceq'verify-full' -and $poolerMigration.SslMode-ceq'require') 'Validated TLS mode was not retained for psql.'
+
+$clientFixture=Join-Path ([IO.Path]::GetTempPath()) ("servisimibul-psql-fixture-"+[guid]::NewGuid().ToString('N')+'.cmd')
+$savedSslMode=Get-Item Env:PGSSLMODE -ErrorAction SilentlyContinue
+try{
+    [IO.File]::WriteAllText($clientFixture,"@echo %PGSSLMODE%`r`n@exit /b 0`r`n")
+    $env:PGSSLMODE='disable'
+    $tlsOutput=Invoke-SbMigrationSql -Endpoint $poolerMigration -Sql 'SELECT 1;' -Client $clientFixture
+    Assert-SbCondition ($tlsOutput-ceq'require') 'psql did not receive the validated TLS mode.'
+    Assert-SbCondition ($env:PGSSLMODE-ceq'disable') 'SQL verification did not restore the caller TLS mode.'
+}finally{
+    if($savedSslMode){$env:PGSSLMODE=$savedSslMode.Value}else{Remove-Item Env:PGSSLMODE -ErrorAction SilentlyContinue}
+    Remove-Item -LiteralPath $clientFixture -Force -ErrorAction SilentlyContinue
+}
+
+$artifacts=@(Get-SbMigrationArtifacts -RepositoryRoot $repositoryRoot)
+Assert-SbCondition ($artifacts.Count-eq 14 -and $artifacts[12].Version-ceq'13' -and $artifacts[13].Version-ceq'14') 'Pending migrations are not ordered V13 then V14.'
+Assert-SbCondition (@($artifacts|Where-Object{$null-eq$_.Checksum}).Count-eq 0) 'A repository migration checksum is missing.'
+
+$historyLines=@('IDENTITY|postgres|postgres|170011|f|123456789012345678|t','RUNTIME|servisimibul_app|f|f|f|f|f')
+for($index=0;$index-lt 12;$index++){$historyLines += "HISTORY|$($index+1)|$($artifacts[$index].Version)|$($artifacts[$index].Script)|$($artifacts[$index].Checksum)|t"}
+$validPreflight=(@($historyLines)+@('COLLISIONS|0','ACTIVITY|0'))-join"`n"
+$script:preflightOutput=$validPreflight
+function Invoke-SbMigrationSql { return $script:preflightOutput }
+$verified=Invoke-SbSupabaseMigrationPreflight -Endpoint $directMigration -RuntimeEndpoint $directRuntime -ExpectedSystemIdentifier '123456789012345678' -Artifacts $artifacts -Client 'unused'
+Assert-SbCondition ($verified.Version-eq 12) 'Valid V12 preflight was rejected.'
+
+$savedPassword=Get-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+try{
+    $env:PGPASSWORD='migration-marker'
+    function Invoke-SbMigrationSql { throw 'sanitized synthetic connection failure' }
+    Assert-Rejected { Assert-SbRuntimeConnection -Endpoint $directRuntime -Password 'synthetic-password' -Client unused } 'sanitized'
+    Assert-SbCondition ($env:PGPASSWORD-ceq'migration-marker') 'Runtime verification did not restore the migration password after failure.'
+}finally{
+    if($savedPassword){$env:PGPASSWORD=$savedPassword.Value}else{Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue}
+}
+function Invoke-SbMigrationSql { return $script:preflightOutput }
+
+$invalidCases=@(
+    @{Name='wrong PostgreSQL version';Value=$validPreflight.Replace('|170011|','|160011|');Pattern='PostgreSQL version'},
+    @{Name='missing history';Value=($validPreflight -split "`n"|Where-Object{$_ -notlike 'HISTORY|12|*'})-join"`n";Pattern='exactly successful'},
+    @{Name='checksum mismatch';Value=$validPreflight.Replace("|$($artifacts[0].Checksum)|t","|123|t");Pattern='history mismatch'},
+    @{Name='unexpected migration';Value=$validPreflight+"`nHISTORY|13|13|V13__unexpected.sql|1|t";Pattern='exactly successful'},
+    @{Name='target collision';Value=$validPreflight.Replace('COLLISIONS|0','COLLISIONS|1');Pattern='collision'},
+    @{Name='concurrent activity';Value=$validPreflight.Replace('ACTIVITY|0','ACTIVITY|1');Pattern='Concurrent'}
+)
+foreach($case in $invalidCases){$script:preflightOutput=$case.Value;Assert-Rejected { Invoke-SbSupabaseMigrationPreflight -Endpoint $directMigration -RuntimeEndpoint $directRuntime -ExpectedSystemIdentifier '123456789012345678' -Artifacts $artifacts -Client unused } $case.Pattern}
+$script:preflightOutput=$validPreflight
+Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit ('0'*40) -ConfirmProjectRef $projectRef -Preflight $verified } 'reviewed release commit|Checked-out HEAD'
+
+$evidenceDirectory=Join-Path ([IO.Path]::GetTempPath()) ("servisimibul-ops01-evidence-"+[guid]::NewGuid().ToString('N'))
+New-Item -ItemType Directory -Path $evidenceDirectory|Out-Null
+try{
+    $releaseCommit=(& git -C $repositoryRoot rev-parse HEAD).Trim()
+    $archivePath=Join-Path $evidenceDirectory 'backup.dump'
+    $backupPath=Join-Path $evidenceDirectory 'backup.json'
+    $restorePath=Join-Path $evidenceDirectory 'restore.json'
+    $approvalPath=Join-Path $evidenceDirectory 'approval.json'
+    [IO.File]::WriteAllText($archivePath,'synthetic disposable backup fixture')
+    $archiveHash=(Get-FileHash -Algorithm SHA256 -LiteralPath $archivePath).Hash.ToLowerInvariant()
+
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -Preflight $verified } 'Backup evidence file is required'
+
+    @{
+        projectRef=$projectRef;database='postgres';postgresMajor=17;flywayVersion=12
+        archivePath=$archivePath;archiveSha256=('0'*64)
+    }|ConvertTo-Json|Set-Content -LiteralPath $backupPath -Encoding UTF8
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -Preflight $verified } 'Backup checksum'
+
+    @{
+        projectRef=$projectRef;database='postgres';postgresMajor=17;flywayVersion=12
+        archivePath=$archivePath;archiveSha256=$archiveHash
+    }|ConvertTo-Json|Set-Content -LiteralPath $backupPath -Encoding UTF8
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -Preflight $verified } 'Restore test evidence file is required'
+
+    @{
+        isolated=$true;postgresMajor=17;flywayVersion=12;verificationChecksPassed=13
+        backupSha256=$archiveHash
+    }|ConvertTo-Json|Set-Content -LiteralPath $restorePath -Encoding UTF8
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -RestoreEvidencePath $restorePath -Preflight $verified } 'Approval evidence file is required'
+}finally{
+    Remove-Item -LiteralPath $evidenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+$source=(Get-Content -Raw $path)+(Get-Content -Raw $supportPath)
+foreach($forbidden in @('baselineOnMigrate=true','flyway repair','flyway clean','--clean','SB_ADMIN_BOOTSTRAP_ENABLED=true')){Assert-SbCondition (-not$source.Contains($forbidden)) "Forbidden operation detected: $forbidden"}
+Assert-SbCondition ($source.Contains('BEGIN TRANSACTION READ ONLY;')) 'Preflight is not explicitly read-only.'
+Assert-SbCondition ($source.Contains('external approval mechanism')) 'Shared apply does not retain its final fail-closed gate.'
+Assert-SbCondition ($source.Contains('verificationChecksPassed')) 'Restore verification evidence is not required.'
+Assert-SbCondition ($source.Contains('Concurrent migration-like')) 'Concurrent activity is not rejected.'
+
+if($PSVersionTable.PSEdition-eq'Core'){
+    $lockJob=Start-Job -ScriptBlock {
+        param($SupportPath,$Ref)
+        . $SupportPath
+        $held=Enter-SbMigrationMutex $Ref
+        try{Write-Output 'LOCKED';Start-Sleep -Seconds 8}finally{Exit-SbMigrationMutex $held}
+    } -ArgumentList $supportPath,$projectRef
+    try{
+        $deadline=[DateTimeOffset]::UtcNow.AddSeconds(10);$locked=$false
+        while(-not$locked -and [DateTimeOffset]::UtcNow-lt$deadline){$locked=@(Receive-Job $lockJob -Keep|Where-Object{$_-eq'LOCKED'}).Count-gt 0;if(-not$locked){Start-Sleep -Milliseconds 100}}
+        Assert-SbCondition $locked 'Concurrent-lock test process did not acquire its mutex.'
+        Assert-Rejected { $null=Enter-SbMigrationMutex $projectRef } 'already holds'
+    }finally{Stop-Job $lockJob -ErrorAction SilentlyContinue;Remove-Job $lockJob -Force -ErrorAction SilentlyContinue}
+}
+$mutex=Enter-SbMigrationMutex $projectRef;Exit-SbMigrationMutex $mutex
+
+Write-Host 'OPS-01 offline endpoint, artifact, evidence and fail-closed safety tests passed.'
