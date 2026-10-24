@@ -215,7 +215,7 @@ function Assert-SbApplyEvidence {
     if(-not$restoreTool){$restoreTool=Get-Command pg_restore -ErrorAction SilentlyContinue}
     if(-not$restoreTool){throw 'PostgreSQL pg_restore is required to inspect backup archive.'}
     $archiveList=@(& $restoreTool.Source --list $backup.archivePath 2>&1)
-    if($LASTEXITCODE-ne 0 -or @($archiveList|Where-Object{[string]$_ -match '^;[[:space:]]*Format: CUSTOM'}).Count-ne 1){
+    if($LASTEXITCODE-ne 0 -or -not (Get-SbBackupArchiveTocStatus -Lines ([string[]]$archiveList)).ValidFormat){
         throw 'Backup archive is not a readable PostgreSQL custom-format archive.'
     }
     $restore=Read-SbEvidenceJson $RestoreEvidencePath 'Restore test'
@@ -223,15 +223,15 @@ function Assert-SbApplyEvidence {
         throw 'Disposable restore-test evidence is missing or inconsistent.'
     }
     # V12 restore verification and V15 rehearsal are distinct evidence phases:
-    # the V14-only 13-check verifier cannot pass on an unmodified V12 restore.
+    # the V15-only 13-check verifier cannot pass on an unmodified V12 restore.
     if([string]$restore.sourceSystemIdentifier-cne[string]$Preflight.SystemIdentifier -or
        [string]::IsNullOrWhiteSpace([string]$restore.disposableSystemIdentifier) -or
        [string]$restore.disposableSystemIdentifier-ceq[string]$Preflight.SystemIdentifier -or
        [int]$restore.rehearsalTargetVersion-ne 15 -or
        -not$restore.v12RestoreVerified -or -not$restore.v15RehearsalVerified){
-        throw 'Restore evidence must identify a separate disposable database, verified V12 restore, and V14 migration rehearsal.'
+        throw 'Restore evidence must identify a separate disposable database, verified V12 restore, and V15 migration rehearsal.'
     }
-    $approval=Read-SbEvidenceJson $ApprovalEvidencePath 'Approval';if($approval.projectRef-cne$ProjectRef -or $approval.releaseCommit-cne$ReleaseCommit -or $approval.authorization-cne'APPLY_V13_V14' -or [string]::IsNullOrWhiteSpace($approval.approvedBy) -or ([string]$approval.backupSha256).ToLowerInvariant()-cne$hash){throw 'Approval evidence does not bind the target, release, and verified backup.'}
+    $approval=Read-SbEvidenceJson $ApprovalEvidencePath 'Approval';if($approval.projectRef-cne$ProjectRef -or $approval.releaseCommit-cne$ReleaseCommit -or $approval.authorization-cne'APPLY_V13_V14_V15' -or [string]::IsNullOrWhiteSpace($approval.approvedBy) -or ([string]$approval.backupSha256).ToLowerInvariant()-cne$hash){throw 'Approval evidence does not bind the target, release, and verified backup.'}
     if([DateTimeOffset]::Parse($approval.expiresAtUtc)-le[DateTimeOffset]::UtcNow){throw 'Approval evidence has expired.'}
     if($Preflight.Version-ne 12){throw 'Apply requires a fresh successful V12 preflight.'}
 }
