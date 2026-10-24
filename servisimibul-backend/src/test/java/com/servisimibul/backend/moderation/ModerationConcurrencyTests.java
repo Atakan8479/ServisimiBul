@@ -18,6 +18,7 @@ import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.moderation.dto.ModerationDtos.CreateReportRequest;
 import com.servisimibul.backend.moderation.dto.ModerationDtos.ReportReceipt;
 import com.servisimibul.backend.moderation.service.ModerationService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,10 +48,53 @@ class ModerationConcurrencyTests {
     @Autowired private DemandRepository demandRepository;
     @Autowired private DemandSupportRepository supportRepository;
     @Autowired private ContentReportRepository reportRepository;
+    @Autowired private ModerationCaseRepository caseRepository;
+    @Autowired private ModerationAuditEventRepository auditRepository;
+
+    private Setup setup;
+
+    @AfterEach
+    void cleanUpCommittedFixture() {
+        if (setup == null) {
+            return;
+        }
+        transactions.executeWithoutResult(ignored -> {
+            auditRepository.deleteAll();
+            auditRepository.flush();
+            reportRepository.deleteAll();
+            reportRepository.flush();
+            caseRepository.deleteAll();
+            caseRepository.flush();
+            supportRepository.deleteAll();
+            supportRepository.flush();
+            demandRepository.deleteById(setup.demandId());
+            demandRepository.flush();
+            schoolRepository.deleteById(setup.schoolId());
+            schoolRepository.flush();
+            neighborhoodRepository.deleteAllById(Set.of(
+                    setup.schoolNeighborhoodId(),
+                    setup.pickupNeighborhoodId()
+            ));
+            neighborhoodRepository.flush();
+            districtRepository.deleteAllById(Set.of(
+                    setup.schoolDistrictId(),
+                    setup.pickupDistrictId()
+            ));
+            districtRepository.flush();
+            provinceRepository.deleteById(setup.provinceId());
+            provinceRepository.flush();
+            userRepository.deleteAllById(Set.of(
+                    setup.creatorId(),
+                    setup.firstReporterId(),
+                    setup.secondReporterId()
+            ));
+            userRepository.flush();
+        });
+    }
 
     @Test
     void concurrentReportersCreateOneActiveCaseWithTwoReports() throws Exception {
-        Setup setup = transactions.execute(ignored -> createSetup());
+        setup = transactions.execute(ignored -> createSetup());
         assertThat(setup).isNotNull();
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -113,7 +157,18 @@ class ModerationConcurrencyTests {
                 Set.of(SupportReason.OTHER)
         ));
         demandRepository.flush();
-        return new Setup(demand.getId(), first.getId(), second.getId());
+        return new Setup(
+                demand.getId(),
+                creator.getId(),
+                first.getId(),
+                second.getId(),
+                school.getId(),
+                schoolNeighborhood.getId(),
+                pickup.getId(),
+                schoolDistrict.getId(),
+                pickupDistrict.getId(),
+                province.getId()
+        );
     }
 
     private AppUser parent(String email) {
@@ -122,6 +177,17 @@ class ModerationConcurrencyTests {
         return userRepository.save(user);
     }
 
-    private record Setup(UUID demandId, UUID firstReporterId, UUID secondReporterId) {
+    private record Setup(
+            UUID demandId,
+            UUID creatorId,
+            UUID firstReporterId,
+            UUID secondReporterId,
+            UUID schoolId,
+            Long schoolNeighborhoodId,
+            Long pickupNeighborhoodId,
+            Long schoolDistrictId,
+            Long pickupDistrictId,
+            Long provinceId
+    ) {
     }
 }
