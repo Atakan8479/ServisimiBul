@@ -82,7 +82,7 @@ $tocWrongSchema=Get-SbBackupArchiveTocStatus -Lines @($tocFixture -replace 'TABL
 Assert-SbCondition (-not $tocWrongSchema.FlywayTable) 'Wrong-schema Flyway TOC was accepted.'
 
 $artifacts=@(Get-SbMigrationArtifacts -RepositoryRoot $repositoryRoot)
-Assert-SbCondition ($artifacts.Count-eq 14 -and $artifacts[12].Version-ceq'13' -and $artifacts[13].Version-ceq'14') 'Pending migrations are not ordered V13 then V14.'
+Assert-SbCondition ($artifacts.Count-eq 15 -and $artifacts[12].Version-ceq'13' -and $artifacts[13].Version-ceq'14' -and $artifacts[14].Version-ceq'15') 'Pending migrations are not ordered V13, V14, V15.'
 Assert-SbCondition (@($artifacts|Where-Object{$null-eq$_.Checksum}).Count-eq 0) 'A repository migration checksum is missing.'
 
 # Runtime role must match in both modes; direct requires server TLS.
@@ -142,7 +142,7 @@ Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -Projec
 $script:verificationFixture = ''
 function Invoke-SbMigrationSql { return $script:verificationFixture }
 $checkLabels = @(
- 'primary PostgreSQL 17 target','Flyway versions V1-V14 applied successfully',
+ 'primary PostgreSQL 17 target','Flyway versions V1-V15 applied successfully',
  'exact application table inventory','exact application sequence inventory',
  'RLS enabled on every application table','exact runtime RLS policies',
  'runtime role is restricted','runtime role has exact table privileges',
@@ -198,6 +198,17 @@ Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contain
 Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('CREATE ROLE supabase_admin NOLOGIN NOSUPERUSER')) 'Supabase admin role must not be privileged in the rehearsal.'
 Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('Assert-SbDisposableClusterIdentity -Cluster $Cluster')) 'Role provisioning must verify disposable cluster identity.'
 
+$v15Path=Join-Path $repositoryRoot 'servisimibul-backend/src/main/resources/db/migration/V15__harden_runtime_privileges.sql'
+$v15=Get-Content -Raw -LiteralPath $v15Path
+Assert-SbCondition ($v15.Contains('REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM servisimibul_app')) 'V15 must revoke legacy table grants.'
+Assert-SbCondition ($v15.Contains('REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM servisimibul_app')) 'V15 must revoke legacy sequence grants.'
+Assert-SbCondition ($v15.Contains('ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public')) 'V15 must revoke postgres default ACL grants.'
+Assert-SbCondition ($v15.Contains('public.flyway_schema_history is intentionally excluded') -or $v15.Contains('flyway_schema_history is intentionally excluded')) 'V15 must exclude Flyway history from runtime grants.'
+Assert-SbCondition (-not $v15.Contains('FROM service_role') -and -not $v15.Contains('FROM supabase_admin')) 'V15 must leave platform roles alone.'
+$verificationSource=Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'docs/10_MIGRATION_VERIFICATION.sql')
+Assert-SbCondition ($verificationSource.Contains('Flyway versions V1-V15 applied successfully')) 'V15 SQL history verification missing.'
+Assert-SbCondition ($verificationSource.Contains('no default runtime ACL')) 'V15 default ACL verification missing.'
+
 $restoreScript = Get-Content -Raw -LiteralPath $restoreEvidencePath
 Assert-SbCondition ($restoreScript.Contains('Get-SbBackupArchiveTocStatus')) 'Restore must validate the same archive TOC as the backup.'
 Assert-SbCondition ($restoreScript.Contains('FlywayTable') -and $restoreScript.Contains('FlywayData')) 'Restore must verify Flyway schema and history data.'
@@ -208,7 +219,7 @@ $restoreSource=Get-Content -Raw -LiteralPath $restoreEvidencePath
 Assert-SbCondition ($restoreSource.Contains('Assert-SbDisposableClusterIdentity')) 'Restore rehearsal must verify disposable target.'
 Assert-SbCondition ($restoreSource.Contains('Start-SbIsolatedPostgres')) 'Restore rehearsal must create isolated PostgreSQL.'
 Assert-SbCondition ($restoreSource.Contains('v12RestoreVerified')) 'V12 restore check missing.'
-Assert-SbCondition ($restoreSource.Contains('v14RehearsalVerified')) 'V14 rehearsal check missing.'
+Assert-SbCondition ($restoreSource.Contains('v15RehearsalVerified')) 'V15 rehearsal check missing.'
 Assert-SbCondition ($restoreSource.Contains('Assert-SbPostMigrationVerification')) '13 post-migration checks missing.'
 $source=(Get-Content -Raw $path)+(Get-Content -Raw $supportPath)
 foreach($forbidden in @('baselineOnMigrate=true','flyway repair','flyway clean','--clean','SB_ADMIN_BOOTSTRAP_ENABLED=true')){Assert-SbCondition (-not$source.Contains($forbidden)) "Forbidden operation detected: $forbidden"}
