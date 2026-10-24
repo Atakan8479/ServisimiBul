@@ -57,4 +57,20 @@ Assert-Condition (-not $launcher.Contains('Start-SbIsolatedPostgres')) `
 Assert-Condition (-not $launcher.Contains('Invoke-LocalMigration')) `
     'The shared launcher can invoke migrations.'
 
+Assert-Condition ($launcher.Contains('Wait-SbBackendReady -BackendProcess $backendProcess')) `
+    'Shared launcher must await backend readiness.'
+Assert-Condition ($launcher.Contains("SB_ADMIN_1_PASSWORD'] = $null")) `
+    'Shared launcher must clear admin bootstrap credentials.'
+$badUserRejected = $false
+try {
+    Assert-SbSharedRuntimeEnvironment -Values @{
+        SB_DB_JDBC_URL = 'jdbc:postgresql://db.example.internal:5432/postgres?sslmode=require'
+        SB_DB_USER = 'postgres'
+        SB_DB_PASSWORD = 'synthetic'
+    }
+} catch {
+    $badUserRejected = $_.Exception.Message -match 'SB_DB_USER'
+}
+Assert-Condition $badUserRejected 'Unsafe role validation must guide the user.'
+
 Write-Host 'Shared Supabase development launcher tests passed.'
