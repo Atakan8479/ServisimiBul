@@ -15,18 +15,25 @@ import {
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/client'
-import { login, registerOperator, verifyEmail } from './auth-api'
+import {
+  login,
+  registerOperator,
+  registerParent,
+  verifyEmail,
+} from './auth-api'
+
+const passwordSchema = z
+  .string()
+  .min(12, 'Şifre en az 12 karakter olmalıdır.')
+  .max(64, 'Şifre en fazla 64 karakter olabilir.')
+  .refine(
+    (value) => new TextEncoder().encode(value).length <= 72,
+    'Şifre UTF-8 olarak en fazla 72 bayt olabilir.',
+  )
 
 const registrationSchema = z.object({
   email: z.string().trim().email('Geçerli bir e-posta adresi girin.'),
-  password: z
-    .string()
-    .min(12, 'Şifre en az 12 karakter olmalıdır.')
-    .max(64, 'Şifre en fazla 64 karakter olabilir.')
-    .refine(
-      (value) => new TextEncoder().encode(value).length <= 72,
-      'Şifre UTF-8 olarak en fazla 72 bayt olabilir.',
-    ),
+  password: passwordSchema,
   businessName: z
     .string()
     .trim()
@@ -36,6 +43,11 @@ const registrationSchema = z.object({
       'İşletme adı en az 2 karakter olmalıdır.',
     ),
   contactPhone: z.string().trim().min(1, 'İletişim telefonu zorunludur.'),
+})
+
+const parentRegistrationSchema = z.object({
+  email: z.string().trim().email('Geçerli bir e-posta adresi girin.'),
+  password: passwordSchema,
 })
 
 const loginSchema = z.object({
@@ -49,6 +61,7 @@ const verificationSchema = z.object({
 })
 
 type RegistrationForm = z.infer<typeof registrationSchema>
+type ParentRegistrationForm = z.infer<typeof parentRegistrationSchema>
 type LoginForm = z.infer<typeof loginSchema>
 type VerificationForm = z.infer<typeof verificationSchema>
 
@@ -189,7 +202,108 @@ export function RegisterPage() {
       <p className="auth-switch">
         Veli misiniz?{' '}
         <Link to="/parent/register" viewTransition>
-          Veli kaydı hakkında bilgi alın
+          Veli hesabı oluşturun
+        </Link>
+      </p>
+    </AuthCard>
+  )
+}
+
+export function ParentSignupPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const [formError, setFormError] = useState<string>()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ParentRegistrationForm>({
+    resolver: zodResolver(parentRegistrationSchema),
+  })
+
+  async function submit(values: ParentRegistrationForm) {
+    setFormError(undefined)
+    try {
+      await registerParent(values)
+      const parameters = new URLSearchParams({
+        next: demandDestination(searchParams.get('next')),
+        registered: 'parent',
+      })
+      void navigate(`/operator/login?${parameters}`, {
+        replace: true,
+        viewTransition: typeof document.startViewTransition === 'function',
+      })
+    } catch (error) {
+      if (error instanceof ApiError && error.problem.status === 429) {
+        setFormError(
+          'Çok fazla kayıt denemesi yapıldı. Lütfen daha sonra tekrar deneyin.',
+        )
+        return
+      }
+      if (error instanceof ApiError && error.problem.status === 503) {
+        setFormError(
+          'Veli kaydı şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.',
+        )
+        return
+      }
+      if (!(error instanceof ApiError)) {
+        setFormError(
+          'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+        )
+        return
+      }
+      setFormError(applyFieldErrors(error, setError, parentRegistrationFields))
+    }
+  }
+
+  return (
+    <AuthCard eyebrow="Veli kaydı" title="Veli hesabı oluşturun">
+      <p>
+        E-posta adresiniz yalnızca hesap girişi için kullanılır. Pilot süresince
+        doğrulama e-postası gönderilmez.
+      </p>
+      <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
+        <FormField
+          label="E-posta"
+          error={errors.email?.message}
+          input={
+            <input type="email" autoComplete="email" {...register('email')} />
+          }
+        />
+        <FormField
+          label="Şifre"
+          hint="12–64 karakter; boşluk kullanabilirsiniz."
+          error={errors.password?.message}
+          input={
+            <input
+              type="password"
+              autoComplete="new-password"
+              {...register('password')}
+            />
+          }
+        />
+        <FormError message={formError} />
+        <button
+          className="primary-button"
+          disabled={isSubmitting}
+          type="submit"
+        >
+          {isSubmitting ? 'Kaydediliyor…' : 'Veli hesabı oluştur'}
+        </button>
+      </form>
+      <p className="auth-switch">
+        Zaten hesabınız var mı?{' '}
+        <Link
+          to={`/operator/login?next=${encodeURIComponent(demandDestination(searchParams.get('next')))}`}
+          viewTransition
+        >
+          Giriş yapın
+        </Link>
+      </p>
+      <p className="auth-switch">
+        <Link to="/register" viewTransition>
+          Hesap türüne geri dön
         </Link>
       </p>
     </AuthCard>
@@ -308,6 +422,11 @@ export function LoginPage() {
 
   return (
     <AuthCard eyebrow="Giriş" title="Hoş geldiniz">
+      {searchParams.get('registered') === 'parent' && (
+        <div className="status-banner success" role="status">
+          Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.
+        </div>
+      )}
       {searchParams.get('reason') === 'session' && (
         <div className="status-banner warning" role="status">
           Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.
@@ -357,20 +476,20 @@ export function LoginPage() {
           </>
         ) : isDemandPath(searchParams.get('next')) ? (
           <>
-            Veli hesapları pilot kapsamında doğrulanarak açılır. Yeni hesap için
-            proje ekibiyle iletişime geçin.{' '}
+            Servis talebi oluşturmak için veli hesabınızla giriş yapın. Yeni
+            hesabınız yoksa{' '}
             <Link
-              to={`/parent/register?next=${encodeURIComponent(searchParams.get('next') ?? '/demands')}`}
+              to={`/parent/register?next=${encodeURIComponent(demandDestination(searchParams.get('next')))}`}
               viewTransition
             >
-              Veli kaydı hakkında bilgi alın
+              veli hesabı oluşturun
             </Link>
             .
           </>
         ) : (
           <>
             Hesabınız yok mu?{' '}
-            <Link to="/operator/register" viewTransition>
+            <Link to="/register" viewTransition>
               Kayıt olun
             </Link>
           </>
@@ -389,6 +508,10 @@ function isDemandPath(path: string | null): path is string {
   )
 }
 
+function demandDestination(path: string | null): string {
+  return isDemandPath(path) ? path : '/demands'
+}
+
 function isDemandResponsePath(path: string | null): path is string {
   if (!isDemandPath(path)) return false
   const url = new URL(path, window.location.origin)
@@ -401,6 +524,7 @@ const registrationFields = [
   'businessName',
   'contactPhone',
 ] as const
+const parentRegistrationFields = ['email', 'password'] as const
 const loginFields = ['email', 'password', 'rememberMe'] as const
 
 function applyFieldErrors<T extends FieldValues>(

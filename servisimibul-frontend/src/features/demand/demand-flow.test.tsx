@@ -74,7 +74,7 @@ describe('public demand board', () => {
     ).toBeInTheDocument()
     expect(operatorChecks).toBe(1)
     expect(
-      screen.getByText(/Veli hesapları pilot kapsamında/),
+      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
     ).toBeInTheDocument()
   })
 

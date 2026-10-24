@@ -58,7 +58,7 @@ const applicationRoutes: RouteObject[] = [
         handle: { pageTitle: 'Veli kaydı' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
-          Component: (await import('../features/auth/SignupPages'))
+          Component: (await import('../features/auth/AuthPages'))
             .ParentSignupPage,
         }),
       },
