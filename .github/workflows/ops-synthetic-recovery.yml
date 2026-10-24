@@ -1,0 +1,56 @@
+name: OPS-01 synthetic multi-schema recovery rehearsal
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ops_recovery_coverage.py"
+      - "scripts/test_ops_recovery_coverage.py"
+      - ".github/workflows/ops-synthetic-recovery.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: isolated-ci-only
+          POSTGRES_DB: recovery_source
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d recovery_source"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Exercise synthetic backup/restore and verify row counts
+        env:
+          PGPASSWORD: isolated-ci-only
+          PGHOST: 127.0.0.1
+          PGPORT: "5432"
+          PGUSER: postgres
+        run: |
+          psql -v ON_ERROR_STOP=1 -d recovery_source -c "CREATE SCHEMA auth; CREATE SCHEMA storage; CREATE TABLE public.example(id int primary key); CREATE TABLE auth.identity_fixture(id int primary key); CREATE TABLE storage.object_metadata_fixture(id int primary key); INSERT INTO public.example VALUES(11); INSERT INTO auth.identity_fixture VALUES(22); INSERT INTO storage.object_metadata_fixture VALUES(33);"
+          pg_dump -Fc -n public -n auth -n storage -f /tmp/synthetic-recovery.dump recovery_source
+          pg_restore -l /tmp/synthetic-recovery.dump > /tmp/synthetic-recovery.toc
+          createdb recovery_copy
+          pg_restore --exit-on-error --single-transaction --no-owner -d recovery_copy /tmp/synthetic-recovery.dump
+          test "$(psql -At -d recovery_copy -c 'SELECT count(*) FROM public.example')" = 1
+          test "$(psql -At -d recovery_copy -c 'SELECT count(*) FROM auth.identity_fixture')" = 1
+          test "$(psql -At -d recovery_copy -c 'SELECT count(*) FROM storage.object_metadata_fixture')" = 1
+          test "$(psql -At -d recovery_copy -c 'SELECT id FROM auth.identity_fixture')" = 22
+          test "$(psql -At -d recovery_copy -c 'SELECT id FROM storage.object_metadata_fixture')" = 33
+          python3 scripts/ops_recovery_coverage.py --toc-file /tmp/synthetic-recovery.toc --output /tmp/recovery-coverage.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open("/tmp/recovery-coverage.json"))
+          assert r["full_supabase_platform_recovery_proven"] is False
+          assert set(r["missing_required_schemas"]) == {"realtime","vault"}
+          assert "storage_objects_binary_payloads" in r["unrecoverable_or_unverified_platform_components"]
+          print("SYNTHETIC logical 3-schema recovery PASS; Supabase platform recovery NOT proven.")
+          PY
