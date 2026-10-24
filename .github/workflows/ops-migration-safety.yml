@@ -33,7 +33,8 @@ jobs:
           ./scripts/Test-SupabaseReleaseReadiness.Tests.ps1
       - name: Independent approval offline tests
         shell: pwsh
-        run: python -m unittest discover -s scripts -p test_ops_github_approval.py
+        run: |
+          python -m unittest discover -s scripts -p test_ops_github_approval.py
           python -m unittest discover -s scripts -p test_ops_disposable_lock_coordinator.py
       - name: PowerShell 7 offline tests
         shell: pwsh
