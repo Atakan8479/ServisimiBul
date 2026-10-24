@@ -309,3 +309,17 @@ pwsh -NoLogo -NoProfile -File .\scripts\Test-SupabaseMigration.Integration.ps1
 #### OPS-01 hardening notes
 
 The preflight clears inherited libpq `PG*` connection overrides except the process-scoped password while running psql, then restores the caller environment. Prefer `sslmode=verify-full` with a trusted CA. Backup evidence additionally requires a readable PostgreSQL custom-format archive (`pg_restore --list`). Restore evidence must separately assert a V12 restore and a disposable V14 rehearsal with all 13 checks and a different system identifier; local JSON evidence is not independently verified proof. External approval and independently observed restore evidence remain mandatory. The Windows mutex only coordinates on one computer; future live execution requires a database-level exclusive gate and fresh preflight. `-Apply` remains disabled. OPS-01 offline PowerShell 5.1/7 checks are covered by the dedicated GitHub workflow; disposable PostgreSQL rehearsal remains an additional requirement.
+
+#### OPS-01 offline restore rehearsal (development-only)
+
+Run `scripts/Test-SupabaseMigration.RestoreEvidence.ps1` only after a separately approved V12 backup has been created with PostgreSQL 17 `pg_dump --format=custom --schema=public`. The script **does not connect to shared Supabase**: it accepts an existing local archive and evidence JSON, then restores into a new, loopback-only disposable PostgreSQL 17 cluster. It validates V12 Flyway history, rehearses the existing V13/V14 migrations and a second no-op run, performs Hibernate schema validation and requires all 13 SQL verification checks. Output evidence is written to a new file outside the repository.
+
+Backup JSON must include `projectRef`, `sourceSystemIdentifier`, `releaseCommit`, `database=postgres`, `postgresMajor=17`, `flywayVersion=12`, `archivePath` (absolute), and `archiveSha256`. The reviewed release SHA must equal local HEAD. Run:
+
+```powershell
+.\scripts\Test-SupabaseMigration.RestoreEvidence.ps1 `
+  -BackupEvidencePath 'C:\private\v12-backup.json' `
+  -EvidenceOutputPath 'C:\private\v12-restore-proof.json'
+```
+
+The report includes distinct source/disposable database system identifiers and backup digest. Store the backup, record and outputs securely, outside Git. The evidence is **operator-local and not independent authorization**, cannot prove the original source backup was taken correctly, and must be independently reviewed. Do not invoke `migrate-supabase.ps1 -Apply`: shared execution stays fail-closed until a separately approved external authorization and distributed/exclusive migration gate exist. No backup is taken automatically and no shared database is modified by this rehearsal.
