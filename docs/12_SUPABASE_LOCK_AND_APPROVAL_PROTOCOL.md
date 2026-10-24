@@ -40,3 +40,11 @@ Official reference: https://supabase.com/docs/guides/platform/backups
 ## Disposable lock contention test (Windows PostgreSQL 17)
 
 Run `powershell.exe -NoProfile -File .\\scripts\\Test-SupabaseMigration.LockIntegration.ps1` from the repository checkout with PostgreSQL 17 tools available. It starts a fresh loopback-only disposable cluster, holds a session-level advisory lock in a dedicated `psql` process and checks from a second connection that a nonblocking acquisition is denied. The child process and cluster are cleaned up when the test exits. This is a **cooperative-lock feasibility test**, not a production exclusive gate, and it does not test write freezing or Flyway's own locking. It has not been wired into production operations.
+
+## Failure injection and synthetic recovery limits
+
+The isolated coordinator now terminates the complete child process group when its dedicated PostgreSQL lock session is lost. The isolated PostgreSQL CI workflow injects pg_terminate_backend while a long-running synthetic process is active, and requires prompt fail-closed exit. This does not prove automatic rollback of arbitrary database writes or complete production exclusivity.
+
+The separate ops-synthetic-recovery workflow backs up synthetic public, auth and storage schemas and restores their data in an isolated PostgreSQL 17 environment. The ops_recovery_coverage.py manifest always reports full_supabase_platform_recovery_proven=false, even when all database schemas are present. Storage object binaries, provider secrets, API keys, roles/passwords, deployment settings, edge functions and selectable PITR are not covered by this logical test.
+
+The actual Supabase project contains non-public managed schemas. The existing V12 archive is PUBLIC ONLY. A synthetic three-schema restore is not independent evidence of full-project recovery. Production go-live remains blocked pending a separately verified identity/Storage continuity and recovery plan, an independently approved write freeze, and a functioning non-cooperative migration exclusion strategy. No live restoration, schema modification or migration occurs in this workflow.
