@@ -79,7 +79,9 @@ export type OperatorPage = z.infer<typeof operatorPageSchema>
 export async function getProvinces(signal?: AbortSignal): Promise<Province[]> {
   // Retry only transient network failures. A valid empty response is not an error.
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    if (signal?.aborted) throw new DOMException('Request cancelled', 'AbortError')
+    if (signal?.aborted) {
+      throw new DOMException('Request cancelled', 'AbortError')
+    }
     try {
       return await apiRequest('/provinces', {
         schema: z.array(provinceSchema),
