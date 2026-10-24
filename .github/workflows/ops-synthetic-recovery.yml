@@ -39,6 +39,7 @@ jobs:
           pg_dump -Fc -n public -n auth -n storage -f /tmp/synthetic-recovery.dump recovery_source
           pg_restore -l /tmp/synthetic-recovery.dump > /tmp/synthetic-recovery.toc
           createdb recovery_copy
+          psql -v ON_ERROR_STOP=1 -d recovery_copy -c 'DROP SCHEMA public CASCADE;'
           pg_restore --exit-on-error --single-transaction --no-owner -d recovery_copy /tmp/synthetic-recovery.dump
           test "$(psql -At -d recovery_copy -c 'SELECT count(*) FROM public.example')" = 1
           test "$(psql -At -d recovery_copy -c 'SELECT count(*) FROM auth.identity_fixture')" = 1
