@@ -92,10 +92,13 @@ export async function getProvinces(signal?: AbortSignal): Promise<Province[]> {
         throw error
       }
       await new Promise<void>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          signal?.removeEventListener('abort', onAbort)
-          resolve()
-        }, 500 * (attempt + 1))
+        const timer = setTimeout(
+          () => {
+            signal?.removeEventListener('abort', onAbort)
+            resolve()
+          },
+          500 * (attempt + 1),
+        )
         function onAbort() {
           clearTimeout(timer)
           reject(new DOMException('Request cancelled', 'AbortError'))
