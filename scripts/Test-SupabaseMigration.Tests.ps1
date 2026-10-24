@@ -72,6 +72,16 @@ $artifacts=@(Get-SbMigrationArtifacts -RepositoryRoot $repositoryRoot)
 Assert-SbCondition ($artifacts.Count-eq 14 -and $artifacts[12].Version-ceq'13' -and $artifacts[13].Version-ceq'14') 'Pending migrations are not ordered V13 then V14.'
 Assert-SbCondition (@($artifacts|Where-Object{$null-eq$_.Checksum}).Count-eq 0) 'A repository migration checksum is missing.'
 
+# Runtime role must match in both modes; direct requires server TLS.
+$script:preflightOutput='postgres|servisimibul_app|f'
+function Invoke-SbMigrationSql { return $script:preflightOutput }
+Assert-SbRuntimeConnection -Endpoint $poolerRuntime -Password 'synthetic-password' -Client unused
+Assert-Rejected { Assert-SbRuntimeConnection -Endpoint $directRuntime -Password 'synthetic-password' -Client unused } 'TLS'
+$script:preflightOutput='postgres|postgres|f'
+Assert-Rejected { Assert-SbRuntimeConnection -Endpoint $poolerRuntime -Password 'synthetic-password' -Client unused } 'identity'
+$script:preflightOutput='postgres|servisimibul_app|t'
+Assert-SbRuntimeConnection -Endpoint $directRuntime -Password 'synthetic-password' -Client unused
+
 $historyLines=@('IDENTITY|postgres|postgres|170011|f|123456789012345678|t','RUNTIME|servisimibul_app|f|f|f|f|f')
 for($index=0;$index-lt 12;$index++){$historyLines += "HISTORY|$($index+1)|$($artifacts[$index].Version)|$($artifacts[$index].Script)|$($artifacts[$index].Checksum)|t"}
 $validPreflight=(@($historyLines)+@('COLLISIONS|0','ACTIVITY|0'))-join"`n"
