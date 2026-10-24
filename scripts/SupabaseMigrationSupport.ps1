@@ -87,13 +87,29 @@ function Invoke-SbMigrationSql {
     if([string]::IsNullOrWhiteSpace($Sql) -eq [string]::IsNullOrWhiteSpace($File)){throw 'Supply exactly one SQL source.'}
     $arguments=@('--no-psqlrc','--no-password','--set=ON_ERROR_STOP=1','--no-align','--tuples-only','--quiet','--host',$Endpoint.Host,'--port',[string]$Endpoint.Port,'--username',$Endpoint.User,'--dbname',$Endpoint.Database)
     if($File){$arguments+=@('--file',$File)}else{$arguments+=@('--command',$Sql)}
-    $previousSslMode=Get-Item Env:PGSSLMODE -ErrorAction SilentlyContinue
+    # libpq honors inherited PGHOSTADDR/PGSERVICE/PGOPTIONS and other PG*
+    # variables even when a host and user are supplied explicitly. Strip all
+    # PG* overrides except the intentionally process-scoped PGPASSWORD.
+    $inheritedPg=@{}
+    foreach($item in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)){
+        if($item.Name -cne 'PGPASSWORD'){
+            $inheritedPg[$item.Name]=$item.Value
+            Remove-Item -LiteralPath ("Env:" + $item.Name) -ErrorAction SilentlyContinue
+        }
+    }
     try{
         if($Endpoint.SslMode){$env:PGSSLMODE=$Endpoint.SslMode}
         $output=@(& $Client @arguments 2>&1)
         $exitCode=$LASTEXITCODE
     }finally{
-        if($previousSslMode){$env:PGSSLMODE=$previousSslMode.Value}else{Remove-Item Env:PGSSLMODE -ErrorAction SilentlyContinue}
+        foreach($item in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)){
+            if($item.Name -cne 'PGPASSWORD'){
+                Remove-Item -LiteralPath ("Env:" + $item.Name) -ErrorAction SilentlyContinue
+            }
+        }
+        foreach($name in $inheritedPg.Keys){
+            Set-Item -LiteralPath ("Env:" + $name) -Value $inheritedPg[$name]
+        }
     }
     if($exitCode -ne 0){throw 'PostgreSQL verification failed; inspect credentials and the approved target outside this sanitized log.'}
     return (($output|ForEach-Object{[string]$_})-join "`n").Trim()
