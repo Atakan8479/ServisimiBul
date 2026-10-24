@@ -38,7 +38,7 @@ DECLARE
 BEGIN
     SELECT array_agg(tablename::text ORDER BY tablename) INTO actual_names
     FROM pg_tables WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history';
-    SELECT array_agg(value ORDER BY value) INTO expected_names FROM unnest(expected_names) AS value;
+    SELECT array_agg(name ORDER BY name) INTO expected_names FROM unnest(expected_names) AS expected(name);
     IF actual_names IS DISTINCT FROM expected_names THEN
         RAISE EXCEPTION 'V15 refused: public application table inventory differs from reviewed V14 schema';
     END IF;
