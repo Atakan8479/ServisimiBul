@@ -2,7 +2,9 @@
 param(
     [string]$JavaHome,
     [string]$PostgresBin,
-    [switch]$SmokeTest
+    [switch]$SmokeTest,
+    [switch]$DemoData,
+    [switch]$DemoAdmins
 )
 
 Set-StrictMode -Version Latest
@@ -129,6 +131,13 @@ try {
             -Sql "insert into province (code, name) values ('34', 'Istanbul')"
     }
 
+    if ($DemoData) {
+        Write-Host 'Loading disposable synthetic school geography...'
+        $fixturePath = Join-Path $repositoryRoot 'scripts\fixtures\j05\seed.sql'
+        $null = Invoke-SbPsql -Cluster $cluster -Database $cluster.Database `
+            -Username $cluster.RuntimeUser -Password $cluster.RuntimePassword -File $fixturePath
+    }
+
     $runtimeEnvironment = @{
         JAVA_HOME = $javaRuntime.Home
         SPRING_PROFILES_ACTIVE = 'local'
@@ -175,6 +184,40 @@ try {
         SERVER_ADDRESS = '127.0.0.1'
         SERVER_PORT = '8080'
     }
+    if ($DemoAdmins) {
+        Write-Host 'Bootstrapping disposable ADMIN identities in a non-web process...'
+        $adminOnePassword = New-SbRandomPassword
+        $adminTwoPassword = New-SbRandomPassword
+        $adminEnvironment = $runtimeEnvironment.Clone()
+        $adminEnvironment['SB_ADMIN_BOOTSTRAP_ENABLED'] = 'true'
+        $adminEnvironment['SERVISIMIBUL_ADMIN_BOOTSTRAP_ENABLED'] = 'true'
+        $adminEnvironment['SB_ADMIN_1_EMAIL'] = 'demo-admin-one@example.test'
+        $adminEnvironment['SB_ADMIN_1_PASSWORD'] = $adminOnePassword
+        $adminEnvironment['SB_ADMIN_2_EMAIL'] = 'demo-admin-two@example.test'
+        $adminEnvironment['SB_ADMIN_2_PASSWORD'] = $adminTwoPassword
+        $adminEnvironment['SB_DEMAND_FEEDBACK_SCHEDULER_ENABLED'] = 'false'
+        $previousAdminEnvironment = Set-SbTemporaryEnvironment -Values $adminEnvironment
+        try {
+            Push-Location $backendDirectory
+            try {
+                & '.\mvnw.cmd' --batch-mode '-Dspring-boot.run.profiles=local' `
+                    '-Dspring-boot.run.arguments=--spring.main.web-application-type=none' spring-boot:run
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'Disposable non-web ADMIN bootstrap failed.'
+                }
+            } finally {
+                Pop-Location
+            }
+        } finally {
+            Restore-SbEnvironment -Previous $previousAdminEnvironment
+        }
+        Write-Host 'Disposable demo administrator 1: demo-admin-one@example.test'
+        Write-Host "Temporary password 1: $adminOnePassword"
+        Write-Host 'Disposable demo administrator 2: demo-admin-two@example.test'
+        Write-Host "Temporary password 2: $adminTwoPassword"
+        Write-Host 'These demo credentials are valid only while this disposable environment is running.'
+    }
+
     $mavenRuntime = Get-SbMavenRuntime -BackendDirectory $backendDirectory
     $previousRuntimeEnvironment = Set-SbTemporaryEnvironment -Values $runtimeEnvironment
     try {
