@@ -7,16 +7,24 @@ $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $path = Join-Path $PSScriptRoot 'migrate-supabase.ps1'
 $supportPath = Join-Path $PSScriptRoot 'SupabaseMigrationSupport.ps1'
 $restoreEvidencePath = Join-Path $PSScriptRoot 'Test-SupabaseMigration.RestoreEvidence.ps1'
+$backupScriptPath = Join-Path $PSScriptRoot 'Backup-SupabaseV12.ps1'
 function Assert-SbCondition {
     param([bool]$Condition, [string]$Message)
     if (-not $Condition) { throw $Message }
 }
-foreach ($scriptPath in @($path, $supportPath, $restoreEvidencePath)) {
+foreach ($scriptPath in @($path, $supportPath, $restoreEvidencePath, $backupScriptPath)) {
     $tokens=$null; $errors=$null
     $ast=[System.Management.Automation.Language.Parser]::ParseFile($scriptPath,[ref]$tokens,[ref]$errors)
     Assert-SbCondition ($null-ne$ast -and $errors.Count-eq 0) "PowerShell parsing failed for $scriptPath."
 }
 
+$backupSource=Get-Content -Raw -LiteralPath $backupScriptPath
+Assert-SbCondition ($backupSource.Contains('Invoke-SbSupabaseMigrationPreflight')) 'Backup requires read-only V12 preflight.'
+Assert-SbCondition ($backupSource.Contains('Assert-SbRuntimeConnection')) 'Backup must verify restricted runtime identity.'
+Assert-SbCondition ($backupSource.Contains('--format=custom')) 'Backup must use custom format.'
+Assert-SbCondition ($backupSource.Contains('--schema=public')) 'Backup must restrict to the app schema.'
+Assert-SbCondition ($backupSource.Contains('Get-FileHash')) 'Backup must record SHA-256.'
+Assert-SbCondition (-not $backupSource.Contains('migrate-supabase.ps1 -Apply')) 'Backup must never apply migrations.'
 . $supportPath
 $projectRef='abcdefghijklmnopqrst'
 $directMigration=ConvertTo-SbSupabaseEndpoint -JdbcUrl "jdbc:postgresql://db.$projectRef.supabase.co:5432/postgres?sslmode=verify-full" -ProjectRef $projectRef -User postgres -Role migration
