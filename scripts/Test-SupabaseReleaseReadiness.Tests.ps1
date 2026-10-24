@@ -7,7 +7,7 @@ function Expect-Rejection {
     param([scriptblock]$Action,[string]$Pattern)
     $errorMessage=$null
     try{& $Action|Out-Null}catch{$errorMessage=$_.Exception.Message}
-    if(-not $errorMessage -or $errorMessage -notmatch $Pattern){throw "Expected fail-closed rejection: $Pattern"}
+    if(-not $errorMessage -or $errorMessage -notmatch $Pattern){throw "Expected fail-closed rejection: $Pattern; actual=$errorMessage"}
 }
 $ref='abcdefghijklmnopqrst'
 $sha='a'*40
