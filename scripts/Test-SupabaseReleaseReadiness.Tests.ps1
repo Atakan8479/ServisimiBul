@@ -26,20 +26,20 @@ $restore=[pscustomobject]@{
  rehearsalTargetVersion=15;v15RehearsalVerified=$true;verificationChecksPassed=13
  testedAtUtc=$now.AddMinutes(-5).ToString('o')
 }
-$args=@{Backup=$backup;Restore=$restore;ProjectRef=$ref;ReleaseCommit=$sha;ArchiveSha256=$digest;NowUtc=$now;MaximumBackupAgeMinutes=120}
-if(-not(Assert-SbReleaseEvidencePair @args)){throw 'Valid evidence rejected.'}
+$evidenceArgs=@{Backup=$backup;Restore=$restore;ProjectRef=$ref;ReleaseCommit=$sha;ArchiveSha256=$digest;NowUtc=$now;MaximumBackupAgeMinutes=120}
+if(-not(Assert-SbReleaseEvidencePair @evidenceArgs)){throw 'Valid evidence rejected.'}
 $restore.verificationChecksPassed=12
-Expect-Rejection { Assert-SbReleaseEvidencePair @args } 'rehearsal evidence'
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'rehearsal evidence'
 $restore.verificationChecksPassed=13
 $restore.disposableSystemIdentifier=$backup.sourceSystemIdentifier
-Expect-Rejection { Assert-SbReleaseEvidencePair @args } 'isolated restore'
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'isolated restore'
 $restore.disposableSystemIdentifier='9234567890123456789'
 $restore.rehearsalToolCommit='c'*40
-Expect-Rejection { Assert-SbReleaseEvidencePair @args } 'checked-out release'
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'checked-out release'
 $restore.rehearsalToolCommit=$sha
 $backup.createdAtUtc=$now.AddMinutes(-130).ToString('o')
-Expect-Rejection { Assert-SbReleaseEvidencePair @args } 'stale'
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'stale'
 $backup.createdAtUtc=$now.AddMinutes(-15).ToString('o')
 $restore.v15RehearsalVerified=$false
-Expect-Rejection { Assert-SbReleaseEvidencePair @args } 'rehearsal evidence'
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'rehearsal evidence'
 Write-Host 'OPS-01 release readiness evidence fail-closed tests passed.'
