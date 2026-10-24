@@ -123,7 +123,7 @@ try{
         isolated=$true;postgresMajor=17;flywayVersion=12;verificationChecksPassed=13
         backupSha256=$archiveHash
     }|ConvertTo-Json|Set-Content -LiteralPath $restorePath -Encoding UTF8
-    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -RestoreEvidencePath $restorePath -Preflight $verified } 'Approval evidence file is required'
+    Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit $releaseCommit -ConfirmProjectRef $projectRef -BackupEvidencePath $backupPath -RestoreEvidencePath $restorePath -Preflight $verified } 'custom-format archive|pg_restore'
 }finally{
     Remove-Item -LiteralPath $evidenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
