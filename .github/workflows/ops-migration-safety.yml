@@ -1,0 +1,27 @@
+name: OPS-01 migration safety
+
+on:
+  pull_request:
+    paths:
+      - "scripts/migrate-supabase.ps1"
+      - "scripts/SupabaseMigrationSupport.ps1"
+      - "scripts/Test-SupabaseMigration*.ps1"
+      - ".github/workflows/ops-migration-safety.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    name: OPS-01 Windows PowerShell safety
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Windows PowerShell 5.1 offline tests
+        shell: powershell
+        run: ./scripts/Test-SupabaseMigration.Tests.ps1
+      - name: PowerShell 7 offline tests
+        shell: pwsh
+        run: ./scripts/Test-SupabaseMigration.Tests.ps1
