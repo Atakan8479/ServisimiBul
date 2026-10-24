@@ -223,7 +223,24 @@ describe('operator authentication screens', () => {
     expect(
       screen.getByRole('button', { name: 'Hesap oluştur' }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
+    ).toHaveAttribute('href', '/parent/register')
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['/operator/login', '/register'],
+    [
+      `/operator/login?next=${encodeURIComponent('/demands/review-target?action=response')}`,
+      '/operator/register',
+    ],
+  ])('routes the signup link on %s to %s', async (path, expectedHref) => {
+    renderRoute(path)
+
+    expect(
+      await screen.findByRole('link', { name: /kayıt olun/i }),
+    ).toHaveAttribute('href', expectedHref)
   })
 
   it('registers an operator without an optional business name', async () => {

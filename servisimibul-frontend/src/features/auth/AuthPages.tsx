@@ -202,7 +202,7 @@ export function RegisterPage() {
       <p className="auth-switch">
         Veli misiniz?{' '}
         <Link to="/parent/register" viewTransition>
-          Veli kaydı hakkında bilgi alın
+          Veli hesabı oluşturun
         </Link>
       </p>
     </AuthCard>
@@ -489,7 +489,7 @@ export function LoginPage() {
         ) : (
           <>
             Hesabınız yok mu?{' '}
-            <Link to="/operator/register" viewTransition>
+            <Link to="/register" viewTransition>
               Kayıt olun
             </Link>
           </>
