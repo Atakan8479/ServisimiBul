@@ -190,6 +190,9 @@ try {
         Restore-SbEnvironment -Previous $previousRuntimeEnvironment
     }
 
+    Write-Host 'Waiting for backend readiness before starting frontend...'
+    $null = Wait-ForHttpSuccess -Uri 'http://127.0.0.1:8080/readyz' -Processes @($backendProcess)
+
     $previousFrontendEnvironment = Set-SbTemporaryEnvironment -Values @{
         VITE_EMAIL_VERIFICATION_REQUIRED = 'false'
     }
