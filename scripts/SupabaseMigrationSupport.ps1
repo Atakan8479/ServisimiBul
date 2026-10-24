@@ -240,5 +240,37 @@ function Assert-SbPostMigrationVerification {
     param($Endpoint,[string]$Client,[string]$VerificationFile)
     $output=Invoke-SbMigrationSql -Endpoint $Endpoint -Client $Client -File $VerificationFile
     $results=@($output -split "`r?`n"|Where-Object{$_ -match '\|(PASS|FAIL)\|'})
-    if($results.Count-ne 13 -or @($results|Where-Object{$_ -match '\|FAIL\|'}).Count-ne 0){throw 'Post-migration verification did not return exactly 13 PASS results.'}
+    $expectedNames=@(
+        'primary PostgreSQL 17 target',
+        'Flyway versions V1-V14 applied successfully',
+        'exact application table inventory',
+        'exact application sequence inventory',
+        'RLS enabled on every application table',
+        'exact runtime RLS policies',
+        'runtime role is restricted',
+        'runtime role has exact table privileges',
+        'public API roles have no direct table privileges',
+        'sequence privileges are least-privilege',
+        'Flyway history is protected',
+        'operator business name remains nullable',
+        'session expiry cleanup index exists'
+    )
+    $names=@()
+    $failures=@()
+    foreach($line in $results){
+        $parts=$line.Split('|')
+        $check=$parts[0].Trim()
+        $status=$parts[1].Trim()
+        $names+= $check
+        if($status -cne 'PASS'){$failures+= $check}
+    }
+    $unexpected=@($names|Where-Object{$_ -cnotin $expectedNames}|Select-Object -Unique)
+    $missing=@($expectedNames|Where-Object{$_ -cnotin $names})
+    $duplicates=@($names|Group-Object|Where-Object{$_.Count -gt 1}|ForEach-Object{$_.Name})
+    if($results.Count -ne 13 -or $failures.Count -gt 0 -or $missing.Count -gt 0 -or $unexpected.Count -gt 0 -or $duplicates.Count -gt 0){
+        # Report only known check labels, never raw rows, arbitrary server output or user data.
+        $failureLabels=@($failures|Where-Object{$_ -cin $expectedNames})
+        throw ('Post-migration checks did not pass: received={0}/13; failed=[{1}]; missing=[{2}]; unexpectedCount={3}; duplicateCount={4}. No restore evidence written.' -f
+            $results.Count,($failureLabels -join ', '),($missing -join ', '),$unexpected.Count,$duplicates.Count)
+    }
 }
