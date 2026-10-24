@@ -155,8 +155,7 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
         'mvnw.cmd',
         'docs/10_MIGRATION_VERIFICATION.sql',
         'scripts/WindowsDevelopmentSupport.ps1',
-        'scripts/BackupRestoreSupport.ps1',
-        'scripts/SupabaseMigrationSupport.ps1'
+        'scripts/BackupRestoreSupport.ps1'
     )
     if ($head -cne $backup.releaseCommit) {
         & git -C $Root merge-base --is-ancestor $backup.releaseCommit HEAD
