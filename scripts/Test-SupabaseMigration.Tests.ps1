@@ -173,6 +173,11 @@ try{
     Remove-Item -LiteralPath $evidenceDirectory -Recurse -Force -ErrorAction SilentlyContinue
 }
 
+Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('Initialize-SbOps01DisposableSupabaseRoles')) 'Restore must initialize inert platform roles in a disposable cluster.'
+Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('CREATE ROLE service_role NOLOGIN NOSUPERUSER')) 'Service role must not be privileged in the rehearsal.'
+Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('CREATE ROLE supabase_admin NOLOGIN NOSUPERUSER')) 'Supabase admin role must not be privileged in the rehearsal.'
+Assert-SbCondition ((Get-Content -Raw -LiteralPath $restoreEvidencePath).Contains('Assert-SbDisposableClusterIdentity -Cluster $Cluster')) 'Role provisioning must verify disposable cluster identity.'
+
 $restoreScript = Get-Content -Raw -LiteralPath $restoreEvidencePath
 Assert-SbCondition ($restoreScript.Contains('Get-SbBackupArchiveTocStatus')) 'Restore must validate the same archive TOC as the backup.'
 Assert-SbCondition ($restoreScript.Contains('FlywayTable') -and $restoreScript.Contains('FlywayData')) 'Restore must verify Flyway schema and history data.'
