@@ -76,10 +76,39 @@ export type Neighborhood = z.infer<typeof neighborhoodSchema>
 export type PublicOperator = z.infer<typeof operatorSchema>
 export type OperatorPage = z.infer<typeof operatorPageSchema>
 
-export function getProvinces(): Promise<Province[]> {
-  return apiRequest('/provinces', {
-    schema: z.array(provinceSchema),
-  })
+export async function getProvinces(signal?: AbortSignal): Promise<Province[]> {
+  // Retry only transient network failures. A valid empty response is not an error.
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (signal?.aborted) {
+      throw new DOMException('Request cancelled', 'AbortError')
+    }
+    try {
+      return await apiRequest('/provinces', {
+        schema: z.array(provinceSchema),
+        signal,
+      })
+    } catch (error) {
+      if (signal?.aborted || attempt === 2 || !(error instanceof TypeError)) {
+        throw error
+      }
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(
+          () => {
+            signal?.removeEventListener('abort', onAbort)
+            resolve()
+          },
+          500 * (attempt + 1),
+        )
+        function onAbort() {
+          clearTimeout(timer)
+          reject(new DOMException('Request cancelled', 'AbortError'))
+        }
+        signal?.addEventListener('abort', onAbort, { once: true })
+        if (signal?.aborted) onAbort()
+      })
+    }
+  }
+  throw new Error('Province lookup retry budget exhausted')
 }
 
 export function getSchools({

@@ -57,6 +57,9 @@ export function AdminWorkspaceLayout() {
           <NavLink to="/admin/tariffs" viewTransition>
             Tarifeler
           </NavLink>
+          <NavLink to="/admin/moderation" viewTransition>
+            Bildirimler
+          </NavLink>
         </nav>
         <button
           className="secondary-button sidebar-action"

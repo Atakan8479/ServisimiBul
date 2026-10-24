@@ -86,6 +86,13 @@ public class DemandFeedbackService {
         closeIfExhausted(response.getDemand(), now());
     }
 
+    /** Called inside the demand-locked administrative-closure transaction. */
+    public void demandClosedByAdmin(Demand demand) {
+        feedbackRepository.findAwaitingByDemandId(demand.getId())
+                .forEach(DemandServiceFeedback::supersede);
+        feedbackRepository.flush();
+    }
+
     /** Called inside the demand-locked parent-withdrawal transaction. */
     public void supportWithdrawn(DemandSupport support) {
         feedbackRepository.findAwaitingBySupportId(support.getId())

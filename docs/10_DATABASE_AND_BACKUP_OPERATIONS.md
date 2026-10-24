@@ -58,7 +58,7 @@ Run the identity query through the controlled administration connection. The res
 if ($LASTEXITCODE -ne 0) { throw 'Database identity check failed' }
 ```
 
-Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. For the currently recorded V12 repository state, [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS`. Any different version or object inventory requires a fresh reviewed plan; do not infer current live state solely from this dated document.
+Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. The repository verifier currently targets V14 and [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS` on a V14 target. The shared Supabase baseline recorded above remains V12; do not run the V14 verifier there or apply V13–V14 without a fresh reviewed plan and explicit approval. Do not infer current live state solely from this dated document.
 
 Stop if the target, role, current version, checksums, schema objects, or active incident differs from the reviewed plan.
 

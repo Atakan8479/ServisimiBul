@@ -12,6 +12,24 @@ import { routes } from '../../app/router'
 import { server } from '../../test/server'
 
 describe('public operator discovery', () => {
+  it('recovers when the province endpoint temporarily has no network connection', async () => {
+    let attempts = 0
+    server.use(
+      http.get('/api/v1/provinces', () => {
+        attempts += 1
+        if (attempts === 1) return HttpResponse.error()
+        return HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }])
+      }),
+    )
+
+    renderHome()
+
+    const istanbul = await screen.findByRole('option', { name: 'İstanbul' })
+    expect(istanbul).toBeInTheDocument()
+    expect(attempts).toBeGreaterThanOrEqual(2)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
   it('finds operators across districts and exposes only the public phone', async () => {
     const requestedPages: string[] = []
     server.use(

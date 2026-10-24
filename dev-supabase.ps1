@@ -11,6 +11,26 @@ $backendEnvPath = Join-Path $backendDirectory '.env'
 . (Join-Path $repositoryRoot 'scripts\WindowsDevelopmentSupport.ps1')
 . (Join-Path $repositoryRoot 'scripts\SharedSupabaseDevelopmentSupport.ps1')
 
+function Wait-SbBackendReady {
+    param([Parameter(Mandatory = $true)][System.Diagnostics.Process]$BackendProcess)
+
+    $deadline = [DateTimeOffset]::UtcNow.AddSeconds(120)
+    while ([DateTimeOffset]::UtcNow -lt $deadline) {
+        $BackendProcess.Refresh()
+        if ($BackendProcess.HasExited) {
+            throw 'Backend stopped before readiness. See its output above.'
+        }
+        try {
+            $response = Invoke-WebRequest -Uri 'http://127.0.0.1:8080/readyz' -UseBasicParsing -TimeoutSec 3
+            if ($response.StatusCode -eq 200) { return }
+        } catch {
+            # Startup can temporarily refuse connections or return 503.
+        }
+        Start-Sleep -Milliseconds 500
+    }
+    throw 'Timed out waiting for the shared backend readiness endpoint.'
+}
+
 $backendProcess = $null
 $frontendProcess = $null
 
@@ -79,6 +99,9 @@ try {
     } finally {
         Restore-SbEnvironment -Previous $previousBackendEnvironment
     }
+
+    Write-Host 'Waiting for shared backend readiness before starting frontend...'
+    Wait-SbBackendReady -BackendProcess $backendProcess
 
     $previousFrontendEnvironment = Set-SbTemporaryEnvironment -Values @{
         VITE_EMAIL_VERIFICATION_REQUIRED = 'false'

@@ -107,4 +107,16 @@ Assert-Condition (Test-Path -LiteralPath `
     (Join-Path $repositoryRoot 'servisimibul-backend\.env.bootstrap.example')) `
     'The one-shot ADMIN bootstrap environment example is missing.'
 
+$devSource = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev.ps1')
+Assert-Condition ($devSource.Contains('Waiting for backend readiness before starting frontend')) `
+    'Frontend may start before backend readiness.'
+Assert-Condition ($devSource.Contains('[switch]$DemoData')) `
+    'Opt-in disposable data mode missing.'
+Assert-Condition ($devSource.Contains('[switch]$DemoAdmins')) `
+    'Opt-in disposable administrator mode missing.'
+Assert-Condition ($devSource.Contains('scripts\fixtures\j05\seed.sql')) `
+    'Disposable demo geography fixture missing.'
+Assert-Condition ($devSource.Contains('spring.main.web-application-type=none')) `
+    'Administrator bootstrap must not expose a web server.'
+
 Write-Host 'A-12 isolated development safety tests passed.'

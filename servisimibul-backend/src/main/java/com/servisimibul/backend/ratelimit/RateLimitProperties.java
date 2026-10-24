@@ -26,7 +26,8 @@ public record RateLimitProperties(
         @Valid @NotNull Limit passwordResetIp,
         @Valid @NotNull Limit passwordResetToken,
         @Valid @NotNull Limit publicSearchIp,
-        @Valid @NotNull Limit commentAccount
+        @Valid @NotNull Limit commentAccount,
+        @Valid @NotNull Limit reportAccount
 ) {
 
     public record Capacity(

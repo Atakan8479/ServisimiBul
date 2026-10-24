@@ -84,7 +84,16 @@ All feedback routes require a `PARENT` session. No route accepts a parent/suppor
 - `POST /api/v1/demands/{demandId}/comments` accepts only `{body}` and derives the author from the authenticated session. An ACTIVE or AWAITING_FEEDBACK supporting `PARENT`, or an enabled/verified/active operator allowed by the effective approval policy, may post only while the demand is OPEN. CSRF is required.
 - `DELETE /api/v1/demands/{demandId}/comments/{commentId}` hard-deletes only the caller's own comment and requires CSRF. Another user's comment is exposed as not found.
 
-Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exact body is rejected for 10 minutes; a configurable single-instance limit defaults to 5 attempts/account/10 minutes and returns 429 with `Retry-After`. Parent output is always `Veli` and contains no parent identifier. Operator output exposes a business name and operator-profile ID only when the existing public-discovery predicate matches the demand; otherwise it uses `Servis işletmecisi` with no link. Admin hide/unhide audit is deferred to REQ-08.
+Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exact body is rejected for 10 minutes; a configurable single-instance limit defaults to 5 attempts/account/10 minutes and returns 429 with `Retry-After`. Parent output is always `Veli` and contains no parent identifier. Operator output exposes a business name and operator-profile ID only when the existing public-discovery predicate matches the demand; otherwise it uses `Servis işletmecisi` with no link.
+
+### Reporting and administrator moderation
+
+- `POST /api/v1/reports` accepts `{targetType,targetId,reason,explanation?}` for enabled authenticated PARENT or OPERATOR accounts and requires CSRF. The principal supplies reporter identity and role; the body cannot select them. The default account limit is 5 attempts per 10 minutes. A duplicate contribution to the same active case returns 409. Missing, hidden, withdrawn, or closed targets use the same not-found response.
+- `GET /api/v1/admin/moderation/cases` is ADMIN-only and supports zero-based pagination plus optional `status`, `targetType`, `reason`, `reportedFrom`, and exclusive `reportedTo` filters. Results expose immutable content context, current visibility, reason counts, and distinct reporter count, never reporter identity.
+- `GET /api/v1/admin/moderation/cases/{caseId}` returns the bounded report explanations and append-only action history without reporter identities.
+- `POST /api/v1/admin/moderation/cases/{caseId}/actions` accepts `{action,reason}`, requires ADMIN and CSRF, serializes the case/target mutation, and writes an audit event. Actions are `MARK_IN_REVIEW`, `DISMISS`, `RESOLVE_NO_ACTION`, `HIDE_COMMENT`, `RESTORE_COMMENT`, `WITHDRAW_SERVICE_RESPONSE`, `SUSPEND_OPERATOR`, and `CLOSE_DEMAND` subject to target/status compatibility.
+
+Creating a report never changes target visibility or lifecycle. Only an explicit administrator action may hide/restore a comment, withdraw a response, close a demand, or suspend an operator. Suspension reuses the existing account-disable/session-revocation path. No AI moderation, universal administrator preapproval, automatic takedown threshold, or notification delivery is part of REQ-08; issue #90 owns notifications.
 
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`

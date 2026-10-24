@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { currentUser } from '../auth/auth-api'
+import { ReportControl } from '../moderation/ReportControl'
 import {
   createDemandComment,
   deleteDemandComment,
@@ -299,16 +300,21 @@ export function DemandComments({
                   </time>
                 </header>
                 <p>{comment.body}</p>
-                {comment.canDelete && (
-                  <button
-                    className="text-button danger-text"
-                    disabled={deletingId === comment.id}
-                    type="button"
-                    onClick={() => void removeComment(comment.id)}
-                  >
-                    {deletingId === comment.id ? 'Siliniyor…' : 'Yorumumu sil'}
-                  </button>
-                )}
+                <div className="comment-actions">
+                  <ReportControl targetId={comment.id} targetType="COMMENT" />
+                  {comment.canDelete && (
+                    <button
+                      className="text-button danger-text"
+                      disabled={deletingId === comment.id}
+                      type="button"
+                      onClick={() => void removeComment(comment.id)}
+                    >
+                      {deletingId === comment.id
+                        ? 'Siliniyor…'
+                        : 'Yorumumu sil'}
+                    </button>
+                  )}
+                </div>
               </article>
             </li>
           ))}

@@ -39,6 +39,26 @@ Use explicit binary paths when discovery is insufficient:
   -PostgresBin 'C:\path\to\postgresql-17\bin'
 ```
 
+## Optional disposable demo content
+
+For an isolated, temporary school catalog with three synthetic İstanbul schools:
+
+```powershell
+.\dev.ps1 -DemoData
+```
+
+For two temporary, verified administrator accounts, with randomly generated credentials printed once in the local terminal:
+
+```powershell
+.\dev.ps1 -DemoAdmins
+```
+
+These switches may be combined. They run only against the per-launch disposable PostgreSQL cluster; neither switch reads the ignored backend `.env` or touches Supabase. Do not copy these credentials into shared or production environments. All disposable data and accounts disappear when the launcher stops. The normal web process always disables ADMIN bootstrap.
+
+The launcher waits for `http://127.0.0.1:8080/readyz` to report HTTP 200 before starting Vite, preventing transient API proxy failures during normal startup. Temporary network errors fetching public provinces are retried with a bounded, abortable delay.
+
+The separate `dev-supabase.ps1` launcher also waits for backend readiness but never imports demo fixtures or bootstraps administrators. If it rejects `SB_DB_USER`, use `servisimibul_app` for a direct connection or the appropriate project-suffixed username for a session pooler. Do not change it to `postgres` or remove the restricted-role validation.
+
 ## Full-stack smoke test
 
 ```powershell

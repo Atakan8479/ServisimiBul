@@ -48,7 +48,7 @@ function Assert-SbSharedRuntimeEnvironment {
 
     $user = $Values['SB_DB_USER']
     if ($user -cne 'servisimibul_app' -and -not $user.StartsWith('servisimibul_app.')) {
-        throw 'Shared development requires the restricted servisimibul_app runtime role.'
+        throw 'Set SB_DB_USER in servisimibul-backend/.env to servisimibul_app (direct) or servisimibul_app.<project-ref> (session pooler). Check Supabase Connect. Never use postgres for application runtime.'
     }
 
     $jdbcUrl = $Values['SB_DB_JDBC_URL']

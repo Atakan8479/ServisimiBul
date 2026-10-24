@@ -21,6 +21,18 @@ public interface DemandServiceResponseRepository
             from DemandServiceResponse response
             join fetch response.demand
             join fetch response.operator operator
+            join fetch operator.user
+            left join fetch response.operatorSchool
+            where response.id = :id
+            """)
+    Optional<DemandServiceResponse> findForUpdateById(@Param("id") UUID id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select response
+            from DemandServiceResponse response
+            join fetch response.demand
+            join fetch response.operator operator
             left join fetch response.operatorSchool
             where response.demand.id = :demandId
               and operator.id = :operatorId
