@@ -305,3 +305,7 @@ pwsh -NoLogo -NoProfile -File .\scripts\Test-SupabaseMigration.Tests.ps1
 powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-SupabaseMigration.Tests.ps1
 pwsh -NoLogo -NoProfile -File .\scripts\Test-SupabaseMigration.Integration.ps1
 ```
+
+#### OPS-01 hardening notes
+
+The preflight clears inherited libpq `PG*` connection overrides except the process-scoped password while running psql, then restores the caller environment. Prefer `sslmode=verify-full` with a trusted CA. Backup evidence additionally requires a readable PostgreSQL custom-format archive (`pg_restore --list`). Restore evidence must separately assert a V12 restore and a disposable V14 rehearsal with all 13 checks and a different system identifier; local JSON evidence is not independently verified proof. External approval and independently observed restore evidence remain mandatory. The Windows mutex only coordinates on one computer; future live execution requires a database-level exclusive gate and fresh preflight. `-Apply` remains disabled. OPS-01 offline PowerShell 5.1/7 checks are covered by the dedicated GitHub workflow; disposable PostgreSQL rehearsal remains an additional requirement.
