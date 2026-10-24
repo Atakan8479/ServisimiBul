@@ -57,7 +57,28 @@ function Assert-SbOps01RestoreInput {
     }
     & git -C $Root diff --quiet HEAD -- $releasePaths
     if ($LASTEXITCODE -ne 0) { throw 'Reviewed release inputs have local modifications.' }
-    return [pscustomobject]@{ Backup=$backup; Archive=$archivePath; Hash=$hash; Output=$outputPath }
+    return [pscustomobject]@{ Backup=$backup; Archive=$archivePath; Hash=$hash; Output=$outputPath; RehearsalCommit=$head }
+}
+
+function Initialize-SbOps01DisposableSupabaseRoles {
+    param([Parameter(Mandatory = $true)]$Cluster)
+    # The source public-schema dump contains ACL and default-ACL entries for
+    # Supabase platform roles. Create only inert role names, inside the
+    # verified disposable cluster. No login, privileges, or BYPASSRLS.
+    Assert-SbDisposableClusterIdentity -Cluster $Cluster
+    $sql = @'
+CREATE ROLE service_role NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+CREATE ROLE supabase_admin NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+'@
+    $null = Invoke-SbPsql -Cluster $Cluster -Database 'postgres' -Username $Cluster.AdminUser -Password $Cluster.AdminPassword -Sql $sql
+    $checks = @'
+SELECT count(*) || '|' || count(*) FILTER (WHERE rolcanlogin OR rolsuper OR rolcreatedb OR rolcreaterole OR rolbypassrls)
+FROM pg_roles WHERE rolname IN ('service_role', 'supabase_admin');
+'@
+    $result = @(Invoke-SbPsql -Cluster $Cluster -Database 'postgres' -Username $Cluster.AdminUser -Password $Cluster.AdminPassword -Sql $checks)
+    if (@($result | Where-Object { $_.ToString().Trim() -ceq '2|0' }).Count -ne 1) {
+        throw 'Disposable Supabase compatibility roles are missing or elevated.'
+    }
 }
 
 function Invoke-SbOps01DisposableMigration {
@@ -103,6 +124,7 @@ $cluster=$null
 try {
     $cluster=Start-SbIsolatedPostgres -Tools $tools
     Assert-SbDisposableClusterIdentity -Cluster $cluster
+    Initialize-SbOps01DisposableSupabaseRoles -Cluster $cluster
     $identifier=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql 'SELECT system_identifier FROM pg_control_system();' | Select-Object -Last 1).ToString().Trim()
     if ($identifier -cnotmatch '^[0-9]{10,30}$' -or $identifier -ceq $input.Backup.sourceSystemIdentifier) {
         throw 'Could not prove a separate disposable PostgreSQL system identity.'
@@ -134,7 +156,7 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     $evidence=[ordered]@{
         projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
         disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
-        isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true; rehearsalToolCommit=$head
+        isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true; rehearsalToolCommit=$input.RehearsalCommit
         rehearsalTargetVersion=14; v14RehearsalVerified=$true; verificationChecksPassed=13
         testedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
     }
