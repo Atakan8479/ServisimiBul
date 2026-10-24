@@ -108,6 +108,9 @@ function Wait-ForHttpSuccess {
 }
 
 try {
+    if ($SmokeTest -and ($DemoData -or $DemoAdmins)) {
+        throw 'SmokeTest uses its own deterministic fixture; do not combine it with DemoData or DemoAdmins.'
+    }
     $javaRuntime = Resolve-SbJavaRuntime -RequestedHome $JavaHome
     $nodeRuntime = Resolve-SbNode24Runtime
     $postgresTools = Resolve-SbPostgres17Tools -PostgresBin $PostgresBin
