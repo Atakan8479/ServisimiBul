@@ -8,6 +8,7 @@ before a production runner can be considered.
 import argparse
 import hashlib
 import ipaddress
+import signal
 import os
 import subprocess
 import sys
@@ -44,6 +45,33 @@ def lock_owned(connection, key: int, pid: int) -> bool:
     ).fetchone()[0]
 
 
+def terminate_process_tree(process) -> None:
+    """Stop the child and its process group; never detach a migration descendant."""
+    if process is None:
+        return
+    if os.name == "nt":
+        # Windows parent termination alone does not stop grandchildren.
+        subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       check=False, timeout=5)
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    try:
+        process.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        if os.name == "nt":
+            process.kill()
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        process.wait(timeout=3)
+
+
 def run_isolated(host: str, port: int, database: str, username: str,
                  project_ref: str, expected_system_id: str, command: list[str],
                  heartbeat_seconds: float = 0.25) -> int:
@@ -73,7 +101,11 @@ def run_isolated(host: str, port: int, database: str, username: str,
         try:
             if not lock_owned(conn, key, pid):
                 raise RuntimeError("Could not prove lock ownership on dedicated session")
-            process = subprocess.Popen(command, stdin=subprocess.DEVNULL)
+            process = subprocess.Popen(
+                command, stdin=subprocess.DEVNULL,
+                start_new_session=(os.name != 'nt'),
+                creationflags=(subprocess.CREATE_NEW_PROCESS_GROUP if os.name == 'nt' else 0),
+            )
             while process.poll() is None:
                 time.sleep(heartbeat_seconds)
                 try:
@@ -83,13 +115,8 @@ def run_isolated(host: str, port: int, database: str, username: str,
                     raise RuntimeError("Migration coordinator database connection lost") from exc
             return process.returncode
         finally:
-            if process is not None and process.poll() is None:
-                process.terminate()
-                try:
-                    process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=3)
+            if process is not None:
+                terminate_process_tree(process)
             # Never unlock on a different/pooled connection.
             # Session close releases all outstanding session advisory locks.
             if not conn.closed:
