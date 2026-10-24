@@ -143,9 +143,9 @@ function Invoke-SbSupabaseMigrationPreflight {
     if($ExpectedSystemIdentifier -cnotmatch '^[0-9]{10,30}$'){throw 'Expected database system identifier must be the numeric value recorded for the approved project.'}
     $output=Invoke-SbMigrationSql -Endpoint $Endpoint -Client $Client -Sql @'
 BEGIN TRANSACTION READ ONLY;
-SELECT 'IDENTITY|'||current_database()||'|'||current_user||'|'||current_setting('server_version_num')||'|'||pg_is_in_recovery()||'|'||(SELECT system_identifier FROM pg_control_system())||'|'||CASE WHEN ssl THEN 't' ELSE 'f' END FROM pg_stat_ssl WHERE pid=pg_backend_pid();
-SELECT 'RUNTIME|'||rolname||'|'||rolsuper||'|'||rolcreatedb||'|'||rolcreaterole||'|'||rolinherit||'|'||rolbypassrls FROM pg_roles WHERE rolname='servisimibul_app';
-SELECT 'HISTORY|'||installed_rank||'|'||version||'|'||script||'|'||COALESCE(checksum::text,'null')||'|'||success FROM public.flyway_schema_history ORDER BY installed_rank;
+SELECT 'IDENTITY|'||current_database()||'|'||current_user||'|'||current_setting('server_version_num')||'|'||CASE WHEN pg_is_in_recovery() THEN 't' ELSE 'f' END||'|'||(SELECT system_identifier FROM pg_control_system())||'|'||CASE WHEN ssl THEN 't' ELSE 'f' END FROM pg_stat_ssl WHERE pid=pg_backend_pid();
+SELECT 'RUNTIME|'||rolname||'|'||CASE WHEN rolsuper THEN 't' ELSE 'f' END||'|'||CASE WHEN rolcreatedb THEN 't' ELSE 'f' END||'|'||CASE WHEN rolcreaterole THEN 't' ELSE 'f' END||'|'||CASE WHEN rolinherit THEN 't' ELSE 'f' END||'|'||CASE WHEN rolbypassrls THEN 't' ELSE 'f' END FROM pg_roles WHERE rolname='servisimibul_app';
+SELECT 'HISTORY|'||installed_rank||'|'||version||'|'||script||'|'||COALESCE(checksum::text,'null')||'|'||CASE WHEN success THEN 't' ELSE 'f' END FROM public.flyway_schema_history ORDER BY installed_rank;
 SELECT 'COLLISIONS|'||count(*) FROM (
  SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='public' AND c.relname IN ('demand_service_feedback','demand_lifecycle_event','moderation_case','content_report','moderation_audit_event')
  UNION ALL SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='demand' AND column_name IN ('closure_reason','closed_at')
