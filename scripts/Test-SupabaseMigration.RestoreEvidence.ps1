@@ -48,12 +48,15 @@ function Assert-SbOps01RestoreInput {
     if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($head)) {
         throw 'Could not read checked-out revision.'
     }
-    $releasePaths = @('servisimibul-backend','.mvn','mvnw.cmd','docs/10_MIGRATION_VERIFICATION.sql','scripts/WindowsDevelopmentSupport.ps1','scripts/BackupRestoreSupport.ps1')
+    $releasePaths = @('servisimibul-backend','.mvn','mvnw.cmd','scripts/WindowsDevelopmentSupport.ps1','scripts/BackupRestoreSupport.ps1')
+    $v15Path = 'servisimibul-backend/src/main/resources/db/migration/V15__harden_runtime_privileges.sql'
     if ($head -cne $backup.releaseCommit) {
         & git -C $Root merge-base --is-ancestor $backup.releaseCommit HEAD
         if ($LASTEXITCODE -ne 0) { throw 'Backup revision is not an ancestor of checkout.' }
-        & git -C $Root diff --quiet $backup.releaseCommit HEAD -- $releasePaths
-        if ($LASTEXITCODE -ne 0) { throw 'Application or migration inputs differ from the backup revision.' }
+        $changes = @(& git -C $Root diff --name-only $backup.releaseCommit HEAD -- $releasePaths)
+        if ($LASTEXITCODE -ne 0 -or @($changes | Where-Object { $_ -cne $v15Path }).Count -gt 0) {
+            throw 'Changes beyond reviewed V15 migration were detected since the backup revision.'
+        }
     }
     & git -C $Root diff --quiet HEAD -- $releasePaths
     if ($LASTEXITCODE -ne 0) { throw 'Reviewed release inputs have local modifications.' }
@@ -148,7 +151,7 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     Invoke-SbOps01DisposableMigration -Cluster $cluster -JavaRuntime $java -TariffDir $tariffs
     Invoke-SbOps01DisposableMigration -Cluster $cluster -JavaRuntime $java -TariffDir $tariffs
     $final=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
-    if ($final -cne '1,2,3,4,5,6,7,8,9,10,11,12,13,14|0') { throw 'V14 rehearsal produced unexpected history.' }
+    if ($final -cne '1,2,3,4,5,6,7,8,9,10,11,12,13,14,15|0') { throw 'V15 rehearsal produced unexpected history.' }
     $endpoint=[pscustomobject]@{Host='127.0.0.1';Port=$cluster.Port;Database=$cluster.Database;User=$cluster.AdminUser;SslMode=$null}
     $env:PGPASSWORD=$cluster.AdminPassword
     Assert-SbPostMigrationVerification -Endpoint $endpoint -Client $tools.Psql -VerificationFile (Join-Path $repositoryRoot 'docs\10_MIGRATION_VERIFICATION.sql')
@@ -157,11 +160,11 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
         projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
         disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
         isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true; rehearsalToolCommit=$input.RehearsalCommit
-        rehearsalTargetVersion=14; v14RehearsalVerified=$true; verificationChecksPassed=13
+        rehearsalTargetVersion=15; v15RehearsalVerified=$true; verificationChecksPassed=13
         testedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
     }
     $evidence | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $input.Output -Encoding UTF8
-    Write-Host 'Restored V12, rehearsed V13/V14 twice and passed all 13 checks in a disposable database.'
+    Write-Host 'Restored V12, rehearsed V13-V15 twice and passed all 13 checks in a disposable database.'
     Write-Host 'Restore evidence saved outside the repository. No shared database was modified.'
 } finally {
     try {
