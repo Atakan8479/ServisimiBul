@@ -268,6 +268,40 @@ Record the observation date, dashboard period, current value, trend, threshold, 
 
 The operational objective is a database recovery point no older than 24 hours once irreplaceable pilot data exists, plus a tariff backup after every approved tariff change. A-13 measured 47.623 seconds for its small disposable fixture; production recovery time remains unvalidated until an environment-representative, separately approved exercise is completed.
 
-### OPS-01 guarded Windows migration tooling — first increment
+### OPS-01 guarded Windows migration tooling
 
-Issue #107 introduces `scripts/migrate-supabase.ps1`. The initial implementation is **read-only preflight only**: `-Apply` fails closed, no Flyway migration is executed, and the operator supplies an exact project reference plus a separate migration endpoint. The tool checks PostgreSQL 17 identity and the expected V12 Flyway history. It is **not yet a complete or approved shared migration runbook**, does not replace the verified backup/restore gate, and must not be used to apply V13/V14. `scripts/Test-SupabaseMigration.Tests.ps1` provides offline PowerShell syntax and fail-closed checks. Next increments must implement complete source/migration checksum comparison, exclusive operation controls, restorable backup evidence, an authorized apply path and all 13 read-only post-migration checks before enabling any shared write.
+Issue #107 provides `scripts/migrate-supabase.ps1`. Its default behavior is strictly read-only and its shared `-Apply` path remains deliberately fail-closed: developing and testing the tooling does not authorize V13/V14 on Supabase.
+
+Prerequisites are PowerShell 7 (Windows PowerShell 5.1 is also syntax/safety-tested), PostgreSQL 17 `psql.exe`, Java 21+, the exact reviewed repository commit, and separate secret-managed passwords for the `postgres` migration identity and restricted `servisimibul_app` runtime identity. Prefer the direct endpoint for migration work; the Dashboard session-pooler endpoint on port 5432 is accepted when direct IPv6 is unavailable. Transaction-pooler port 6543 is rejected because migration and advisory/session semantics require a stable session. JDBC URLs must target `/postgres`, contain no credentials, and explicitly use `sslmode=require`, `verify-ca`, or `verify-full`.
+
+Record the target database system identifier during a separately approved identity-verification step. Then place only the migration password in the invoking process and run preflight:
+
+```powershell
+$env:PGPASSWORD = '<migration-admin-password-from-secret-manager>'
+$env:SB_DB_PASSWORD = '<restricted-runtime-password-from-secret-manager>'
+.\scripts\migrate-supabase.ps1 `
+  -ProjectRef '<20-character-project-ref>' `
+  -ExpectedSystemIdentifier '<recorded-system-identifier>' `
+  -MigrationJdbcUrl 'jdbc:postgresql://db.<ref>.supabase.co:5432/postgres?sslmode=verify-full' `
+  -MigrationUser 'postgres' `
+  -RuntimeJdbcUrl 'jdbc:postgresql://db.<ref>.supabase.co:5432/postgres?sslmode=verify-full' `
+  -RuntimeUser 'servisimibul_app'
+Remove-Item Env:PGPASSWORD
+Remove-Item Env:SB_DB_PASSWORD
+```
+
+The preflight validates the project-scoped endpoint and usernames, PostgreSQL 17 primary/TLS/system identity, restricted runtime-role attributes, exact successful V1–V12 scripts and Flyway CRC32 checksums, V13→V14 repository ordering, absence of partial target objects, and absence of migration-like concurrent activity. It uses a read-only transaction and emits no password or connection string.
+
+An apply attempt additionally requires the full reviewed release SHA, an exact project-ref confirmation, a SHA-256-verified PostgreSQL 17 V12 archive, evidence that the same archive restored into an isolated PostgreSQL 17 target and passed all 13 verification checks, an unexpired approval record bound to that project/release/backup, and a per-project local execution mutex. A confirmation flag alone is insufficient. Evidence JSON and archives are sensitive operational records: keep them outside Git with current-user-only ACLs and never place secrets in them.
+
+The final shared execution step is intentionally not implemented because a local JSON file is not independently verifiable authorization. Even after every local prerequisite passes, `-Apply` stops before Flyway. Enabling it requires a separately reviewed external approval mechanism and a new explicit authorization. When that exists, execution must use the `migration` profile, Flyway enabled only for the one-shot process, ADMIN bootstrap and mail disabled, separate migration/runtime connections, non-web mode, Hibernate `ddl-auto=validate`, and Flyway's schema-history lock. Never add repair, baseline, clean, reset, recreation, automatic restore, or retry-after-partial-failure behavior.
+
+After any future authorized execution, run `docs/10_MIGRATION_VERIFICATION.sql` as the migration identity and require exactly 13 PASS rows, then perform Hibernate validation through `servisimibul_app`. Any migration or validation failure ends the attempt; preserve logs and backup evidence, revoke temporary access, and escalate to the recovery owner. Do not automatically retry, repair, restore, or modify credentials.
+
+Local verification uses only disposable PostgreSQL 17:
+
+```powershell
+pwsh -NoLogo -NoProfile -File .\scripts\Test-SupabaseMigration.Tests.ps1
+powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-SupabaseMigration.Tests.ps1
+pwsh -NoLogo -NoProfile -File .\scripts\Test-SupabaseMigration.Integration.ps1
+```

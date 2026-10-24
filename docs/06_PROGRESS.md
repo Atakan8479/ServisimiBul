@@ -6,6 +6,13 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 
 Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13 remains unapplied.
 
+## Verified OPS-01 guarded migration tooling development — 2026-10-24
+
+- Draft PR #108 extends the default read-only preflight with exact project/endpoint and database-system identity, TLS, PostgreSQL 17 primary, separate migration/runtime identities, restricted `servisimibul_app` attributes, exact V1–V12 Flyway script/checksum validation, ordered V13/V14 artifacts, partial-object collision checks, and concurrent migration-activity rejection.
+- Apply prerequisites validate the reviewed commit, unchanged migration artifacts, exact project confirmation, PostgreSQL 17 V12 backup SHA-256, matching isolated-restore evidence with all 13 checks, an unexpired target/release/backup-bound approval record, and a per-project local mutex. Shared execution remains fail-closed because the repository has no independently verifiable external approval mechanism; no local confirmation or JSON file can authorize a live migration by itself.
+- Offline syntax, endpoint, secret-redaction, artifact, evidence, prohibited-operation, concurrency-lock, and fail-closed tests pass in PowerShell 7 and Windows PowerShell 5.1. A disposable PostgreSQL 17.11 integration run built V12, matched every repository checksum to Flyway history, applied only V13–V14, passed Hibernate validation, proved a second-run no-op, and returned all 13 post-migration checks as PASS.
+- No shared Supabase connection, read, migration, schema/data mutation, restore, repair, baseline, clean, ADMIN bootstrap, SMTP action, or credential change occurred. Shared Supabase remains recorded at V12.
+
 ## Verified Issue #100 parent registration security foundation — 2026-10-23
 
 - Branch `codex/issue-100-parent-registration` adds backend-only `POST /api/v1/auth/parent/register`. The request accepts only email and password, assigns `PARENT` on the server, and creates no operator profile.
