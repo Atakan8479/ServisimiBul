@@ -139,6 +139,26 @@ foreach($case in $invalidCases){$script:preflightOutput=$case.Value;Assert-Rejec
 $script:preflightOutput=$validPreflight
 Assert-Rejected { Assert-SbApplyEvidence -RepositoryRoot $repositoryRoot -ProjectRef $projectRef -ReleaseCommit ('0'*40) -ConfirmProjectRef $projectRef -Preflight $verified } 'reviewed release commit|Checked-out HEAD'
 
+$script:verificationFixture = ''
+function Invoke-SbMigrationSql { return $script:verificationFixture }
+$checkLabels = @(
+ 'primary PostgreSQL 17 target','Flyway versions V1-V14 applied successfully',
+ 'exact application table inventory','exact application sequence inventory',
+ 'RLS enabled on every application table','exact runtime RLS policies',
+ 'runtime role is restricted','runtime role has exact table privileges',
+ 'public API roles have no direct table privileges','sequence privileges are least-privilege',
+ 'Flyway history is protected','operator business name remains nullable',
+ 'session expiry cleanup index exists'
+)
+$script:verificationFixture = (@($checkLabels | ForEach-Object { "$_|PASS|fixture" }) -join "`n")
+Assert-SbPostMigrationVerification -Endpoint $directMigration -Client unused -VerificationFile unused
+$script:verificationFixture = $script:verificationFixture.Replace('exact runtime RLS policies|PASS|fixture','exact runtime RLS policies|FAIL|fixture')
+Assert-Rejected { Assert-SbPostMigrationVerification -Endpoint $directMigration -Client unused -VerificationFile unused } 'exact runtime RLS policies'
+$script:verificationFixture = (@($checkLabels | Select-Object -Skip 1 | ForEach-Object { "$_|PASS|fixture" }) -join "`n")
+Assert-Rejected { Assert-SbPostMigrationVerification -Endpoint $directMigration -Client unused -VerificationFile unused } 'missing='
+$script:verificationFixture = $validPreflight
+function Invoke-SbMigrationSql { return $script:preflightOutput }
+
 $evidenceDirectory=Join-Path ([IO.Path]::GetTempPath()) ("servisimibul-ops01-evidence-"+[guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $evidenceDirectory|Out-Null
 try{
