@@ -74,3 +74,15 @@ try {
 Assert-Condition $badUserRejected 'Unsafe role validation must guide the user.'
 
 Write-Host 'Shared Supabase development launcher tests passed.'
+
+. (Join-Path $PSScriptRoot 'SupabaseMigrationSupport.ps1')
+Assert-Condition (Assert-SbLiveRuntimeV15Result -Output 'SB_LIVE|postgres|servisimibul_app|170011|5|f|f|39') 'Valid V15-compatible runtime rejected.'
+foreach($bad in @('SB_LIVE|postgres|servisimibul_app|170011|0|t|t|39',
+                   'SB_LIVE|postgres|postgres|170011|5|f|f|39',
+                   'SB_LIVE|postgres|servisimibul_app|170011|5|f|f|38')) {
+    $blocked=$false
+    try{$null=Assert-SbLiveRuntimeV15Result -Output $bad}catch{$blocked=$true}
+    Assert-Condition $blocked 'V12 or unsafe runtime must fail closed.'
+}
+$launcher=Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev-supabase.ps1')
+Assert-Condition ($launcher.Contains('Assert-SbLiveRuntimeV15 -Values $backendEnvironment')) 'Shared backend must run read-only V15 gate.'
