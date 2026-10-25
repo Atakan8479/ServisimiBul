@@ -109,3 +109,33 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     Assert-SbSnapshotV12History -HistoryRows $historyRows
     Write-Host 'Verified V12 public-schema snapshot restored only into disposable PostgreSQL.'
 }
+
+function Assert-SbRealGeographyResponses {
+    param(
+        [Parameter(Mandatory=$true)]$Provinces,
+        [Parameter(Mandatory=$true)]$Districts
+    )
+    $istanbul=@($Provinces | Where-Object { $_.name -ceq 'İstanbul' })
+    if($istanbul.Length -ne 1) {
+        throw 'Real-data API must expose exactly one Istanbul province.'
+    }
+    $id=[int64]$istanbul[0].id
+    if($id -le 0) { throw 'Invalid Istanbul province ID from real-data API.' }
+    $rows=@($Districts)
+    if($rows.Length -lt 39) {
+        throw 'Real-data API is missing Istanbul district records.'
+    }
+    $ids=@{}
+    foreach($district in $rows) {
+        if([int64]$district.provinceId -ne $id -or
+           [int64]$district.id -le 0 -or
+           [string]::IsNullOrWhiteSpace([string]$district.name)) {
+            throw 'Real-data district API returned an invalid or out-of-province record.'
+        }
+        $key=[string]$district.id
+        if($ids.ContainsKey($key)){throw 'Real-data district API contains duplicated IDs.'}
+        $ids[$key]=$true
+    }
+    return [pscustomobject]@{ ProvinceId=$id; DistrictCount=$rows.Length }
+}
+
