@@ -45,6 +45,17 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'notifications',
+        handle: { pageTitle: 'Bildirim merkezi' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (
+            await import('../features/notification/NotificationCenterPage')
+          ).NotificationCenterPage,
+        }),
+      },
+      {
         path: 'register',
         handle: { pageTitle: 'Hesap türü seçimi' },
         HydrateFallback: LoadingPage,
@@ -134,6 +145,15 @@ const applicationRoutes: RouteObject[] = [
           ).OperatorOfferingsPage,
         }),
       },
+      {
+        path: 'notifications',
+        handle: { pageTitle: 'Bildirim merkezi' },
+        lazy: async () => ({
+          Component: (
+            await import('../features/notification/NotificationCenterPage')
+          ).NotificationCenterPage,
+        }),
+      },
     ],
   },
   {
@@ -193,6 +213,15 @@ const applicationRoutes: RouteObject[] = [
             .AdminModerationPage,
         }),
       },
+      {
+        path: 'notifications',
+        handle: { pageTitle: 'Bildirim merkezi' },
+        lazy: async () => ({
+          Component: (
+            await import('../features/notification/NotificationCenterPage')
+          ).NotificationCenterPage,
+        }),
+      },
     ],
   },
   {
@@ -235,6 +264,29 @@ async function adminLoader({ request }: LoaderFunctionArgs) {
   try {
     const user = await currentUser()
     if (user.role !== 'ADMIN') {
+      throw new Response('Forbidden', { status: 403 })
+    }
+    return user
+  } catch (error) {
+    if (
+      error instanceof ApiError &&
+      (error.problem.status === 401 || error.problem.status === 403)
+    ) {
+      const url = new URL(request.url)
+      const next = `${url.pathname}${url.search}`
+      const reason = error.sessionExpired ? '&reason=session' : ''
+      throw redirect(
+        `/operator/login?next=${encodeURIComponent(next)}${reason}`,
+      )
+    }
+    throw error
+  }
+}
+
+async function parentLoader({ request }: LoaderFunctionArgs) {
+  try {
+    const user = await currentUser()
+    if (user.role !== 'PARENT') {
       throw new Response('Forbidden', { status: 403 })
     }
     return user

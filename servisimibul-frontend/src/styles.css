@@ -2397,6 +2397,139 @@ button:disabled {
   color: var(--color-danger);
 }
 
+.notification-nav-link {
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.notification-count,
+.unread-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.55rem;
+  min-height: 1.55rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.notification-page {
+  width: min(54rem, 100%);
+}
+
+.notification-heading {
+  align-items: flex-start;
+}
+
+.notification-heading p {
+  max-width: 68ch;
+}
+
+.notification-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.notification-state,
+.notification-empty {
+  margin-top: 2rem;
+}
+
+.notification-list {
+  display: grid;
+  margin: 2rem 0 0;
+  padding: 0;
+  border-block: 1px solid var(--color-border);
+  list-style: none;
+}
+
+.notification-list li + li {
+  border-top: 1px solid var(--color-border);
+}
+
+.notification-list li.is-read {
+  color: var(--color-muted);
+}
+
+.notification-list li.is-unread {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+}
+
+.notification-list button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 7rem;
+  border: 0;
+  padding: 1.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast) ease;
+}
+
+.notification-list button:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+.notification-list button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.notification-copy {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.notification-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.notification-copy > span:nth-child(2) {
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+.notification-copy time {
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.unread-marker {
+  min-height: 1.3rem;
+  padding-inline: 0.4rem;
+}
+
+.notification-action {
+  color: var(--color-accent);
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.notification-page > .pagination {
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
 .demand-comments-more {
   margin-top: 0.75rem;
 }
@@ -2443,6 +2576,10 @@ button:disabled {
   .action-card:hover {
     border-color: #9fbba8;
     box-shadow: 0 1.2rem 3rem rgba(33, 66, 47, 0.13);
+  }
+
+  .notification-list button:hover {
+    background: color-mix(in srgb, var(--color-accent) 8%, transparent);
   }
 }
 
@@ -2683,6 +2820,21 @@ button:disabled {
     display: grid;
   }
 
+  .notification-heading,
+  .notification-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .notification-list button {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .notification-action {
+    white-space: normal;
+  }
+
   .road-lane {
     opacity: 0.2;
   }
@@ -2726,69 +2878,4 @@ button:disabled {
     opacity: 1;
     transform: none;
   }
-}
-
-/* REQ-07: private in-app notification center */
-.notification-center {
-  position: relative;
-  margin-block: 0.75rem;
-}
-
-.notification-center > button {
-  width: 100%;
-}
-
-.notification-panel {
-  padding: 1rem;
-  margin-top: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-medium);
-  background: var(--color-surface, #fff);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
-  max-height: min(65vh, 34rem);
-  overflow-y: auto;
-  overflow-wrap: anywhere;
-}
-
-.notification-panel h2 {
-  font-size: 1.1rem;
-  margin-block: 0 0.75rem;
-}
-
-.notification-panel ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0;
-}
-
-.notification-panel li {
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--color-border);
-}
-
-.notification-panel li p {
-  margin: 0.35rem 0;
-}
-
-.notification-panel li time {
-  font-size: 0.8rem;
-  opacity: 0.75;
-}
-
-.notification-panel li div,
-.notification-panel nav {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-top: 0.5rem;
-}
-
-.notification-panel button {
-  cursor: pointer;
-}
-
-.notification-panel button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }

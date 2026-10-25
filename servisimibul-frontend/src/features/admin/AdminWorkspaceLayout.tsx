@@ -6,8 +6,8 @@ import {
   useRouteLoaderData,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { NotificationCenter } from '../notifications/NotificationCenter'
 import { logout, type AuthUser } from '../auth/auth-api'
+import { NotificationNavLink } from '../notification/NotificationNavLink'
 
 export function AdminWorkspaceLayout() {
   const user = useRouteLoaderData('admin') as AuthUser
@@ -59,10 +59,10 @@ export function AdminWorkspaceLayout() {
             Tarifeler
           </NavLink>
           <NavLink to="/admin/moderation" viewTransition>
-            Bildirimler
+            İçerik inceleme
           </NavLink>
+          <NotificationNavLink to="/admin/notifications" />
         </nav>
-        <NotificationCenter />
         <button
           className="secondary-button sidebar-action"
           disabled={loggingOut}

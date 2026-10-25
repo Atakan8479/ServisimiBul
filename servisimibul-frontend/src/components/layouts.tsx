@@ -7,26 +7,26 @@ import {
   useNavigation,
 } from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
-import { currentUser } from '../features/auth/auth-api'
-import { NotificationCenter } from '../features/notifications/NotificationCenter'
+import { ApiError } from '../api/client'
+import { currentUser, type AuthUser } from '../features/auth/auth-api'
+import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
 export function PublicLayout() {
-  const [isParent, setIsParent] = useState(false)
-  const location = useLocation()
+  const [user, setUser] = useState<AuthUser>()
 
   useEffect(() => {
     let active = true
     void currentUser()
-      .then((user) => {
-        if (active) setIsParent(user.role === 'PARENT')
+      .then((response) => {
+        if (active) setUser(response)
       })
-      .catch(() => {
-        if (active) setIsParent(false)
+      .catch((error: unknown) => {
+        if (active && !(error instanceof ApiError)) setUser(undefined)
       })
     return () => {
       active = false
     }
-  }, [location.pathname])
+  }, [])
 
   return (
     <div className="app-shell">
@@ -45,11 +45,14 @@ export function PublicLayout() {
           <NavLink to="/demands" viewTransition>
             Talep panosu
           </NavLink>
-          <NavLink to="/operator/login" viewTransition>
-            Giriş
-          </NavLink>
+          {user?.role === 'PARENT' ? (
+            <NotificationNavLink to="/notifications" />
+          ) : (
+            <NavLink to="/operator/login" viewTransition>
+              Giriş
+            </NavLink>
+          )}
         </nav>
-        {isParent && <NotificationCenter />}
       </header>
       <main id="main-content" className="page-content">
         <Outlet />

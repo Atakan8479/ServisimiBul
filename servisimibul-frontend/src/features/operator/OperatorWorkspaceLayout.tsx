@@ -6,8 +6,8 @@ import {
   useRouteLoaderData,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { NotificationCenter } from '../notifications/NotificationCenter'
 import { logout, type AuthUser } from '../auth/auth-api'
+import { NotificationNavLink } from '../notification/NotificationNavLink'
 
 export function OperatorWorkspaceLayout() {
   const user = useRouteLoaderData('operator') as AuthUser
@@ -60,6 +60,7 @@ export function OperatorWorkspaceLayout() {
           <NavLink to="/operator/profile" viewTransition>
             {user.operatorApprovalRequired ? 'Profil ve başvuru' : 'Profil'}
           </NavLink>
+          <NotificationNavLink to="/operator/notifications" />
           {canManageResources && (
             <>
               <NavLink to="/operator/schools" viewTransition>
@@ -71,7 +72,6 @@ export function OperatorWorkspaceLayout() {
             </>
           )}
         </nav>
-        <NotificationCenter />
         <button
           className="secondary-button sidebar-action"
           disabled={loggingOut}

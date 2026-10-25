@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import {
   getModerationCase,
@@ -48,6 +48,8 @@ const actionLabels: Record<ModerationAction, string> = {
 
 export function AdminModerationPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const openedCaseId = useRef<string | undefined>(undefined)
   const [filters, setFilters] = useState({
     status: 'OPEN' as ModerationCaseStatus | '',
     targetType: '' as ModerationTargetType | '',
@@ -76,6 +78,22 @@ export function AdminModerationPage() {
     },
     [navigate],
   )
+
+  useEffect(() => {
+    const caseId = searchParams.get('caseId')
+    if (!caseId || openedCaseId.current === caseId) return
+    openedCaseId.current = caseId
+    setDetailLoading(true)
+    void getModerationCase(caseId)
+      .then((detail) => setSelected(detail))
+      .catch((failure: unknown) =>
+        handleFailure(
+          failure,
+          'Bildirim ayrıntısı yüklenemedi. Tekrar deneyin.',
+        ),
+      )
+      .finally(() => setDetailLoading(false))
+  }, [handleFailure, searchParams])
 
   const loadQueue = useCallback(async () => {
     setLoading(true)
