@@ -10,6 +10,7 @@ $frontendDirectory = Join-Path $repositoryRoot 'servisimibul-frontend'
 $backendEnvPath = Join-Path $backendDirectory '.env'
 . (Join-Path $repositoryRoot 'scripts\WindowsDevelopmentSupport.ps1')
 . (Join-Path $repositoryRoot 'scripts\SharedSupabaseDevelopmentSupport.ps1')
+. (Join-Path $repositoryRoot 'scripts\SupabaseMigrationSupport.ps1')
 
 function Wait-SbBackendReady {
     param([Parameter(Mandatory = $true)][System.Diagnostics.Process]$BackendProcess)
@@ -39,6 +40,7 @@ try {
     $nodeRuntime = Resolve-SbNode24Runtime
     $backendEnvironment = Read-SbRuntimeEnvironmentFile -Path $backendEnvPath
     Assert-SbSharedRuntimeEnvironment -Values $backendEnvironment
+    Assert-SbLiveRuntimeV15 -Values $backendEnvironment
 
     $viteEntryPoint = Join-Path $frontendDirectory 'node_modules\vite\bin\vite.js'
     if (-not (Test-Path -LiteralPath $viteEntryPoint -PathType Leaf)) {
