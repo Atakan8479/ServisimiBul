@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   NavLink,
   Outlet,
@@ -7,8 +7,21 @@ import {
   useNavigation,
 } from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
+import { currentUser } from '../features/auth/auth-api'
+import { NotificationCenter } from '../features/notifications/NotificationCenter'
 
 export function PublicLayout() {
+  const [isParent, setIsParent] = useState(false)
+  const location = useLocation()
+
+  useEffect(() => {
+    let active = true
+    void currentUser()
+      .then((user) => { if (active) setIsParent(user.role === 'PARENT') })
+      .catch(() => { if (active) setIsParent(false) })
+    return () => { active = false }
+  }, [location.pathname])
+
   return (
     <div className="app-shell">
       <RoadBackdrop />
@@ -30,6 +43,7 @@ export function PublicLayout() {
             Giriş
           </NavLink>
         </nav>
+        {isParent && <NotificationCenter />}
       </header>
       <main id="main-content" className="page-content">
         <Outlet />
