@@ -10,6 +10,7 @@ on:
       - "scripts/Test-SupabaseWriterObservation*.ps1"
       - "scripts/Test-SupabaseMigration*.ps1"
       - "scripts/Test-SupabaseReleaseReadiness*.ps1"
+      - "scripts/Invoke-SupabaseV15ReadinessRehearsal.ps1"
       - "scripts/ops_github_approval.py"
       - "scripts/test_ops_github_approval.py"
       - "scripts/ops_disposable_lock_coordinator.py"
