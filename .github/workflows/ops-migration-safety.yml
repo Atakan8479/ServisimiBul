@@ -14,6 +14,8 @@ on:
       - "scripts/test_ops_disposable_lock_coordinator.py"
       - "scripts/ops_recovery_coverage.py"
       - "scripts/test_ops_recovery_coverage.py"
+      - "scripts/ops_project_recovery_assessment.py"
+      - "scripts/test_ops_project_recovery_assessment.py"
       - ".github/workflows/ops-independent-approval-audit.yml"
       - ".github/workflows/ops-migration-safety.yml"
   workflow_dispatch:
@@ -39,6 +41,7 @@ jobs:
           python -m unittest discover -s scripts -p test_ops_github_approval.py
           python -m unittest discover -s scripts -p test_ops_disposable_lock_coordinator.py
           python -m unittest discover -s scripts -p test_ops_recovery_coverage.py
+          python -m unittest discover -s scripts -p test_ops_project_recovery_assessment.py
       - name: PowerShell 7 offline tests
         shell: pwsh
         run: ./scripts/Test-SupabaseMigration.Tests.ps1
