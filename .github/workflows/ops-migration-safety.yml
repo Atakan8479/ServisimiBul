@@ -14,6 +14,8 @@ on:
       - "scripts/LocalSupabaseSnapshotSupport.ps1"
       - "scripts/Test-LocalSupabaseSnapshot.Tests.ps1"
       - "dev-snapshot.ps1"
+      - "scripts/Set-SharedSupabaseConnection.ps1"
+      - "scripts/Test-SharedSupabaseConnectionRepair.Tests.ps1"
       - "scripts/ops_github_approval.py"
       - "scripts/test_ops_github_approval.py"
       - "scripts/ops_disposable_lock_coordinator.py"
@@ -43,6 +45,7 @@ jobs:
           ./scripts/Test-SupabaseReleaseReadiness.Tests.ps1
           ./scripts/Test-SupabaseWriterObservation.Tests.ps1
           ./scripts/Test-LocalSupabaseSnapshot.Tests.ps1
+          ./scripts/Test-SharedSupabaseConnectionRepair.Tests.ps1
       - name: Independent approval offline tests
         shell: pwsh
         run: |
