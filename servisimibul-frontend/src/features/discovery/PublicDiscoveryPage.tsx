@@ -534,7 +534,8 @@ export function PublicDiscoveryPage() {
 
           <label className="form-field">
             Okulun ilçesi
-            <select aria-label="Okulun ilçesi"
+            <select
+              aria-label="Okulun ilçesi"
               disabled={!selectedSchoolProvinceId || loadingSchoolDistricts}
               onChange={(event) =>
                 void selectSchoolDistrict(event.target.value)
