@@ -27,6 +27,17 @@ $runnerSource=Get-Content -Raw -LiteralPath $launcher
 if(-not $runnerSource.Contains("scripts\BackupRestoreSupport.ps1")) {
     throw 'Snapshot launcher does not load the disposable identity helper.'
 }
+# Regression: single psql row must not be treated as a scalar lacking Count.
+Assert-SbSnapshotV12History -HistoryRows @('1,2,3,4,5,6,7,8,9,10,11,12|0')
+foreach($invalidRows in @(
+    @(),
+    @('1,2,3,4,5,6,7,8,9,10,11,12|1'),
+    @('1,2,3,4,5,6,7,8,9,10,11,12|0', '1,2,3,4,5,6,7,8,9,10,11,12|0')
+)) {
+    $rejected=$false
+    try { Assert-SbSnapshotV12History -HistoryRows $invalidRows } catch { $rejected=$true }
+    if(-not $rejected) { throw 'Snapshot V12 history validator accepted invalid row cardinality/content.' }
+}
 $runner=Get-Content -Raw -LiteralPath $launcher
 $source=Get-Content -Raw -LiteralPath $support
 foreach($token in @('Restore-SbV12SnapshotToDisposable',
