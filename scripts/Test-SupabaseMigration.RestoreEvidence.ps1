@@ -84,6 +84,33 @@ FROM pg_roles WHERE rolname IN ('service_role', 'supabase_admin');
     }
 }
 
+function Get-SbV12ApplicationFingerprint {
+    param([Parameter(Mandatory = $true)]$Cluster)
+    Assert-SbDisposableClusterIdentity -Cluster $Cluster
+    $sql = @'
+CREATE TEMP TABLE sb_restore_fingerprint (table_name text NOT NULL, row_count bigint NOT NULL, row_digest text NOT NULL);
+DO $sb$
+DECLARE item record; n bigint; digest text;
+BEGIN
+  FOR item IN SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'flyway_schema_history' ORDER BY tablename LOOP
+    EXECUTE format(
+      'SELECT count(*), md5(coalesce(string_agg(md5(to_jsonb(t)::text), '''' ORDER BY md5(to_jsonb(t)::text)), '''')) FROM public.%I t',
+      item.tablename
+    ) INTO n, digest;
+    INSERT INTO sb_restore_fingerprint VALUES(item.tablename,n,digest);
+  END LOOP;
+END
+$sb$;
+SELECT 'DATA|'||table_name||'|'||row_count||'|'||row_digest FROM sb_restore_fingerprint ORDER BY table_name;
+'@
+    $lines = @(Invoke-SbPsql -Cluster $Cluster -Database $Cluster.Database -Username $Cluster.AdminUser -Password $Cluster.AdminPassword -Sql $sql)
+    $dataRows = @($lines | ForEach-Object { [string]$_ } | Where-Object { $_ -like 'DATA|*' })
+    if ($dataRows.Count -lt 10 -or @($dataRows | Where-Object { $_ -match '^DATA\|app_user\|' }).Count -ne 1) {
+        throw 'V12 application data fingerprint is incomplete.'
+    }
+    return ($dataRows -join [Environment]::NewLine)
+}
+
 function Invoke-SbOps01DisposableMigration {
     param($Cluster,$JavaRuntime,[string]$TariffDir)
     $envMap = @{
@@ -144,6 +171,7 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
 '@
     $history=(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
     if ($history -cne '1,2,3,4,5,6,7,8,9,10,11,12|0') { throw 'Restored V12 Flyway history is inconsistent.' }
+    $baselineDataFingerprint=Get-SbV12ApplicationFingerprint -Cluster $cluster
     Write-Host 'V12 restoration verified in disposable PostgreSQL.'
 
     $tariffs=Join-Path $cluster.Root 'tariffs'
@@ -169,6 +197,8 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
         Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
         $rollbackHistory=(Invoke-SbPsql -Cluster $other -Database $other.Database -Username $other.AdminUser -Password $other.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
         if ($rollbackHistory -ne '1,2,3,4,5,6,7,8,9,10,11,12|0') { throw 'Rollback Flyway history mismatch.' }
+        $rollbackDataFingerprint=Get-SbV12ApplicationFingerprint -Cluster $other
+        if ($rollbackDataFingerprint -cne $baselineDataFingerprint) { throw 'Independent V12 recovery changed application data.' }
     } finally { if ($other) { Stop-SbIsolatedPostgres -Cluster $other } }
     Write-Host 'Second isolated V12 recovery verified.'
     $evidence=[ordered]@{
