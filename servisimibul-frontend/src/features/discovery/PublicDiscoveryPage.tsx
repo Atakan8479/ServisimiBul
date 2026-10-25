@@ -555,9 +555,11 @@ export function PublicDiscoveryPage() {
             {!selectedSchoolProvinceId && (
               <small>İlçeleri görmek için önce İstanbul'u seçin.</small>
             )}
-            {selectedSchoolProvinceId && !loadingSchoolDistricts && schoolDistricts.length > 0 && (
-              <small>{schoolDistricts.length} ilçe yüklendi.</small>
-            )}
+            {selectedSchoolProvinceId &&
+              !loadingSchoolDistricts &&
+              schoolDistricts.length > 0 && (
+                <small>{schoolDistricts.length} ilçe yüklendi.</small>
+              )}
           </label>
 
           <label className="form-field">
