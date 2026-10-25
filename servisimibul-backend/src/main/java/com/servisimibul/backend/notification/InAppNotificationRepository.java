@@ -20,6 +20,8 @@ public interface InAppNotificationRepository extends JpaRepository<InAppNotifica
 
     long countByRecipientUserIdAndReadAtIsNull(UUID recipientUserId);
 
+    long countByRecipientUserIdAndType(UUID recipientUserId, NotificationType type);
+
     Optional<InAppNotification> findByIdAndRecipientUserId(UUID id, UUID recipientUserId);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
