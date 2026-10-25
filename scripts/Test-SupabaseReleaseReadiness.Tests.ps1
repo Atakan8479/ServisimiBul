@@ -24,6 +24,7 @@ $restore=[pscustomobject]@{
  releaseCommit=$sha;rehearsalToolCommit=$sha;isolated=$true
  postgresMajor=17;flywayVersion=12;v12RestoreVerified=$true
  rehearsalTargetVersion=15;v15RehearsalVerified=$true;verificationChecksPassed=13
+ v12RollbackRehearsed=$true;rollbackIsolatedSystemIdentifier='8234567890123456789'
  testedAtUtc=$now.AddMinutes(-5).ToString('o')
 }
 $evidenceArgs=@{Backup=$backup;Restore=$restore;ProjectRef=$ref;ReleaseCommit=$sha;ArchiveSha256=$digest;NowUtc=$now;MaximumBackupAgeMinutes=120}
@@ -40,6 +41,12 @@ $restore.rehearsalToolCommit=$sha
 $backup.createdAtUtc=$now.AddMinutes(-130).ToString('o')
 Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'stale'
 $backup.createdAtUtc=$now.AddMinutes(-15).ToString('o')
+$restore.v12RollbackRehearsed=$false
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'rehearsal evidence'
+$restore.v12RollbackRehearsed=$true
+$restore.rollbackIsolatedSystemIdentifier=$restore.disposableSystemIdentifier
+Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'rehearsal evidence'
+$restore.rollbackIsolatedSystemIdentifier='8234567890123456789'
 $restore.v15RehearsalVerified=$false
 Expect-Rejection { Assert-SbReleaseEvidencePair @evidenceArgs } 'rehearsal evidence'
 Write-Host 'OPS-01 release readiness evidence fail-closed tests passed.'
