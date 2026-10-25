@@ -86,3 +86,23 @@ foreach($bad in @('SB_LIVE|postgres|servisimibul_app|170011|0|t|t|39',
 }
 $launcher=Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev-supabase.ps1')
 Assert-Condition ($launcher.Contains('Assert-SbLiveRuntimeV15 -Values $backendEnvironment')) 'Shared backend must run read-only V15 gate.'
+
+# Malformed URL diagnostics must never echo environment values or passwords.
+foreach ($url in @(
+    'jdbc:postgresql://<HOST>:5432/postgres?sslmode=require',
+    'jdbc:postgresql://aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require extra',
+    'jdbc:postgresql://aws-0-eu-west-1.pooler.supabase.com:6543/postgres?sslmode=require'
+)) {
+    $rejected=$false
+    try {
+        Assert-SbSharedRuntimeEnvironment -Values @{
+            SB_DB_JDBC_URL=$url
+            SB_DB_USER='servisimibul_app.whftdzfbvpchmghttjkg'
+            SB_DB_PASSWORD='test-only-secret'
+        }
+    } catch {
+        $rejected=$true
+        Assert-Condition (-not $_.Exception.Message.Contains('test-only-secret')) 'Connection error leaked a credential.'
+    }
+    Assert-Condition $rejected 'Malformed JDBC URL must fail closed.'
+}
