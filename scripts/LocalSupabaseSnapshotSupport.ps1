@@ -110,6 +110,39 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     Write-Host 'Verified V12 public-schema snapshot restored only into disposable PostgreSQL.'
 }
 
+function Convert-SbGeographyApiArray {
+    param(
+        [Parameter(Mandatory=$true)][string]$Json,
+        [Parameter(Mandatory=$true)][string]$Label
+    )
+    if(-not $Json.TrimStart().StartsWith('[')) {
+        throw "$Label API did not return a JSON array."
+    }
+    try {
+        $parsed=ConvertFrom-Json -InputObject $Json
+    } catch {
+        throw "$Label API returned invalid JSON."
+    }
+    # Windows PowerShell 5.1 and PowerShell 7 enumerate JSON arrays
+    # differently. Normalize a single nested Object[] without losing rows.
+    $items=@($parsed)
+    if($items.Length -eq 1 -and $items[0] -is [array]) {
+        $items=@($items[0])
+    }
+    if($items.Length -eq 1 -and $null -eq $items[0]) {
+        $items=@()
+    }
+    foreach($item in $items) {
+        if($null -eq $item -or $item -is [array] -or
+           $null -eq $item.PSObject.Properties['id'] -or
+           $null -eq $item.PSObject.Properties['name']) {
+            throw "$Label API returned unexpected row structure."
+        }
+    }
+    # A unary comma keeps the array's cardinality intact at the caller.
+    return ,$items
+}
+
 function Assert-SbRealGeographyResponses {
     param(
         [Parameter(Mandatory=$true)]$Provinces,
