@@ -6,6 +6,7 @@ import {
   useRouteLoaderData,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { NotificationCenter } from '../notifications/NotificationCenter'
 import { logout, type AuthUser } from '../auth/auth-api'
 
 export function OperatorWorkspaceLayout() {
@@ -70,6 +71,7 @@ export function OperatorWorkspaceLayout() {
             </>
           )}
         </nav>
+        <NotificationCenter />
         <button
           className="secondary-button sidebar-action"
           disabled={loggingOut}
