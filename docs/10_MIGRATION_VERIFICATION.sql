@@ -1,4 +1,4 @@
--- A-09 read-only post-migration verification for the repository's V1-V14 schema.
+-- A-09 read-only post-migration verification for the repository's V1-V15 schema.
 -- Run as the controlled migration/administration identity against the explicitly
 -- confirmed target. Every row must report PASS. This script changes no state.
 
@@ -68,12 +68,12 @@ checks(sort_order, check_name, passed, detail) as (
 
     union all
     select 20,
-           'Flyway versions V1-V14 applied successfully',
+           'Flyway versions V1-V15 applied successfully',
            coalesce((
                select array_agg(version order by installed_rank) filter (where success)
                from public.flyway_schema_history
                where version is not null
-           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12','13','14']::varchar[]
+           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15']::varchar[]
            and not exists (
                select 1 from public.flyway_schema_history where not success
            ),
@@ -175,8 +175,16 @@ checks(sort_order, check_name, passed, detail) as (
                   or has_table_privilege('servisimibul_app', format('public.%I', table_name), 'TRUNCATE')
                   or has_table_privilege('servisimibul_app', format('public.%I', table_name), 'REFERENCES')
                   or has_table_privilege('servisimibul_app', format('public.%I', table_name), 'TRIGGER')
+           )
+           and not exists (
+               select 1 from pg_default_acl defaults
+               cross join lateral aclexplode(defaults.defaclacl) privilege
+               where defaults.defaclnamespace = 'public'::regnamespace
+                 and defaults.defaclrole = 'postgres'::regrole
+                 and defaults.defaclobjtype in ('r', 'S')
+                 and privilege.grantee = 'servisimibul_app'::regrole
            ),
-           'requires SELECT, INSERT, UPDATE, DELETE only'
+           'requires SELECT, INSERT, UPDATE, DELETE only; no default runtime ACL'
 
     union all
     select 90,
