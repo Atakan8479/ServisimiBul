@@ -52,10 +52,12 @@ $backupEvidencePath = Join-Path $backupDirFull ("servisimibul-v12-$runId-backup.
 $restoreEvidencePath = Join-Path $backupDirFull ("servisimibul-v15-$runId-restore-proof.json")
 
 Write-Host 'Running offline safety tests before touching the read-only backup source.'
+# PowerShell script invocations do not reset LASTEXITCODE; expected negative
+# native-command tests can leave a nonzero value even when a .ps1 passed.
 & $offlineTests
-if ($LASTEXITCODE -ne 0) { throw 'Migration offline tests did not pass.' }
+if (-not $?) { throw 'Migration offline tests did not pass.' }
 & $readinessTests
-if ($LASTEXITCODE -ne 0) { throw 'Release readiness offline tests did not pass.' }
+if (-not $?) { throw 'Release readiness offline tests did not pass.' }
 
 $backupParameters = @{
     ProjectRef = $projectRef
