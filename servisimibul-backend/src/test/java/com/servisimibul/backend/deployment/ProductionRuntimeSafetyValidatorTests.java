@@ -82,6 +82,23 @@ class ProductionRuntimeSafetyValidatorTests {
         assertUnsafe(environment, "cannot be active together");
     }
 
+    @Test
+    void frozenProductionFailsWhenBackgroundDemandSchedulerIsEnabled() {
+        MockEnvironment environment = safeProductionEnvironment()
+                .withProperty("app.maintenance.traffic-frozen", "true")
+                .withProperty("app.demand.feedback.scheduler-enabled", "true");
+        assertUnsafe(environment, "disabling background feedback jobs");
+    }
+
+    @Test
+    void frozenProductionAcceptsExplicitlyStoppedScheduler() {
+        MockEnvironment environment = safeProductionEnvironment()
+                .withProperty("app.maintenance.traffic-frozen", "true")
+                .withProperty("app.demand.feedback.scheduler-enabled", "false");
+        assertThatCode(() -> new ProductionRuntimeSafetyValidator().validate(environment))
+                .doesNotThrowAnyException();
+    }
+
     private MockEnvironment safeProductionEnvironment() {
         MockEnvironment environment = new MockEnvironment()
                 .withProperty("spring.flyway.enabled", "false")
