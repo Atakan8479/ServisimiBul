@@ -9,6 +9,7 @@ OWNER = "Atakan8479"
 REPO = "ServisimiBul"
 PROJECT_REF = "whftdzfbvpchmghttjkg"
 TRUSTED = {"OWNER", "MEMBER", "COLLABORATOR"}
+# Approval is audit evidence only; never an automatic production authorization.
 
 def approved_reviewer(pr, reviews, expected_sha, actor):
     if pr.get("state") != "open" or pr.get("draft") is not False:
@@ -26,6 +27,8 @@ def approved_reviewer(pr, reviews, expected_sha, actor):
         login = (record.get("user") or {}).get("login", "").casefold()
         if login:
             latest[login] = record
+    # A review approval must apply to the exact immutable SHA. A later
+    # disapproval, dismissal, or unknown state supersedes earlier approvals.
     eligible = []
     for login, item in latest.items():
         if login in {author, initiating_actor}:
