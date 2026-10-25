@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   NavLink,
   Outlet,
@@ -7,8 +7,23 @@ import {
   useNavigation,
 } from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
+import {
+  AUTH_ROLE_CHANGED_EVENT,
+  knownAuthRole,
+} from '../features/auth/auth-api'
+import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
 export function PublicLayout() {
+  const [role, setRole] = useState(knownAuthRole)
+
+  useEffect(() => {
+    const refreshRole = () => setRole(knownAuthRole())
+    window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+    return () => {
+      window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+    }
+  }, [])
+
   return (
     <div className="app-shell">
       <RoadBackdrop />
@@ -26,9 +41,13 @@ export function PublicLayout() {
           <NavLink to="/demands" viewTransition>
             Talep panosu
           </NavLink>
-          <NavLink to="/operator/login" viewTransition>
-            Giriş
-          </NavLink>
+          {role === 'PARENT' ? (
+            <NotificationNavLink to="/notifications" />
+          ) : (
+            <NavLink to="/operator/login" viewTransition>
+              Giriş
+            </NavLink>
+          )}
         </nav>
       </header>
       <main id="main-content" className="page-content">

@@ -38,6 +38,7 @@ import com.servisimibul.backend.moderation.exception.ModerationApiException;
 import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
 import com.servisimibul.backend.ratelimit.RateLimitRule;
 import com.servisimibul.backend.operatorapplication.service.OperatorApplicationService;
+import com.servisimibul.backend.notification.NotificationDeliveryService;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
@@ -84,6 +85,7 @@ public class ModerationService {
     private final DemandLifecycleEventRepository lifecycleEventRepository;
     private final DemandFeedbackService feedbackService;
     private final OperatorApplicationService operatorApplicationService;
+    private final NotificationDeliveryService notificationDelivery;
     private final InMemoryRateLimiter rateLimiter;
     private final Clock clock;
 
@@ -116,6 +118,7 @@ public class ModerationService {
                 request.reason(),
                 normalizeOptional(request.explanation(), "explanation")
         ));
+        notificationDelivery.contentReported(report);
         return new ReportReceipt(
                 report.getId(),
                 moderationCase.getId(),

@@ -19,6 +19,7 @@ import com.servisimibul.backend.demand.config.DemandFeedbackProperties;
 import com.servisimibul.backend.demand.dto.DemandFeedbackDtos.FeedbackListResponse;
 import com.servisimibul.backend.demand.dto.DemandFeedbackDtos.FeedbackResponse;
 import com.servisimibul.backend.demand.exception.DemandApiException;
+import com.servisimibul.backend.notification.NotificationDeliveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -44,6 +45,7 @@ public class DemandFeedbackService {
     private final DemandLifecycleEventRepository lifecycleEventRepository;
     private final DemandFeedbackProperties properties;
     private final ParentEmailVerificationProperties parentEmailVerification;
+    private final NotificationDeliveryService notificationDelivery;
     private final Clock clock;
 
     /** Called inside the demand-locked publication transaction. */
@@ -55,21 +57,23 @@ public class DemandFeedbackService {
                 event.isOffersAfternoon(),
                 parentEmailVerification.required()
         );
+        List<DemandServiceFeedback> created = new java.util.ArrayList<>();
         for (DemandSupport support : supports) {
             if (!feedbackRepository.existsBySupportIdAndPublicationEventId(
                     support.getId(),
                     event.getId()
             )) {
-                feedbackRepository.save(new DemandServiceFeedback(
+                created.add(feedbackRepository.save(new DemandServiceFeedback(
                         support,
                         event,
                         event.getPublishedAt().plus(properties.expiryIfUnopened())
-                ));
+                )));
                 support.awaitFeedback();
             }
         }
         feedbackRepository.flush();
         supportRepository.flush();
+        created.forEach(notificationDelivery::servicePublished);
     }
 
     /** Called inside the demand-locked operator-withdrawal transaction. */
@@ -79,6 +83,7 @@ public class DemandFeedbackService {
                 : feedbackRepository.findAwaitingByResponseId(response.getId())) {
             feedback.supersede();
             affected.add(feedback.getSupport());
+            notificationDelivery.serviceWithdrawn(feedback);
         }
         affected.forEach(this::restoreSupportAfterPendingFeedbackChange);
         feedbackRepository.flush();
@@ -216,12 +221,14 @@ public class DemandFeedbackService {
             expireSupportAfterPendingFeedbackChange(feedback.getSupport());
             feedbackRepository.flush();
             supportRepository.flush();
+            notificationDelivery.supportExpired(feedback);
             closeIfExhausted(demand, now);
         } else if (feedback.getOpenedAt() != null
                 && feedback.getReminderTriggeredAt() == null
                 && !feedback.getReminderDueAt().isAfter(now)) {
             feedback.remind(now);
             feedbackRepository.flush();
+            notificationDelivery.feedbackReminder(feedback);
         }
     }
 

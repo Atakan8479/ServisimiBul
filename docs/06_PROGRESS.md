@@ -1,10 +1,20 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Parent identity — Issue #104 frontend journey ready for review
+## Current stage: REQ-07 in-app notifications ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, REQ-08, frontend design tooling, the parent/operator signup UX (PR #103), and Issue #100's backend parent-registration foundation (PR #105) are merged. Issue #104 is implemented on `codex/issue-104-parent-registration-frontend` for review. Shared Supabase is verified at V12; V13–V14 remain unapplied and require separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-06, REQ-08, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. REQ-07 is implemented on `codex/req-07-in-app-notifications` in draft PR #113 for review. Shared Supabase is verified at V12; V13–V16 remain unapplied and require separate approval. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13–V14 remain unapplied.
+Shared Supabase was verified at Flyway V12 on 2026-10-22 after separately approved V9–V12 migrations; V13–V16 remain unapplied.
+
+## Verified REQ-07 in-app notifications — 2026-10-26
+
+- Draft PR #113 on `codex/req-07-in-app-notifications` implements GitHub issue #90. Flyway V16 adds private recipient-scoped notifications with deterministic unique event keys, read timestamps, RLS, and restricted runtime grants; migration verification and Hibernate inventory expectations include the new table.
+- Demand creation notifies each currently eligible operator once across exact-neighborhood and same-pickup-district coverage tiers. New service publications, reminders, expiry, and withdrawal notify affected parents; genuinely new reports notify admins. Delivery shares the originating transaction and conflict-safe insert path, so failed or duplicate business operations do not emit duplicate rows.
+- Authenticated PARENT, OPERATOR, and ADMIN accounts have private paginated list, unread-count, and CSRF-protected mark-read APIs. The frontend provides role-specific routes, bounded visible-only polling, request cancellation, loading/empty/error/retry states, safe local navigation, read-before-navigation, pagination, and an admin moderation deep link. A session-scoped role hint controls only presentation and never grants access; backend loaders and recipient ownership remain authoritative.
+- The complete disposable PostgreSQL 17.11 run replayed Flyway V1–V16, validated Hibernate, packaged the application, and passed all 271 backend tests. Focused notification, demand/service-response, and moderation verification passed 16 tests, including tier targeting, recipient deduplication, publication/lifecycle idempotency, and genuinely new report delivery.
+- Frontend ESLint, strict TypeScript, scoped Prettier, all 94 Vitest tests, and the production build passed. The mocked Playwright suite passed all 11 desktop/tablet/mobile accessibility, overflow, reduced-motion, demand, operator, and 13-journey regressions after the notification fixture and anonymous session-probe regressions were fixed.
+- The real Spring Boot/Vite/Playwright journey passed 1/1 against another fresh disposable PostgreSQL 17.11 database after replaying all 16 migrations with the isolated administrator and starting the application through the restricted runtime role.
+- No SMTP, SMS, push, WebSocket, AI service, authorization relaxation, production verification change, or shared Supabase operation was introduced. Shared Supabase remains at V12; V13–V16 deployment is a separate approval-gated operation.
 
 ## Verified Issue #104 parent registration frontend — 2026-10-24
 

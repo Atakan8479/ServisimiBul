@@ -16,6 +16,8 @@ import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
+import com.servisimibul.backend.notification.InAppNotificationRepository;
+import com.servisimibul.backend.notification.NotificationType;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
@@ -89,6 +91,8 @@ class DemandServiceResponseApiTests {
     private DemandLifecycleEventRepository lifecycleEventRepository;
     @Autowired
     private com.servisimibul.backend.demand.service.DemandFeedbackService feedbackService;
+    @Autowired
+    private InAppNotificationRepository notificationRepository;
 
     @Test
     void eligibleOperatorPublishesImmediatelyAndLifecycleIsIdempotent() throws Exception {
@@ -114,6 +118,9 @@ class DemandServiceResponseApiTests {
         ).orElseThrow().getId();
         DemandServiceFeedback firstFeedback = feedbackRepository
                 .findDetailedBySupportId(supportId).getFirst();
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.SERVICE_PUBLISHED
+        )).isOne();
 
         mockMvc.perform(get(publicPath(fixture.demand())))
                 .andExpect(status().isOk())
@@ -138,6 +145,9 @@ class DemandServiceResponseApiTests {
                 .andExpect(jsonPath("$.response.offersAfternoon").value(false));
         assertThat(responseRepository.count()).isOne();
         assertThat(eventRepository.countByResponseId(responseId)).isOne();
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.SERVICE_PUBLISHED
+        )).isOne();
 
         mockMvc.perform(delete(operatorPath(fixture.demand()))
                         .with(as(fixture.operatorUser()))
@@ -155,6 +165,9 @@ class DemandServiceResponseApiTests {
                 .andExpect(jsonPath("$.totalElements").value(0));
         assertThat(feedbackRepository.findById(firstFeedback.getId()).orElseThrow().getStatus())
                 .isEqualTo(DemandServiceFeedbackStatus.SUPERSEDED);
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.SERVICE_WITHDRAWN
+        )).isOne();
 
         MvcResult republished = mockMvc.perform(post(operatorPath(fixture.demand()))
                         .with(as(fixture.operatorUser()))
@@ -180,6 +193,9 @@ class DemandServiceResponseApiTests {
                         DemandServiceFeedbackStatus.SUPERSEDED,
                         DemandServiceFeedbackStatus.AWAITING_FEEDBACK
                 );
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.SERVICE_PUBLISHED
+        )).isEqualTo(2);
         feedbackService.processDue(firstFeedback.getId());
         assertThat(supportRepository.findOwned(
                 fixture.demand().getId(),
@@ -505,6 +521,9 @@ class DemandServiceResponseApiTests {
         entityManager.clear();
         assertThat(feedbackRepository.findById(feedback.getId()).orElseThrow().getReminderTriggeredAt())
                 .isNotNull();
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.FEEDBACK_REMINDER
+        )).isOne();
 
         jdbcTemplate.update("""
                 update demand_service_feedback set expires_at = now() - interval '1 minute' where id = ?
@@ -516,6 +535,9 @@ class DemandServiceResponseApiTests {
         entityManager.clear();
         assertThat(feedbackRepository.findById(feedback.getId()).orElseThrow().getStatus())
                 .isEqualTo(DemandServiceFeedbackStatus.INACTIVE_EXPIRED);
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                fixture.parent().getId(), NotificationType.SUPPORT_EXPIRED
+        )).isOne();
         Demand inactive = demandRepository.findById(fixture.demand().getId()).orElseThrow();
         assertThat(inactive.getClosureReason()).isEqualTo(DemandClosureReason.INACTIVE);
         assertThat(lifecycleEventRepository.countByDemandIdAndEventType(

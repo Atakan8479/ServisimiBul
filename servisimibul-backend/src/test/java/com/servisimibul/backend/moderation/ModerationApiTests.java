@@ -19,6 +19,8 @@ import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
+import com.servisimibul.backend.notification.InAppNotificationRepository;
+import com.servisimibul.backend.notification.NotificationType;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -72,6 +74,7 @@ class ModerationApiTests {
     @Autowired private ModerationCaseRepository caseRepository;
     @Autowired private ContentReportRepository reportRepository;
     @Autowired private ModerationAuditEventRepository auditRepository;
+    @Autowired private InAppNotificationRepository notificationRepository;
 
     @AfterAll
     void removeBootstrapAdmins() {
@@ -139,6 +142,10 @@ class ModerationApiTests {
 
         assertThat(caseRepository.count()).isEqualTo(1);
         assertThat(reportRepository.count()).isEqualTo(2);
+        AppUser admin = userRepository.findByEmail("moderation-admin-one@example.com").orElseThrow();
+        assertThat(notificationRepository.countByRecipientUserIdAndType(
+                admin.getId(), NotificationType.CONTENT_REPORTED
+        )).isEqualTo(2);
     }
 
     @Test

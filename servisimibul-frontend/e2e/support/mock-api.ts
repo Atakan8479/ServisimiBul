@@ -167,6 +167,22 @@ export async function installMockApi(page: Page, state: MockApiState) {
       return empty(route)
     }
 
+    if (path === '/notifications/unread-count' && method === 'GET') {
+      return requireAuthenticated(route, role, () =>
+        json(route, { unreadCount: 0 }),
+      )
+    }
+    if (path === '/notifications' && method === 'GET') {
+      return requireAuthenticated(route, role, () =>
+        json(route, pageResponse([], 20)),
+      )
+    }
+    if (/^\/notifications\/[0-9a-f-]+\/read$/.test(path) && method === 'PUT') {
+      return requireAuthenticated(route, role, () =>
+        problem(route, 404, 'notification_not_found'),
+      )
+    }
+
     if (path === '/operator/profile' && method === 'GET') {
       return requireRole(route, role, 'OPERATOR', () =>
         json(route, profile(state)),
@@ -895,6 +911,14 @@ function requireRole(
   return actual === expected
     ? action()
     : problem(route, actual ? 403 : 401, 'authentication_required')
+}
+
+function requireAuthenticated(
+  route: Route,
+  actual: Role | undefined,
+  action: () => unknown,
+) {
+  return actual ? action() : problem(route, 401, 'authentication_required')
 }
 
 function json(route: Route, body: unknown, status = 200) {

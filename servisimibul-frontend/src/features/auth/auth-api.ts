@@ -1,5 +1,8 @@
 import { z } from 'zod'
-import { apiRequest, resetCsrfToken } from '../../api/client'
+import { ApiError, apiRequest, resetCsrfToken } from '../../api/client'
+
+const AUTH_ROLE_KEY = 'servisimibul.auth-role'
+export const AUTH_ROLE_CHANGED_EVENT = 'servisimibul:auth-role-changed'
 
 export const authUserSchema = z.object({
   id: z.string().uuid(),
@@ -12,6 +15,7 @@ export const authUserSchema = z.object({
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>
+export type AuthRole = AuthUser['role']
 
 export interface RegisterOperatorRequest {
   email: string
@@ -53,14 +57,24 @@ export async function login(request: LoginRequest): Promise<AuthUser> {
     schema: authUserSchema,
   })
   resetCsrfToken()
+  setKnownAuthRole(user.role)
   return user
 }
 
-export function currentUser(): Promise<AuthUser> {
-  return apiRequest('/auth/me', {
-    requiresSession: true,
-    schema: authUserSchema,
-  })
+export async function currentUser(): Promise<AuthUser> {
+  try {
+    const user = await apiRequest('/auth/me', {
+      requiresSession: true,
+      schema: authUserSchema,
+    })
+    setKnownAuthRole(user.role)
+    return user
+  } catch (error) {
+    if (error instanceof ApiError && error.problem.status === 401) {
+      clearKnownAuthRole()
+    }
+    throw error
+  }
 }
 
 export async function logout(): Promise<void> {
@@ -69,4 +83,22 @@ export async function logout(): Promise<void> {
     requiresSession: true,
   })
   resetCsrfToken()
+  clearKnownAuthRole()
+}
+
+export function knownAuthRole(): AuthRole | undefined {
+  const role = window.sessionStorage.getItem(AUTH_ROLE_KEY)
+  return role === 'ADMIN' || role === 'OPERATOR' || role === 'PARENT'
+    ? role
+    : undefined
+}
+
+export function clearKnownAuthRole(): void {
+  window.sessionStorage.removeItem(AUTH_ROLE_KEY)
+  window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
+}
+
+function setKnownAuthRole(role: AuthRole): void {
+  window.sessionStorage.setItem(AUTH_ROLE_KEY, role)
+  window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
