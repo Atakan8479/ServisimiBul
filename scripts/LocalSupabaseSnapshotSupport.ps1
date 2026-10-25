@@ -53,6 +53,17 @@ function Assert-SbVerifiedLocalSnapshotArchive {
     return [IO.Path]::GetFullPath([string]$backup.archivePath)
 }
 
+function Assert-SbSnapshotV12History {
+    param([Parameter(Mandatory=$true)][AllowEmptyCollection()][object[]]$HistoryRows)
+
+    # PowerShell unrolls single pipeline results. Always normalize to a real
+    # array before inspecting the result; do not pipe the assignment itself.
+    $rows = @($HistoryRows | ForEach-Object { ([string]$_).Trim() } | Where-Object { $_ })
+    if ($rows.Length -ne 1 -or $rows[0] -cne '1,2,3,4,5,6,7,8,9,10,11,12|0') {
+        throw 'Disposable restore does not match expected Flyway V12 history.'
+    }
+}
+
 function Restore-SbV12SnapshotToDisposable {
     param(
         [Parameter(Mandatory=$true)]$Cluster,
@@ -88,13 +99,13 @@ CREATE ROLE supabase_admin NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT
         }
     }
     Assert-SbDisposableClusterIdentity -Cluster $Cluster
-    $history=@(Invoke-SbPsql -Cluster $Cluster -Database $Cluster.Database -Username $Cluster.AdminUser -Password $Cluster.AdminPassword -Sql @'
+    $historyRows = @(
+        Invoke-SbPsql -Cluster $Cluster -Database $Cluster.Database -Username $Cluster.AdminUser -Password $Cluster.AdminPassword -Sql @'
 SELECT coalesce(string_agg(version,',' ORDER BY installed_rank),'none') || '|' ||
        (SELECT count(*) FROM public.flyway_schema_history WHERE NOT success)
 FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
-'@) | Select-Object -Last 1
-    if($history.Count -ne 1 -or [string]$history[0] -cne '1,2,3,4,5,6,7,8,9,10,11,12|0') {
-        throw 'Disposable restore does not match expected Flyway V12 history.'
-    }
+'@
+    )
+    Assert-SbSnapshotV12History -HistoryRows $historyRows
     Write-Host 'Verified V12 public-schema snapshot restored only into disposable PostgreSQL.'
 }
