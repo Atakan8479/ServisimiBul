@@ -32,3 +32,9 @@ By default, backup evidence must be no more than 120 minutes old; timestamps, so
 
 ## Current state
 Read-only preparation and local 13/13 V12-to-V15 rehearsal have been observed; all five PR #108 CI checks were successful at commit `6ed1892c`. PR remains a draft until current changes receive fresh CI and code review. OPS-01 live `-Apply` is intentionally unavailable.
+
+## Maintenance implementation and residual blockers
+
+The production web API now supports `SB_MAINTENANCE_TRAFFIC_FROZEN=true`. The highest-precedence HTTP filter responds 503 with no-cache to all requests except GET /livez. The production startup validator also requires `SB_DEMAND_FEEDBACK_SCHEDULER_ENABLED=false` whenever that flag is enabled. No remote flag is toggled automatically. This only quarantines a *single deployed web process*: all replicas, scheduled jobs, independent database clients, CI runners and Supabase Dashboard writes must be stopped or coordinated separately. Prove a write freeze across every entrypoint before creating the fresh backup. The production migration executor remains disabled and needs independent approval/recovery evidence.
+
+GitHub `ops-independent-approval-audit.yml` can assess a distinct current-commit PR review, but it is not a protected production environment with immutable external authorization and does not certify a backup or maintenance window. Do not connect it to production credentials. Existing public-schema V12 recovery proof cannot restore all managed Supabase Auth/Storage/platform state. A real separate-platform restore and validated loss-of-data boundary remain required.
