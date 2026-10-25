@@ -91,7 +91,8 @@ export function NotificationCenter() {
     setBusy(notification.id)
     setError(undefined)
     try {
-      const result = await apiRequest(`/notifications/${notification.id}/read`, {
+      const path = `/notifications/${notification.id}/read`
+      const result = await apiRequest(path, {
         method: 'PUT',
         schema: notificationSchema,
         requiresSession: true,
@@ -121,7 +122,11 @@ export function NotificationCenter() {
       {opened && (
         <div id="notification-list" className="notification-panel">
           <h2>Bildirimler</h2>
-          <button type="button" disabled={loading} onClick={() => void load(page)}>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => void load(page)}
+          >
             Yenile
           </button>
           {loading && <p role="status">Bildirimler yükleniyor…</p>}
