@@ -209,6 +209,9 @@ $verificationSource=Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'do
 Assert-SbCondition ($verificationSource.Contains('Flyway versions V1-V15 applied successfully')) 'V15 SQL history verification missing.'
 Assert-SbCondition ($verificationSource.Contains('no default runtime ACL')) 'V15 default ACL verification missing.'
 
+$fingerprintScript=Get-Content -Raw -LiteralPath $restoreEvidencePath
+Assert-SbCondition ($fingerprintScript.Contains('Get-SbV12ApplicationFingerprint')) 'Rollback must compare V12 application data fingerprints.'
+Assert-SbCondition ($fingerprintScript.Contains('Independent V12 recovery changed application data.')) 'Rollback data drift must fail closed.'
 $restoreScript = Get-Content -Raw -LiteralPath $restoreEvidencePath
 Assert-SbCondition ($restoreScript.Contains('Get-SbBackupArchiveTocStatus')) 'Restore must validate the same archive TOC as the backup.'
 Assert-SbCondition ($restoreScript.Contains('FlywayTable') -and $restoreScript.Contains('FlywayData')) 'Restore must verify Flyway schema and history data.'
