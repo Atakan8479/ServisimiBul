@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { ApiError } from '../../api/client'
+import { clearKnownAuthRole } from '../auth/auth-api'
 import { unreadNotificationCount } from './notification-api'
 
 export function NotificationNavLink({ to }: { to: string }) {
@@ -18,6 +20,9 @@ export function NotificationNavLink({ to }: { to: string }) {
           if (!disposed) setCount(response.unreadCount)
         })
         .catch((error: unknown) => {
+          if (error instanceof ApiError && error.problem.status === 401) {
+            clearKnownAuthRole()
+          }
           if (
             !disposed &&
             !(error instanceof DOMException && error.name === 'AbortError')

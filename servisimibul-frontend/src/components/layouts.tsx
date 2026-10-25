@@ -7,24 +7,20 @@ import {
   useNavigation,
 } from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
-import { ApiError } from '../api/client'
-import { currentUser, type AuthUser } from '../features/auth/auth-api'
+import {
+  AUTH_ROLE_CHANGED_EVENT,
+  knownAuthRole,
+} from '../features/auth/auth-api'
 import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
 export function PublicLayout() {
-  const [user, setUser] = useState<AuthUser>()
+  const [role, setRole] = useState(knownAuthRole)
 
   useEffect(() => {
-    let active = true
-    void currentUser()
-      .then((response) => {
-        if (active) setUser(response)
-      })
-      .catch((error: unknown) => {
-        if (active && !(error instanceof ApiError)) setUser(undefined)
-      })
+    const refreshRole = () => setRole(knownAuthRole())
+    window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
     return () => {
-      active = false
+      window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
     }
   }, [])
 
@@ -45,7 +41,7 @@ export function PublicLayout() {
           <NavLink to="/demands" viewTransition>
             Talep panosu
           </NavLink>
-          {user?.role === 'PARENT' ? (
+          {role === 'PARENT' ? (
             <NotificationNavLink to="/notifications" />
           ) : (
             <NavLink to="/operator/login" viewTransition>
