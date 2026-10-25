@@ -38,6 +38,13 @@ foreach($invalidRows in @(
     try { Assert-SbSnapshotV12History -HistoryRows $invalidRows } catch { $rejected=$true }
     if(-not $rejected) { throw 'Snapshot V12 history validator accepted invalid row cardinality/content.' }
 }
+$provinces=@([pscustomobject]@{id=1;name='İstanbul'})
+$districts=@(1..39 | ForEach-Object { [pscustomobject]@{id=$_;provinceId=1;name=('District '+$_)} })
+$null=Assert-SbRealGeographyResponses -Provinces $provinces -Districts $districts
+$invalid=@($districts | Select-Object -Skip 1)
+$rejected=$false
+try { $null=Assert-SbRealGeographyResponses -Provinces $provinces -Districts $invalid } catch { $rejected=$true }
+if(-not $rejected) { throw 'Real geography validation accepted missing districts.' }
 $runner=Get-Content -Raw -LiteralPath $launcher
 $source=Get-Content -Raw -LiteralPath $support
 foreach($token in @('Restore-SbV12SnapshotToDisposable',
