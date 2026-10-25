@@ -36,6 +36,10 @@ public final class ProductionRuntimeSafetyValidator implements EnvironmentPostPr
         if (!hasActiveProfile(environment, "prod")) {
             return;
         }
+        if (environment.getProperty("app.maintenance.traffic-frozen", Boolean.class, false) &&
+                environment.getProperty("app.demand.feedback.scheduler-enabled", Boolean.class, true)) {
+            throw unsafe("Maintenance traffic freeze also requires disabling background feedback jobs");
+        }
         if (hasActiveProfile(environment, "migration")) {
             throw unsafe("The prod and migration profiles cannot be active together");
         }
