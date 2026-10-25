@@ -10,6 +10,23 @@ foreach($path in @($launcher,$support)) {
     $null=[System.Management.Automation.Language.Parser]::ParseFile($path,[ref]$null,[ref]$parseErrors)
     if(@($parseErrors).Count -gt 0) { throw ('Snapshot runner PowerShell parse failed: '+$path) }
 }
+# Verify mandatory helper functions are actually imported, not just mentioned.
+. (Join-Path $PSScriptRoot 'WindowsDevelopmentSupport.ps1')
+. (Join-Path $PSScriptRoot 'BackupRestoreSupport.ps1')
+. (Join-Path $PSScriptRoot 'SupabaseMigrationSupport.ps1')
+. (Join-Path $PSScriptRoot 'LocalSupabaseSnapshotSupport.ps1')
+foreach($functionName in @('Assert-SbDisposableClusterIdentity',
+                           'Get-SbBackupArchiveTocStatus',
+                           'Read-SbEvidenceJson',
+                           'Restore-SbV12SnapshotToDisposable')) {
+    if(-not (Get-Command $functionName -CommandType Function -ErrorAction SilentlyContinue)) {
+        throw ('Snapshot launcher dependency not available: '+$functionName)
+    }
+}
+$runnerSource=Get-Content -Raw -LiteralPath $launcher
+if(-not $runnerSource.Contains("scripts\BackupRestoreSupport.ps1")) {
+    throw 'Snapshot launcher does not load the disposable identity helper.'
+}
 $runner=Get-Content -Raw -LiteralPath $launcher
 $source=Get-Content -Raw -LiteralPath $support
 foreach($token in @('Restore-SbV12SnapshotToDisposable',
