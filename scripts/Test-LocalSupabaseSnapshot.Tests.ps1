@@ -38,6 +38,13 @@ foreach($invalidRows in @(
     try { Assert-SbSnapshotV12History -HistoryRows $invalidRows } catch { $rejected=$true }
     if(-not $rejected) { throw 'Snapshot V12 history validator accepted invalid row cardinality/content.' }
 }
+$json='[{"id":1,"name":"İstanbul"}]'
+$one=Convert-SbGeographyApiArray -Json $json -Label 'Province'
+if(@($one).Length -ne 1 -or $one[0].id -ne 1){throw 'Single-province JSON array normalization failed.'}
+$districtJson='[' + ((1..39 | ForEach-Object { '{"id":'+$_+',"provinceId":1,"name":"District '+$_+'"}' }) -join ',') + ']'
+$allDistricts=Convert-SbGeographyApiArray -Json $districtJson -Label 'District'
+if(@($allDistricts).Length -ne 39){throw 'District JSON array was flattened incorrectly.'}
+$null=Assert-SbRealGeographyResponses -Provinces $one -Districts $allDistricts
 $provinces=@([pscustomobject]@{id=1;name='İstanbul'})
 $districts=@(1..39 | ForEach-Object { [pscustomobject]@{id=$_;provinceId=1;name=('District '+$_)} })
 $null=Assert-SbRealGeographyResponses -Provinces $provinces -Districts $districts
