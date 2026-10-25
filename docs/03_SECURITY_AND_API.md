@@ -95,6 +95,15 @@ Bodies are trimmed plain text of 2–1000 characters. The same author/demand/exa
 
 Creating a report never changes target visibility or lifecycle. Only an explicit administrator action may hide/restore a comment, withdraw a response, close a demand, or suspend an operator. Suspension reuses the existing account-disable/session-revocation path. No AI moderation, universal administrator preapproval, automatic takedown threshold, or notification delivery is part of REQ-08; issue #90 owns notifications.
 
+### In-app notifications
+
+- `GET /api/v1/notifications` and `GET /api/v1/notifications/unread-count` require an authenticated PARENT, OPERATOR, or ADMIN and return only rows whose `recipient_user_id` is the current principal. Pagination is bounded and newest-first.
+- `PUT /api/v1/notifications/{notificationId}/read` requires the same authenticated ownership plus CSRF. A notification owned by another account is exposed as not found.
+- Delivery is part of the originating business transaction and uses a unique deterministic event key with conflict-safe insertion. Repeated demand, publication, lifecycle, or report handling therefore cannot create duplicate recipient/event rows.
+- Notification links are backend-generated local application paths. The frontend validates that every link begins with `/`, polls the unread count only while visible at a bounded interval, and cancels obsolete requests during navigation or unmount.
+
+Notifications never change demand, response, feedback, report, moderation, or account state. REQ-07 activates no SMTP, SMS, push, WebSocket, or inference service.
+
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
 - `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`
