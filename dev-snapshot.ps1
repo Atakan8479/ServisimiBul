@@ -136,6 +136,10 @@ try {
     Invoke-LocalMigration -Database $cluster -JavaRuntime $javaRuntime `
         -TariffDirectory $tariffDirectory
 
+    Assert-SbDisposableClusterIdentity -Cluster $cluster
+    $version=@(Invoke-SbPsql -Cluster $cluster -Database $cluster.Database -Username $cluster.AdminUser -Password $cluster.AdminPassword -Sql 'SELECT max(version::int) FROM public.flyway_schema_history WHERE success;' | Select-Object -Last 1)
+    if ($version.Count -ne 1 -or [string]$version[0] -cne '15') { throw 'Disposable migration did not reach Flyway V15.' }
+    Write-Host 'Disposable snapshot Flyway V15 verified.'
     if ($SmokeTest) {
         $null = Invoke-SbPsql -Cluster $cluster -Database $cluster.Database `
             -Username $cluster.RuntimeUser -Password $cluster.RuntimePassword `
