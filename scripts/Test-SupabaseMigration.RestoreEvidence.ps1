@@ -156,6 +156,48 @@ FROM public.flyway_schema_history WHERE version IS NOT NULL AND success;
     $env:PGPASSWORD=$cluster.AdminPassword
     Assert-SbPostMigrationVerification -Endpoint $endpoint -Client $tools.Psql -VerificationFile (Join-Path $repositoryRoot 'docs\10_MIGRATION_VERIFICATION.sql')
     Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+    $rollbackCluster=$null
+    $rollbackIdentifier=$null
+    try {
+        $rollbackCluster=Start-SbIsolatedPostgres -Tools $tools
+        Assert-SbDisposableClusterIdentity -Cluster $rollbackCluster
+        Initialize-SbOps01DisposableSupabaseRoles -Cluster $rollbackCluster
+        $rollbackIdentifier=(Invoke-SbPsql -Cluster $rollbackCluster -Database $rollbackCluster.Database -Username $rollbackCluster.AdminUser -Password $rollbackCluster.AdminPassword -Sql 'SELECT system_identifier FROM pg_control_system();' | Select-Object -Last 1).ToString().Trim()
+        if ($rollbackIdentifier -cnotmatch '^[0-9]{10,30}
+        projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
+        disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
+        isolated=$true; postgresMajor=17; flywayVersion=12; v12RestoreVerified=$true; rehearsalToolCommit=$input.RehearsalCommit
+        rehearsalTargetVersion=15; v15RehearsalVerified=$true; verificationChecksPassed=13
+        v12RollbackRehearsed=$true; rollbackIsolatedSystemIdentifier=$rollbackIdentifier
+        testedAtUtc=[DateTimeOffset]::UtcNow.ToString('o')
+    }
+    $evidence | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $input.Output -Encoding UTF8
+    Write-Host 'Restored V12, rehearsed V13-V15 twice and passed all 13 checks in a disposable database.'
+    Write-Host 'Restore evidence saved outside the repository. No shared database was modified.'
+} finally {
+    try {
+        if ($cluster) { Stop-SbIsolatedPostgres -Cluster $cluster }
+    } finally {
+    foreach ($entry in @(Get-ChildItem Env:PG* -ErrorAction SilentlyContinue)) {
+        Remove-Item -LiteralPath ('Env:'+$entry.Name) -ErrorAction SilentlyContinue
+    }
+    foreach ($name in $pgEnvironment.Keys) {
+        Set-Item -LiteralPath ('Env:'+$name) -Value $pgEnvironment[$name]
+    }
+    }
+}
+ -or $rollbackIdentifier -ceq $identifier -or $rollbackIdentifier -ceq [string]$input.Backup.sourceSystemIdentifier) { throw 'Rollback must have unique disposable database identity.' }
+        $env:PGPASSWORD=$rollbackCluster.AdminPassword
+        $null=@(& $tools.PgRestore '--exit-on-error' '--single-transaction' '--no-owner' '--host=127.0.0.1' "--port=$($rollbackCluster.Port)" "--username=$($rollbackCluster.AdminUser)" "--dbname=$($rollbackCluster.Database)" '--schema=public' $input.Archive 2>&1)
+        if ($LASTEXITCODE -ne 0) { throw 'Independent V12 recovery rehearsal failed.' }
+        Remove-Item Env:PGPASSWORD -ErrorAction SilentlyContinue
+        Assert-SbDisposableClusterIdentity -Cluster $rollbackCluster
+        $rollbackHistory=(Invoke-SbPsql -Cluster $rollbackCluster -Database $rollbackCluster.Database -Username $rollbackCluster.AdminUser -Password $rollbackCluster.AdminPassword -Sql $sql | Select-Object -Last 1).ToString().Trim()
+        if ($rollbackHistory -cne '1,2,3,4,5,6,7,8,9,10,11,12|0') { throw 'Independent rollback V12 Flyway history mismatch.' }
+    } finally {
+        if ($rollbackCluster) { Stop-SbIsolatedPostgres -Cluster $rollbackCluster }
+    }
+    Write-Host 'Independent V12 recovery in a second isolated PostgreSQL 17 cluster verified.'
     $evidence=[ordered]@{
         projectRef=$input.Backup.projectRef; sourceSystemIdentifier=$input.Backup.sourceSystemIdentifier
         disposableSystemIdentifier=$identifier; backupSha256=$input.Hash; releaseCommit=$input.Backup.releaseCommit
