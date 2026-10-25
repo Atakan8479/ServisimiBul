@@ -17,9 +17,15 @@ export function PublicLayout() {
   useEffect(() => {
     let active = true
     void currentUser()
-      .then((user) => { if (active) setIsParent(user.role === 'PARENT') })
-      .catch(() => { if (active) setIsParent(false) })
-    return () => { active = false }
+      .then((user) => {
+        if (active) setIsParent(user.role === 'PARENT')
+      })
+      .catch(() => {
+        if (active) setIsParent(false)
+      })
+    return () => {
+      active = false
+    }
   }, [location.pathname])
 
   return (
