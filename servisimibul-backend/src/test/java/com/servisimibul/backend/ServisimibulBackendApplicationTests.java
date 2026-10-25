@@ -324,6 +324,16 @@ class ServisimibulBackendApplicationTests {
 
         assertThat(jdbcTemplate.queryForObject("""
                 select count(*)
+                from pg_default_acl defaults
+                cross join lateral aclexplode(defaults.defaclacl) privilege
+                where defaults.defaclnamespace in (0::oid, 'public'::regnamespace)
+                  and defaults.defaclrole = 'postgres'::regrole
+                  and defaults.defaclobjtype in ('r', 'S')
+                  and privilege.grantee = 'servisimibul_app'::regrole
+                """, Integer.class)).isZero();
+
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
                 from pg_class object_info
                 join pg_namespace schema_info on schema_info.oid = object_info.relnamespace
                 cross join lateral aclexplode(coalesce(

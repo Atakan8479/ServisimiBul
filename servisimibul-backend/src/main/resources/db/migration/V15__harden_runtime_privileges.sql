@@ -47,6 +47,17 @@ BEGIN
         AND NOT rolinherit AND NOT rolbypassrls) THEN
         RAISE EXCEPTION 'V15 refused: missing or elevated runtime role';
     END IF;
+    IF EXISTS (
+        SELECT 1
+        FROM pg_default_acl defaults
+        CROSS JOIN LATERAL aclexplode(defaults.defaclacl) privilege
+        WHERE defaults.defaclnamespace = 0::oid
+          AND defaults.defaclrole = 'postgres'::regrole
+          AND defaults.defaclobjtype IN ('r', 'S')
+          AND privilege.grantee = 'servisimibul_app'::regrole
+    ) THEN
+        RAISE EXCEPTION 'V15 refused: global postgres default privileges grant runtime access';
+    END IF;
 END
 $$;
 

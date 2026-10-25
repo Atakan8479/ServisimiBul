@@ -179,12 +179,12 @@ checks(sort_order, check_name, passed, detail) as (
            and not exists (
                select 1 from pg_default_acl defaults
                cross join lateral aclexplode(defaults.defaclacl) privilege
-               where defaults.defaclnamespace = 'public'::regnamespace
+               where defaults.defaclnamespace in (0::oid, 'public'::regnamespace)
                  and defaults.defaclrole = 'postgres'::regrole
                  and defaults.defaclobjtype in ('r', 'S')
                  and privilege.grantee = 'servisimibul_app'::regrole
            ),
-           'requires SELECT, INSERT, UPDATE, DELETE only; no default runtime ACL'
+           'requires SELECT, INSERT, UPDATE, DELETE only; no global/schema runtime default ACL'
 
     union all
     select 90,
