@@ -6,6 +6,8 @@ on:
       - "scripts/migrate-supabase.ps1"
       - "scripts/SupabaseMigrationSupport.ps1"
       - "scripts/SupabaseReleaseReadinessSupport.ps1"
+      - "scripts/SupabaseWriterObservationSupport.ps1"
+      - "scripts/Test-SupabaseWriterObservation*.ps1"
       - "scripts/Test-SupabaseMigration*.ps1"
       - "scripts/Test-SupabaseReleaseReadiness*.ps1"
       - "scripts/ops_github_approval.py"
@@ -35,6 +37,7 @@ jobs:
         run: |
           ./scripts/Test-SupabaseMigration.Tests.ps1
           ./scripts/Test-SupabaseReleaseReadiness.Tests.ps1
+          ./scripts/Test-SupabaseWriterObservation.Tests.ps1
       - name: Independent approval offline tests
         shell: pwsh
         run: |
