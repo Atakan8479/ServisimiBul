@@ -15,6 +15,7 @@ $repositoryRoot = $PSScriptRoot
 $backendDirectory = Join-Path $repositoryRoot 'servisimibul-backend'
 $frontendDirectory = Join-Path $repositoryRoot 'servisimibul-frontend'
 . (Join-Path $repositoryRoot 'scripts\WindowsDevelopmentSupport.ps1')
+. (Join-Path $repositoryRoot 'scripts\BackupRestoreSupport.ps1')
 . (Join-Path $repositoryRoot 'scripts\SupabaseMigrationSupport.ps1')
 . (Join-Path $repositoryRoot 'scripts\LocalSupabaseSnapshotSupport.ps1')
 
