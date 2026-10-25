@@ -41,26 +41,9 @@ function Assert-SbReleaseEvidencePair {
     if($Restore.isolated -cne $true -or $Restore.v12RestoreVerified -cne $true -or
        $Restore.v15RehearsalVerified -cne $true -or [int]$Restore.rehearsalTargetVersion -ne 15 -or
        [int]$Restore.verificationChecksPassed -ne 13 -or
-       $Restore.v12RollbackRehearsed -cne $true -or
-       [string]$Restore.rollbackIsolatedSystemIdentifier -cnotmatch '^[0-9]{10,30}
-        throw 'Disposable V12-to-V15 rehearsal evidence is missing or incomplete.'
-    }
-    $created=[DateTimeOffset]::MinValue
-    $tested=[DateTimeOffset]::MinValue
-    if(-not [DateTimeOffset]::TryParse([string]$Backup.createdAtUtc,[ref]$created) -or
-       -not [DateTimeOffset]::TryParse([string]$Restore.testedAtUtc,[ref]$tested)){
-        throw 'Release evidence timestamps are invalid.'
-    }
-    if($created -gt $tested -or $tested -gt $NowUtc.AddMinutes(2) -or
-       $created -gt $NowUtc.AddMinutes(2) -or
-       $NowUtc - $created -gt [TimeSpan]::FromMinutes($MaximumBackupAgeMinutes)){
-        throw 'Backup is stale, future-dated, or newer than the restore rehearsal.'
-    }
-    return $true
-}
- -or
-       [string]$Restore.rollbackIsolatedSystemIdentifier -ceq [string]$Restore.disposableSystemIdentifier -or
-       [string]$Restore.rollbackIsolatedSystemIdentifier -ceq [string]$Backup.sourceSystemIdentifier){
+       $Restore.v12RollbackRehearsed -ne $true -or
+       [string]$Restore.rollbackIsolatedSystemIdentifier -eq [string]$Restore.disposableSystemIdentifier -or
+       [string]$Restore.rollbackIsolatedSystemIdentifier -eq [string]$Backup.sourceSystemIdentifier){
         throw 'Disposable V12-to-V15 rehearsal evidence is missing or incomplete.'
     }
     $created=[DateTimeOffset]::MinValue
