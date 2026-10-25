@@ -55,10 +55,87 @@ function Assert-SbSharedRuntimeEnvironment {
     if (-not $jdbcUrl.StartsWith('jdbc:postgresql://')) {
         throw 'SB_DB_JDBC_URL must be a PostgreSQL JDBC URL.'
     }
+    # This launcher reads servisimibul-backend/.env, not variables
+    # defined in other PowerShell sessions. Never echo credentials.
+    $endpointText = $jdbcUrl.Substring('jdbc:'.Length)
+    if ($endpointText -match '\s' -or $endpointText.Contains('<') -or
+        $endpointText.Contains('>') -or $endpointText.Contains('
+    if ($uri.Host -in @('localhost', '127.0.0.1', '::1')) {
+        throw 'The shared Supabase launcher rejects loopback database targets.'
+    }
+    if ($uri.Query.TrimStart('?') -notmatch '(^|&)sslmode=require(&|$)') {
+        throw 'The shared Supabase JDBC URL must include sslmode=require.'
+    }
+}
+
+# Restricted runtime may not read Flyway history after V15 by design.
+# Check V13/V14 schema presence, V15 privilege hardening, and geography.
+function Assert-SbLiveRuntimeV15Result {
+    param([Parameter(Mandatory=$true)][string]$Output)
+    $lines=@($Output -split "\r?\n" | Where-Object { $_ -like 'SB_LIVE|*' })
+    if($lines.Length -ne 1){throw 'Shared database preflight returned no unique status row.'}
+    $parts=$lines[0].Trim().Split('|')
+    if($parts.Length -ne 8 -or
+       $parts[0] -cne 'SB_LIVE' -or
+       $parts[1] -cne 'postgres' -or
+       $parts[2] -cne 'servisimibul_app' -or
+       $parts[3] -cnotmatch '^17[0-9]{4}$' -or
+       $parts[4] -cne '5' -or
+       $parts[5] -cne 'f' -or
+       $parts[6] -cne 'f' -or
+       $parts[7] -cne '39') {
+        throw 'Shared Supabase is not V15-compatible with restricted runtime rights and 39 districts. Do not start this backend against V12; complete the approved V12-to-V15 migration first.'
+    }
+    return $true
+}
+
+function Assert-SbLiveRuntimeV15 {
+    param(
+        [Parameter(Mandatory=$true)][hashtable]$Values,
+        [string]$PsqlPath
+    )
+    $endpoint=ConvertTo-SbSupabaseEndpoint -JdbcUrl $Values['SB_DB_JDBC_URL'] -ProjectRef 'whftdzfbvpchmghttjkg' -User $Values['SB_DB_USER'] -Role runtime
+    if(-not $PsqlPath){
+        $psql=Get-Command psql.exe -ErrorAction SilentlyContinue
+        if(-not $psql){$psql=Get-Command psql -ErrorAction SilentlyContinue}
+        if(-not $psql){throw 'PostgreSQL psql is required for the read-only shared V15 gate.'}
+        $PsqlPath=$psql.Source
+    }
+    $previous=Get-Item -LiteralPath 'Env:PGPASSWORD' -ErrorAction SilentlyContinue
     try {
-        $uri = [Uri]$jdbcUrl.Substring('jdbc:'.Length)
+        $env:PGPASSWORD=$Values['SB_DB_PASSWORD']
+        $output=Invoke-SbMigrationSql -Endpoint $endpoint -Client $PsqlPath -Sql @'
+BEGIN TRANSACTION READ ONLY;
+SELECT 'SB_LIVE|'||current_database()||'|'||current_user||'|'||
+current_setting('server_version_num')||'|'||
+(SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+ WHERE n.nspname='public' AND c.relkind IN ('r','p') AND
+ c.relname IN ('demand_service_feedback','demand_lifecycle_event',
+              'content_report','moderation_case','moderation_audit_event'))||'|'||
+CASE WHEN has_table_privilege(current_user,'public.flyway_schema_history','SELECT') THEN 't' ELSE 'f' END||'|'||
+CASE WHEN has_sequence_privilege(current_user,'public.province_id_seq','UPDATE') THEN 't' ELSE 'f' END||'|'||
+(SELECT count(*) FROM public.district);
+COMMIT;
+'@
+    } finally {
+        if($previous){$env:PGPASSWORD=$previous.Value}else{Remove-Item -LiteralPath 'Env:PGPASSWORD' -ErrorAction SilentlyContinue}
+    }
+    $null=Assert-SbLiveRuntimeV15Result -Output $output
+    Write-Host 'Live Supabase V15 schema, restricted runtime privileges, and 39 districts verified (read-only).'
+}
++'{') -or
+        $endpointText.Contains('@')) {
+        throw 'SB_DB_JDBC_URL contains whitespace, placeholders, or URL credentials. In servisimibul-backend/.env use one JDBC URL without angle brackets, variables, a username, or a password.'
+    }
+    try {
+        $uri = [Uri]$endpointText
     } catch {
-        throw 'SB_DB_JDBC_URL is invalid.'
+        throw 'SB_DB_JDBC_URL has malformed URI syntax in servisimibul-backend/.env. Expected jdbc:postgresql://aws-0-eu-west-1.pooler.supabase.com:5432/postgres?sslmode=require (no quotes or URL credentials).'
+    }
+    if (-not $uri.IsAbsoluteUri -or $uri.Scheme -cne 'postgresql' -or
+        [string]::IsNullOrWhiteSpace($uri.Host) -or $uri.AbsolutePath -cne '/postgres' -or
+        $uri.Port -ne 5432) {
+        throw 'SB_DB_JDBC_URL must use a valid PostgreSQL host on port 5432 with the /postgres database.'
     }
     if ($uri.Host -in @('localhost', '127.0.0.1', '::1')) {
         throw 'The shared Supabase launcher rejects loopback database targets.'
