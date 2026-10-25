@@ -13,6 +13,35 @@ import java.util.Optional;
 public interface OperatorSchoolCoverageRepository extends JpaRepository<OperatorSchoolCoverage, UUID> {
 
     @Query("""
+            select distinct profile.user.id
+            from OperatorSchoolCoverage coverage
+            join coverage.operatorSchool operatorSchool
+            join operatorSchool.operator profile
+            join profile.user user
+            join operatorSchool.school school
+            join coverage.neighborhood neighborhood
+            join neighborhood.district district
+            where school.id = :schoolId
+              and school.active = true
+              and operatorSchool.active = true
+              and profile.active = true
+              and profile.publiclyVisible = true
+              and user.enabled = true
+              and user.emailVerifiedAt is not null
+              and user.role = com.servisimibul.backend.identity.UserRole.OPERATOR
+              and (:approvalRequired = false
+                   or profile.approvalStatus = com.servisimibul.backend.identity.OperatorApprovalStatus.APPROVED)
+              and (neighborhood.id = :neighborhoodId or district.id = :districtId)
+            order by profile.user.id
+            """)
+    List<UUID> findEligibleNotificationRecipientIds(
+            @Param("schoolId") UUID schoolId,
+            @Param("neighborhoodId") Long neighborhoodId,
+            @Param("districtId") Long districtId,
+            @Param("approvalRequired") boolean approvalRequired
+    );
+
+    @Query("""
             select coverage
             from OperatorSchoolCoverage coverage
             join fetch coverage.operatorSchool operatorSchool

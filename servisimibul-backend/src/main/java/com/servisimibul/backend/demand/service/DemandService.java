@@ -25,6 +25,7 @@ import com.servisimibul.backend.geography.School;
 import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
+import com.servisimibul.backend.notification.NotificationDeliveryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -55,6 +56,7 @@ public class DemandService {
     private final DemandProperties properties;
     private final ParentEmailVerificationProperties parentEmailVerification;
     private final DemandFeedbackService feedbackService;
+    private final NotificationDeliveryService notificationDelivery;
 
     @Transactional(readOnly = true)
     public PageResponse<DemandResponse> list(
@@ -171,6 +173,7 @@ public class DemandService {
                 values.needsAfternoon(),
                 values.reasons()
         ));
+        notificationDelivery.demandCreated(demand);
         return new CreateResponse(true, response(demand.getId(), parentId));
     }
 
