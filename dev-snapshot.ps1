@@ -255,11 +255,11 @@ try {
 
     # Verify the HTTP API actually serves the real restored geography.
     $provincesResponse=Wait-ForHttpSuccess -Uri 'http://127.0.0.1:8080/api/v1/provinces' -Processes @($backendProcess)
-    $provinces=@($provincesResponse.Content | ConvertFrom-Json)
+    $provinces=Convert-SbGeographyApiArray -Json ([string]$provincesResponse.Content) -Label 'Province'
     $istanbul=@($provinces | Where-Object { $_.name -ceq 'İstanbul' })
     if($istanbul.Length -ne 1) { throw 'Real snapshot API does not expose Istanbul.' }
     $districtsResponse=Wait-ForHttpSuccess -Uri ("http://127.0.0.1:8080/api/v1/districts?provinceId="+$istanbul[0].id) -Processes @($backendProcess)
-    $districts=@($districtsResponse.Content | ConvertFrom-Json)
+    $districts=Convert-SbGeographyApiArray -Json ([string]$districtsResponse.Content) -Label 'District'
     $geography=Assert-SbRealGeographyResponses -Provinces $provinces -Districts $districts
     Write-Host ("Real API geography verified: Istanbul ID {0}, {1} districts." -f $geography.ProvinceId,$geography.DistrictCount)
 
