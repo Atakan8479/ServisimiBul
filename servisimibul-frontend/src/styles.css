@@ -2727,3 +2727,26 @@ button:disabled {
     transform: none;
   }
 }
+
+/* REQ-07: private in-app notification center */
+.notification-center { position: relative; margin-block: 0.75rem; }
+.notification-center > button { width: 100%; }
+.notification-panel {
+  padding: 1rem;
+  margin-top: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface, #fff);
+  box-shadow: 0 12px 28px rgba(0,0,0,.08);
+  max-height: min(65vh, 34rem);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
+.notification-panel h2 { font-size: 1.1rem; margin-block: 0 0.75rem; }
+.notification-panel ul { list-style: none; padding: 0; margin: 1rem 0; }
+.notification-panel li { padding: 0.75rem 0; border-top: 1px solid var(--color-border); }
+.notification-panel li p { margin: 0.35rem 0; }
+.notification-panel li time { font-size: 0.8rem; opacity: .75; }
+.notification-panel li div, .notification-panel nav { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.5rem; }
+.notification-panel button { cursor: pointer; }
+.notification-panel button:disabled { cursor: not-allowed; opacity: .55; }
