@@ -1,8 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const operatorEmail = 'j03.operator@example.test'
 const operatorPassword = 'J03-operator-password'
+const secondOperatorEmail = 'j03.operator.two@example.test'
+const secondOperatorPassword = 'J03-second-operator-password'
 const adminEmail = process.env.J03_ADMIN_EMAIL ?? 'j03.admin.one@example.test'
 const adminPassword = process.env.J03_ADMIN_PASSWORD
 const parentEmail = process.env.J03_PARENT_EMAIL ?? 'j03.parent@example.test'
@@ -52,6 +54,16 @@ interface FeedbackList {
   }>
 }
 
+interface PublicResponsePage {
+  content: Array<{
+    id: string
+    publicationEventId: string
+    operatorId: string
+    businessName: string
+  }>
+  totalElements: number
+}
+
 interface CommentPage {
   content: Array<{
     id: string
@@ -79,6 +91,7 @@ interface NotificationPage {
     type: string
     demandId: string | null
     moderationCaseId: string | null
+    publicationEventId: string | null
     readAt: string | null
   }>
   totalElements: number
@@ -98,12 +111,14 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const parentContext = await browser.newContext()
   const secondParentContext = await browser.newContext()
   const nonSupportingParentContext = await browser.newContext()
+  const secondOperatorContext = await browser.newContext()
   const operatorPage = await operatorContext.newPage()
   const adminPage = await adminContext.newPage()
   const publicPage = await publicContext.newPage()
   const parentPage = await parentContext.newPage()
   const secondParentPage = await secondParentContext.newPage()
   const nonSupportingParentPage = await nonSupportingParentContext.newPage()
+  const secondOperatorPage = await secondOperatorContext.newPage()
 
   adminPage.on('dialog', (dialog) => void dialog.accept())
 
@@ -266,6 +281,79 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           profile: { approvalStatus: string }
         },
       ).toMatchObject({ profile: { approvalStatus: 'APPROVED' } })
+    })
+
+    let secondOperatorProfileId = ''
+    await test.step('prepare a second eligible operator without a vehicle or offering', async () => {
+      const registrationCsrf = await csrf(secondOperatorPage)
+      const registration = await secondOperatorPage.request.post(
+        '/api/v1/auth/register',
+        {
+          headers: {
+            [registrationCsrf.headerName]: registrationCsrf.token,
+          },
+          data: {
+            email: secondOperatorEmail,
+            password: secondOperatorPassword,
+            businessName: 'J03 İkinci Servis',
+            contactPhone: '+905321112255',
+          },
+        },
+      )
+      expect(registration.status()).toBe(202)
+      await login(
+        secondOperatorPage,
+        secondOperatorEmail,
+        secondOperatorPassword,
+        'operator',
+      )
+
+      const secondCsrf = await csrf(secondOperatorPage)
+      const profile = await secondOperatorPage.request.get(
+        '/api/v1/operator/profile',
+      )
+      expect(profile.status()).toBe(200)
+      secondOperatorProfileId = ((await profile.json()) as { id: string }).id
+      const submitted = await secondOperatorPage.request.post(
+        '/api/v1/operator/application/submit',
+        { headers: { [secondCsrf.headerName]: secondCsrf.token } },
+      )
+      expect(submitted.status()).toBe(200)
+
+      const adminCsrf = await csrf(adminPage)
+      const approved = await adminPage.request.post(
+        `/api/v1/admin/operators/${secondOperatorProfileId}/approve`,
+        { headers: { [adminCsrf.headerName]: adminCsrf.token } },
+      )
+      expect(approved.status()).toBe(200)
+
+      const school = await secondOperatorPage.request.post(
+        '/api/v1/operator/schools',
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: { schoolId: '10000000-0000-4000-8000-000000000001' },
+        },
+      )
+      expect(school.status()).toBe(201)
+      const secondOperatorSchoolId = ((await school.json()) as { id: string })
+        .id
+      const coverage = await secondOperatorPage.request.put(
+        `/api/v1/operator/schools/${secondOperatorSchoolId}/coverage`,
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: { neighborhoodIds: [340101] },
+        },
+      )
+      expect(coverage.status()).toBe(200)
+
+      for (const path of [
+        '/api/v1/operator/vehicles',
+        '/api/v1/operator/offerings',
+      ]) {
+        const resources = await secondOperatorPage.request.get(path)
+        expect(resources.status()).toBe(200)
+        expect(await resources.json()).toEqual([])
+      }
     })
 
     let operatorSchoolId = ''
@@ -628,6 +716,13 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         supporterCount: 2,
         currentUserSupport: { id: secondParentSupportId },
       })
+
+      await assertAccessibleWorkflow(
+        parentPage,
+        `/demands/${sharedDemandId}`,
+        { width: 390, height: 844 },
+        parentPage.getByRole('button', { name: 'Desteğimi düzenle' }),
+      )
     })
 
     await test.step('enforce real comment privacy, ownership, escaping, moderation, and notification boundaries', async () => {
@@ -751,6 +846,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         },
       )
       expect(demandReportResponse.status()).toBe(201)
+      const demandReport = (await demandReportResponse.json()) as ReportReceipt
 
       expect(
         (
@@ -801,6 +897,50 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(caseDetailText).not.toContain(parentEmail)
       expect(caseDetailText).not.toContain(secondParentEmail)
 
+      const parentModerationDenied = await parentPage.request.post(
+        `/api/v1/admin/moderation/cases/${demandReport.caseId}/actions`,
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: {
+            action: 'RESOLVE_NO_ACTION',
+            reason: 'Yetkisiz işlem doğrulaması.',
+          },
+        },
+      )
+      expect(parentModerationDenied.status()).toBe(403)
+
+      const resolvedWithoutAction = await adminPage.request.post(
+        `/api/v1/admin/moderation/cases/${demandReport.caseId}/actions`,
+        {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            action: 'RESOLVE_NO_ACTION',
+            reason: 'İçerik kurallara uygun bulundu.',
+          },
+        },
+      )
+      expect(resolvedWithoutAction.status()).toBe(200)
+      expect(await resolvedWithoutAction.json()).toMatchObject({
+        summary: { status: 'RESOLVED' },
+        audit: [{ action: 'RESOLVE_NO_ACTION' }],
+      })
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 2,
+      })
+
+      const duplicateResolution = await adminPage.request.post(
+        `/api/v1/admin/moderation/cases/${demandReport.caseId}/actions`,
+        {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            action: 'RESOLVE_NO_ACTION',
+            reason: 'Tekrarlanan işlem engellenmeli.',
+          },
+        },
+      )
+      expect(duplicateResolution.status()).toBe(409)
+
       const hidden = await adminPage.request.post(
         `/api/v1/admin/moderation/cases/${commentReport.caseId}/actions`,
         {
@@ -838,11 +978,41 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           ).json()) as CommentPage
         ).content.map(({ id }) => id),
       ).toContain(parentComment.id)
+
+      await assertAccessibleWorkflow(
+        adminPage,
+        '/admin/moderation',
+        { width: 1440, height: 900 },
+        adminPage.getByRole('button', { name: 'Filtrele' }),
+      )
     })
 
-    await test.step('keep publication idempotent and close only after every active parent is satisfied', async () => {
+    await test.step('keep two operator publications independent and close only after every active parent is satisfied', async () => {
       const responsePath = `/api/v1/operator/demands/${sharedDemandId}/response`
       const operatorCsrf = await csrf(operatorPage)
+      const secondOperatorCsrf = await csrf(secondOperatorPage)
+
+      await assertAccessibleWorkflow(
+        operatorPage,
+        `/demands/${sharedDemandId}`,
+        { width: 768, height: 1024 },
+        operatorPage.getByRole('button', {
+          name: 'Bu talep için servis ekle',
+        }),
+      )
+      await operatorPage
+        .getByRole('button', { name: 'Bu talep için servis ekle' })
+        .click()
+      await operatorPage.getByLabel('Sabah').uncheck()
+      await operatorPage
+        .getByRole('button', { name: 'Servis bildirimini yayınla' })
+        .click()
+      await expect(
+        operatorPage.getByRole('alert').filter({
+          hasText: 'En az bir servis yönü seçin.',
+        }),
+      ).toBeVisible()
+
       const firstPublication = await operatorPage.request.post(responsePath, {
         headers: { [operatorCsrf.headerName]: operatorCsrf.token },
         data: { offersMorning: true, offersAfternoon: false },
@@ -859,6 +1029,93 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           publicationVersion: 1,
         },
       })
+
+      const secondPublication = await secondOperatorPage.request.post(
+        responsePath,
+        {
+          headers: {
+            [secondOperatorCsrf.headerName]: secondOperatorCsrf.token,
+          },
+          data: { offersMorning: false, offersAfternoon: true },
+        },
+      )
+      expect(secondPublication.status()).toBe(200)
+      const otherPublished =
+        (await secondPublication.json()) as PublishedResponse
+      expect(otherPublished).toMatchObject({
+        published: true,
+        response: {
+          status: 'ACTIVE',
+          offersMorning: false,
+          offersAfternoon: true,
+          publicationVersion: 1,
+        },
+      })
+      expect(otherPublished.response.id).not.toBe(firstPublished.response.id)
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 2,
+      })
+
+      const bothResponses = (await (
+        await publicPage.request.get(
+          `/api/v1/demands/${sharedDemandId}/responses?size=10`,
+        )
+      ).json()) as PublicResponsePage
+      expect(bothResponses.totalElements).toBe(2)
+      expect(bothResponses.content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: firstPublished.response.id,
+            businessName: 'J03 Gerçek Servis',
+          }),
+          expect.objectContaining({
+            id: otherPublished.response.id,
+            operatorId: secondOperatorProfileId,
+            businessName: 'J03 İkinci Servis',
+          }),
+        ]),
+      )
+
+      for (const [page, expectedEventId, unexpectedEventId] of [
+        [
+          parentPage,
+          firstPublished.response.publicationEventId,
+          otherPublished.response.publicationEventId,
+        ],
+        [
+          secondParentPage,
+          otherPublished.response.publicationEventId,
+          firstPublished.response.publicationEventId,
+        ],
+      ] as const) {
+        const feedback = (await (
+          await page.request.get(`/api/v1/demands/${sharedDemandId}/feedback`)
+        ).json()) as FeedbackList
+        const feedbackEvents = feedback.feedback.map(
+          ({ publicationEventId }) => publicationEventId,
+        )
+        expect(feedbackEvents).toContain(expectedEventId)
+        expect(feedbackEvents).not.toContain(unexpectedEventId)
+        const notifications = (await (
+          await page.request.get('/api/v1/notifications?size=50')
+        ).json()) as NotificationPage
+        const notificationEvents = notifications.content
+          .filter(
+            ({ demandId, type }) =>
+              demandId === sharedDemandId && type === 'SERVICE_PUBLISHED',
+          )
+          .map(({ publicationEventId }) => publicationEventId)
+        expect(notificationEvents).toContain(expectedEventId)
+        expect(notificationEvents).not.toContain(unexpectedEventId)
+      }
+
+      await assertAccessibleWorkflow(
+        parentPage,
+        '/notifications',
+        { width: 320, height: 844 },
+        parentPage.getByRole('button', { name: /Ayrıntıyı aç/ }).first(),
+      )
 
       const duplicatePublication = await operatorPage.request.post(
         responsePath,
@@ -895,16 +1152,28 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       )
       expect(hiddenResponses.status()).toBe(200)
       expect(
-        (await hiddenResponses.json()) as { totalElements: number },
-      ).toMatchObject({ totalElements: 0 })
+        (await hiddenResponses.json()) as PublicResponsePage,
+      ).toMatchObject({
+        totalElements: 1,
+        content: [
+          expect.objectContaining({
+            id: otherPublished.response.id,
+            businessName: 'J03 İkinci Servis',
+          }),
+        ],
+      })
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 2,
+      })
 
       const republished = await operatorPage.request.post(responsePath, {
         headers: { [operatorCsrf.headerName]: operatorCsrf.token },
         data: { offersMorning: true, offersAfternoon: true },
       })
       expect(republished.status()).toBe(200)
-      const secondPublished = (await republished.json()) as PublishedResponse
-      expect(secondPublished).toMatchObject({
+      const republishedFirst = (await republished.json()) as PublishedResponse
+      expect(republishedFirst).toMatchObject({
         published: true,
         response: {
           id: firstPublished.response.id,
@@ -913,7 +1182,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           publicationVersion: 2,
         },
       })
-      expect(secondPublished.response.publicationEventId).not.toBe(
+      expect(republishedFirst.response.publicationEventId).not.toBe(
         firstPublished.response.publicationEventId,
       )
 
@@ -931,17 +1200,25 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(secondOpened.status()).toBe(200)
       const firstFeedback = (
         (await firstOpened.json()) as FeedbackList
-      ).feedback.find(({ canEvaluate }) => canEvaluate)!
+      ).feedback.find(
+        ({ publicationEventId, canEvaluate }) =>
+          canEvaluate &&
+          publicationEventId === republishedFirst.response.publicationEventId,
+      )!
       const secondFeedback = (
         (await secondOpened.json()) as FeedbackList
-      ).feedback.find(({ canEvaluate }) => canEvaluate)!
+      ).feedback.find(
+        ({ publicationEventId, canEvaluate }) =>
+          canEvaluate &&
+          publicationEventId === republishedFirst.response.publicationEventId,
+      )!
       expect(firstFeedback).toBeDefined()
       expect(secondFeedback).toBeDefined()
       expect(firstFeedback.publicationEventId).toBe(
-        secondPublished.response.publicationEventId,
+        republishedFirst.response.publicationEventId,
       )
       expect(secondFeedback.publicationEventId).toBe(
-        secondPublished.response.publicationEventId,
+        republishedFirst.response.publicationEventId,
       )
 
       const firstSatisfied = await parentPage.request.put(
@@ -1022,7 +1299,15 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await parentPage
         .getByLabel('Açıklama (isteğe bağlı)')
         .fill('Gerçek tam yığın yönetim incelemesi.')
+      const reportCreated = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/reports'),
+      )
       await parentPage.getByRole('button', { name: 'Bildirimi gönder' }).click()
+      const serviceReport = (await (
+        await reportCreated
+      ).json()) as ReportReceipt
       await expect(parentPage.getByText('Bildirim alındı')).toBeVisible()
       await expect(
         parentPage
@@ -1037,6 +1322,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         ),
       ).toBeVisible()
       for (const viewport of [
+        { width: 320, height: 844 },
         { width: 390, height: 844 },
         { width: 768, height: 1024 },
         { width: 1440, height: 900 },
@@ -1071,6 +1357,19 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(
         adminPage.getByText('Servis bildirimini geri çek işlemi kaydedildi.'),
       ).toBeVisible()
+
+      const adminCsrf = await csrf(adminPage)
+      const duplicateWithdrawal = await adminPage.request.post(
+        `/api/v1/admin/moderation/cases/${serviceReport.caseId}/actions`,
+        {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            action: 'WITHDRAW_SERVICE_RESPONSE',
+            reason: 'Tekrarlanan işlem engellenmeli.',
+          },
+        },
+      )
+      expect(duplicateWithdrawal.status()).toBe(409)
 
       await parentPage.reload()
       await expect(
@@ -1295,7 +1594,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     await test.step('suspend the operator, revoke the session, and remove discovery', async () => {
       await adminPage.goto('/admin/applications')
       await adminPage.getByLabel('Başvuru durumu').selectOption('APPROVED')
-      await adminPage.getByRole('link', { name: 'Başvuruyu incele' }).click()
+      await adminPage
+        .locator(`a[href="/admin/applications/${operatorProfileId}"]`)
+        .click()
       await adminPage
         .getByRole('button', { name: 'İşletmeciyi askıya al' })
         .click()
@@ -1320,6 +1621,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       parentContext.close(),
       secondParentContext.close(),
       nonSupportingParentContext.close(),
+      secondOperatorContext.close(),
     ])
   }
 })
@@ -1394,4 +1696,37 @@ async function demand(page: Page, id: string): Promise<DemandState> {
   const response = await page.request.get(`/api/v1/demands/${id}`)
   expect(response.status()).toBe(200)
   return (await response.json()) as DemandState
+}
+
+async function assertAccessibleWorkflow(
+  page: Page,
+  path: string,
+  viewport: { width: number; height: number },
+  action: Locator,
+) {
+  await page.setViewportSize(viewport)
+  await page.goto(path)
+  await expect(action).toBeVisible()
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(
+    await page.evaluate(() => document.documentElement.clientWidth),
+  )
+
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur()
+  })
+  await page.keyboard.press('Tab')
+  await expect(page.getByRole('link', { name: 'İçeriğe geç' })).toBeFocused()
+
+  const target = await action.boundingBox()
+  expect(target).not.toBeNull()
+  expect(target!.width).toBeGreaterThanOrEqual(44)
+  expect(target!.height).toBeGreaterThanOrEqual(44)
+
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
 }
