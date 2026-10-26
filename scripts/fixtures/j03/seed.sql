@@ -12,7 +12,9 @@ INSERT INTO neighborhood (id, district_id, name)
 OVERRIDING SYSTEM VALUE
 VALUES
     (340101, 3401, 'Moda'),
-    (340201, 3402, 'Acıbadem');
+    (340201, 3402, 'Acıbadem'),
+    (340202, 3402, 'Altunizade'),
+    (340203, 3402, 'Kuzguncuk');
 
 INSERT INTO school (id, neighborhood_id, name, address, source_name, source_code)
 VALUES (

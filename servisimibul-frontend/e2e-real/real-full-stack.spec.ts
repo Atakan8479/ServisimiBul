@@ -76,6 +76,7 @@ interface NotificationPage {
   content: Array<{
     id: string
     type: string
+    demandId: string | null
     moderationCaseId: string | null
     readAt: string | null
   }>
@@ -1077,6 +1078,169 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect((await closed.json()) as { closureReason: string }).toMatchObject({
         closureReason: 'FULFILLED',
       })
+    })
+
+    await test.step('run reminder and opened/unopened expiry through the real idempotent scheduler', async () => {
+      const operatorCsrf = await csrf(operatorPage)
+      const firstCsrf = await csrf(parentPage)
+      const secondCsrf = await csrf(secondParentPage)
+      const coverage = await operatorPage.request.put(
+        `/api/v1/operator/schools/${operatorSchoolId}/coverage`,
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: { neighborhoodIds: [340101, 340201, 340202, 340203] },
+        },
+      )
+      expect(coverage.status()).toBe(200)
+
+      const support = {
+        needsMorning: true,
+        needsAfternoon: false,
+        reasons: ['SCHEDULE_UNSUITABLE'],
+      }
+      const openedCreationResponse = await parentPage.request.post(
+        '/api/v1/demands',
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: {
+            schoolId: '10000000-0000-4000-8000-000000000001',
+            neighborhoodId: 340202,
+            ...support,
+          },
+        },
+      )
+      const unopenedCreationResponse = await secondParentPage.request.post(
+        '/api/v1/demands',
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: {
+            schoolId: '10000000-0000-4000-8000-000000000001',
+            neighborhoodId: 340203,
+            ...support,
+          },
+        },
+      )
+      expect(openedCreationResponse.status()).toBe(201)
+      expect(unopenedCreationResponse.status()).toBe(201)
+      const openedCreation =
+        (await openedCreationResponse.json()) as DemandCreation
+      const unopenedCreation =
+        (await unopenedCreationResponse.json()) as DemandCreation
+      const openedDemandId = openedCreation.demand.id
+      const unopenedDemandId = unopenedCreation.demand.id
+      const stableSupportId = openedCreation.demand.currentUserSupport!.id
+
+      for (const demandId of [openedDemandId, unopenedDemandId]) {
+        const published = await operatorPage.request.post(
+          `/api/v1/operator/demands/${demandId}/response`,
+          {
+            headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+            data: { offersMorning: true, offersAfternoon: false },
+          },
+        )
+        expect(published.status()).toBe(200)
+        expect((await published.json()) as PublishedResponse).toMatchObject({
+          published: true,
+          response: { publicationVersion: 1 },
+        })
+      }
+
+      const openedFeedbackResponse = await parentPage.request.post(
+        `/api/v1/demands/${openedDemandId}/feedback/open`,
+        { headers: { [firstCsrf.headerName]: firstCsrf.token } },
+      )
+      expect(openedFeedbackResponse.status()).toBe(200)
+
+      await expect
+        .poll(
+          async () => {
+            const notifications = (await (
+              await parentPage.request.get('/api/v1/notifications?size=50')
+            ).json()) as NotificationPage
+            return notifications.content
+              .filter(
+                ({ demandId, type }) =>
+                  demandId === openedDemandId &&
+                  (type === 'FEEDBACK_REMINDER' || type === 'SUPPORT_EXPIRED'),
+              )
+              .map(({ type }) => type)
+          },
+          {
+            message: 'opened feedback should receive one reminder then expire',
+            timeout: 20_000,
+          },
+        )
+        .toEqual(
+          expect.arrayContaining(['FEEDBACK_REMINDER', 'SUPPORT_EXPIRED']),
+        )
+
+      await expect
+        .poll(
+          async () => {
+            const notifications = (await (
+              await secondParentPage.request.get(
+                '/api/v1/notifications?size=50',
+              )
+            ).json()) as NotificationPage
+            return notifications.content
+              .filter(
+                ({ demandId, type }) =>
+                  demandId === unopenedDemandId &&
+                  (type === 'FEEDBACK_REMINDER' || type === 'SUPPORT_EXPIRED'),
+              )
+              .map(({ type }) => type)
+          },
+          {
+            message: 'unopened feedback should expire without a reminder',
+            timeout: 20_000,
+          },
+        )
+        .toEqual(['SUPPORT_EXPIRED'])
+
+      expect(await demand(publicPage, openedDemandId)).toMatchObject({
+        status: 'CLOSED',
+        closureReason: 'INACTIVE',
+        supporterCount: 0,
+      })
+      expect(await demand(publicPage, unopenedDemandId)).toMatchObject({
+        status: 'CLOSED',
+        closureReason: 'INACTIVE',
+        supporterCount: 0,
+      })
+
+      const reopenedResponse = await parentPage.request.post(
+        `/api/v1/demands/${openedDemandId}/support`,
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: support,
+        },
+      )
+      expect(reopenedResponse.status()).toBe(200)
+      expect((await reopenedResponse.json()) as DemandState).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 1,
+        currentUserSupport: {
+          id: stableSupportId,
+          status: 'ACTIVE',
+        },
+      })
+
+      await new Promise((resolve) => setTimeout(resolve, 1_500))
+      const openedNotifications = (await (
+        await parentPage.request.get('/api/v1/notifications?size=50')
+      ).json()) as NotificationPage
+      expect(
+        openedNotifications.content.filter(
+          ({ demandId, type }) =>
+            demandId === openedDemandId && type === 'FEEDBACK_REMINDER',
+        ),
+      ).toHaveLength(1)
+      expect(
+        openedNotifications.content.filter(
+          ({ demandId, type }) =>
+            demandId === openedDemandId && type === 'SUPPORT_EXPIRED',
+        ),
+      ).toHaveLength(1)
     })
 
     await test.step('cover a mobile keyboard path without sharing authenticated state', async () => {
