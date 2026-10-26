@@ -198,4 +198,94 @@ try {
         $adminEnvironment['SB_ADMIN_1_EMAIL'] = 'demo-admin-one@example.test'
         $adminEnvironment['SB_ADMIN_1_PASSWORD'] = $adminOnePassword
         $adminEnvironment['SB_ADMIN_2_EMAIL'] = 'demo-admin-two@example.test'
-... (+91 lines) [see remaining: rtk proxy git show HEAD:dev.ps1 | tail -n +201]
+        $adminEnvironment['SB_ADMIN_2_PASSWORD'] = $adminTwoPassword
+        $adminEnvironment['SB_DEMAND_FEEDBACK_SCHEDULER_ENABLED'] = 'false'
+        $previousAdminEnvironment = Set-SbTemporaryEnvironment -Values $adminEnvironment
+        try {
+            Push-Location $backendDirectory
+            try {
+                $wrapper = if ($IsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+                & $wrapper --batch-mode '-Dspring-boot.run.profiles=local' `
+                    '-Dspring-boot.run.arguments=--spring.main.web-application-type=none' spring-boot:run
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'Disposable non-web ADMIN bootstrap failed.'
+                }
+            } finally {
+                Pop-Location
+            }
+        } finally {
+            Restore-SbEnvironment -Previous $previousAdminEnvironment
+        }
+        Write-Host 'Disposable demo administrator 1: demo-admin-one@example.test'
+        Write-Host "Temporary password 1: $adminOnePassword"
+        Write-Host 'Disposable demo administrator 2: demo-admin-two@example.test'
+        Write-Host "Temporary password 2: $adminTwoPassword"
+        Write-Host 'These demo credentials are valid only while this disposable environment is running.'
+    }
+
+    $mavenRuntime = Get-SbMavenRuntime -BackendDirectory $backendDirectory
+    $previousRuntimeEnvironment = Set-SbTemporaryEnvironment -Values $runtimeEnvironment
+    try {
+        $backendProcess = Start-Process -FilePath $javaRuntime.Java -ArgumentList @(
+            "-Dmaven.home=$($mavenRuntime.Home)",
+            "-Dclassworlds.conf=$(Join-Path $mavenRuntime.Home 'bin\m2.conf')",
+            "-Dmaven.multiModuleProjectDirectory=$backendDirectory",
+            '-classpath', $mavenRuntime.Launcher,
+            'org.codehaus.plexus.classworlds.launcher.Launcher',
+            'spring-boot:run'
+        ) -WorkingDirectory $backendDirectory -NoNewWindow -PassThru
+    } finally {
+        Restore-SbEnvironment -Previous $previousRuntimeEnvironment
+    }
+
+    Write-Host 'Waiting for backend readiness before starting frontend...'
+    $null = Wait-ForHttpSuccess -Uri 'http://127.0.0.1:8080/readyz' -Processes @($backendProcess)
+
+    $previousFrontendEnvironment = Set-SbTemporaryEnvironment -Values @{
+        VITE_EMAIL_VERIFICATION_REQUIRED = 'false'
+    }
+    try {
+        $frontendProcess = Start-Process -FilePath $nodeRuntime.Node `
+            -ArgumentList @($viteEntryPoint, '--host', '127.0.0.1', '--port', '5173', '--strictPort') `
+            -WorkingDirectory $frontendDirectory -NoNewWindow -PassThru
+    } finally {
+        Restore-SbEnvironment -Previous $previousFrontendEnvironment
+    }
+
+    Write-Host "Using Java $($javaRuntime.Major), Node.js $($nodeRuntime.Version), and disposable PostgreSQL 17."
+    Write-Host 'Frontend: http://127.0.0.1:5173'
+    Write-Host 'Backend:  http://127.0.0.1:8080'
+
+    if ($SmokeTest) {
+        $processes = @($backendProcess, $frontendProcess)
+        $null = Wait-ForHttpSuccess -Uri 'http://127.0.0.1:8080/readyz' -Processes $processes
+        $null = Wait-ForHttpSuccess -Uri 'http://127.0.0.1:5173/' -Processes $processes
+        $proxyResponse = Wait-ForHttpSuccess `
+            -Uri 'http://127.0.0.1:5173/api/v1/provinces' -Processes $processes
+        $provinces = $proxyResponse.Content | ConvertFrom-Json
+        if (@($provinces).Count -ne 1 -or $provinces[0].code -ne '34') {
+            throw 'The full-stack proxy smoke test did not return the disposable database fixture.'
+        }
+        Write-Host 'A-12 full-stack smoke test passed.'
+    } else {
+        Write-Host 'Press Ctrl+C to stop the applications and delete the disposable database.'
+        while ($true) {
+            Start-Sleep -Milliseconds 500
+            $backendProcess.Refresh()
+            $frontendProcess.Refresh()
+            if ($backendProcess.HasExited) {
+                throw 'Backend stopped. See its output above.'
+            }
+            if ($frontendProcess.HasExited) {
+                throw 'Frontend stopped. See its output above.'
+            }
+        }
+    }
+} finally {
+    Write-Host 'Stopping local processes and deleting disposable state...'
+    Stop-SbProcessTree -Process $frontendProcess
+    Stop-SbProcessTree -Process $backendProcess
+    if ($cluster) {
+        Stop-SbIsolatedPostgres -Cluster $cluster
+    }
+}

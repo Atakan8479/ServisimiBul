@@ -162,4 +162,32 @@ try {
     $runtimeEnvironment.SB_DEMO_PARENT_EMAIL = $null
     $runtimeEnvironment.SB_DEMO_PARENT_PASSWORD = $null
     $runtimeEnvironment.SERVER_ADDRESS = '127.0.0.1'
-... (+29 lines) [see remaining: rtk proxy git show HEAD:scripts/Test-RealFullStack.ps1 | tail -n +165]
+    $runtimeEnvironment.SERVER_PORT = [string]$backendPort
+    $runtimeEnvironment.J03_BACKEND_PORT = [string]$backendPort
+    $runtimeEnvironment.J03_FRONTEND_PORT = [string]$frontendPort
+    $runtimeEnvironment.J03_ADMIN_EMAIL = 'j03.admin.one@example.test'
+    $runtimeEnvironment.J03_ADMIN_PASSWORD = $adminPassword
+    $runtimeEnvironment.J03_PARENT_EMAIL = 'j03.parent@example.test'
+    $runtimeEnvironment.J03_PARENT_PASSWORD = $parentPassword
+
+    Write-Host "Running real Playwright journeys on loopback ports $frontendPort and $backendPort..."
+    $previousEnvironment = Set-SbTemporaryEnvironment -Values $runtimeEnvironment
+    Push-Location $frontendDirectory
+    try {
+        & $nodeRuntime.Node $playwrightCli test --config playwright.real.config.ts
+        if ($LASTEXITCODE -ne 0) {
+            throw 'J-03 real full-stack Playwright tests failed.'
+        }
+    } finally {
+        Pop-Location
+    }
+    Write-Host 'J-03 real full-stack tests passed.'
+} finally {
+    if ($previousEnvironment) {
+        Restore-SbEnvironment -Previous $previousEnvironment
+    }
+    if ($cluster) {
+        Write-Host 'Deleting the disposable J-03 database, tariff volume, and generated credentials...'
+        Stop-SbIsolatedPostgres -Cluster $cluster
+    }
+}

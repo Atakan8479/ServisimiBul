@@ -223,4 +223,228 @@ function Assert-SbLoopbackJdbcUrl {
     )
 
     if (-not $JdbcUrl.StartsWith('jdbc:postgresql://')) {
-... (+225 lines) [see remaining: rtk proxy git show HEAD:scripts/WindowsDevelopmentSupport.ps1 | tail -n +226]
+        throw 'Isolated development requires a PostgreSQL JDBC URL.'
+    }
+    try {
+        $uri = [Uri]$JdbcUrl.Substring('jdbc:'.Length)
+    } catch {
+        throw 'Isolated development JDBC URL is invalid.'
+    }
+    $database = $uri.AbsolutePath.TrimStart('/')
+    if ($uri.Host -notin @('localhost', '127.0.0.1', '::1') -or $database -ne $ExpectedDatabase) {
+        throw 'Isolated development may connect only to its named loopback database.'
+    }
+}
+
+function Start-SbIsolatedPostgres {
+    param([Parameter(Mandatory = $true)]$Tools)
+
+    $database = 'servisimibul_a12'
+    $instanceId = 'a12_' + [guid]::NewGuid().ToString('N')
+    $port = Get-SbFreeTcpPort
+    $root = Join-Path ([System.IO.Path]::GetTempPath()) ('ServisimiBul-A12-' + [guid]::NewGuid())
+    $data = Join-Path $root 'data'
+    $log = Join-Path $root 'postgres.log'
+    $adminPassword = New-SbRandomPassword
+    $runtimePassword = New-SbRandomPassword
+    $passwordFile = Join-Path $root 'init-password.txt'
+    $provisionFile = Join-Path $root 'provision.sql'
+    $started = $false
+    $cluster = [pscustomobject]@{
+        Tools = $Tools
+        Root = $root
+        DataDirectory = $data
+    }
+
+    New-Item -ItemType Directory -Path $root | Out-Null
+    try {
+        [System.IO.File]::WriteAllText($passwordFile, $adminPassword)
+        $initOutput = @(& $Tools.InitDb "--pgdata=$data" '--username=postgres' `
+            "--pwfile=$passwordFile" '--auth-host=scram-sha-256' '--auth-local=trust' `
+            '--encoding=UTF8' '--no-locale' 2>&1)
+        Remove-Item -LiteralPath $passwordFile -Force -ErrorAction SilentlyContinue
+        if ($LASTEXITCODE -ne 0) {
+            throw "initdb failed: $($initOutput -join [Environment]::NewLine)"
+        }
+
+        $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1" --wait start' -f `
+            $data, $log, $port
+        try {
+            $startProcessArguments = @{
+                FilePath = $Tools.PgCtl
+                ArgumentList = $startArguments
+                PassThru = $true
+            }
+            if ($IsWindows) {
+                $startProcessArguments.WindowStyle = 'Hidden'
+            }
+            $startProcess = Start-Process @startProcessArguments
+            $startProcess.WaitForExit()
+            $startExitCode = $startProcess.ExitCode
+        } finally {
+            $started = Test-Path -LiteralPath (Join-Path $data 'postmaster.pid')
+        }
+        if ($startExitCode -ne 0 -or -not $started) {
+            throw 'pg_ctl start failed. See postgres.log in the preserved disposable directory.'
+        }
+
+        $cluster = [pscustomobject]@{
+            Tools = $Tools
+            Root = $root
+            DataDirectory = $data
+            Port = $port
+            Database = $database
+            InstanceId = $instanceId
+            AdminUser = 'postgres'
+            AdminPassword = $adminPassword
+            RuntimeUser = 'servisimibul_app'
+            RuntimePassword = $runtimePassword
+            AdminJdbcUrl = "jdbc:postgresql://127.0.0.1:$port/$database"
+            RuntimeJdbcUrl = "jdbc:postgresql://127.0.0.1:$port/$database"
+        }
+        Assert-SbLoopbackJdbcUrl -JdbcUrl $cluster.AdminJdbcUrl -ExpectedDatabase $database
+
+        $provisionSql = @"
+CREATE ROLE servisimibul_app LOGIN PASSWORD '$runtimePassword'
+    NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS;
+CREATE ROLE anon NOLOGIN;
+CREATE ROLE authenticated NOLOGIN;
+CREATE DATABASE $database;
+\connect $database
+REVOKE CONNECT ON DATABASE $database FROM PUBLIC;
+GRANT CONNECT ON DATABASE $database TO servisimibul_app;
+CREATE SCHEMA test_harness;
+CREATE TABLE test_harness.database_instance (instance_id text PRIMARY KEY);
+INSERT INTO test_harness.database_instance VALUES ('$instanceId');
+REVOKE ALL ON SCHEMA test_harness FROM PUBLIC;
+REVOKE ALL ON ALL TABLES IN SCHEMA test_harness FROM PUBLIC;
+GRANT USAGE ON SCHEMA test_harness TO servisimibul_app;
+GRANT SELECT ON test_harness.database_instance TO servisimibul_app;
+"@
+        [System.IO.File]::WriteAllText($provisionFile, $provisionSql)
+        $null = Invoke-SbPsql -Cluster $cluster -Database 'postgres' -Username 'postgres' `
+            -Password $adminPassword -File $provisionFile
+        Remove-Item -LiteralPath $provisionFile -Force -ErrorAction SilentlyContinue
+
+        $identity = @(
+            @(Invoke-SbPsql -Cluster $cluster -Database $database `
+                -Username $cluster.RuntimeUser -Password $cluster.RuntimePassword -Sql @"
+select current_database() || '|' || current_user || '|' || instance_id
+from test_harness.database_instance;
+"@) | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ }
+        )
+        $actualIdentity = if ($identity.Count -gt 0) { $identity[-1] } else { '<no row>' }
+        if ($actualIdentity -ne "$database|servisimibul_app|$instanceId") {
+            throw "Disposable PostgreSQL identity verification failed: $actualIdentity"
+        }
+
+        return $cluster
+    } catch {
+        $startupError = $_
+        Remove-Item -LiteralPath $passwordFile, $provisionFile -Force -ErrorAction SilentlyContinue
+        if ($started) {
+            try {
+                Stop-SbIsolatedPostgres -Cluster $cluster -Mode 'immediate'
+            } catch {
+                throw "$($startupError.Exception.Message)$([Environment]::NewLine)Cleanup also failed: $($_.Exception.Message)"
+            }
+        } else {
+            Remove-SbIsolatedDirectory -Path $root
+        }
+        throw $startupError
+    }
+}
+
+function Remove-SbIsolatedDirectory {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    $resolvedTemp = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath()).TrimEnd(
+        [System.IO.Path]::DirectorySeparatorChar,
+        [System.IO.Path]::AltDirectorySeparatorChar
+    )
+    $leaf = [System.IO.Path]::GetFileName($resolvedPath)
+    $parent = [System.IO.Path]::GetDirectoryName($resolvedPath)
+    if (-not [string]::Equals($parent, $resolvedTemp, [System.StringComparison]::OrdinalIgnoreCase) -or
+        -not $leaf.StartsWith('ServisimiBul-A12-', [System.StringComparison]::Ordinal)) {
+        throw "Refusing to remove non-A-12 directory: $resolvedPath"
+    }
+    if (Test-Path -LiteralPath $resolvedPath) {
+        Remove-Item -LiteralPath $resolvedPath -Recurse -Force
+    }
+}
+
+function Stop-SbIsolatedPostgres {
+    param(
+        [Parameter(Mandatory = $true)]$Cluster,
+        [ValidateSet('fast', 'immediate')][string]$Mode = 'fast'
+    )
+
+    if (Test-Path -LiteralPath $Cluster.DataDirectory) {
+        $stopArguments = '--pgdata="{0}" --mode={1} --wait stop' -f $Cluster.DataDirectory, $Mode
+        $stopProcessArguments = @{
+            FilePath = $Cluster.Tools.PgCtl
+            ArgumentList = $stopArguments
+            PassThru = $true
+        }
+        if ($IsWindows) {
+            $stopProcessArguments.WindowStyle = 'Hidden'
+        }
+        $stopProcess = Start-Process @stopProcessArguments
+        $stopProcess.WaitForExit()
+        if ($stopProcess.ExitCode -ne 0) {
+            throw 'Disposable PostgreSQL did not stop cleanly; its directory was preserved.'
+        }
+    }
+    Remove-SbIsolatedDirectory -Path $Cluster.Root
+}
+
+function Get-SbMavenRuntime {
+    param([Parameter(Mandatory = $true)][string]$BackendDirectory)
+
+    $propertiesPath = Join-Path $BackendDirectory '.mvn\wrapper\maven-wrapper.properties'
+    $properties = Get-Content -LiteralPath $propertiesPath -Raw | ConvertFrom-StringData
+    $distributionName = [System.IO.Path]::GetFileNameWithoutExtension($properties.distributionUrl) -replace '-bin$', ''
+    $mavenUserHome = if ($env:MAVEN_USER_HOME) {
+        $env:MAVEN_USER_HOME
+    } else {
+        Join-Path ([Environment]::GetFolderPath('UserProfile')) '.m2'
+    }
+    $distributionRoot = Join-Path $mavenUserHome "wrapper\dists\$distributionName"
+    $launcher = Get-ChildItem -LiteralPath $distributionRoot -Recurse `
+        -Filter 'plexus-classworlds-*.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $launcher) {
+        $wrapper = Join-Path $BackendDirectory $(if ($IsWindows) { 'mvnw.cmd' } else { 'mvnw' })
+        & $wrapper --version
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Maven Wrapper setup failed.'
+        }
+        $launcher = Get-ChildItem -LiteralPath $distributionRoot -Recurse `
+            -Filter 'plexus-classworlds-*.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
+    }
+    if (-not $launcher) {
+        throw 'Maven runtime was not found after Maven Wrapper setup.'
+    }
+
+    return [pscustomobject]@{
+        Home = Split-Path -Parent (Split-Path -Parent $launcher.FullName)
+        Launcher = $launcher.FullName
+    }
+}
+
+function Stop-SbProcessTree {
+    param([System.Diagnostics.Process]$Process)
+
+    if (-not $Process) {
+        return
+    }
+    $Process.Refresh()
+    if (-not $Process.HasExited) {
+        if ($IsWindows) {
+            & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
+        } else {
+            $Process.Kill($true)
+            $Process.WaitForExit()
+        }
+    }
+}
