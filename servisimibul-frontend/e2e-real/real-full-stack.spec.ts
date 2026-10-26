@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 
 const operatorEmail = 'j03.operator@example.test'
@@ -697,6 +698,20 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(JSON.stringify(publicComments)).not.toContain(parentEmail)
       expect(JSON.stringify(publicComments)).not.toContain(operatorEmail)
 
+      const firstCommentPage = (await (
+        await publicPage.request.get(`${commentsPath}?page=0&size=1`)
+      ).json()) as CommentPage
+      const secondCommentPage = (await (
+        await publicPage.request.get(`${commentsPath}?page=1&size=1`)
+      ).json()) as CommentPage
+      expect(firstCommentPage.totalElements).toBe(2)
+      expect(secondCommentPage.totalElements).toBe(2)
+      expect(firstCommentPage.content).toHaveLength(1)
+      expect(secondCommentPage.content).toHaveLength(1)
+      expect(firstCommentPage.content[0].id).not.toBe(
+        secondCommentPage.content[0].id,
+      )
+
       await publicPage.goto(`/demands/${sharedDemandId}`)
       await expect(publicPage.getByText(unsafeLookingText)).toBeVisible()
       expect(await publicPage.locator('img[src="x"]').count()).toBe(0)
@@ -1268,6 +1283,10 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(
           mobilePage.getByRole('link', { name: 'Giriş' }),
         ).toBeVisible()
+        const accessibility = await new AxeBuilder({ page: mobilePage })
+          .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+          .analyze()
+        expect(accessibility.violations).toEqual([])
       } finally {
         await mobileContext.close()
       }

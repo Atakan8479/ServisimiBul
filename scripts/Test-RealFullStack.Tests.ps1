@@ -37,6 +37,10 @@ Assert-Condition ($runner.Contains("SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'fal
     'J-03 does not select the approved parent verification policy.'
 Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'false'")) `
     'J-03 still bootstraps a parent instead of exercising real registration.'
+Assert-Condition ($runner.Contains("SB_MAIL_ENABLED = 'false'")) `
+    'J-03 does not explicitly keep external email delivery disabled.'
+Assert-Condition (-not $runner.Contains('OPENAI')) `
+    'J-03 unexpectedly configures an AI service.'
 Assert-Condition ($runner.Contains("OPERATOR_APPROVAL_REQUIRED = 'true'")) `
     'J-03 does not exercise the safe-default approval workflow.'
 Assert-Condition ($runner.Contains("SB_DEMAND_FEEDBACK_REMINDER_AFTER_OPEN = '5s'")) `
