@@ -267,7 +267,7 @@ function Start-SbIsolatedPostgres {
             throw "initdb failed: $($initOutput -join [Environment]::NewLine)"
         }
 
-        $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1" --wait start' -f `
+        $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1 -c max_connections=200" --wait start' -f `
             $data, $log, $port
         try {
             $startProcessArguments = @{

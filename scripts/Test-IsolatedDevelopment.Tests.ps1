@@ -73,6 +73,8 @@ Assert-Condition ($supportSource.Contains("Stop-SbIsolatedPostgres -Cluster `$cl
     'Failed startup does not use the shared safe PostgreSQL cleanup.'
 Assert-Condition (-not $supportSource.Contains('$null = $stopProcess.WaitForExit(15000)')) `
     'PostgreSQL cleanup can still abandon pg_ctl and delete a live cluster.'
+Assert-Condition ($supportSource.Contains('-c max_connections=200')) `
+    'The disposable PostgreSQL cluster cannot accommodate the complete cached Spring test suite.'
 
 $devSource = Get-Content -Raw -LiteralPath (Join-Path $repositoryRoot 'dev.ps1')
 Assert-Condition (-not $devSource.Contains('backendEnvPath')) `
@@ -124,5 +126,9 @@ Assert-Condition ($devSource.Contains('scripts\fixtures\j05\seed.sql')) `
     'Disposable demo geography fixture missing.'
 Assert-Condition ($devSource.Contains('spring.main.web-application-type=none')) `
     'Administrator bootstrap must not expose a web server.'
+
+$backendRunner = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'Test-IsolatedBackend.ps1')
+Assert-Condition ($backendRunner.Contains("if (`$IsWindows) { '.\mvnw.cmd' } else { './mvnw' }")) `
+    'The isolated backend runner does not select the platform Maven Wrapper.'
 
 Write-Host 'A-12 isolated development safety tests passed.'
