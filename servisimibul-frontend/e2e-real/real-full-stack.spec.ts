@@ -51,6 +51,37 @@ interface FeedbackList {
   }>
 }
 
+interface CommentPage {
+  content: Array<{
+    id: string
+    body: string
+    author: {
+      role: 'PARENT' | 'OPERATOR'
+      displayName: string
+      operatorProfileId: string | null
+    }
+    canDelete: boolean
+  }>
+  totalElements: number
+}
+
+interface ReportReceipt {
+  id: string
+  caseId: string
+  targetType: 'COMMENT' | 'DEMAND' | 'SERVICE_RESPONSE'
+  targetId: string
+}
+
+interface NotificationPage {
+  content: Array<{
+    id: string
+    type: string
+    moderationCaseId: string | null
+    readAt: string | null
+  }>
+  totalElements: number
+}
+
 test('runs the approved MVP journey against the real backend and PostgreSQL', async ({
   browser,
 }) => {
@@ -64,11 +95,13 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const publicContext = await browser.newContext()
   const parentContext = await browser.newContext()
   const secondParentContext = await browser.newContext()
+  const nonSupportingParentContext = await browser.newContext()
   const operatorPage = await operatorContext.newPage()
   const adminPage = await adminContext.newPage()
   const publicPage = await publicContext.newPage()
   const parentPage = await parentContext.newPage()
   const secondParentPage = await secondParentContext.newPage()
+  const nonSupportingParentPage = await nonSupportingParentContext.newPage()
 
   adminPage.on('dialog', (dialog) => void dialog.accept())
 
@@ -138,6 +171,28 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await login(
         secondParentPage,
         secondParentEmail,
+        parentPassword!,
+        'parent',
+      )
+
+      const nonSupporterCsrf = await csrf(nonSupportingParentPage)
+      const nonSupporterRegistration =
+        await nonSupportingParentPage.request.post(
+          '/api/v1/auth/parent/register',
+          {
+            headers: {
+              [nonSupporterCsrf.headerName]: nonSupporterCsrf.token,
+            },
+            data: {
+              email: 'j03.parent.non-supporter@example.test',
+              password: parentPassword,
+            },
+          },
+        )
+      expect(nonSupporterRegistration.status()).toBe(202)
+      await login(
+        nonSupportingParentPage,
+        'j03.parent.non-supporter@example.test',
         parentPassword!,
         'parent',
       )
@@ -573,6 +628,202 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       })
     })
 
+    await test.step('enforce real comment privacy, ownership, escaping, moderation, and notification boundaries', async () => {
+      const commentsPath = `/api/v1/demands/${sharedDemandId}/comments`
+      const firstCsrf = await csrf(parentPage)
+      const secondCsrf = await csrf(secondParentPage)
+      const operatorCsrf = await csrf(operatorPage)
+      const nonSupporterCsrf = await csrf(nonSupportingParentPage)
+      const unsafeLookingText =
+        '<img src=x onerror=alert(1)> gerçek veli yorumu'
+
+      const parentCommentResponse = await parentPage.request.post(
+        commentsPath,
+        {
+          headers: { [firstCsrf.headerName]: firstCsrf.token },
+          data: { body: unsafeLookingText },
+        },
+      )
+      expect(parentCommentResponse.status()).toBe(201)
+      const parentComment = (await parentCommentResponse.json()) as {
+        id: string
+      }
+
+      const operatorCommentResponse = await operatorPage.request.post(
+        commentsPath,
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: { body: 'Bu mahalle için sabah yönünde hizmet verebilirim.' },
+        },
+      )
+      expect(operatorCommentResponse.status()).toBe(201)
+
+      const nonSupporterDenied = await nonSupportingParentPage.request.post(
+        commentsPath,
+        {
+          headers: { [nonSupporterCsrf.headerName]: nonSupporterCsrf.token },
+          data: { body: 'Bu yorum yayınlanmamalı.' },
+        },
+      )
+      expect(nonSupporterDenied.status()).toBe(403)
+
+      const publicCommentsResponse = await publicPage.request.get(commentsPath)
+      expect(publicCommentsResponse.status()).toBe(200)
+      const publicComments =
+        (await publicCommentsResponse.json()) as CommentPage
+      expect(publicComments.totalElements).toBe(2)
+      expect(publicComments.content).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: parentComment.id,
+            body: unsafeLookingText,
+            author: expect.objectContaining({
+              role: 'PARENT',
+              displayName: 'Veli',
+              operatorProfileId: null,
+            }),
+            canDelete: false,
+          }),
+          expect.objectContaining({
+            author: expect.objectContaining({
+              role: 'OPERATOR',
+              displayName: 'J03 Gerçek Servis',
+              operatorProfileId,
+            }),
+          }),
+        ]),
+      )
+      expect(JSON.stringify(publicComments)).not.toContain(parentEmail)
+      expect(JSON.stringify(publicComments)).not.toContain(operatorEmail)
+
+      await publicPage.goto(`/demands/${sharedDemandId}`)
+      await expect(publicPage.getByText(unsafeLookingText)).toBeVisible()
+      expect(await publicPage.locator('img[src="x"]').count()).toBe(0)
+
+      const foreignDelete = await secondParentPage.request.delete(
+        `${commentsPath}/${parentComment.id}`,
+        { headers: { [secondCsrf.headerName]: secondCsrf.token } },
+      )
+      expect(foreignDelete.status()).toBe(404)
+
+      const commentReportResponse = await secondParentPage.request.post(
+        '/api/v1/reports',
+        {
+          headers: { [secondCsrf.headerName]: secondCsrf.token },
+          data: {
+            targetType: 'COMMENT',
+            targetId: parentComment.id,
+            reason: 'PERSONAL_DATA',
+            explanation: 'Sentetik yorum moderasyon doğrulaması.',
+          },
+        },
+      )
+      expect(commentReportResponse.status()).toBe(201)
+      const commentReport =
+        (await commentReportResponse.json()) as ReportReceipt
+
+      const demandReportResponse = await operatorPage.request.post(
+        '/api/v1/reports',
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: {
+            targetType: 'DEMAND',
+            targetId: sharedDemandId,
+            reason: 'OTHER',
+            explanation: 'Sentetik talep bildirimi doğrulaması.',
+          },
+        },
+      )
+      expect(demandReportResponse.status()).toBe(201)
+
+      expect(
+        (
+          (await (
+            await publicPage.request.get(commentsPath)
+          ).json()) as CommentPage
+        ).content.map(({ id }) => id),
+      ).toContain(parentComment.id)
+      expect(await demand(publicPage, sharedDemandId)).toMatchObject({
+        status: 'OPEN',
+        supporterCount: 2,
+      })
+
+      const adminCsrf = await csrf(adminPage)
+      const adminNotificationsResponse = await adminPage.request.get(
+        '/api/v1/notifications?size=50',
+      )
+      expect(adminNotificationsResponse.status()).toBe(200)
+      const adminNotifications =
+        (await adminNotificationsResponse.json()) as NotificationPage
+      const commentReportNotification = adminNotifications.content.find(
+        ({ moderationCaseId }) => moderationCaseId === commentReport.caseId,
+      )
+      expect(commentReportNotification).toMatchObject({
+        type: 'CONTENT_REPORTED',
+        readAt: null,
+      })
+
+      const parentCannotReadAdminNotification = await parentPage.request.put(
+        `/api/v1/notifications/${commentReportNotification!.id}/read`,
+        { headers: { [firstCsrf.headerName]: firstCsrf.token } },
+      )
+      expect(parentCannotReadAdminNotification.status()).toBe(404)
+      const markedRead = await adminPage.request.put(
+        `/api/v1/notifications/${commentReportNotification!.id}/read`,
+        { headers: { [adminCsrf.headerName]: adminCsrf.token } },
+      )
+      expect(markedRead.status()).toBe(200)
+      expect(
+        (await markedRead.json()) as { readAt: string | null },
+      ).toMatchObject({ readAt: expect.any(String) })
+
+      const caseDetailResponse = await adminPage.request.get(
+        `/api/v1/admin/moderation/cases/${commentReport.caseId}`,
+      )
+      expect(caseDetailResponse.status()).toBe(200)
+      const caseDetailText = await caseDetailResponse.text()
+      expect(caseDetailText).not.toContain(parentEmail)
+      expect(caseDetailText).not.toContain(secondParentEmail)
+
+      const hidden = await adminPage.request.post(
+        `/api/v1/admin/moderation/cases/${commentReport.caseId}/actions`,
+        {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            action: 'HIDE_COMMENT',
+            reason: 'Sentetik kişisel veri moderasyon kontrolü.',
+          },
+        },
+      )
+      expect(hidden.status()).toBe(200)
+      expect(
+        (
+          (await (
+            await publicPage.request.get(commentsPath)
+          ).json()) as CommentPage
+        ).content.map(({ id }) => id),
+      ).not.toContain(parentComment.id)
+
+      const restored = await adminPage.request.post(
+        `/api/v1/admin/moderation/cases/${commentReport.caseId}/actions`,
+        {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            action: 'RESTORE_COMMENT',
+            reason: 'Sentetik yorum geri yükleme kontrolü.',
+          },
+        },
+      )
+      expect(restored.status()).toBe(200)
+      expect(
+        (
+          (await (
+            await publicPage.request.get(commentsPath)
+          ).json()) as CommentPage
+        ).content.map(({ id }) => id),
+      ).toContain(parentComment.id)
+    })
+
     await test.step('keep publication idempotent and close only after every active parent is satisfied', async () => {
       const responsePath = `/api/v1/operator/demands/${sharedDemandId}/response`
       const operatorCsrf = await csrf(operatorPage)
@@ -885,6 +1136,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       publicContext.close(),
       parentContext.close(),
       secondParentContext.close(),
+      nonSupportingParentContext.close(),
     ])
   }
 })
