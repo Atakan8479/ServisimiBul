@@ -72,7 +72,7 @@ try {
             } else {
                 $mavenArguments += 'verify'
             }
-            $wrapper = if ($IsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+            $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
             & $wrapper @mavenArguments
             if ($LASTEXITCODE -ne 0) {
                 throw 'Backend verification failed.'

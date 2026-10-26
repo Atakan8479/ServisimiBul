@@ -68,7 +68,7 @@ function Invoke-LocalMigration {
     try {
         Push-Location $backendDirectory
         try {
-            $wrapper = if ($IsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+            $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
             & $wrapper --batch-mode `
                 '-Dspring-boot.run.profiles=migration' spring-boot:run
             if ($LASTEXITCODE -ne 0) {
@@ -204,7 +204,7 @@ try {
         try {
             Push-Location $backendDirectory
             try {
-                $wrapper = if ($IsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+                $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
                 & $wrapper --batch-mode '-Dspring-boot.run.profiles=local' `
                     '-Dspring-boot.run.arguments=--spring.main.web-application-type=none' spring-boot:run
                 if ($LASTEXITCODE -ne 0) {

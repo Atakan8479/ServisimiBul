@@ -63,11 +63,11 @@ try {
 Assert-Condition $unsafeSiblingRejected 'A temp-prefix sibling path was not rejected.'
 
 $supportSource = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'WindowsDevelopmentSupport.ps1')
-Assert-Condition ($supportSource.Contains("if (`$IsWindows) { 'java.exe' } else { 'java' }")) `
+Assert-Condition ($supportSource.Contains("if (`$SbIsWindows) { 'java.exe' } else { 'java' }")) `
     'Java discovery does not support the current platform executable name.'
-Assert-Condition ($supportSource.Contains("if (`$IsWindows) { 'node.exe' } else { 'node' }")) `
+Assert-Condition ($supportSource.Contains("if (`$SbIsWindows) { 'node.exe' } else { 'node' }")) `
     'Node discovery does not support the current platform executable name.'
-Assert-Condition ($supportSource.Contains("if (`$IsWindows) { '.exe' } else { '' }")) `
+Assert-Condition ($supportSource.Contains("if (`$SbIsWindows) { '.exe' } else { '' }")) `
     'PostgreSQL discovery does not support the current platform executable suffix.'
 Assert-Condition ($supportSource.Contains("Stop-SbIsolatedPostgres -Cluster `$cluster -Mode 'immediate'")) `
     'Failed startup does not use the shared safe PostgreSQL cleanup.'
@@ -128,7 +128,7 @@ Assert-Condition ($devSource.Contains('spring.main.web-application-type=none')) 
     'Administrator bootstrap must not expose a web server.'
 
 $backendRunner = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot 'Test-IsolatedBackend.ps1')
-Assert-Condition ($backendRunner.Contains("if (`$IsWindows) { '.\mvnw.cmd' } else { './mvnw' }")) `
+Assert-Condition ($backendRunner.Contains("if (`$SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }")) `
     'The isolated backend runner does not select the platform Maven Wrapper.'
 
 Write-Host 'A-12 isolated development safety tests passed.'

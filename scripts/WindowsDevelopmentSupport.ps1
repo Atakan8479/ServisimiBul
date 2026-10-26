@@ -1,4 +1,5 @@
 Set-StrictMode -Version Latest
+$SbIsWindows = $env:OS -eq 'Windows_NT'
 
 function Resolve-SbJavaRuntime {
     param([string]$RequestedHome)
@@ -11,14 +12,14 @@ function Resolve-SbJavaRuntime {
     } else {
         @()
     }
-    $pathJava = Get-Command $(if ($IsWindows) { 'java.exe' } else { 'java' }) `
+    $pathJava = Get-Command $(if ($SbIsWindows) { 'java.exe' } else { 'java' }) `
         -ErrorAction SilentlyContinue
     $pathJavaHome = if ($pathJava) {
         Split-Path -Parent (Split-Path -Parent $pathJava.Source)
     } else {
         $null
     }
-    if ($IsMacOS -and (Test-Path -LiteralPath '/usr/libexec/java_home' -PathType Leaf)) {
+    if (Test-Path -LiteralPath '/usr/libexec/java_home' -PathType Leaf) {
         $macJavaHome = (& /usr/libexec/java_home 2>$null | Select-Object -First 1)
     } else {
         $macJavaHome = $null
@@ -26,7 +27,7 @@ function Resolve-SbJavaRuntime {
     $candidates = @($RequestedHome, $env:JAVA_HOME, $macJavaHome, $pathJavaHome) + @($discoveredJdks)
 
     foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
-        $java = Join-Path $candidate $(if ($IsWindows) { 'bin\java.exe' } else { 'bin/java' })
+        $java = Join-Path $candidate $(if ($SbIsWindows) { 'bin\java.exe' } else { 'bin/java' })
         if (-not (Test-Path -LiteralPath $java -PathType Leaf)) {
             continue
         }
@@ -45,7 +46,7 @@ function Resolve-SbJavaRuntime {
 
 function Resolve-SbNode24Runtime {
     $nodeCandidates = @()
-    $pathNode = Get-Command $(if ($IsWindows) { 'node.exe' } else { 'node' }) `
+    $pathNode = Get-Command $(if ($SbIsWindows) { 'node.exe' } else { 'node' }) `
         -ErrorAction SilentlyContinue
     if ($pathNode) {
         $nodeCandidates += $pathNode.Source
@@ -79,7 +80,7 @@ function Resolve-SbPostgres17Tools {
     param([string]$PostgresBin)
 
     $programFiles = [Environment]::GetFolderPath('ProgramFiles')
-    $pathPostgres = Get-Command $(if ($IsWindows) { 'postgres.exe' } else { 'postgres' }) `
+    $pathPostgres = Get-Command $(if ($SbIsWindows) { 'postgres.exe' } else { 'postgres' }) `
         -ErrorAction SilentlyContinue
     $pathPostgresBin = if ($pathPostgres) { Split-Path -Parent $pathPostgres.Source } else { $null }
     $candidates = @(
@@ -92,7 +93,7 @@ function Resolve-SbPostgres17Tools {
     ) | Where-Object { $_ } | Select-Object -Unique
 
     foreach ($candidate in $candidates) {
-        $executableSuffix = if ($IsWindows) { '.exe' } else { '' }
+        $executableSuffix = if ($SbIsWindows) { '.exe' } else { '' }
         $tools = [ordered]@{
             Bin = $candidate
             InitDb = Join-Path $candidate "initdb$executableSuffix"
@@ -275,7 +276,7 @@ function Start-SbIsolatedPostgres {
                 ArgumentList = $startArguments
                 PassThru = $true
             }
-            if ($IsWindows) {
+            if ($SbIsWindows) {
                 $startProcessArguments.WindowStyle = 'Hidden'
             }
             $startProcess = Start-Process @startProcessArguments
@@ -387,7 +388,7 @@ function Stop-SbIsolatedPostgres {
             ArgumentList = $stopArguments
             PassThru = $true
         }
-        if ($IsWindows) {
+        if ($SbIsWindows) {
             $stopProcessArguments.WindowStyle = 'Hidden'
         }
         $stopProcess = Start-Process @stopProcessArguments
@@ -414,7 +415,7 @@ function Get-SbMavenRuntime {
     $launcher = Get-ChildItem -LiteralPath $distributionRoot -Recurse `
         -Filter 'plexus-classworlds-*.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $launcher) {
-        $wrapper = Join-Path $BackendDirectory $(if ($IsWindows) { 'mvnw.cmd' } else { 'mvnw' })
+        $wrapper = Join-Path $BackendDirectory $(if ($SbIsWindows) { 'mvnw.cmd' } else { 'mvnw' })
         & $wrapper --version
         if ($LASTEXITCODE -ne 0) {
             throw 'Maven Wrapper setup failed.'
@@ -440,7 +441,7 @@ function Stop-SbProcessTree {
     }
     $Process.Refresh()
     if (-not $Process.HasExited) {
-        if ($IsWindows) {
+        if ($SbIsWindows) {
             & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
         } else {
             $Process.Kill($true)

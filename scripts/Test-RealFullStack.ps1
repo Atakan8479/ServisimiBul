@@ -26,7 +26,7 @@ function Invoke-J03Maven {
     try {
         Push-Location $backendDirectory
         try {
-            $wrapper = if ($IsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+            $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
             & $wrapper --batch-mode "-Dspring-boot.run.profiles=$Profile" spring-boot:run
             if ($LASTEXITCODE -ne 0) {
                 throw "J-03 $Profile process failed."
