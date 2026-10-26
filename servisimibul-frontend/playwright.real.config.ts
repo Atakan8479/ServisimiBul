@@ -18,7 +18,7 @@ export default defineConfig({
   timeout: 300_000,
   use: {
     baseURL: frontendUrl,
-    channel: process.env.CI ? undefined : 'msedge',
+    channel: !process.env.CI && process.platform === 'win32' ? 'msedge' : undefined,
     screenshot: 'only-on-failure',
     trace: 'off',
   },
