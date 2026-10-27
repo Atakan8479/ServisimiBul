@@ -147,7 +147,7 @@ describe('public demand board', () => {
     )
 
     expect(
-      await screen.findByText(/Desteğiniz otomatik eklenmedi/),
+      await screen.findByText(/Katılmak için “Benim de ihtiyacım var”/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Benim de ihtiyacım var' }),
@@ -168,7 +168,7 @@ describe('demand board regression cases', () => {
     )
     renderRoute(filteredBoardPath)
     expect(
-      await screen.findByText(/Kaydedilen okul ve mahalle artık bulunamadı/),
+      await screen.findByText(/Seçtiğiniz okul veya mahalle artık bulunamıyor/),
     ).toBeInTheDocument()
     expect(
       await screen.findByText('Bu seçim için açık talep yok'),
@@ -196,7 +196,7 @@ describe('demand board regression cases', () => {
       screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
     )
     expect(
-      await screen.findByText(/daha önce açılmış talep katılıma kapalı/),
+      await screen.findByText(/talep var ancak yeni katılıma kapalı/),
     ).toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Benim de ihtiyacım var' }),
@@ -681,7 +681,7 @@ describe('demand-specific operator service responses', () => {
     expect(await screen.findByText('Moda Öğrenci Servisi')).toBeInTheDocument()
     expect(
       screen.getByText(
-        /doğrulanmış koltuk, fiyat veya hizmet garantisi değildir/,
+        /Bilgiler işletmeciler tarafından paylaşılır/,
       ),
     ).toBeInTheDocument()
     expect(
@@ -711,7 +711,7 @@ describe('demand-specific operator service responses', () => {
 
     expect(
       await screen.findByText(
-        /Servis bildirimi yayınlamak için işletmeci hesabınızla giriş yapın/,
+        /İşletmeci hesabınız yoksa/,
       ),
     ).toBeInTheDocument()
   })
@@ -780,7 +780,7 @@ describe('demand-specific operator service responses', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        /uygunluk yeniden sağlanana kadar velilere gösterilmiyor/,
+        /gerekli koşullar sağlanana kadar velilere gösterilmiyor/,
       ),
     ).toBeInTheDocument()
     expect(
