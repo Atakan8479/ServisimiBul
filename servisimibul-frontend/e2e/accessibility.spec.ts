@@ -10,12 +10,14 @@ const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
   { name: 'tablet', width: 768, height: 1024 },
   { name: 'mobile', width: 390, height: 844 },
+  { name: 'compact mobile', width: 320, height: 844 },
 ] as const
 
 for (const viewport of viewports) {
   test(`${viewport.name} routes meet WCAG 2.2 AA and do not overflow`, async ({
     page,
   }) => {
+    test.setTimeout(90_000)
     const state = createMockApiState()
     const consoleProblems: string[] = []
     page.on('console', (message) => {
@@ -55,6 +57,12 @@ for (const viewport of viewports) {
 
     await page.goto('/parent/register')
     await audit(page, 'parent registration')
+
+    await page.goto('/parent/login')
+    await assertVisibleKeyboardFocus(page)
+    await audit(page, 'parent login')
+    await page.getByRole('button', { name: 'Şifreyi göster' }).click()
+    await expect(page.getByLabel('Şifre')).toHaveAttribute('type', 'text')
 
     await page.goto('/operator/login')
     await assertVisibleKeyboardFocus(page)

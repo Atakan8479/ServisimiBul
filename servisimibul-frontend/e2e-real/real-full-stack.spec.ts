@@ -158,9 +158,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'Veli hesabı oluştur' })
         .click()
       expect((await registration).status()).toBe(202)
-      await expect(parentPage).toHaveURL(
-        /\/operator\/login\?.*registered=parent/,
-      )
+      await expect(parentPage).toHaveURL(/\/parent\/login\?.*registered=parent/)
       await expect(parentPage.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
@@ -1580,7 +1578,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           await mobilePage.evaluate(() => document.documentElement.clientWidth),
         )
         await expect(
-          mobilePage.getByRole('link', { name: 'Giriş' }),
+          mobilePage.getByRole('link', { name: 'Veli girişi' }),
         ).toBeVisible()
         const accessibility = await new AxeBuilder({ page: mobilePage })
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
@@ -1613,6 +1611,25 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
       ).toBeVisible()
     })
+
+    await test.step('persist and securely end the parent session', async () => {
+      await parentPage.goto('/demands')
+      await parentPage.reload()
+      await expect(parentPage.getByText('Veli oturumu açık')).toBeVisible()
+      expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
+        200,
+      )
+
+      await parentPage.getByRole('button', { name: 'Çıkış yap' }).click()
+      await expect(parentPage).toHaveURL(/\/parent\/login$/)
+      expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
+        401,
+      )
+      await parentPage.goto('/notifications')
+      await expect(parentPage).toHaveURL(
+        /\/parent\/login\?.*next=%2Fnotifications/,
+      )
+    })
   } finally {
     await Promise.all([
       operatorContext.close(),
@@ -1632,7 +1649,9 @@ async function login(
   password: string,
   expectedRole: 'admin' | 'operator' | 'parent',
 ) {
-  await page.goto('/operator/login')
+  await page.goto(
+    expectedRole === 'parent' ? '/parent/login' : '/operator/login',
+  )
   await page.getByLabel('E-posta').fill(email)
   await page.getByLabel('Şifre').fill(password)
   const response = page.waitForResponse(

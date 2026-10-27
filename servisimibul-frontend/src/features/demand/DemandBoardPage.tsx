@@ -270,7 +270,7 @@ export function DemandBoardPage() {
           appliedSelection,
           academicYear.trim(),
         )
-        void navigate(`/operator/login?next=${encodeURIComponent(next)}`)
+        void navigate(`/parent/login?next=${encodeURIComponent(next)}`)
         return
       }
       setAccessError('Oturum bilgisi kontrol edilemedi. Tekrar deneyin.')
@@ -304,7 +304,7 @@ export function DemandBoardPage() {
           academicYear.trim(),
         )
         void navigate(
-          `/operator/login?next=${encodeURIComponent(next)}&reason=session`,
+          `/parent/login?next=${encodeURIComponent(next)}&reason=session`,
         )
         return
       }

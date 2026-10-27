@@ -146,8 +146,9 @@ export function DemandDetailPage() {
     sessionExpired = false,
   ) {
     const reason = sessionExpired ? '&reason=session' : ''
+    const loginPath = action === 'support' ? '/parent/login' : '/operator/login'
     void navigate(
-      `/operator/login?next=${encodeURIComponent(loginReturnPath(action))}${reason}`,
+      `${loginPath}?next=${encodeURIComponent(loginReturnPath(action))}${reason}`,
     )
   }
 

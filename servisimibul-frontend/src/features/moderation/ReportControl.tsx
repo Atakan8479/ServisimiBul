@@ -1,7 +1,7 @@
 import { useId, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { currentUser } from '../auth/auth-api'
+import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
 import {
   reportContent,
   reportReasons,
@@ -40,8 +40,19 @@ export function ReportControl({
   const [error, setError] = useState<string>()
   const [sent, setSent] = useState(false)
 
+  function redirectToLogin(
+    sessionExpired: boolean,
+    role: AuthRole | undefined = knownAuthRole(),
+  ) {
+    const loginPath = role === 'OPERATOR' ? '/operator/login' : '/parent/login'
+    const next = encodeURIComponent(location.pathname + location.search)
+    const reason = sessionExpired ? '&reason=session' : ''
+    void navigate(`${loginPath}?next=${next}${reason}`)
+  }
+
   async function begin() {
     setError(undefined)
+    const role = knownAuthRole()
     try {
       const user = await currentUser()
       if (user.role !== 'PARENT' && user.role !== 'OPERATOR') {
@@ -53,9 +64,7 @@ export function ReportControl({
       setOpen(true)
     } catch (failure) {
       if (failure instanceof ApiError && failure.problem.status === 401) {
-        void navigate(
-          `/operator/login?next=${encodeURIComponent(location.pathname + location.search)}`,
-        )
+        redirectToLogin(failure.sessionExpired, role)
         return
       }
       setError('Hesabınız kontrol edilemedi. Tekrar deneyin.')
@@ -83,9 +92,7 @@ export function ReportControl({
       setExplanation('')
     } catch (failure) {
       if (failure instanceof ApiError && failure.problem.status === 401) {
-        void navigate(
-          `/operator/login?next=${encodeURIComponent(location.pathname + location.search)}`,
-        )
+        redirectToLogin(failure.sessionExpired)
         return
       }
       setError(

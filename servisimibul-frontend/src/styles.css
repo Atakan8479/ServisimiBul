@@ -110,7 +110,9 @@ nav {
   gap: 1rem;
 }
 
-nav a {
+nav a,
+nav button,
+.nav-session {
   display: inline-flex;
   align-items: center;
   min-height: 2.75rem;
@@ -123,6 +125,24 @@ nav a {
     color var(--motion-fast) ease,
     background-color var(--motion-fast) ease,
     transform var(--motion-fast) var(--ease-out);
+}
+
+nav button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.nav-session {
+  color: var(--color-accent);
+  font-weight: 750;
+}
+
+.site-alert {
+  position: relative;
+  z-index: 1;
+  width: min(72rem, calc(100% - 2rem));
+  margin: 1rem auto 0;
 }
 
 nav a.active {
@@ -2666,7 +2686,9 @@ button:disabled {
     background: rgba(255, 255, 255, 0.72);
   }
 
-  .site-header nav a {
+  .site-header nav a,
+  .site-header nav button,
+  .site-header .nav-session {
     padding-right: 0.35rem;
     padding-left: 0.35rem;
     font-size: 0.9rem;
