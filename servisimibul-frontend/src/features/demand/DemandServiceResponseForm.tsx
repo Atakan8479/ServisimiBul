@@ -45,8 +45,7 @@ export function DemandServiceResponseForm({
       <fieldset>
         <legend>Hangi yönlerde servis sunuyorsunuz?</legend>
         <p className="fieldset-help">
-          Bu bildirim koltuk garantisi veya fiyat teklifi değildir. Veliler
-          ayrıntıları sizinle doğrudan görüşür.
+          Paylaştığınız bilgiler kesin fiyat veya boş yer garantisi değildir.
         </p>
         <div className="demand-choice-grid">
           <label className="checkbox-row">
