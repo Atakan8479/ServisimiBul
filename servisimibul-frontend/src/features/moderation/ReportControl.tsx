@@ -131,8 +131,7 @@ export function ReportControl({
         <form className="report-form" onSubmit={submit}>
           <strong>İçeriği bildir</strong>
           <p>
-            Bildiriminiz içeriği otomatik olarak gizlemez; yönetici incelemesine
-            alınır.
+            Bildiriminiz incelenecek. İçerik hemen kaldırılmaz.
           </p>
           <label htmlFor={`${fieldId}-reason`}>Bildirim nedeni</label>
           <select
