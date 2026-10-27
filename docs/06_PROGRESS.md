@@ -1,8 +1,16 @@
 # Progress ledger (update only after verification)
 
-## Current stage: REQ-09 real full-stack lifecycle verification ready for review
+## Current stage: SEC-ARCH school integrity follow-up ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-08, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. REQ-09 Phase 2 is implemented on `codex/req-09-lifecycle-e2e-phase2` in PR #114 for review. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. SEC-ARCH tracker #111 follow-up 1 is implemented on `codex/sec-arch-school-integrity` in PR #127 for review; follow-ups 2–5 remain separate work. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified SEC-ARCH school integrity follow-up — 2026-10-27
+
+- PR #127 implements only finding 1 from GitHub issue #111. The first TDD commit reproduced all three risks on disposable PostgreSQL 17.11: a cross-province school move with existing coverage returned 200 instead of 409, concurrent ADMIN patches lost one update, and an overlapping school move plus coverage replacement created cross-province coverage.
+- ADMIN school patch, activate, and deactivate operations now take a pessimistic write lock on the school row. A province-changing patch returns 409 `school_province_change_conflict` while operator-school coverage exists; moves inside the same province remain allowed.
+- Coverage replacement resolves the owned school and locks rows in the consistent `school -> operator_school` order before validating the complete replacement. The school lock query intentionally locks only the school row so PostgreSQL can re-evaluate a concurrently changed neighborhood after waiting; geography is loaded inside the same transaction.
+- The focused regression suite passed all 4 tests, including same-province relocation and activation/deactivation coverage preservation. The complete isolated backend verification replayed Flyway V1–V16 on fresh PostgreSQL 17.11, validated Hibernate, packaged the application, and passed all 275 tests with zero failures, errors, or skips.
+- Current Spring Data JPA 4.1.2 transaction/locking guidance and PostgreSQL 17 row-lock/deadlock guidance were checked through Context7. No dependency, migration, frontend file, shared Supabase connection/write, SMTP setting, production setting, or work on #111 findings 2–5 was introduced.
 
 ## Verified REQ-09 real full-stack lifecycle — 2026-10-26
 

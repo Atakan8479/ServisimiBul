@@ -57,6 +57,17 @@ public interface OperatorSchoolRepository extends JpaRepository<OperatorSchool, 
             @Param("schoolId") UUID schoolId
     );
 
+    @Query("""
+            select operatorSchool.school.id
+            from OperatorSchool operatorSchool
+            where operatorSchool.id = :id
+              and operatorSchool.operator.id = :operatorId
+            """)
+    Optional<UUID> findOwnedSchoolId(
+            @Param("id") UUID id,
+            @Param("operatorId") UUID operatorId
+    );
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select operatorSchool

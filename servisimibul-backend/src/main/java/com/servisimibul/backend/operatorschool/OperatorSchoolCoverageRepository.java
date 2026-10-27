@@ -12,6 +12,8 @@ import java.util.Optional;
 
 public interface OperatorSchoolCoverageRepository extends JpaRepository<OperatorSchoolCoverage, UUID> {
 
+    boolean existsByOperatorSchoolSchoolId(UUID schoolId);
+
     @Query("""
             select distinct profile.user.id
             from OperatorSchoolCoverage coverage

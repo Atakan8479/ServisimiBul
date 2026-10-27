@@ -121,7 +121,7 @@ public class OperatorSchoolService {
 
     @Transactional
     public OperatorSchoolResponse replaceCoverage(UUID id, CoverageReplaceRequest request) {
-        OperatorSchool relationship = ownedForUpdate(id);
+        OperatorSchool relationship = ownedForCoverageUpdate(id);
         List<Long> requestedIds = request.neighborhoodIds();
         Set<Long> distinctIds = new HashSet<>(requestedIds);
         if (distinctIds.size() != requestedIds.size()) {
@@ -206,10 +206,24 @@ public class OperatorSchoolService {
     private OperatorSchool ownedForUpdate(UUID id) {
         OperatorProfile operator = currentOperator();
         return operatorSchoolRepository.findOwnedForUpdate(id, operator.getId())
-                .orElseThrow(() -> OperatorSchoolApiException.notFound(
-                        "operator_school_not_found",
-                        "Operator school relationship was not found"
-                ));
+                .orElseThrow(this::operatorSchoolNotFound);
+    }
+
+    private OperatorSchool ownedForCoverageUpdate(UUID id) {
+        OperatorProfile operator = currentOperator();
+        UUID schoolId = operatorSchoolRepository.findOwnedSchoolId(id, operator.getId())
+                .orElseThrow(this::operatorSchoolNotFound);
+        schoolRepository.findDetailedForUpdateById(schoolId)
+                .orElseThrow(this::operatorSchoolNotFound);
+        return operatorSchoolRepository.findOwnedForUpdate(id, operator.getId())
+                .orElseThrow(this::operatorSchoolNotFound);
+    }
+
+    private OperatorSchoolApiException operatorSchoolNotFound() {
+        return OperatorSchoolApiException.notFound(
+                "operator_school_not_found",
+                "Operator school relationship was not found"
+        );
     }
 
     private OperatorSchoolResponse toResponse(

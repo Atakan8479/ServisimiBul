@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -130,6 +131,31 @@ class SchoolIntegrityConcurrencyTests {
 
         School school = transactionTemplate.execute(status -> schoolRepository.findDetailedById(schoolId).orElseThrow());
         assertThat(school.getNeighborhood().getId()).isEqualTo(schoolNeighborhoodId);
+    }
+
+    @Test
+    @WithMockUser(roles = "ADMIN")
+    void sameProvinceMoveAndLifecycleChangesPreserveCoverage() throws Exception {
+        createCommittedFixture(true);
+
+        mockMvc.perform(patch("/api/v1/admin/schools/{id}", schoolId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"neighborhoodId": %d}
+                                """.formatted(coverageNeighborhoodId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.neighborhoodId").value(coverageNeighborhoodId));
+        mockMvc.perform(post("/api/v1/admin/schools/{id}/deactivate", schoolId).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+        mockMvc.perform(post("/api/v1/admin/schools/{id}/activate", schoolId).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(true));
+
+        assertThat(coverageRepository.findAllDetailedByOperatorSchoolId(relationshipId))
+                .extracting(coverage -> coverage.getNeighborhood().getId())
+                .containsExactly(coverageNeighborhoodId);
     }
 
     @Test
