@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "vite build",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format:check": "prettier --write . && node ci-emit-formatted-copy.cjs",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
