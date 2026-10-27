@@ -174,8 +174,9 @@ export function AdminTariffsPage() {
           </label>
           <p className="tariff-editor-help" id="tariff-editor-help">
             Yeni bir sürüm kaydederken <code>version</code> değerini değiştirin.
-            Tutarlar kuruş cinsinden tam sayı olmalıdır; yalnızca son mesafe
-            aralığının <code>maxDistanceKm</code> değeri null olabilir.
+            Aylık ve yıllık tutarlar kuruş cinsinden tam sayı olmalıdır. Ek
+            kilometre kuralı varsa eşiği son sabit aralığın üst sınırıyla aynı
+            olmalıdır.
           </p>
 
           {error && (
@@ -216,7 +217,7 @@ function emptyIstanbulTariff(): Tariff {
     academicYear: `${year}–${year + 1}`,
     currency: 'TRY',
     effectiveFrom: `${year}-09-01`,
-    effectiveTo: `${year + 1}-08-31`,
+    effectiveTo: null,
     sourceTitle: '',
     officialSourceUrl: 'https://',
     version: `${year}-01`,

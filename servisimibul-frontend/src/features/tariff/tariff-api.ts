@@ -6,6 +6,14 @@ const tariffBandSchema = z
     minDistanceKm: z.number().nonnegative(),
     maxDistanceKm: z.number().positive().nullable(),
     amountKurus: z.number().int().nonnegative(),
+    annualAmountKurus: z.number().int().nonnegative().nullish(),
+  })
+  .strict()
+
+const additionalKilometerRuleSchema = z
+  .object({
+    startsAfterDistanceKm: z.number().positive(),
+    monthlyAmountPerKilometerKurus: z.number().int().nonnegative(),
   })
   .strict()
 
@@ -17,10 +25,15 @@ export const tariffSchema = z
     academicYear: z.string().trim().min(1),
     currency: z.literal('TRY'),
     effectiveFrom: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    effectiveTo: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    effectiveTo: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .nullable(),
     sourceTitle: z.string().trim().min(1),
     officialSourceUrl: z.url().refine((value) => value.startsWith('https://')),
     version: z.string().trim().min(1),
+    additionalKilometerRule: additionalKilometerRuleSchema.nullish(),
+    notes: z.array(z.string().trim().min(1).max(1000)).max(50).optional(),
     bands: z.array(tariffBandSchema).min(1),
   })
   .strict()
@@ -33,7 +46,10 @@ export const tariffSchema = z
         path: ['provinceCode'],
       })
     }
-    if (tariff.effectiveTo < tariff.effectiveFrom) {
+    if (
+      tariff.effectiveTo !== null &&
+      tariff.effectiveTo < tariff.effectiveFrom
+    ) {
       context.addIssue({
         code: 'custom',
         message: 'Bitiş tarihi başlangıç tarihinden önce olamaz.',
@@ -48,12 +64,40 @@ export const tariffSchema = z
       })
     }
 
+    const requiresAnnualAmounts =
+      tariff.additionalKilometerRule != null ||
+      tariff.bands.some((band) => band.annualAmountKurus != null)
+
     tariff.bands.forEach((band, index) => {
       const finalBand = index === tariff.bands.length - 1
-      if (finalBand !== (band.maxDistanceKm === null)) {
+      if (
+        finalBand &&
+        tariff.additionalKilometerRule == null &&
+        band.maxDistanceKm !== null
+      ) {
         context.addIssue({
           code: 'custom',
-          message: 'Yalnızca son aralığın üst sınırı null olmalıdır.',
+          message:
+            'Ek kilometre kuralı yoksa son aralığın üst sınırı null olmalıdır.',
+          path: ['bands', index, 'maxDistanceKm'],
+        })
+      }
+      if (
+        finalBand &&
+        tariff.additionalKilometerRule != null &&
+        band.maxDistanceKm === null
+      ) {
+        context.addIssue({
+          code: 'custom',
+          message:
+            'Ek kilometre kuralı varsa son sabit aralığın üst sınırı belirtilmelidir.',
+          path: ['bands', index, 'maxDistanceKm'],
+        })
+      }
+      if (!finalBand && band.maxDistanceKm === null) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Yalnızca son sabit aralığın üst sınırı null olabilir.',
           path: ['bands', index, 'maxDistanceKm'],
         })
       }
@@ -75,7 +119,28 @@ export const tariffSchema = z
           path: ['bands', index, 'minDistanceKm'],
         })
       }
+      if (requiresAnnualAmounts && band.annualAmountKurus == null) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Tüm aralıkların yıllık tutarı belirtilmelidir.',
+          path: ['bands', index, 'annualAmountKurus'],
+        })
+      }
     })
+
+    const finalMaximum = tariff.bands.at(-1)?.maxDistanceKm
+    if (
+      tariff.additionalKilometerRule != null &&
+      finalMaximum !== null &&
+      finalMaximum !== undefined &&
+      tariff.additionalKilometerRule.startsAfterDistanceKm !== finalMaximum
+    ) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Ek kilometre eşiği son sabit aralığın üst sınırı olmalıdır.',
+        path: ['additionalKilometerRule', 'startsAfterDistanceKm'],
+      })
+    }
   })
 
 export type Tariff = z.infer<typeof tariffSchema>

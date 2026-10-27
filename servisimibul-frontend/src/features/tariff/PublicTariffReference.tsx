@@ -84,7 +84,9 @@ function TariffDetails({ tariff }: { tariff: Tariff }) {
         <div>
           <strong>{tariff.authority}</strong>
           <span>
-            {formatDate(tariff.effectiveFrom)}–{formatDate(tariff.effectiveTo)}
+            {tariff.effectiveTo === null
+              ? `${formatDate(tariff.effectiveFrom)} tarihinden itibaren`
+              : `${formatDate(tariff.effectiveFrom)}–${formatDate(tariff.effectiveTo)}`}
           </span>
         </div>
       </div>
@@ -94,9 +96,28 @@ function TariffDetails({ tariff }: { tariff: Tariff }) {
             <span>
               {formatDistance(band.minDistanceKm, band.maxDistanceKm)}
             </span>
-            <strong>{formatKurus(band.amountKurus)}</strong>
+            <strong>
+              {formatKurus(band.amountKurus)} / ay
+              {band.annualAmountKurus != null &&
+                ` · ${formatKurus(band.annualAmountKurus)} / yıl`}
+            </strong>
           </div>
         ))}
+        {tariff.additionalKilometerRule && (
+          <div>
+            <span>
+              {tariff.additionalKilometerRule.startsAfterDistanceKm} km üzeri
+              her ek km
+            </span>
+            <strong>
+              +
+              {formatKurus(
+                tariff.additionalKilometerRule.monthlyAmountPerKilometerKurus,
+              )}{' '}
+              / ay
+            </strong>
+          </div>
+        )}
       </div>
       <p className="tariff-disclaimer">
         Mahalle seçimi mesafeyi belirlemez. Mesafe ve uygulanacak ücret ayrıca
