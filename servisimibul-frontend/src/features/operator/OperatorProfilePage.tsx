@@ -174,11 +174,11 @@ export function OperatorProfilePage() {
           : 'İşletmeci profili'}
       </p>
       <h1>İşletme bilgileriniz</h1>
-      <p className="page-lead">
-        {user.operatorApprovalRequired
-          ? 'İletişim telefonu onaydan sonra velilere açık olarak gösterilir.'
-          : 'Profiliniz için yönetici onayı gerekmiyor; diğer görünürlük koşulları aynen uygulanır.'}
-      </p>
+      {user.operatorApprovalRequired && (
+        <p className="page-lead">
+          İletişim telefonu onaydan sonra velilere gösterilir.
+        </p>
+      )}
 
       {profile && user.operatorApprovalRequired && (
         <div
@@ -191,9 +191,7 @@ export function OperatorProfilePage() {
       {profile && !user.operatorApprovalRequired && (
         <div className="status-banner success" role="status">
           <strong>Yönetici onayı gerekmiyor</strong>
-          <span>
-            Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.
-          </span>
+          
         </div>
       )}
       {loadError && (
@@ -229,7 +227,7 @@ export function OperatorProfilePage() {
           </label>
           <label className="form-field">
             <span>Herkese açık iletişim telefonu</span>
-            <small>Telefon API tarafından E.164 biçiminde kaydedilir.</small>
+            
             <input
               aria-invalid={Boolean(errors.contactPhone)}
               autoComplete="tel"
@@ -260,8 +258,7 @@ export function OperatorProfilePage() {
             <span>
               <strong>Profilimi velilere göster</strong>
               <small>
-                Bu tercih kapalıysa, diğer bütün koşullar sağlansa bile
-                profiliniz arama sonuçlarında görünmez.
+                Bu ayarı kapatırsanız profiliniz aramalarda görünmez.
               </small>
             </span>
           </label>
