@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { afterEach, describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import { ApiError, apiRequest, resetCsrfToken } from './client'
+import { normalizeApiProblem } from './contracts'
 
 afterEach(resetCsrfToken)
 
@@ -86,5 +87,53 @@ describe('apiRequest', () => {
 
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).sessionExpired).toBe(true)
+  })
+})
+
+describe('user-facing API messages', () => {
+  it('keeps machine codes while localizing known authentication failures', () => {
+    const error = normalizeApiProblem(
+      {
+        title: 'Authentication failed',
+        detail: 'Invalid credentials',
+        code: 'INVALID_CREDENTIALS',
+      },
+      401,
+    )
+    expect(error.code).toBe('INVALID_CREDENTIALS')
+    expect(error.status).toBe(401)
+    expect(error.detail).toBe('E-posta veya şifre yanlış.')
+  })
+
+  it('uses concise Turkish descriptions for registration, session and conflicts', () => {
+    expect(
+      normalizeApiProblem({ code: 'PARENT_REGISTRATION_UNAVAILABLE' }, 503)
+        .detail,
+    ).toBe('Şu anda veli hesabı oluşturulamıyor.')
+    expect(
+      normalizeApiProblem({ code: 'CSRF_INVALID' }, 403).detail,
+    ).toContain('Sayfayı yenileyin.')
+    expect(
+      normalizeApiProblem({ code: 'demand_update_conflict' }, 409).detail,
+    ).toContain('Talep bu sırada değişti.')
+  })
+
+  it('preserves field-specific validation errors and unknown API codes', () => {
+    const error = normalizeApiProblem(
+      {
+        code: 'VALIDATION_FAILED',
+        detail: 'Validation failed',
+        fieldErrors: [{ field: 'email', message: 'Geçerli adres girin.' }],
+      },
+      400,
+    )
+    expect(error.detail).toBe('Girilen bilgileri kontrol edin.')
+    expect(error.fieldErrors).toEqual({ email: 'Geçerli adres girin.' })
+    expect(
+      normalizeApiProblem(
+        { code: 'CUSTOM_ERROR', detail: 'Güncel bir kullanıcı uyarısı' },
+        409,
+      ).detail,
+    ).toBe('Güncel bir kullanıcı uyarısı')
   })
 })
