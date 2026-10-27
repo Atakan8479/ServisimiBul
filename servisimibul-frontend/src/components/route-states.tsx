@@ -11,7 +11,7 @@ export function LoadingPage() {
         <span />
       </div>
       <h1>Yükleniyor</h1>
-      <p>İçerik hazırlanıyor.</p>
+      
     </main>
   )
 }
@@ -23,7 +23,7 @@ export function RouteErrorPage() {
     return (
       <StatePage
         title="Oturumunuz sona erdi"
-        detail="Güvenli işlemlere devam etmek için yeniden giriş yapmanız gerekecek."
+        detail="Devam etmek için tekrar giriş yapın."
       />
     )
   }
