@@ -110,7 +110,7 @@ test('eligible operator publishes and withdraws a demand-specific service respon
   await page.getByRole('button', { name: 'Bu talep için servis ekle' }).click()
   await expect(page).toHaveURL(/\/operator\/login\?next=/)
   await expect(
-    page.getByText(/Servis bildirimi yayınlamak için işletmeci hesabınızla/),
+    page.getByText(/İşletmeci hesabınız yoksa/),
   ).toBeVisible()
 
   await page.getByLabel('E-posta').fill('operator@example.com')
