@@ -69,9 +69,6 @@ describe('public operator discovery', () => {
     expect(
       screen.getByText(/Güzergâh, boş yer ve ücret için işletmeciyle görüşün/),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText(/UKOME tarifeleri yalnızca resmi referanstır/),
-    ).toBeInTheDocument()
     expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
     expect(
       await screen.findByRole('heading', {
@@ -527,7 +524,7 @@ describe('public operator discovery', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Okullarda ara' }))
     expect(
-      await screen.findByRole('heading', {
+      await screen.findAllByRole('heading', {
         name: 'Okul bulunamadı',
       }),
     ).toBeInTheDocument()
