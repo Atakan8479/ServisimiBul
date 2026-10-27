@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Issue #124 parent authentication flow ready for review
+## Current stage: UI-01 review findings ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. Issue #124 is implemented on `codex/issue-124-parent-login` for review. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, and SEC-ARCH PR #127 are merged. UI-01 issue #115 is implemented on `codex/ui-01-design-system` in PR #128; the branch is reconciled with merged parent authentication and the requested review findings are locally verified. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
 ## Verified Issue #124 parent authentication completion — 2026-10-27
 
@@ -13,6 +13,16 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 - Node.js 24 verification passed Prettier on touched files, ESLint, strict TypeScript, all 103 Vitest tests, and the production build. The complete mocked Chromium suite passed 12/12, including WCAG 2.2 AA and overflow checks at 1440×900, 768×1024, 390×844, and 320×844.
 - The real Vite/Spring Boot/Playwright journey passed 1/1 against a fresh disposable PostgreSQL 17.4 database. It exercised real parent registration, immediate login, `/auth/me`, session persistence after reload, demand creation/support, notifications, secure logout, and denial of protected access after logout, then deleted the cluster, generated credentials, processes, and tariff directory.
 - No shared Supabase connection, schema/data write, migration, SMTP activation, production configuration, dependency, or lockfile change occurred. GitHub Actions and peer review remain required before merge.
+
+## Verified UI-01 shared design system — 2026-10-28
+
+- PR #128 establishes semantic navy/teal/yellow/neutral design tokens plus shared brand, button, card, badge, field, state, typography, and section-shell primitives without adding a dependency or changing the npm/Node baseline.
+- The branch now includes the merged parent-authentication journey from `main`. The public header preserves parent session state, notifications, secure logout, session-expiry handling, role-aware routes, and authentication errors while adding a compact keyboard-accessible mobile menu. Operator and admin layouts share one responsive workspace shell with their role-specific navigation and authorization behavior preserved.
+- The workspace uses a desktop sidebar and an off-canvas mobile dialog. Opening moves focus into the drawer and makes background content inert; Tab and Shift+Tab remain contained; Escape and backdrop dismissal restore the menu trigger; route selection leaves focus on the destination heading. The desktop sidebar remains unchanged, and the drawer retains 44-pixel controls, reduced motion, and 200% text reflow support.
+- Shared `FormField` controls now combine and deduplicate caller-provided help/error description IDs, preserve explicit control IDs and valid states, and force `aria-invalid` only when an error exists. Focused component regressions cover labels, descriptions, invalid state, drawer containment, restoration, and route focus.
+- Before/after public and operator screenshots were captured at 1440×900 and 390×844 under `docs/screenshots/ui-01`. The final visual pass uses reduced motion to avoid transition artifacts and confirms the reference archive's restrained deep-navy, teal, warm-yellow, and neutral direction without importing its mock data, routes, dependencies, or package-manager setup.
+- Frontend ESLint, strict TypeScript, all 110 Vitest tests, the production build, and `git diff --check` passed. The complete mocked Chromium Playwright suite passed all 17 tests, including WCAG route scans, 320-pixel/200%-text reflow, touch targets, reduced motion, all existing MVP journeys, the 320/390/768/1440 shared-navigation regression, and mobile drawer focus behavior. The real journey passed 1/1 against fresh disposable PostgreSQL 17.11 after replaying Flyway V1–V16, then deleted the database, tariff volume, and generated credentials.
+- Current React Router NavLink and transition guidance was checked through Context7. No backend source, API contract, authentication rule, dependency, lockfile, database, migration, shared Supabase operation, or production setting changed. GitHub Actions and peer review remain required before merge.
 
 ## Verified SEC-ARCH school integrity follow-up — 2026-10-27
 

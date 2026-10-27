@@ -1577,6 +1577,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         ).toBeLessThanOrEqual(
           await mobilePage.evaluate(() => document.documentElement.clientWidth),
         )
+        await mobilePage.keyboard.press('Tab')
+        await mobilePage.keyboard.press('Tab')
+        const menu = mobilePage.getByRole('button', { name: 'Menü' })
+        await expect(menu).toBeFocused()
+        await mobilePage.keyboard.press('Enter')
         await expect(
           mobilePage.getByRole('link', { name: 'Veli girişi' }),
         ).toBeVisible()

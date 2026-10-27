@@ -1,10 +1,6 @@
 import { useState } from 'react'
-import {
-  NavLink,
-  Outlet,
-  useNavigate,
-  useRouteLoaderData,
-} from 'react-router-dom'
+import { NavLink, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
 import { NotificationNavLink } from '../notification/NotificationNavLink'
@@ -36,19 +32,14 @@ export function AdminWorkspaceLayout() {
   }
 
   return (
-    <div className="workspace-shell">
-      <a className="skip-link" href="#workspace-content">
-        İçeriğe geç
-      </a>
-      <aside className="workspace-sidebar">
-        <NavLink className="brand" to="/" viewTransition>
-          ServisimiBul
-        </NavLink>
-        <div>
-          <p className="workspace-label">Yönetim alanı</p>
-          <small>{user.email}</small>
-        </div>
-        <nav aria-label="Yönetim alanı menüsü">
+    <WorkspaceShell
+      accountLabel="Yönetim alanı"
+      email={user.email}
+      error={error}
+      loggingOut={loggingOut}
+      onSignOut={signOut}
+      navigation={
+        <>
           <NavLink to="/admin/applications" viewTransition>
             {user.operatorApprovalRequired ? 'Başvurular' : 'İşletmeciler'}
           </NavLink>
@@ -62,24 +53,8 @@ export function AdminWorkspaceLayout() {
             İçerik inceleme
           </NavLink>
           <NotificationNavLink to="/admin/notifications" />
-        </nav>
-        <button
-          className="secondary-button sidebar-action"
-          disabled={loggingOut}
-          onClick={signOut}
-          type="button"
-        >
-          {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-        </button>
-        {error && (
-          <p className="field-error" role="alert">
-            {error}
-          </p>
-        )}
-      </aside>
-      <main id="workspace-content" className="workspace-content">
-        <Outlet />
-      </main>
-    </div>
+        </>
+      }
+    />
   )
 }
