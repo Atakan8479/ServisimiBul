@@ -166,23 +166,16 @@ export function RegisterPage() {
           <p>
             {emailVerificationRequired ? (
               <>
-                E-posta doğrulamanız tamamlandığında ve hizmet verdiğiniz okul
-                ile mahalle bilgilerini eklediğinizde, diğer yayın koşulları da
-                sağlanıyorsa işletme profiliniz herkese açık arama sonuçlarında
-                görüntülenebilir.
+                E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve mahalleleri ekleyin.
               </>
             ) : (
               <>
-                Hizmet verdiğiniz okul ile mahalle bilgilerini eklediğinizde,
-                diğer yayın koşulları da sağlanıyorsa işletme profiliniz herkese
-                açık arama sonuçlarında görüntülenebilir.
+                Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul ve mahalleleri ekleyin.
               </>
             )}
           </p>
           <p>
-            İletişim telefonunuz ve profilinizde paylaştığınız işletme bilgileri
-            ziyaretçiler tarafından görülebilir. Profil görünürlüğünüzü
-            işletmeci panelinden istediğiniz zaman kapatabilirsiniz.
+            Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir.
           </p>
         </aside>
         <FormError message={formError} />
@@ -450,7 +443,7 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
     >
       {searchParams.get('registered') === 'parent' && (
         <div className="status-banner success" role="status">
-          Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.
+          Devam etmek için veli hesabınızla giriş yapın.
         </div>
       )}
       {searchParams.get('reason') === 'session' && (
@@ -511,8 +504,7 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           </>
         ) : isDemandResponsePath(searchParams.get('next')) ? (
           <>
-            Servis bildirimi yayınlamak için işletmeci hesabınızla giriş yapın.
-            Hesabınız yoksa{' '}
+            İşletmeci hesabınız yoksa{' '}
             <Link to="/operator/register" viewTransition>
               kayıt olun
             </Link>
@@ -520,8 +512,7 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           </>
         ) : isDemandPath(searchParams.get('next')) ? (
           <>
-            Servis talebi oluşturmak için veli hesabınızla giriş yapın. Yeni
-            hesabınız yoksa{' '}
+            Veli hesabınız yoksa{' '}
             <Link
               to={`/parent/register?next=${encodeURIComponent(demandDestination(searchParams.get('next')))}`}
               viewTransition
