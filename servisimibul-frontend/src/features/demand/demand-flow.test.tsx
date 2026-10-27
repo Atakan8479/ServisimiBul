@@ -32,7 +32,7 @@ describe('public demand board', () => {
       screen.getByRole('link', { name: 'Talebi görüntüle' }),
     ).toHaveAttribute('href', `/demands/${demandId}`)
     expect(
-      screen.getByText('Bu konum için bir talep zaten var'),
+      screen.getByText('Bu okul ve mahalle için zaten bir talep var'),
     ).toBeInTheDocument()
     expect(requests.at(-1)?.get('neighborhoodId')).toBe('201')
   })
@@ -110,7 +110,7 @@ describe('public demand board', () => {
     )
 
     expect(
-      await screen.findByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
+      await screen.findByText('Talebiniz oluşturuldu.'),
     ).toBeInTheDocument()
     expect(createBody).toEqual({
       schoolId: school.id,
