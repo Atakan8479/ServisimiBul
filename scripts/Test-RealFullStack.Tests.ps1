@@ -37,8 +37,16 @@ Assert-Condition ($runner.Contains("SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'fal
     'J-03 does not select the approved parent verification policy.'
 Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'false'")) `
     'J-03 still bootstraps a parent instead of exercising real registration.'
+Assert-Condition ($runner.Contains("SB_MAIL_ENABLED = 'false'")) `
+    'J-03 does not explicitly keep external email delivery disabled.'
+Assert-Condition (-not $runner.Contains('OPENAI')) `
+    'J-03 unexpectedly configures an AI service.'
 Assert-Condition ($runner.Contains("OPERATOR_APPROVAL_REQUIRED = 'true'")) `
     'J-03 does not exercise the safe-default approval workflow.'
+Assert-Condition ($runner.Contains("SB_DEMAND_FEEDBACK_REMINDER_AFTER_OPEN = '5s'")) `
+    'J-03 does not accelerate the reminder boundary for real scheduler verification.'
+Assert-Condition ($runner.Contains("SB_DEMAND_FEEDBACK_EXPIRY_IF_UNOPENED = '15s'")) `
+    'J-03 does not accelerate the unopened expiry boundary for real scheduler verification.'
 Assert-Condition ($runner.Contains('Stop-SbIsolatedPostgres')) `
     'J-03 does not clean up its disposable database.'
 Assert-Condition (-not $runner.Contains('supabase.co')) `
@@ -59,6 +67,8 @@ Assert-Condition ($workflow.Contains('SB_PARENT_EMAIL_VERIFICATION_REQUIRED: "fa
     'J-03 CI does not select the approved parent verification policy.'
 Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "false"')) `
     'J-03 CI still bootstraps a parent instead of exercising real registration.'
+Assert-Condition ($workflow.Contains('SB_DEMAND_FEEDBACK_SCHEDULER_INTERVAL: 500ms')) `
+    'J-03 CI does not run the real lifecycle scheduler at the test interval.'
 Assert-Condition (
     [regex]::Matches($workflow, 'SB_EMAIL_VERIFICATION_REQUIRED: "true"').Count -eq 2
 ) 'J-03 CI does not restore verification for migration-only processes.'

@@ -68,7 +68,8 @@ function Invoke-LocalMigration {
     try {
         Push-Location $backendDirectory
         try {
-            & '.\mvnw.cmd' --batch-mode `
+            $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+            & $wrapper --batch-mode `
                 '-Dspring-boot.run.profiles=migration' spring-boot:run
             if ($LASTEXITCODE -ne 0) {
                 throw 'The isolated Flyway migration process failed.'
@@ -203,7 +204,8 @@ try {
         try {
             Push-Location $backendDirectory
             try {
-                & '.\mvnw.cmd' --batch-mode '-Dspring-boot.run.profiles=local' `
+                $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+                & $wrapper --batch-mode '-Dspring-boot.run.profiles=local' `
                     '-Dspring-boot.run.arguments=--spring.main.web-application-type=none' spring-boot:run
                 if ($LASTEXITCODE -ne 0) {
                     throw 'Disposable non-web ADMIN bootstrap failed.'

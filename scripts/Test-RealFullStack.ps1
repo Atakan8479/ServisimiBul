@@ -26,7 +26,8 @@ function Invoke-J03Maven {
     try {
         Push-Location $backendDirectory
         try {
-            & '.\mvnw.cmd' --batch-mode "-Dspring-boot.run.profiles=$Profile" spring-boot:run
+            $wrapper = if ($SbIsWindows) { '.\mvnw.cmd' } else { './mvnw' }
+            & $wrapper --batch-mode "-Dspring-boot.run.profiles=$Profile" spring-boot:run
             if ($LASTEXITCODE -ne 0) {
                 throw "J-03 $Profile process failed."
             }
@@ -154,6 +155,11 @@ try {
     $runtimeEnvironment.APP_AUTH_EMAIL_VERIFICATION_REQUIRED = 'false'
     $runtimeEnvironment.SB_PARENT_REGISTRATION_ENABLED = 'true'
     $runtimeEnvironment.SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'false'
+    $runtimeEnvironment.SB_DEMAND_FEEDBACK_REMINDER_AFTER_OPEN = '5s'
+    $runtimeEnvironment.SB_DEMAND_FEEDBACK_EXPIRY_AFTER_OPEN = '10s'
+    $runtimeEnvironment.SB_DEMAND_FEEDBACK_EXPIRY_IF_UNOPENED = '15s'
+    $runtimeEnvironment.SB_DEMAND_FEEDBACK_SCHEDULER_INITIAL_DELAY = '1s'
+    $runtimeEnvironment.SB_DEMAND_FEEDBACK_SCHEDULER_INTERVAL = '500ms'
     $runtimeEnvironment.OPERATOR_APPROVAL_REQUIRED = 'true'
     $runtimeEnvironment.APP_OPERATOR_APPROVAL_REQUIRED = 'true'
     $runtimeEnvironment.SB_TEST_DB_DISPOSABLE = 'true'

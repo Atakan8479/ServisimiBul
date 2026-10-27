@@ -1,4 +1,5 @@
 Set-StrictMode -Version Latest
+$SbIsWindows = $env:OS -eq 'Windows_NT'
 
 function Resolve-SbJavaRuntime {
     param([string]$RequestedHome)
@@ -11,10 +12,22 @@ function Resolve-SbJavaRuntime {
     } else {
         @()
     }
-    $candidates = @($RequestedHome, $env:JAVA_HOME) + @($discoveredJdks)
+    $pathJava = Get-Command $(if ($SbIsWindows) { 'java.exe' } else { 'java' }) `
+        -ErrorAction SilentlyContinue
+    $pathJavaHome = if ($pathJava) {
+        Split-Path -Parent (Split-Path -Parent $pathJava.Source)
+    } else {
+        $null
+    }
+    if (Test-Path -LiteralPath '/usr/libexec/java_home' -PathType Leaf) {
+        $macJavaHome = (& /usr/libexec/java_home 2>$null | Select-Object -First 1)
+    } else {
+        $macJavaHome = $null
+    }
+    $candidates = @($RequestedHome, $env:JAVA_HOME, $macJavaHome, $pathJavaHome) + @($discoveredJdks)
 
     foreach ($candidate in ($candidates | Where-Object { $_ } | Select-Object -Unique)) {
-        $java = Join-Path $candidate 'bin\java.exe'
+        $java = Join-Path $candidate $(if ($SbIsWindows) { 'bin\java.exe' } else { 'bin/java' })
         if (-not (Test-Path -LiteralPath $java -PathType Leaf)) {
             continue
         }
@@ -33,7 +46,8 @@ function Resolve-SbJavaRuntime {
 
 function Resolve-SbNode24Runtime {
     $nodeCandidates = @()
-    $pathNode = Get-Command node.exe -ErrorAction SilentlyContinue
+    $pathNode = Get-Command $(if ($SbIsWindows) { 'node.exe' } else { 'node' }) `
+        -ErrorAction SilentlyContinue
     if ($pathNode) {
         $nodeCandidates += $pathNode.Source
     }
@@ -66,24 +80,29 @@ function Resolve-SbPostgres17Tools {
     param([string]$PostgresBin)
 
     $programFiles = [Environment]::GetFolderPath('ProgramFiles')
+    $pathPostgres = Get-Command $(if ($SbIsWindows) { 'postgres.exe' } else { 'postgres' }) `
+        -ErrorAction SilentlyContinue
+    $pathPostgresBin = if ($pathPostgres) { Split-Path -Parent $pathPostgres.Source } else { $null }
     $candidates = @(
         $PostgresBin,
         $env:SB_POSTGRES_BIN,
+        $pathPostgresBin,
         (Join-Path $programFiles 'PostgreSQL\17\bin'),
         (Join-Path ([Environment]::GetFolderPath('UserProfile')) 'scoop\apps\postgresql17\current\bin'),
         (Join-Path ([Environment]::GetFolderPath('UserProfile')) 'scoop\apps\postgresql\current\bin')
     ) | Where-Object { $_ } | Select-Object -Unique
 
     foreach ($candidate in $candidates) {
+        $executableSuffix = if ($SbIsWindows) { '.exe' } else { '' }
         $tools = [ordered]@{
             Bin = $candidate
-            InitDb = Join-Path $candidate 'initdb.exe'
-            PgCtl = Join-Path $candidate 'pg_ctl.exe'
-            PgIsReady = Join-Path $candidate 'pg_isready.exe'
-            PgDump = Join-Path $candidate 'pg_dump.exe'
-            PgRestore = Join-Path $candidate 'pg_restore.exe'
-            Postgres = Join-Path $candidate 'postgres.exe'
-            Psql = Join-Path $candidate 'psql.exe'
+            InitDb = Join-Path $candidate "initdb$executableSuffix"
+            PgCtl = Join-Path $candidate "pg_ctl$executableSuffix"
+            PgIsReady = Join-Path $candidate "pg_isready$executableSuffix"
+            PgDump = Join-Path $candidate "pg_dump$executableSuffix"
+            PgRestore = Join-Path $candidate "pg_restore$executableSuffix"
+            Postgres = Join-Path $candidate "postgres$executableSuffix"
+            Psql = Join-Path $candidate "psql$executableSuffix"
         }
         if (@($tools.Values | Where-Object { $_ -ne $candidate -and -not (Test-Path -LiteralPath $_ -PathType Leaf) }).Count -gt 0) {
             continue
@@ -249,11 +268,18 @@ function Start-SbIsolatedPostgres {
             throw "initdb failed: $($initOutput -join [Environment]::NewLine)"
         }
 
-        $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1" --wait start' -f `
+        $startArguments = '--pgdata="{0}" --log="{1}" --options="-p {2} -h 127.0.0.1 -c max_connections=200" --wait start' -f `
             $data, $log, $port
         try {
-            $startProcess = Start-Process -FilePath $Tools.PgCtl -ArgumentList $startArguments `
-                -WindowStyle Hidden -PassThru
+            $startProcessArguments = @{
+                FilePath = $Tools.PgCtl
+                ArgumentList = $startArguments
+                PassThru = $true
+            }
+            if ($SbIsWindows) {
+                $startProcessArguments.WindowStyle = 'Hidden'
+            }
+            $startProcess = Start-Process @startProcessArguments
             $startProcess.WaitForExit()
             $startExitCode = $startProcess.ExitCode
         } finally {
@@ -357,8 +383,15 @@ function Stop-SbIsolatedPostgres {
 
     if (Test-Path -LiteralPath $Cluster.DataDirectory) {
         $stopArguments = '--pgdata="{0}" --mode={1} --wait stop' -f $Cluster.DataDirectory, $Mode
-        $stopProcess = Start-Process -FilePath $Cluster.Tools.PgCtl -ArgumentList $stopArguments `
-            -WindowStyle Hidden -PassThru
+        $stopProcessArguments = @{
+            FilePath = $Cluster.Tools.PgCtl
+            ArgumentList = $stopArguments
+            PassThru = $true
+        }
+        if ($SbIsWindows) {
+            $stopProcessArguments.WindowStyle = 'Hidden'
+        }
+        $stopProcess = Start-Process @stopProcessArguments
         $stopProcess.WaitForExit()
         if ($stopProcess.ExitCode -ne 0) {
             throw 'Disposable PostgreSQL did not stop cleanly; its directory was preserved.'
@@ -382,7 +415,8 @@ function Get-SbMavenRuntime {
     $launcher = Get-ChildItem -LiteralPath $distributionRoot -Recurse `
         -Filter 'plexus-classworlds-*.jar' -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $launcher) {
-        & (Join-Path $BackendDirectory 'mvnw.cmd') --version
+        $wrapper = Join-Path $BackendDirectory $(if ($SbIsWindows) { 'mvnw.cmd' } else { 'mvnw' })
+        & $wrapper --version
         if ($LASTEXITCODE -ne 0) {
             throw 'Maven Wrapper setup failed.'
         }
@@ -407,6 +441,11 @@ function Stop-SbProcessTree {
     }
     $Process.Refresh()
     if (-not $Process.HasExited) {
-        & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
+        if ($SbIsWindows) {
+            & "$env:SystemRoot\System32\taskkill.exe" /PID $Process.Id /T /F 2>$null | Out-Null
+        } else {
+            $Process.Kill($true)
+            $Process.WaitForExit()
+        }
     }
 }
