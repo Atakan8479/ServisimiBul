@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: SEC-ARCH school integrity follow-up ready for review
+## Current stage: UI-01 shared design system ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. SEC-ARCH tracker #111 follow-up 1 is implemented on `codex/sec-arch-school-integrity` in PR #127 for review; follow-ups 2–5 remain separate work. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104, and SEC-ARCH PR #127 are merged. UI-01 issue #115 is implemented on `codex/ui-01-design-system` in PR #128 for review. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-01 shared design system — 2026-10-28
+
+- PR #128 establishes semantic navy/teal/yellow/neutral design tokens plus shared brand, button, card, badge, field, state, typography, and section-shell primitives without adding a dependency or changing the npm/Node baseline.
+- The public header retains `/`, `/demands`, role-aware sign-in/workspace links, and notification behavior while adding a compact keyboard-accessible mobile menu. Operator and admin layouts now share one responsive workspace shell with the existing role-specific navigation, logout, skip-link, focus, and authorization behavior preserved.
+- The workspace uses a desktop sidebar and an off-canvas mobile drawer with Escape, backdrop, route-selection dismissal, 44-pixel controls, hidden closed-drawer semantics, reduced motion, and 200% text reflow support. Semantic colors were validated at WCAG 2.2 AA contrast on the neutral workspace and navy sidebar surfaces.
+- Before/after public and operator screenshots were captured at 1440×900 and 390×844 under `docs/screenshots/ui-01`. The final visual pass uses reduced motion to avoid transition artifacts and confirms the reference archive's restrained deep-navy, teal, warm-yellow, and neutral direction without importing its mock data, routes, dependencies, or package-manager setup.
+- Frontend ESLint, strict TypeScript, all 98 Vitest tests, the production build, and `git diff --check` passed. The complete Chromium Playwright suite passed all 15 tests, including WCAG route scans, 320-pixel/200%-text reflow, touch targets, reduced motion, all existing MVP journeys, and the new 320/390/768/1440 shared-navigation regression.
+- Current React Router NavLink and transition guidance was checked through Context7. No backend source, API contract, authentication rule, dependency, lockfile, database, migration, shared Supabase operation, or production setting changed. GitHub Actions and peer review remain required before merge.
 
 ## Verified SEC-ARCH school integrity follow-up — 2026-10-27
 

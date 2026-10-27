@@ -7,6 +7,7 @@ import {
   useNavigation,
 } from 'react-router-dom'
 import { RoadBackdrop } from './RoadBackdrop'
+import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
   knownAuthRole,
@@ -15,6 +16,7 @@ import { NotificationNavLink } from '../features/notification/NotificationNavLin
 
 export function PublicLayout() {
   const [role, setRole] = useState(knownAuthRole)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     const refreshRole = () => setRole(knownAuthRole())
@@ -24,6 +26,15 @@ export function PublicLayout() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!menuOpen) return
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [menuOpen])
+
   return (
     <div className="app-shell">
       <RoadBackdrop />
@@ -31,10 +42,32 @@ export function PublicLayout() {
         İçeriğe geç
       </a>
       <header className="site-header">
-        <NavLink className="brand" to="/" viewTransition>
-          ServisimiBul
+        <NavLink
+          aria-label="ServisimiBul ana sayfa"
+          className="brand"
+          to="/"
+          viewTransition
+        >
+          <BrandLockup />
         </NavLink>
-        <nav aria-label="Ana menü">
+        <button
+          className="site-nav-toggle"
+          type="button"
+          aria-controls="public-navigation"
+          aria-expanded={menuOpen}
+          onClick={() => setMenuOpen((open) => !open)}
+        >
+          <span aria-hidden="true" />
+          Menü
+        </button>
+        <nav
+          aria-label="Ana menü"
+          className={`site-nav${menuOpen ? ' open' : ''}`}
+          id="public-navigation"
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest('a')) setMenuOpen(false)
+          }}
+        >
           <NavLink to="/" viewTransition>
             Ana sayfa
           </NavLink>

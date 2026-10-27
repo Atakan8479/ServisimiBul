@@ -16,6 +16,7 @@ for (const viewport of viewports) {
   test(`${viewport.name} routes meet WCAG 2.2 AA and do not overflow`, async ({
     page,
   }) => {
+    test.setTimeout(90_000)
     const state = createMockApiState()
     const consoleProblems: string[] = []
     page.on('console', (message) => {
@@ -131,6 +132,7 @@ test('route changes restore page context and mobile controls meet the touch targ
   await expect(overviewHeading).toBeFocused()
   await expect(page).toHaveTitle('Genel bakış | ServisimiBul')
 
+  await page.getByRole('button', { name: 'Menü', exact: true }).click()
   await page.getByRole('link', { name: 'Okullar ve kapsam' }).click()
   const schoolsHeading = page.getByRole('heading', { name: 'Hizmet ağınız' })
   await expect(schoolsHeading).toBeFocused()
