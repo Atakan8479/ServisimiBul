@@ -418,6 +418,8 @@ a:focus-visible {
 }
 
 .site-nav a,
+.site-nav button,
+.site-nav .nav-session,
 .workspace-sidebar nav a {
   display: inline-flex;
   align-items: center;
@@ -436,6 +438,24 @@ a:focus-visible {
 .site-nav a.active {
   background: var(--teal-100);
   color: var(--teal-700);
+}
+
+.site-nav button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.site-nav .nav-session {
+  color: var(--color-accent-strong);
+  font-weight: 750;
+}
+
+.site-alert {
+  position: relative;
+  z-index: 1;
+  width: min(72rem, calc(100% - 2rem));
+  margin: 1rem auto 0;
 }
 
 .site-nav-toggle,
@@ -3108,6 +3128,8 @@ button:disabled {
     right: 1rem;
     left: 1rem;
     display: grid;
+    max-height: calc(100dvh - 5.25rem);
+    overflow-y: auto;
     gap: var(--space-1);
     padding: var(--space-2);
     border-radius: var(--radius-medium);
@@ -3134,8 +3156,12 @@ button:disabled {
     visibility: visible;
   }
 
-  .site-nav a {
+  .site-nav a,
+  .site-nav button,
+  .site-nav .nav-session {
     width: 100%;
+    justify-content: flex-start;
+    font-size: 0.9rem;
   }
 
   .workspace-shell {

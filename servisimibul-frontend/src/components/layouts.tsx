@@ -4,19 +4,27 @@ import {
   Outlet,
   useLocation,
   useMatches,
+  useNavigate,
   useNavigation,
 } from 'react-router-dom'
+import { ApiError } from '../api/client'
 import { RoadBackdrop } from './RoadBackdrop'
 import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
+  clearKnownAuthRole,
   knownAuthRole,
+  logout,
 } from '../features/auth/auth-api'
 import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
 export function PublicLayout() {
   const [role, setRole] = useState(knownAuthRole)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [logoutError, setLogoutError] = useState<string>()
+  const [loggingOut, setLoggingOut] = useState(false)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const navigate = useNavigate()
 
   useEffect(() => {
     const refreshRole = () => setRole(knownAuthRole())
@@ -29,11 +37,30 @@ export function PublicLayout() {
   useEffect(() => {
     if (!menuOpen) return
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+      if (event.key !== 'Escape') return
+      setMenuOpen(false)
+      menuButtonRef.current?.focus()
     }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [menuOpen])
+
+  async function signOutParent() {
+    setLoggingOut(true)
+    setLogoutError(undefined)
+    try {
+      await logout()
+      void navigate('/parent/login', { replace: true, viewTransition: true })
+    } catch (error) {
+      if (error instanceof ApiError && error.sessionExpired) {
+        clearKnownAuthRole()
+        void navigate('/parent/login?reason=session', { replace: true })
+        return
+      }
+      setLogoutError('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+      setLoggingOut(false)
+    }
+  }
 
   return (
     <div className="app-shell">
@@ -51,6 +78,7 @@ export function PublicLayout() {
           <BrandLockup />
         </NavLink>
         <button
+          ref={menuButtonRef}
           className="site-nav-toggle"
           type="button"
           aria-controls="public-navigation"
@@ -65,7 +93,9 @@ export function PublicLayout() {
           className={`site-nav${menuOpen ? ' open' : ''}`}
           id="public-navigation"
           onClick={(event) => {
-            if ((event.target as HTMLElement).closest('a')) setMenuOpen(false)
+            if ((event.target as HTMLElement).closest('a, button')) {
+              setMenuOpen(false)
+            }
           }}
         >
           <NavLink to="/" viewTransition>
@@ -75,14 +105,40 @@ export function PublicLayout() {
             Talep panosu
           </NavLink>
           {role === 'PARENT' ? (
-            <NotificationNavLink to="/notifications" />
+            <>
+              <span className="nav-session">Veli oturumu açık</span>
+              <NotificationNavLink to="/notifications" />
+              <button
+                disabled={loggingOut}
+                onClick={() => void signOutParent()}
+                type="button"
+              >
+                {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+              </button>
+            </>
           ) : (
-            <NavLink to="/operator/login" viewTransition>
-              Giriş
-            </NavLink>
+            <>
+              <NavLink to="/parent/login" viewTransition>
+                Veli girişi
+              </NavLink>
+              <NavLink to="/parent/register" viewTransition>
+                Veli kaydı
+              </NavLink>
+              <NavLink to="/operator/login" viewTransition>
+                İşletmeci girişi
+              </NavLink>
+              <NavLink to="/operator/register" viewTransition>
+                İşletmeci kaydı
+              </NavLink>
+            </>
           )}
         </nav>
       </header>
+      {logoutError && (
+        <div className="form-error site-alert" role="alert">
+          {logoutError}
+        </div>
+      )}
       <main id="main-content" className="page-content">
         <Outlet />
       </main>

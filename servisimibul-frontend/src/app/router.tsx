@@ -74,6 +74,15 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'parent/login',
+        handle: { pageTitle: 'Veli girişi' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages'))
+            .ParentLoginPage,
+        }),
+      },
+      {
         path: 'operator/register',
         handle: { pageTitle: 'İşletmeci kaydı' },
         HydrateFallback: LoadingPage,
@@ -298,9 +307,7 @@ async function parentLoader({ request }: LoaderFunctionArgs) {
       const url = new URL(request.url)
       const next = `${url.pathname}${url.search}`
       const reason = error.sessionExpired ? '&reason=session' : ''
-      throw redirect(
-        `/operator/login?next=${encodeURIComponent(next)}${reason}`,
-      )
+      throw redirect(`/parent/login?next=${encodeURIComponent(next)}${reason}`)
     }
     throw error
   }

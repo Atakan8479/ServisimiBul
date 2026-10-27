@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { currentUser } from '../auth/auth-api'
+import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
 import { ReportControl } from '../moderation/ReportControl'
 import {
   createDemandComment,
@@ -81,10 +81,14 @@ export function DemandComments({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, searchParams, setSearchParams])
 
-  function redirectToLogin(sessionExpired = false) {
+  function redirectToLogin(
+    sessionExpired = false,
+    role: AuthRole | undefined = knownAuthRole(),
+  ) {
     const next = `${location.pathname}?action=comment`
     const reason = sessionExpired ? '&reason=session' : ''
-    void navigate(`/operator/login?next=${encodeURIComponent(next)}${reason}`)
+    const loginPath = role === 'OPERATOR' ? '/operator/login' : '/parent/login'
+    void navigate(`${loginPath}?next=${encodeURIComponent(next)}${reason}`)
   }
 
   async function beginComment() {
@@ -94,6 +98,7 @@ export function DemandComments({
       setActionError('Katılıma kapalı taleplere yeni yorum eklenemez.')
       return
     }
+    const role = knownAuthRole()
     try {
       const user = await currentUser()
       if (user.role === 'PARENT' && !parentHasActiveSupport) {
@@ -108,7 +113,7 @@ export function DemandComments({
       window.requestAnimationFrame(() => commentBodyRef.current?.focus())
     } catch (error) {
       if (error instanceof ApiError && error.problem.status === 401) {
-        redirectToLogin(error.sessionExpired)
+        redirectToLogin(error.sessionExpired, role)
         return
       }
       setActionError('Oturum bilgisi kontrol edilemedi. Tekrar deneyin.')

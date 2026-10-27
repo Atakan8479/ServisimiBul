@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { BrandLockup, Button } from './design-system'
 
@@ -18,31 +18,100 @@ export function WorkspaceShell({
   onSignOut: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const drawerRef = useRef<HTMLElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const restoreFocusRef = useRef(true)
+  const wasOpenRef = useRef(false)
+
+  function closeMenu(restoreFocus = true) {
+    restoreFocusRef.current = restoreFocus
+    setMenuOpen(false)
+  }
 
   useEffect(() => {
-    if (!menuOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuOpen(false)
+    if (!menuOpen) {
+      if (wasOpenRef.current && restoreFocusRef.current) {
+        menuButtonRef.current?.focus()
+      }
+      wasOpenRef.current = false
+      return
     }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+
+    wasOpenRef.current = true
+    restoreFocusRef.current = true
+    const drawer = drawerRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
+
+    const focusableElements = () =>
+      Array.from(
+        drawer?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      )
+
+    const containFocus = (event: FocusEvent) => {
+      if (drawer?.contains(event.target as Node)) return
+      closeButtonRef.current?.focus()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        closeMenu()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = focusableElements()
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (!first || !last) {
+        event.preventDefault()
+        drawer?.focus()
+        return
+      }
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('focusin', containFocus)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('focusin', containFocus)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [menuOpen])
 
   return (
     <div className="workspace-shell">
-      <a className="skip-link" href="#workspace-content">
+      <a
+        aria-hidden={menuOpen || undefined}
+        className="skip-link"
+        href="#workspace-content"
+        tabIndex={menuOpen ? -1 : undefined}
+      >
         İçeriğe geç
       </a>
-      <header className="workspace-mobile-bar">
+      <header className="workspace-mobile-bar" inert={menuOpen || undefined}>
         <Link aria-label="ServisimiBul ana sayfa" to="/" viewTransition>
           <BrandLockup compact />
         </Link>
         <button
+          ref={menuButtonRef}
           className="workspace-menu-toggle"
           type="button"
           aria-controls="workspace-navigation"
           aria-expanded={menuOpen}
-          onClick={() => setMenuOpen((open) => !open)}
+          onClick={() => setMenuOpen(true)}
         >
           <span aria-hidden="true" />
           Menü
@@ -52,22 +121,29 @@ export function WorkspaceShell({
         <button
           className="workspace-sidebar-backdrop"
           type="button"
-          aria-label="Menüyü kapat"
-          onClick={() => setMenuOpen(false)}
+          aria-hidden="true"
+          tabIndex={-1}
+          onClick={() => closeMenu()}
         />
       )}
       <aside
+        ref={drawerRef}
+        aria-label={menuOpen ? `${accountLabel} menüsü` : undefined}
+        aria-modal={menuOpen || undefined}
         className={`workspace-sidebar${menuOpen ? ' open' : ''}`}
         id="workspace-navigation"
+        role={menuOpen ? 'dialog' : undefined}
+        tabIndex={menuOpen ? -1 : undefined}
       >
         <div className="workspace-sidebar-heading">
           <Link aria-label="ServisimiBul ana sayfa" to="/" viewTransition>
             <BrandLockup />
           </Link>
           <button
+            ref={closeButtonRef}
             className="workspace-sidebar-close"
             type="button"
-            onClick={() => setMenuOpen(false)}
+            onClick={() => closeMenu()}
           >
             Menüyü kapat
           </button>
@@ -84,7 +160,7 @@ export function WorkspaceShell({
         <nav
           aria-label={`${accountLabel} menüsü`}
           onClick={(event) => {
-            if ((event.target as HTMLElement).closest('a')) setMenuOpen(false)
+            if ((event.target as HTMLElement).closest('a')) closeMenu(false)
           }}
         >
           {navigation}
@@ -104,7 +180,11 @@ export function WorkspaceShell({
           </p>
         )}
       </aside>
-      <main id="workspace-content" className="workspace-content">
+      <main
+        id="workspace-content"
+        className="workspace-content"
+        inert={menuOpen || undefined}
+      >
         <div className="workspace-content-inner">
           <Outlet />
         </div>

@@ -96,15 +96,23 @@ export function FormField({
     : hint
       ? `${htmlFor}-hint`
       : undefined
+  const controlId = children.props.id ?? htmlFor
+  const describedBy = Array.from(
+    new Set(
+      [children.props['aria-describedby'], messageId]
+        .flatMap((value) => value?.split(/\s+/) ?? [])
+        .filter(Boolean),
+    ),
+  ).join(' ')
   const control = cloneElement(children, {
-    id: children.props.id ?? htmlFor,
-    'aria-describedby': children.props['aria-describedby'] ?? messageId,
+    id: controlId,
+    'aria-describedby': describedBy || undefined,
     'aria-invalid': error ? true : children.props['aria-invalid'],
   })
 
   return (
     <div className="ui-field">
-      <label htmlFor={htmlFor}>{label}</label>
+      <label htmlFor={controlId}>{label}</label>
       {control}
       {error ? (
         <small className="ui-field-error" id={`${htmlFor}-error`}>

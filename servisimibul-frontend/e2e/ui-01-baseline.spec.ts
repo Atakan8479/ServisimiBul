@@ -28,6 +28,13 @@ for (const viewport of viewports) {
       await expect(publicToggle).toBeVisible()
       await publicToggle.click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'true')
+      await expect(
+        page.getByRole('link', { name: 'Veli girişi' }),
+      ).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Veli kaydı' })).toBeVisible()
+      await expect(
+        page.getByRole('link', { name: 'İşletmeci girişi' }),
+      ).toBeVisible()
       await page.getByRole('link', { name: 'Talep panosu' }).click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'false')
     } else {
@@ -57,6 +64,49 @@ for (const viewport of viewports) {
     await expectNoHorizontalOverflow(page)
   })
 }
+
+test('mobile workspace drawer contains and restores keyboard focus', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  state.operatorSchoolAdded = true
+  state.generalCoverage = [101]
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await installMockApi(page, state)
+  await login(page)
+
+  const toggle = page.getByRole('button', { name: 'Menü', exact: true })
+  await toggle.click()
+  const drawer = page.getByRole('dialog', { name: 'İşletmeci alanı menüsü' })
+  const close = drawer.getByRole('button', { name: 'Menüyü kapat' })
+  const home = drawer.getByRole('link', { name: 'ServisimiBul ana sayfa' })
+  const signOut = drawer.getByRole('button', { name: 'Çıkış yap' })
+  await expect(close).toBeFocused()
+  await expect(page.locator('.workspace-content')).toHaveAttribute('inert', '')
+
+  await signOut.focus()
+  await page.keyboard.press('Tab')
+  await expect(home).toBeFocused()
+  await page.keyboard.press('Shift+Tab')
+  await expect(signOut).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(toggle).toBeFocused()
+
+  await toggle.click()
+  await page.mouse.click(380, 400)
+  await expect(toggle).toBeFocused()
+
+  await toggle.click()
+  await drawer.getByRole('link', { name: 'Profil ve başvuru' }).click()
+  await expect(
+    page.getByRole('heading', { name: 'İşletme bilgileriniz' }),
+  ).toBeFocused()
+})
 
 async function login(page: Page) {
   await page.goto('/operator/login')

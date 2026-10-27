@@ -17,6 +17,7 @@ import { z } from 'zod'
 import { ApiError } from '../../api/client'
 import {
   login,
+  logout,
   registerOperator,
   registerParent,
   verifyEmail,
@@ -230,7 +231,7 @@ export function ParentSignupPage() {
         next: demandDestination(searchParams.get('next')),
         registered: 'parent',
       })
-      void navigate(`/operator/login?${parameters}`, {
+      void navigate(`/parent/login?${parameters}`, {
         replace: true,
         viewTransition: typeof document.startViewTransition === 'function',
       })
@@ -259,10 +260,6 @@ export function ParentSignupPage() {
 
   return (
     <AuthCard eyebrow="Veli kaydı" title="Veli hesabı oluşturun">
-      <p>
-        E-posta adresiniz yalnızca hesap girişi için kullanılır. Pilot süresince
-        doğrulama e-postası gönderilmez.
-      </p>
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -295,7 +292,7 @@ export function ParentSignupPage() {
       <p className="auth-switch">
         Zaten hesabınız var mı?{' '}
         <Link
-          to={`/operator/login?next=${encodeURIComponent(demandDestination(searchParams.get('next')))}`}
+          to={`/parent/login?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
           viewTransition
         >
           Giriş yapın
@@ -371,9 +368,18 @@ export function VerifyEmailPage() {
 }
 
 export function LoginPage() {
+  return <LoginScreen parentOnly={false} />
+}
+
+export function ParentLoginPage() {
+  return <LoginScreen parentOnly />
+}
+
+function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formError, setFormError] = useState<string>()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -388,9 +394,22 @@ export function LoginPage() {
     setFormError(undefined)
     try {
       const user = await login(values)
+      if (parentOnly && user.role !== 'PARENT') {
+        try {
+          await logout()
+          setFormError(
+            'Bu giriş yalnızca veli hesapları içindir. İşletmeci veya yönetici girişini kullanın.',
+          )
+        } catch {
+          setFormError(
+            'Bu hesap veli hesabı değil ve açılan oturum güvenli biçimde kapatılamadı. Sayfayı yenileyip tekrar deneyin.',
+          )
+        }
+        return
+      }
       if (user.role === 'PARENT') {
         const next = searchParams.get('next')
-        const destination = isDemandPath(next) ? next : '/demands'
+        const destination = parentDestination(next)
         void navigate(destination, {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
@@ -416,12 +435,19 @@ export function LoginPage() {
         viewTransition: typeof document.startViewTransition === 'function',
       })
     } catch (error) {
-      setFormError(applyFieldErrors(error, setError, loginFields))
+      setFormError(
+        error instanceof ApiError
+          ? applyFieldErrors(error, setError, loginFields)
+          : 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+      )
     }
   }
 
   return (
-    <AuthCard eyebrow="Giriş" title="Hoş geldiniz">
+    <AuthCard
+      eyebrow={parentOnly ? 'Veli girişi' : 'Giriş'}
+      title={parentOnly ? 'Veli hesabınıza giriş yapın' : 'Hoş geldiniz'}
+    >
       {searchParams.get('registered') === 'parent' && (
         <div className="status-banner success" role="status">
           Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.
@@ -445,12 +471,20 @@ export function LoginPage() {
           error={errors.password?.message}
           input={
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="current-password"
               {...register('password')}
             />
           }
         />
+        <button
+          aria-pressed={showPassword}
+          className="text-button"
+          onClick={() => setShowPassword((visible) => !visible)}
+          type="button"
+        >
+          {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+        </button>
         <label className="checkbox-row">
           <input type="checkbox" {...register('rememberMe')} />
           <strong>Beni hatırla</strong>
@@ -465,7 +499,17 @@ export function LoginPage() {
         </button>
       </form>
       <p className="auth-switch">
-        {isDemandResponsePath(searchParams.get('next')) ? (
+        {parentOnly ? (
+          <>
+            Hesabınız yok mu?{' '}
+            <Link
+              to={`/parent/register?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
+              viewTransition
+            >
+              Veli hesabı oluşturun
+            </Link>
+          </>
+        ) : isDemandResponsePath(searchParams.get('next')) ? (
           <>
             Servis bildirimi yayınlamak için işletmeci hesabınızla giriş yapın.
             Hesabınız yoksa{' '}
@@ -495,6 +539,14 @@ export function LoginPage() {
           </>
         )}
       </p>
+      {parentOnly && (
+        <p className="auth-switch">
+          İşletmeci veya yönetici misiniz?{' '}
+          <Link to="/operator/login" viewTransition>
+            İşletmeci girişi
+          </Link>
+        </p>
+      )}
     </AuthCard>
   )
 }
@@ -510,6 +562,24 @@ function isDemandPath(path: string | null): path is string {
 
 function demandDestination(path: string | null): string {
   return isDemandPath(path) ? path : '/demands'
+}
+
+function parentDestination(path: string | null): string {
+  if (path === '/notifications' || path?.startsWith('/notifications?')) {
+    return path
+  }
+  if (!isDemandPath(path)) return '/demands'
+
+  try {
+    const url = new URL(path, window.location.origin)
+    const action = url.searchParams.get('action')
+    return isDemandPath(url.pathname) &&
+      (action === null || action === 'support' || action === 'comment')
+      ? path
+      : '/demands'
+  } catch {
+    return '/demands'
+  }
 }
 
 function isDemandResponsePath(path: string | null): path is string {
