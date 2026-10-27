@@ -5,7 +5,8 @@ const { execFileSync } = require('node:child_process')
 const paths = execFileSync('git', ['diff', '--name-only', '--', 'src'], {
   encoding: 'utf8',
 }).trim().split(/\r?\n/).filter(Boolean)
-for (const path of paths) {
+for (const gitPath of paths) {
+  const path = gitPath.replace(/^servisimibul-frontend\//, '')
   if (!/^src\/[\w/.-]+\.(?:ts|tsx)$/.test(path)) continue
   const data = fs.readFileSync(path).toString('base64')
   console.log('SB_COPY_START ' + path)
