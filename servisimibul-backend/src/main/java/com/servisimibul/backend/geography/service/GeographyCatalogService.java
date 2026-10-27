@@ -16,6 +16,7 @@ import com.servisimibul.backend.geography.dto.GeographyDtos.SchoolResponse;
 import com.servisimibul.backend.geography.dto.SchoolCreateRequest;
 import com.servisimibul.backend.geography.dto.SchoolPatchRequest;
 import com.servisimibul.backend.geography.exception.GeographyApiException;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -40,6 +41,7 @@ public class GeographyCatalogService {
     private final DistrictRepository districtRepository;
     private final NeighborhoodRepository neighborhoodRepository;
     private final SchoolRepository schoolRepository;
+    private final OperatorSchoolCoverageRepository operatorSchoolCoverageRepository;
 
     @Transactional(readOnly = true)
     public List<ProvinceResponse> provinces() {
@@ -155,10 +157,11 @@ public class GeographyCatalogService {
             throw GeographyApiException.validation("request", "must contain at least one mutable field");
         }
 
-        School school = detailedSchool(id);
+        School school = detailedSchoolForUpdate(id);
         Neighborhood neighborhood = request.hasNeighborhoodId()
                 ? neighborhood(requiredValue(request.neighborhoodId(), "neighborhoodId"))
                 : school.getNeighborhood();
+        rejectProvinceChangeWithCoverage(school, neighborhood);
         String name = request.hasName()
                 ? normalizeRequired(request.name(), "name", 255)
                 : school.getName();
@@ -182,14 +185,14 @@ public class GeographyCatalogService {
 
     @Transactional
     public SchoolResponse activateSchool(UUID id) {
-        School school = detailedSchool(id);
+        School school = detailedSchoolForUpdate(id);
         school.activate();
         return toResponse(schoolRepository.saveAndFlush(school));
     }
 
     @Transactional
     public SchoolResponse deactivateSchool(UUID id) {
-        School school = detailedSchool(id);
+        School school = detailedSchoolForUpdate(id);
         school.deactivate();
         return toResponse(schoolRepository.saveAndFlush(school));
     }
@@ -209,6 +212,26 @@ public class GeographyCatalogService {
                         "school_not_found",
                         "School was not found"
                 ));
+    }
+
+    private School detailedSchoolForUpdate(UUID id) {
+        return schoolRepository.findDetailedForUpdateById(id)
+                .orElseThrow(() -> GeographyApiException.notFound(
+                        "school_not_found",
+                        "School was not found"
+                ));
+    }
+
+    private void rejectProvinceChangeWithCoverage(School school, Neighborhood neighborhood) {
+        Long currentProvinceId = school.getNeighborhood().getDistrict().getProvince().getId();
+        Long requestedProvinceId = neighborhood.getDistrict().getProvince().getId();
+        if (!currentProvinceId.equals(requestedProvinceId)
+                && operatorSchoolCoverageRepository.existsByOperatorSchoolSchoolId(school.getId())) {
+            throw GeographyApiException.conflict(
+                    "school_province_change_conflict",
+                    "School province cannot change while operator coverage exists"
+            );
+        }
     }
 
     private void validateSourceIdentity(String sourceName, String sourceCode, UUID schoolId) {
