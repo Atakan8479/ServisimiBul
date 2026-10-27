@@ -105,11 +105,6 @@ public interface SchoolRepository extends JpaRepository<School, UUID> {
     Optional<School> findByIdAndActiveTrue(UUID id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @EntityGraph(attributePaths = {
-            "neighborhood",
-            "neighborhood.district",
-            "neighborhood.district.province"
-    })
     @Query("select school from School school where school.id = :id")
     Optional<School> findDetailedForUpdateById(@Param("id") UUID id);
 
