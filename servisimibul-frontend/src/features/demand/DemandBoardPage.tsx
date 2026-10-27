@@ -90,7 +90,7 @@ export function DemandBoardPage() {
         if (request === demandRequest.current) {
           setDemands(undefined)
           setDemandError(
-            'Talepler yüklenemedi. Filtrelerinizi koruduk; tekrar deneyebilirsiniz.',
+            'Talepleri yükleyemedik. Tekrar deneyin.',
           )
         }
       } finally {
@@ -140,7 +140,7 @@ export function DemandBoardPage() {
         initialHydrationFailed.current = true
         setAppliedSelection(undefined)
         setReturnNotice(
-          'Kaydedilen okul ve mahalle artık bulunamadı. Lütfen yeniden seçin.',
+          'Seçtiğiniz okul veya mahalle artık bulunamıyor. Yeniden seçin.',
         )
         setSearchParams({}, { replace: true })
         void loadDemands(undefined, academicYear, sort, 0)
@@ -289,10 +289,10 @@ export function DemandBoardPage() {
       void navigate(`/demands/${response.demand.id}`, {
         state: {
           notice: response.created
-            ? 'Talebiniz oluşturuldu ve desteğiniz eklendi.'
+            ? 'Talebiniz oluşturuldu.'
             : response.demand.status !== 'OPEN'
-              ? 'Bu konum ve dönem için daha önce açılmış talep katılıma kapalı. Yeni kayıt oluşturulmadı; yeniden açılması için proje ekibiyle iletişime geçin.'
-              : 'Bu konum için talep zaten vardı. Desteğiniz otomatik eklenmedi; katılmak için aşağıdaki ayrı işlemi kullanın.',
+              ? 'Bu okul ve mahalle için talep var ancak yeni katılıma kapalı.'
+              : 'Bu okul ve mahalle için zaten bir talep var. Katılmak için “Benim de ihtiyacım var” seçeneğini kullanın.',
         },
         viewTransition: typeof document.startViewTransition === 'function',
       })
@@ -310,7 +310,7 @@ export function DemandBoardPage() {
       }
       setAccessError(
         error instanceof ApiError && error.problem.fieldErrors?.academicYear
-          ? 'Seçilen eğitim yılı artık yeni taleplere açık değil. Sunucunun güncel eğitim yılına dönüp tekrar deneyin.'
+          ? 'Bu eğitim yılı için yeni talep açılamıyor. Güncel eğitim yılını seçin.'
           : error instanceof ApiError
             ? error.problem.detail
             : 'Talep oluşturulamadı. Bilgileri koruduk; tekrar deneyin.',
@@ -328,9 +328,7 @@ export function DemandBoardPage() {
       <header className="demand-intro">
         <h1>Servis talep panosu</h1>
         <p>
-          Okul ve servis alınacak mahalleyi seçin; açık talepleri anonim olarak
-          inceleyin. Yeni talep oluşturmadan önce o konumdaki mevcut servisleri
-          göstereceğiz.
+          Okul ve mahallenizi seçerek servis taleplerini inceleyin.
         </p>
       </header>
 
@@ -341,10 +339,7 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2 id="demand-filter-title">Okul ve mahalleye göre bulun</h2>
-            <p>
-              Okulun ilçesiyle servis alınacak ilçe farklı olabilir; ikisi aynı
-              ilde olmalıdır.
-            </p>
+            
           </div>
           <button className="text-button" type="button" onClick={clearFilters}>
             Filtreleri temizle
@@ -368,7 +363,7 @@ export function DemandBoardPage() {
               aria-describedby={filterError ? 'academic-year-error' : undefined}
               onChange={(event) => setAcademicYear(event.target.value)}
             />
-            <small>Boş bırakırsanız sunucunun güncel yılı kullanılır.</small>
+            
           </label>
           <label className="form-field">
             Sıralama
@@ -408,10 +403,7 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2>Açık talepler</h2>
-            <p>
-              Veli kimlikleri gösterilmez; yalnızca doğrulanmış hesapların toplu
-              ihtiyaç sayıları yer alır.
-            </p>
+            
           </div>
           {demands && (
             <span className="count-badge">{demands.totalElements} talep</span>
@@ -490,13 +482,9 @@ export function DemandBoardPage() {
             <div className="existing-demand-callout">
               <div>
                 <h2 id="create-demand-title">
-                  Bu konum için bir talep zaten var
+                  Bu okul ve mahalle için zaten bir talep var
                 </h2>
-                <p>
-                  Yeni bir kayıt oluşturmak yerine mevcut talebi inceleyin.
-                  Katılımınız yalnızca ayrı “Benim de ihtiyacım var” işlemiyle
-                  eklenir.
-                </p>
+                
               </div>
               <Link
                 className="button-link"
@@ -511,13 +499,9 @@ export function DemandBoardPage() {
               <div className="section-heading">
                 <div>
                   <h2 id="create-demand-title">
-                    Yeni talep düşünüyor musunuz?
+                    Servise mi ihtiyacınız var?
                   </h2>
-                  <p>
-                    Önce {appliedSelection.school.name} ve{' '}
-                    {appliedSelection.neighborhood.name} için görünür servisleri
-                    kontrol edin.
-                  </p>
+                  
                 </div>
                 {!operators && (
                   <button
@@ -569,10 +553,7 @@ export function DemandBoardPage() {
               {showCreateForm && (
                 <div className="demand-inline-form">
                   <h3>İhtiyacınızı ekleyin</h3>
-                  <p>
-                    Öğrenci adı veya açık adres girmeyin. Seçimleriniz yalnızca
-                    toplu sayılarda görünür.
-                  </p>
+                  
                   <DemandSupportForm
                     busyLabel="Talep oluşturuluyor…"
                     submitLabel="Talebi ve desteğimi oluştur"
@@ -620,8 +601,7 @@ function OperatorCheckResult({
             : 'Görünür servis bulunamadı'}
         </h3>
         <p>
-          Eşleşme koltuk, ücret, saat veya kesin güzergâh garantisi değildir.
-          Ayrıntıları işletmeciyle görüşün.
+          Listelenmesi servis garantisi değildir. Ücret ve güzergâh için işletmeciyle görüşün.
         </p>
       </div>
       {operators.content.length > 0 && (
