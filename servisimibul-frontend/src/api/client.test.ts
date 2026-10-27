@@ -110,9 +110,9 @@ describe('user-facing API messages', () => {
       normalizeApiProblem({ code: 'PARENT_REGISTRATION_UNAVAILABLE' }, 503)
         .detail,
     ).toBe('Şu anda veli hesabı oluşturulamıyor.')
-    expect(
-      normalizeApiProblem({ code: 'CSRF_INVALID' }, 403).detail,
-    ).toContain('Sayfayı yenileyin.')
+    expect(normalizeApiProblem({ code: 'CSRF_INVALID' }, 403).detail).toContain(
+      'Sayfayı yenileyin.',
+    )
     expect(
       normalizeApiProblem({ code: 'demand_update_conflict' }, 409).detail,
     ).toContain('Talep bu sırada değişti.')

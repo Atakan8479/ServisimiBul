@@ -72,11 +72,15 @@ const localizedProblems: Record<string, string> = {
   CSRF_INVALID: 'Oturumunuzun süresi dolmuş olabilir. Sayfayı yenileyin.',
   ACCESS_DENIED: 'Bu işlem için yetkiniz yok.',
   VALIDATION_FAILED: 'Girilen bilgileri kontrol edin.',
-  demand_update_conflict: 'Talep bu sırada değişti. Sayfayı yenileyip tekrar deneyin.',
-  offering_data_conflict: 'Araç veya servis bilgilerini kontrol edip tekrar deneyin.',
-  offering_update_conflict: 'Servis bilgileri değişti. Sayfayı yenileyip tekrar deneyin.',
+  demand_update_conflict:
+    'Talep bu sırada değişti. Sayfayı yenileyip tekrar deneyin.',
+  offering_data_conflict:
+    'Araç veya servis bilgilerini kontrol edip tekrar deneyin.',
+  offering_update_conflict:
+    'Servis bilgileri değişti. Sayfayı yenileyip tekrar deneyin.',
   operator_school_conflict: 'Okul bağlantısını kontrol edip tekrar deneyin.',
-  coverage_update_conflict: 'Mahalle seçimi değişti. Sayfayı yenileyip tekrar deneyin.',
+  coverage_update_conflict:
+    'Mahalle seçimi değişti. Sayfayı yenileyip tekrar deneyin.',
 }
 
 function displayProblemDetail(code: string, original: string): string {
@@ -103,7 +107,10 @@ export function normalizeApiProblem(
     type: raw.type,
     title: raw.title || 'İşlem tamamlanamadı',
     status: raw.status || status,
-    detail: displayProblemDetail(raw.code || `HTTP_${status}`, raw.detail || 'İşlem tamamlanamadı. Tekrar deneyin.'),
+    detail: displayProblemDetail(
+      raw.code || `HTTP_${status}`,
+      raw.detail || 'İşlem tamamlanamadı. Tekrar deneyin.',
+    ),
     instance: raw.instance,
     code: raw.code || `HTTP_${status}`,
     fieldErrors,
