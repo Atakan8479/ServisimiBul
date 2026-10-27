@@ -159,7 +159,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       expect((await registration).status()).toBe(202)
       await expect(parentPage).toHaveURL(/\/parent\/login\?.*registered=parent/)
-      await expect(parentPage.getByText(/Devam etmek için veli hesabınızla giriş yapın/)).toBeVisible()
+      await expect(
+        parentPage.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
+      ).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
       await parentPage.getByLabel('Şifre').fill(parentPassword!)
@@ -1269,9 +1271,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
         .click()
       expect((await created).status()).toBe(201)
-      await expect(
-        parentPage.getByText('Talebiniz oluşturuldu.'),
-      ).toBeVisible()
+      await expect(parentPage.getByText('Talebiniz oluşturuldu.')).toBeVisible()
       const demandId = new URL(parentPage.url()).pathname.split('/').at(-1)!
       const responsePath = `/api/v1/operator/demands/${demandId}/response`
       const operatorCsrf = await csrf(operatorPage)
@@ -1289,7 +1289,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'Bildir', exact: true })
         .click()
       await expect(
-        parentPage.getByText(/içeriği otomatik olarak gizlemez/),
+        parentPage.getByText(/İçerik hemen kaldırılmaz/),
       ).toBeVisible()
       await parentPage
         .getByLabel('Bildirim nedeni')

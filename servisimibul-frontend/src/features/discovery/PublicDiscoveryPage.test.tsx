@@ -77,9 +77,7 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
     expect(
-      screen.getByText(
-        'Kesin ücret için işletmeciyle görüşün.',
-      ),
+      screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))

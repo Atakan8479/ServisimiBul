@@ -154,7 +154,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       operatorPage.getByText('Profiliniz uygun aramalarda görünebilir.'),
     ).toBeVisible()
     await expect(
-      operatorPage.getByText(/Aramalarda görünmek için araç eklemek zorunda değilsiniz/),
+      operatorPage.getByText(
+        /Aramalarda görünmek için araç eklemek zorunda değilsiniz/,
+      ),
     ).toBeVisible()
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(
