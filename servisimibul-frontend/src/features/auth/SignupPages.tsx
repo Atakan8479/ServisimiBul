@@ -29,9 +29,15 @@ export function SignupChoicePage() {
         </Link>
       </div>
       <p className="auth-switch">
-        Zaten hesabınız var mı?{' '}
-        <Link to={`/operator/login?next=${next}`} viewTransition>
-          Giriş yapın
+        Veli hesabınız var mı?{' '}
+        <Link to={`/parent/login?next=${next}`} viewTransition>
+          Veli girişi
+        </Link>
+      </p>
+      <p className="auth-switch">
+        İşletmeci hesabınız var mı?{' '}
+        <Link to="/operator/login" viewTransition>
+          İşletmeci girişi
         </Link>
       </p>
     </section>

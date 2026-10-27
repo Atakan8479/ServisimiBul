@@ -131,6 +131,41 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
+  it('redirects an expired parent notification session to parent login', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Authentication is required',
+            code: 'UNAUTHENTICATED',
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    render(
+      <RouterProvider
+        router={createMemoryRouter(routes, {
+          initialEntries: ['/notifications'],
+        })}
+      />,
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Veli hesabınıza giriş yapın',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('uses a view transition when navigating between pages', async () => {
     server.use(
       http.get('/api/v1/provinces', () =>
@@ -165,13 +200,23 @@ describe('application routes', () => {
       expect(
         screen.queryByRole('link', { name: 'Yönetim' }),
       ).not.toBeInTheDocument()
-      fireEvent.click(screen.getByRole('link', { name: 'Giriş' }))
+      expect(screen.getByRole('link', { name: 'Veli kaydı' })).toHaveAttribute(
+        'href',
+        '/parent/register',
+      )
+      expect(
+        screen.getByRole('link', { name: 'İşletmeci girişi' }),
+      ).toHaveAttribute('href', '/operator/login')
+      expect(
+        screen.getByRole('link', { name: 'İşletmeci kaydı' }),
+      ).toHaveAttribute('href', '/operator/register')
+      fireEvent.click(screen.getByRole('link', { name: 'Veli girişi' }))
 
       const loginHeading = await screen.findByRole('heading', {
-        name: 'Hoş geldiniz',
+        name: 'Veli hesabınıza giriş yapın',
       })
       await waitFor(() => expect(loginHeading).toHaveFocus())
-      expect(document.title).toBe('Giriş | ServisimiBul')
+      expect(document.title).toBe('Veli girişi | ServisimiBul')
       expect(startViewTransition).toHaveBeenCalledOnce()
     } finally {
       Reflect.deleteProperty(document, 'startViewTransition')

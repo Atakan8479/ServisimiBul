@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import {
   listNotifications,
@@ -10,6 +10,7 @@ import {
 
 export function NotificationCenterPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [page, setPage] = useState(0)
   const [result, setResult] = useState<NotificationPage>()
   const [loading, setLoading] = useState(true)
@@ -26,7 +27,15 @@ export function NotificationCenterPage() {
         if (failure instanceof DOMException && failure.name === 'AbortError')
           return
         if (failure instanceof ApiError && failure.sessionExpired) {
-          void navigate('/operator/login?reason=session', { replace: true })
+          const loginPath =
+            location.pathname === '/notifications'
+              ? '/parent/login'
+              : '/operator/login'
+          const next = `${location.pathname}${location.search}`
+          void navigate(
+            `${loginPath}?next=${encodeURIComponent(next)}&reason=session`,
+            { replace: true },
+          )
           return
         }
         setError(
@@ -38,7 +47,7 @@ export function NotificationCenterPage() {
         if (!signal?.aborted) setLoading(false)
       }
     },
-    [navigate, page],
+    [location.pathname, location.search, navigate, page],
   )
 
   useEffect(() => {

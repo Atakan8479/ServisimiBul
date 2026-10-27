@@ -66,6 +66,46 @@ describe('reporting and moderation flows', () => {
     })
   })
 
+  it('sends an unauthenticated reporter to the parent login', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Authentication is required',
+            code: 'UNAUTHORIZED',
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+    const router = createMemoryRouter(
+      [
+        {
+          path: '*',
+          element: (
+            <ReportControl
+              targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
+              targetType="COMMENT"
+            />
+          ),
+        },
+      ],
+      { initialEntries: ['/demands/example?tab=comments'] },
+    )
+
+    render(<RouterProvider router={router} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/parent/login'),
+    )
+    expect(router.state.location.search).toBe(
+      '?next=%2Fdemands%2Fexample%3Ftab%3Dcomments&reason=session',
+    )
+  })
+
   it('shows grouped admin cases without reporter identity and records a reasoned action', async () => {
     let actionBody: unknown
     server.use(

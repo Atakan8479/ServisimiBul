@@ -70,11 +70,13 @@ describe('public demand board', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Hoş geldiniz' }),
+      await screen.findByRole('heading', {
+        name: 'Veli hesabınıza giriş yapın',
+      }),
     ).toBeInTheDocument()
     expect(operatorChecks).toBe(1)
     expect(
-      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
+      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
     ).toBeInTheDocument()
   })
 
@@ -595,6 +597,28 @@ describe('demand comments', () => {
       await screen.findByText('Yorum yazmak için önce bu talebe destek verin.'),
     ).toBeInTheDocument()
     expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+  })
+
+  it('sends an unauthenticated commenter to the parent login', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(problem(401, 'Authentication is required'), {
+          status: 401,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Veli hesabınıza giriş yapın',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('lets an eligible operator open the form and paginates public comments', async () => {

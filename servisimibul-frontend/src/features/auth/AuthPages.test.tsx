@@ -5,9 +5,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
+import { clearKnownAuthRole, knownAuthRole } from './auth-api'
+import { LoginPage } from './AuthPages'
 
 afterEach(() => {
   resetCsrfToken()
+  window.sessionStorage.clear()
   vi.unstubAllEnvs()
 })
 
@@ -50,9 +53,18 @@ describe('parent account onboarding', () => {
           totalPages: 0,
         }),
       ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 3 }),
+      ),
+      http.post(
+        '/api/v1/auth/logout',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
     )
 
     renderRoute('/parent/register?next=%2Fdemands')
+    expect(await screen.findByLabelText('E-posta')).toBeInTheDocument()
+    expect(screen.queryByText(/pilot/i)).not.toBeInTheDocument()
     fireEvent.change(await screen.findByLabelText('E-posta'), {
       target: { value: 'parent@example.test' },
     })
@@ -65,6 +77,9 @@ describe('parent account onboarding', () => {
       await screen.findByText(
         'Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.',
       ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Veli hesabınıza giriş yapın' }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/doğrulama bağlantısı/i)).not.toBeInTheDocument()
     expect(requestBody).toEqual({
@@ -84,6 +99,17 @@ describe('parent account onboarding', () => {
     expect(
       await screen.findByRole('heading', { name: 'Servis talep panosu' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Veli oturumu açık')).toBeInTheDocument()
+    expect(
+      await screen.findByLabelText('3 okunmamış bildirim'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Çıkış yap' }))
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Veli hesabınıza giriş yapın',
+      }),
+    ).toBeInTheDocument()
+    expect(knownAuthRole()).toBeUndefined()
   })
 
   it('uses the duplicate-safe accepted response without claiming mailbox ownership', async () => {
@@ -108,7 +134,7 @@ describe('parent account onboarding', () => {
       await screen.findByText(/Kayıt isteğiniz alındı/),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
+      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
   })
 
@@ -205,6 +231,101 @@ describe('parent account onboarding', () => {
     )
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })
+
+  it('provides a dedicated parent login with password visibility', async () => {
+    renderRoute('/parent/login')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Veli hesabınıza giriş yapın',
+      }),
+    ).toBeInTheDocument()
+    const password = screen.getByLabelText('Şifre')
+    expect(password).toHaveAttribute('type', 'password')
+    fireEvent.click(screen.getByRole('button', { name: 'Şifreyi göster' }))
+    expect(password).toHaveAttribute('type', 'text')
+    expect(
+      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
+    ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+  })
+
+  it('returns a parent to notifications but rejects an external URL', async () => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(parentUser)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json(parentUser)),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 0 }),
+      ),
+    )
+
+    const view = renderRoute('/parent/login?next=%2Fnotifications')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'unique parent password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Bildirim merkezi' }),
+    ).toBeInTheDocument()
+
+    view.unmount()
+    clearKnownAuthRole()
+    renderRoute('/parent/login?next=https%3A%2F%2Fevil.example')
+    expect(
+      await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
+    ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+  })
+
+  it.each(['/demands/review-target?action=response', '/demands/../operator'])(
+    'rejects an unsafe parent return destination: %s',
+    async (next) => {
+      renderRoute(`/parent/login?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
+      ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+    },
+  )
+
+  it('rejects an operator account on the parent login and closes its session', async () => {
+    let logoutCalls = 0
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(operatorUser)),
+      http.post('/api/v1/auth/logout', () => {
+        logoutCalls += 1
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderRoute('/parent/login')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'operator@example.com' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'long password value' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Bu giriş yalnızca veli hesapları içindir.',
+    )
+    expect(logoutCalls).toBe(1)
+    expect(knownAuthRole()).toBeUndefined()
+  })
 })
 
 describe('operator authentication screens', () => {
@@ -241,6 +362,41 @@ describe('operator authentication screens', () => {
     expect(
       await screen.findByRole('link', { name: /kayıt olun/i }),
     ).toHaveAttribute('href', expectedHref)
+  })
+
+  it('preserves the operator response action after login', async () => {
+    const router = createMemoryRouter(
+      [
+        { path: '/operator/login', Component: LoginPage },
+        {
+          path: '/demands/:demandId',
+          element: <h1>Servis bildirimi dönüşü</h1>,
+        },
+      ],
+      {
+        initialEntries: [
+          `/operator/login?next=${encodeURIComponent('/demands/review-target?action=response')}`,
+        ],
+      },
+    )
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/login', () => HttpResponse.json(operatorUser)),
+    )
+
+    render(<RouterProvider router={router} />)
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'operator@example.com' },
+    })
+    fireEvent.change(screen.getByLabelText('Şifre'), {
+      target: { value: 'long password value' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Servis bildirimi dönüşü' }),
+    ).toBeInTheDocument()
+    expect(router.state.location.search).toBe('?action=response')
   })
 
   it('registers an operator without an optional business name', async () => {
@@ -402,7 +558,7 @@ describe('operator authentication screens', () => {
       ),
     )
 
-    renderRoute('/operator/login')
+    renderRoute('/parent/login')
     fireEvent.change(await screen.findByLabelText('E-posta'), {
       target: { value: 'parent@example.test' },
     })
@@ -473,10 +629,10 @@ describe('operator authentication screens', () => {
     )
 
     renderRoute(
-      `/operator/login?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
+      `/parent/login?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
     )
     expect(
-      await screen.findByRole('link', { name: 'veli hesabı oluşturun' }),
+      await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
     ).toHaveAttribute(
       'href',
       `/parent/register?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,

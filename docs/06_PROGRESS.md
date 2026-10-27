@@ -1,8 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: SEC-ARCH school integrity follow-up ready for review
+## Current stage: Issue #124 parent authentication flow ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. SEC-ARCH tracker #111 follow-up 1 is implemented on `codex/sec-arch-school-integrity` in PR #127 for review; follow-ups 2–5 remain separate work. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. Issue #124 is implemented on `codex/issue-124-parent-login` for review. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified Issue #124 parent authentication completion — 2026-10-27
+
+- Backend inspection confirmed that merged Issues #100/#102 already provide role-fixed PARENT registration, normalized unique email, BCrypt, CSRF and rate limits, immediate login only under the explicit no-email pilot policy, session creation/current-user/logout, disabled-account denial, request-time verification-policy enforcement, and PARENT authorization for demands and notifications. No backend source, API, dependency, or Flyway change was necessary.
+- The frontend now has a dedicated `/parent/login` route with email/password, password visibility, accessible validation/loading/errors, registration link, and cross-role rejection that closes the mistakenly opened session. Registration, demand/support/comment/report guards, notifications, and session expiry use `/parent/login` and preserve only validated local demand or notification destinations.
+- The public header separates Veli Girişi, Veli Kaydı, İşletmeci Girişi, and İşletmeci Kaydı. An authenticated parent sees session state, notifications, and secure logout; logout clears the presentation-only role hint and protected access remains backend-authoritative.
+- Complete isolated PostgreSQL 17.4 verification replayed Flyway V1–V16, validated Hibernate, packaged the backend, and passed all 271 tests with zero failures, errors, or skips. This includes parent registration disabled/enabled, no-token/no-email pilot behavior, strict verification mode, existing-session invalidation, login/session/CSRF/rate-limit/role restrictions, and demand authorization.
+- Node.js 24 verification passed Prettier on touched files, ESLint, strict TypeScript, all 103 Vitest tests, and the production build. The complete mocked Chromium suite passed 12/12, including WCAG 2.2 AA and overflow checks at 1440×900, 768×1024, 390×844, and 320×844.
+- The real Vite/Spring Boot/Playwright journey passed 1/1 against a fresh disposable PostgreSQL 17.4 database. It exercised real parent registration, immediate login, `/auth/me`, session persistence after reload, demand creation/support, notifications, secure logout, and denial of protected access after logout, then deleted the cluster, generated credentials, processes, and tariff directory.
+- No shared Supabase connection, schema/data write, migration, SMTP activation, production configuration, dependency, or lockfile change occurred. GitHub Actions and peer review remain required before merge.
 
 ## Verified SEC-ARCH school integrity follow-up — 2026-10-27
 
