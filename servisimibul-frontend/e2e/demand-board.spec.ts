@@ -32,7 +32,7 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page.getByLabel('Şifre').fill('parent password')
   await page.getByRole('button', { name: 'Veli hesabı oluştur' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?.*registered=parent/)
-  await expect(page.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+  await expect(page.getByText(/Devam etmek için veli hesabınızla giriş yapın/)).toBeVisible()
   expect(state.parentRegistered).toBe(true)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
@@ -49,7 +49,7 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .click()
 
   await expect(
-    page.getByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
+    page.getByText('Talebiniz oluşturuldu.'),
   ).toBeVisible()
   await expect(page.getByText('Destekliyorsunuz')).toBeVisible()
   expect(state.demandCreated).toBe(true)
