@@ -1270,7 +1270,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       expect((await created).status()).toBe(201)
       await expect(
-        parentPage.getByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
+        parentPage.getByText('Talebiniz oluşturuldu.'),
       ).toBeVisible()
       const demandId = new URL(parentPage.url()).pathname.split('/').at(-1)!
       const responsePath = `/api/v1/operator/demands/${demandId}/response`
@@ -1309,7 +1309,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(parentPage.getByText('Bildirim alındı')).toBeVisible()
       await expect(
         parentPage
-          .getByRole('region', { name: 'İşletmeci servis bildirimleri' })
+          .getByRole('region', { name: 'İşletmecilerin servis duyuruları' })
           .getByText('J03 Gerçek Servis'),
       ).toBeVisible()
 
