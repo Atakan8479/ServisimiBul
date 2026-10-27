@@ -35,7 +35,9 @@ for (const viewport of viewports) {
       await expect(
         page.getByRole('link', { name: 'İşletmeci girişi' }),
       ).toBeVisible()
-      await page.getByRole('link', { name: 'Talep panosu' }).click()
+      await page
+        .getByRole('link', { name: 'Talep panosu', exact: true })
+        .click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'false')
     } else {
       await expect(publicToggle).toBeHidden()
