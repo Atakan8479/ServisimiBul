@@ -159,7 +159,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       expect((await registration).status()).toBe(202)
       await expect(parentPage).toHaveURL(/\/parent\/login\?.*registered=parent/)
-      await expect(parentPage.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+      await expect(parentPage.getByText(/Devam etmek için veli hesabınızla giriş yapın/)).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
       await parentPage.getByLabel('Şifre').fill(parentPassword!)
