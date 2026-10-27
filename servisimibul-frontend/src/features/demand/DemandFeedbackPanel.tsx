@@ -72,8 +72,7 @@ export function DemandFeedbackPanel({
         <div>
           <h2 id="feedback-title">Servis ihtiyacınız karşılandı mı?</h2>
           <p>
-            Yeni servis bildirimlerini değerlendirin. Yanıtınız yalnızca bu
-            talebin durumunu günceller; rezervasyon oluşturmaz.
+            Yanıtınız rezervasyon oluşturmaz.
           </p>
         </div>
         {data?.feedback.some(
