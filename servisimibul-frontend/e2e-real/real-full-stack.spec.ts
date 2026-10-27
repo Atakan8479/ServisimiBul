@@ -428,7 +428,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toHaveCount(0)
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
-        publicPage.getByText('Bu tarife kişisel fiyat teklifi değildir.'),
+        publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),
       ).toBeVisible()
     })
 
