@@ -65,11 +65,7 @@ export function AdminApplicationsPage() {
           ? 'İşletmeci başvuruları'
           : 'İşletmeciler'}
       </h1>
-      <p className="page-lead">
-        {user.operatorApprovalRequired
-          ? 'Başvuruları durumuna göre inceleyin ve gerekli işlemi uygulayın.'
-          : 'İşletmecileri başvuru beklemeden izleyin ve gerektiğinde askıya alın.'}
-      </p>
+      
 
       {user.operatorApprovalRequired && (
         <label className="form-field application-filter">
