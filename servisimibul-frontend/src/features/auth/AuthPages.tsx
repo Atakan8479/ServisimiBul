@@ -260,11 +260,6 @@ export function ParentSignupPage() {
 
   return (
     <AuthCard eyebrow="Veli kaydı" title="Veli hesabı oluşturun">
-      <p>
-        Veli e-posta doğrulaması pilot ortamında açıkça kapatıldığında doğrulama
-        e-postası gerekmez ve hesabınız hemen girişe açılır. E-posta adresiniz
-        doğrulanmış sayılmaz.
-      </p>
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -570,11 +565,21 @@ function demandDestination(path: string | null): string {
 }
 
 function parentDestination(path: string | null): string {
-  return path === '/notifications' ||
-    path?.startsWith('/notifications?') ||
-    isDemandPath(path)
-    ? path
-    : '/demands'
+  if (path === '/notifications' || path?.startsWith('/notifications?')) {
+    return path
+  }
+  if (!isDemandPath(path)) return '/demands'
+
+  try {
+    const url = new URL(path, window.location.origin)
+    const action = url.searchParams.get('action')
+    return isDemandPath(url.pathname) &&
+      (action === null || action === 'support' || action === 'comment')
+      ? path
+      : '/demands'
+  } catch {
+    return '/demands'
+  }
 }
 
 function isDemandResponsePath(path: string | null): path is string {

@@ -15,6 +15,7 @@ import {
   knownAuthRole,
   logout,
 } from '../features/auth/auth-api'
+import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
 export function PublicLayout() {
   const [role, setRole] = useState(knownAuthRole)
@@ -67,9 +68,7 @@ export function PublicLayout() {
           {role === 'PARENT' ? (
             <>
               <span className="nav-session">Veli oturumu açık</span>
-              <NavLink to="/notifications" viewTransition>
-                Bildirimler
-              </NavLink>
+              <NotificationNavLink to="/notifications" />
               <button
                 disabled={loggingOut}
                 onClick={() => void signOutParent()}
