@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import type { AuthUser } from '../auth/auth-api'
 import { getDiscoveryReadiness, type DiscoveryReadiness } from './operator-api'
 
 export function OperatorOverviewPage() {
-  const user = useRouteLoaderData('operator') as AuthUser
   const navigate = useNavigate()
   const [readiness, setReadiness] = useState<DiscoveryReadiness>()
   const [loading, setLoading] = useState(true)
