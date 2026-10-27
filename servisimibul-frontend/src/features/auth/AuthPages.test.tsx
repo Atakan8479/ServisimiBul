@@ -75,7 +75,7 @@ describe('parent account onboarding', () => {
 
     expect(
       await screen.findByText(
-        'Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.',
+        'Devam etmek için veli hesabınızla giriş yapın.',
       ),
     ).toBeInTheDocument()
     expect(
@@ -131,7 +131,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText(/Kayıt isteğiniz alındı/),
+      await screen.findByText(/Devam etmek için veli hesabınızla giriş yapın/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
