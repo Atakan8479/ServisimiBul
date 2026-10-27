@@ -242,9 +242,7 @@ export function AdminSchoolsPage() {
     <section className="workspace-page">
       <p className="eyebrow">Okul kataloğu</p>
       <h1>Okulları yönetin</h1>
-      <p className="page-lead">
-        İletişim kurduğunuz okulları ekleyin ve durumlarını yönetin.
-      </p>
+      
 
       {error && (
         <div className="form-error" role="alert">
