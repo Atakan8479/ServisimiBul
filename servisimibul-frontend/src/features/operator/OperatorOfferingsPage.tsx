@@ -124,8 +124,7 @@ export function OperatorOfferingsPage() {
     <section className="workspace-page">
       <h1>Servis ayrıntılarınız</h1>
       <p className="page-lead">
-        Araçlar isteğe bağlıdır; servis yayımlamak için etkin bir araç ve okul
-        kapsamından en az bir mahalle gerekir.
+        Servis ilanı oluşturmak için araç, okul ve mahalle bilgilerinizi tamamlayın. Aramalarda görünmek için araç eklemek zorunda değilsiniz.
       </p>
 
       {error && (
@@ -706,7 +705,7 @@ function OfferingEditor({
 
       <form className="offering-coverage" onSubmit={saveCoverage}>
         <h4>Servise özel mahalleler</h4>
-        <p>Yalnızca bu okulun genel kapsamındaki mahalleler seçilebilir.</p>
+        
         {groupedCoverage.length === 0 ? (
           <p className="empty-note">
             Önce okulun genel kapsamına mahalle ekleyin.
