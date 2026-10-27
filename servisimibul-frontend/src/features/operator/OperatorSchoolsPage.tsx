@@ -253,8 +253,7 @@ export function OperatorSchoolsPage() {
       <p className="eyebrow">Okullar ve kapsam</p>
       <h1>Hizmet ağınız</h1>
       <p className="page-lead">
-        Hizmet verdiğiniz okulları ekleyin; her okul için aynı ildeki
-        mahalleleri seçin.
+        Hizmet verdiğiniz okulları ve mahalleleri ekleyin.
       </p>
 
       {error && (
@@ -429,10 +428,7 @@ export function OperatorSchoolsPage() {
         {relationships.length === 0 ? (
           <div className="empty-state">
             <h2>Henüz okul eklenmedi</h2>
-            <p>
-              Yukarıdaki okul aramasından ilk okulunuzu ekleyin. Okul eklenince
-              hizmet mahallesi seçimi otomatik olarak açılır.
-            </p>
+            
             <a className="text-button" href="#school-search-input">
               Okul aramasına git
             </a>
@@ -473,8 +469,7 @@ export function OperatorSchoolsPage() {
                   relationship.active &&
                   relationship.coverage.length === 0 && (
                     <p className="school-warning">
-                      Bu okul için hizmet mahallesi seçin; kapsam kaydedilmeden
-                      okul aramalara katkı sağlamaz.
+                      Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin.
                     </p>
                   )}
               </div>
@@ -723,8 +718,7 @@ function CoverageEditor({
             {relationship.schoolName} için hizmet mahalleleri
           </h3>
           <p>
-            {relationship.schoolProvinceName} içinde farklı ilçelerden mahalle
-            seçebilirsiniz; il dışı seçim yapılamaz.
+            Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.
           </p>
         </div>
         <span className="count-badge">{selectedCount} seçili</span>
@@ -752,10 +746,8 @@ function CoverageEditor({
         <div className="district-groups">
           {districts.length === 0 && (
             <div className="empty-state compact-empty">
-              <h4>Mahalle kataloğu henüz boş</h4>
-              <p>
-                Bu il için mahalle verisi eklenmeden hizmet kapsamı seçilemez.
-              </p>
+              <h4>Bu ilde henüz mahalle bilgisi bulunmuyor</h4>
+              
             </div>
           )}
           {districts.map((district) => {
@@ -924,8 +916,7 @@ function SchoolCatalogGuidance({
   }
   return (
     <p className="empty-note">
-      Bu sayfadaki tüm okullar zaten hizmet ağınıza eklenmiş. Diğer sayfalara
-      geçebilir veya okul adıyla arayabilirsiniz.
+      Bu sayfadaki tüm okulları eklemişsiniz. Başka bir okul arayabilirsiniz.
     </p>
   )
 }
