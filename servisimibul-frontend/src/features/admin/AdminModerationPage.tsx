@@ -188,8 +188,7 @@ export function AdminModerationPage() {
         <div>
           <h1>İçerik bildirimleri</h1>
           <p>
-            Kullanıcı bildirimlerini bağlamıyla inceleyin. Bildirim gelmesi
-            içeriği kendiliğinden gizlemez.
+            Bildirilen içerikleri inceleyin. Bildirilmesi içeriği otomatik olarak kaldırmaz.
           </p>
         </div>
       </div>
