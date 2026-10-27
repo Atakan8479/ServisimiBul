@@ -335,7 +335,7 @@ describe('operator authentication screens', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText(
-        /Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul/,
+        /E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve mahalleleri ekleyin/,
       ),
     ).toBeInTheDocument()
     expect(
