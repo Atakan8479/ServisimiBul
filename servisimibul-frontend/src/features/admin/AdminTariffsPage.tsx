@@ -132,10 +132,7 @@ export function AdminTariffsPage() {
   return (
     <section className="workspace-page tariff-admin-page">
       <h1>Resmî tarifeler</h1>
-      <p className="page-lead">
-        İstanbul için yayımlanacak UKOME mesafe tarifesini yönetin. Bu kayıt
-        işletmeciye özel fiyat değildir.
-      </p>
+      
 
       {loading ? (
         <div className="inline-loading" role="status">
