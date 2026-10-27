@@ -336,10 +336,10 @@ describe('operator authentication screens', () => {
       await screen.findByText('İşletme profilinizin görünürlüğü'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/işletme profiliniz herkese açık arama sonuçlarında/),
+      screen.getByText(/Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul/),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/İletişim telefonunuz.*ziyaretçiler tarafından/),
+      screen.getByText(/Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Hesap oluştur' }),
@@ -537,7 +537,7 @@ describe('operator authentication screens', () => {
     // Avoid leaving the overview's readiness request in flight after teardown.
     expect(
       await screen.findByText(
-        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+        'Profiliniz henüz arama sonuçlarında görünmüyor.',
       ),
     ).toBeInTheDocument()
   })
