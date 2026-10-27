@@ -1,5 +1,6 @@
 package com.servisimibul.backend.tariff.service;
 
+import com.servisimibul.backend.tariff.dto.TariffDtos.AdditionalKilometerRule;
 import com.servisimibul.backend.tariff.dto.TariffDtos.TariffBand;
 import com.servisimibul.backend.tariff.dto.TariffDtos.TariffDocument;
 import com.servisimibul.backend.tariff.exception.TariffApiException;
@@ -21,6 +22,7 @@ public class TariffValidator {
     private static final Pattern PROVINCE_CODE = Pattern.compile("\\d{2}");
     private static final Pattern VERSION = Pattern.compile("[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?");
     private static final int MAX_BANDS = 100;
+    private static final int MAX_NOTES = 50;
 
     public String normalizeProvinceCode(String provinceCode, String field) {
         String normalized = trim(provinceCode);
@@ -58,16 +60,24 @@ public class TariffValidator {
         if (document.effectiveFrom() == null) {
             errors.put("tariff.effectiveFrom", "is required");
         }
-        if (document.effectiveTo() == null) {
-            errors.put("tariff.effectiveTo", "is required");
-        }
         if (document.effectiveFrom() != null
                 && document.effectiveTo() != null
                 && document.effectiveTo().isBefore(document.effectiveFrom())) {
             errors.put("tariff.effectiveTo", "must be on or after effectiveFrom");
         }
 
-        List<TariffBand> bands = validateBands(document.bands(), errors);
+        boolean hasAdditionalKilometerRule = document.additionalKilometerRule() != null;
+        List<TariffBand> bands = validateBands(
+                document.bands(),
+                hasAdditionalKilometerRule,
+                errors
+        );
+        AdditionalKilometerRule additionalKilometerRule = validateAdditionalKilometerRule(
+                document.additionalKilometerRule(),
+                bands,
+                errors
+        );
+        List<String> notes = validateNotes(document.notes(), errors);
         if (!errors.isEmpty()) {
             throw TariffApiException.validation(errors);
         }
@@ -83,6 +93,8 @@ public class TariffValidator {
                 sourceTitle,
                 officialSourceUrl,
                 version,
+                additionalKilometerRule,
+                notes,
                 bands
         );
     }
@@ -127,17 +139,25 @@ public class TariffValidator {
         return normalized;
     }
 
-    private List<TariffBand> validateBands(List<TariffBand> input, Map<String, String> errors) {
+    private List<TariffBand> validateBands(
+            List<TariffBand> input,
+            boolean hasAdditionalKilometerRule,
+            Map<String, String> errors
+    ) {
         if (input == null || input.isEmpty()) {
             errors.put("tariff.bands", "must contain at least one distance band");
             return List.of();
         }
         if (input.size() > MAX_BANDS) {
             errors.put("tariff.bands", "must contain at most " + MAX_BANDS + " distance bands");
-            return List.copyOf(input);
+            return List.of();
         }
 
         List<TariffBand> normalized = new ArrayList<>(input.size());
+        boolean hasAnnualAmounts = input.stream()
+                .filter(java.util.Objects::nonNull)
+                .anyMatch(band -> band.annualAmountKurus() != null);
+        boolean requireAnnualAmounts = hasAnnualAmounts || hasAdditionalKilometerRule;
         BigDecimal expectedMinimum = BigDecimal.ZERO;
         for (int index = 0; index < input.size(); index++) {
             TariffBand band = input.get(index);
@@ -149,7 +169,18 @@ public class TariffValidator {
 
             BigDecimal minimum = normalizeNumber(band.minDistanceKm());
             BigDecimal maximum = normalizeNumber(band.maxDistanceKm());
-            BigDecimal amount = normalizeNumber(band.amountKurus());
+            BigDecimal amount = validateKurus(
+                    band.amountKurus(),
+                    prefix + ".amountKurus",
+                    true,
+                    errors
+            );
+            BigDecimal annualAmount = validateKurus(
+                    band.annualAmountKurus(),
+                    prefix + ".annualAmountKurus",
+                    requireAnnualAmounts,
+                    errors
+            );
 
             if (minimum == null) {
                 errors.put(prefix + ".minDistanceKm", "is required");
@@ -163,8 +194,16 @@ public class TariffValidator {
             }
 
             boolean finalBand = index == input.size() - 1;
-            if (finalBand && maximum != null) {
-                errors.put(prefix + ".maxDistanceKm", "must be null for the final band");
+            if (finalBand && hasAdditionalKilometerRule && maximum == null) {
+                errors.put(
+                        prefix + ".maxDistanceKm",
+                        "is required when an additional-kilometer rule follows the fixed bands"
+                );
+            } else if (finalBand && !hasAdditionalKilometerRule && maximum != null) {
+                errors.put(
+                        prefix + ".maxDistanceKm",
+                        "must be null unless an additional-kilometer rule follows the fixed bands"
+                );
             } else if (!finalBand && maximum == null) {
                 errors.put(prefix + ".maxDistanceKm", "is required except for the final band");
             }
@@ -172,31 +211,105 @@ public class TariffValidator {
                 errors.put(prefix + ".maxDistanceKm", "must be greater than minDistanceKm");
             }
 
-            if (amount == null) {
-                errors.put(prefix + ".amountKurus", "is required");
-            } else {
-                boolean integral = amount.stripTrailingZeros().scale() <= 0;
-                boolean withinLongRange = amount.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) <= 0;
-                if (amount.signum() < 0) {
-                    errors.put(prefix + ".amountKurus", "must be nonnegative");
-                }
-                if (!integral) {
-                    errors.put(prefix + ".amountKurus", "must be an integer kuruş amount");
-                }
-                if (!withinLongRange) {
-                    errors.put(prefix + ".amountKurus", "is too large");
-                }
-                if (amount.signum() >= 0 && integral && withinLongRange) {
-                    amount = BigDecimal.valueOf(amount.longValueExact());
-                }
-            }
-
-            normalized.add(new TariffBand(minimum, maximum, amount));
+            normalized.add(new TariffBand(minimum, maximum, amount, annualAmount));
             if (maximum != null) {
                 expectedMinimum = maximum;
             }
         }
         return List.copyOf(normalized);
+    }
+
+    private AdditionalKilometerRule validateAdditionalKilometerRule(
+            AdditionalKilometerRule input,
+            List<TariffBand> bands,
+            Map<String, String> errors
+    ) {
+        if (input == null) {
+            return null;
+        }
+
+        BigDecimal threshold = normalizeNumber(input.startsAfterDistanceKm());
+        if (threshold == null) {
+            errors.put("tariff.additionalKilometerRule.startsAfterDistanceKm", "is required");
+        } else if (threshold.signum() <= 0) {
+            errors.put(
+                    "tariff.additionalKilometerRule.startsAfterDistanceKm",
+                    "must be greater than zero"
+            );
+        }
+
+        BigDecimal monthlyAmount = validateKurus(
+                input.monthlyAmountPerKilometerKurus(),
+                "tariff.additionalKilometerRule.monthlyAmountPerKilometerKurus",
+                true,
+                errors
+        );
+
+        if (!bands.isEmpty()) {
+            BigDecimal finalMaximum = bands.getLast().maxDistanceKm();
+            if (threshold != null
+                    && finalMaximum != null
+                    && threshold.compareTo(finalMaximum) != 0) {
+                errors.put(
+                        "tariff.additionalKilometerRule.startsAfterDistanceKm",
+                        "must equal the final fixed band's maximum"
+                );
+            }
+        }
+        return new AdditionalKilometerRule(threshold, monthlyAmount);
+    }
+
+    private List<String> validateNotes(List<String> input, Map<String, String> errors) {
+        if (input == null) {
+            return List.of();
+        }
+        if (input.size() > MAX_NOTES) {
+            errors.put("tariff.notes", "must contain at most " + MAX_NOTES + " notes");
+            return List.of();
+        }
+
+        List<String> normalized = new ArrayList<>(input.size());
+        for (int index = 0; index < input.size(); index++) {
+            String note = required(
+                    input.get(index),
+                    "tariff.notes[" + index + "]",
+                    1_000,
+                    errors
+            );
+            normalized.add(note == null ? "" : note);
+        }
+        return List.copyOf(normalized);
+    }
+
+    private BigDecimal validateKurus(
+            BigDecimal input,
+            String field,
+            boolean required,
+            Map<String, String> errors
+    ) {
+        BigDecimal amount = normalizeNumber(input);
+        if (amount == null) {
+            if (required) {
+                errors.put(field, "is required");
+            }
+            return null;
+        }
+
+        boolean integral = amount.stripTrailingZeros().scale() <= 0;
+        boolean withinLongRange = amount.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) <= 0;
+        if (amount.signum() < 0) {
+            errors.put(field, "must be nonnegative");
+        }
+        if (!integral) {
+            errors.put(field, "must be an integer kuruş amount");
+        }
+        if (!withinLongRange) {
+            errors.put(field, "is too large");
+        }
+        if (amount.signum() >= 0 && integral && withinLongRange) {
+            return BigDecimal.valueOf(amount.longValueExact());
+        }
+        return amount;
     }
 
     private BigDecimal normalizeNumber(BigDecimal value) {

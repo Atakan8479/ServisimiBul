@@ -95,7 +95,7 @@ describe('public operator discovery', () => {
     expect(
       await screen.findByRole('heading', { name: 'Resmî tarife referansı' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
+    expect(screen.getByText('₺1.300,00 / ay')).toBeInTheDocument()
     expect(
       screen.getByText(
         'Bu tarife kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
