@@ -1,0 +1,544 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T22:21:38.743Z",
+  "title": "Design System: ServisimiBul",
+  "extensions": {
+    "colorMeta": {
+      "navy-950": {
+        "role": "primary",
+        "displayName": "navy 950",
+        "tonalRamp": [
+          "oklch(15% 0.0460 252.71)",
+          "oklch(26% 0.0460 252.71)",
+          "oklch(38% 0.0460 252.71)",
+          "oklch(49% 0.0460 252.71)",
+          "oklch(61% 0.0460 252.71)",
+          "oklch(72% 0.0460 252.71)",
+          "oklch(84% 0.0460 252.71)",
+          "oklch(95% 0.0460 252.71)"
+        ]
+      },
+      "navy-900": {
+        "role": "primary",
+        "displayName": "navy 900",
+        "tonalRamp": [
+          "oklch(15% 0.0587 253.08)",
+          "oklch(26% 0.0587 253.08)",
+          "oklch(38% 0.0587 253.08)",
+          "oklch(49% 0.0587 253.08)",
+          "oklch(61% 0.0587 253.08)",
+          "oklch(72% 0.0587 253.08)",
+          "oklch(84% 0.0587 253.08)",
+          "oklch(95% 0.0587 253.08)"
+        ]
+      },
+      "navy-800": {
+        "role": "primary",
+        "displayName": "navy 800",
+        "tonalRamp": [
+          "oklch(15% 0.0615 245.82)",
+          "oklch(26% 0.0615 245.82)",
+          "oklch(38% 0.0615 245.82)",
+          "oklch(49% 0.0615 245.82)",
+          "oklch(61% 0.0615 245.82)",
+          "oklch(72% 0.0615 245.82)",
+          "oklch(84% 0.0615 245.82)",
+          "oklch(95% 0.0615 245.82)"
+        ]
+      },
+      "navy-700": {
+        "role": "primary",
+        "displayName": "navy 700",
+        "tonalRamp": [
+          "oklch(15% 0.0607 244.12)",
+          "oklch(26% 0.0607 244.12)",
+          "oklch(38% 0.0607 244.12)",
+          "oklch(49% 0.0607 244.12)",
+          "oklch(61% 0.0607 244.12)",
+          "oklch(72% 0.0607 244.12)",
+          "oklch(84% 0.0607 244.12)",
+          "oklch(95% 0.0607 244.12)"
+        ]
+      },
+      "teal-700": {
+        "role": "primary",
+        "displayName": "teal 700",
+        "tonalRamp": [
+          "oklch(15% 0.0803 200.58)",
+          "oklch(26% 0.0803 200.58)",
+          "oklch(38% 0.0803 200.58)",
+          "oklch(49% 0.0803 200.58)",
+          "oklch(61% 0.0803 200.58)",
+          "oklch(72% 0.0803 200.58)",
+          "oklch(84% 0.0803 200.58)",
+          "oklch(95% 0.0803 200.58)"
+        ]
+      },
+      "teal-600": {
+        "role": "primary",
+        "displayName": "teal 600",
+        "tonalRamp": [
+          "oklch(15% 0.0907 198.76)",
+          "oklch(26% 0.0907 198.76)",
+          "oklch(38% 0.0907 198.76)",
+          "oklch(49% 0.0907 198.76)",
+          "oklch(61% 0.0907 198.76)",
+          "oklch(72% 0.0907 198.76)",
+          "oklch(84% 0.0907 198.76)",
+          "oklch(95% 0.0907 198.76)"
+        ]
+      },
+      "teal-500": {
+        "role": "primary",
+        "displayName": "teal 500",
+        "tonalRamp": [
+          "oklch(15% 0.1025 199.90)",
+          "oklch(26% 0.1025 199.90)",
+          "oklch(38% 0.1025 199.90)",
+          "oklch(49% 0.1025 199.90)",
+          "oklch(61% 0.1025 199.90)",
+          "oklch(72% 0.1025 199.90)",
+          "oklch(84% 0.1025 199.90)",
+          "oklch(95% 0.1025 199.90)"
+        ]
+      },
+      "teal-100": {
+        "role": "primary",
+        "displayName": "teal 100",
+        "tonalRamp": [
+          "oklch(15% 0.0242 199.92)",
+          "oklch(26% 0.0242 199.92)",
+          "oklch(38% 0.0242 199.92)",
+          "oklch(49% 0.0242 199.92)",
+          "oklch(61% 0.0242 199.92)",
+          "oklch(72% 0.0242 199.92)",
+          "oklch(84% 0.0242 199.92)",
+          "oklch(95% 0.0242 199.92)"
+        ]
+      },
+      "yellow-500": {
+        "role": "secondary",
+        "displayName": "yellow 500",
+        "tonalRamp": [
+          "oklch(15% 0.1553 88.35)",
+          "oklch(26% 0.1553 88.35)",
+          "oklch(38% 0.1553 88.35)",
+          "oklch(49% 0.1553 88.35)",
+          "oklch(61% 0.1553 88.35)",
+          "oklch(72% 0.1553 88.35)",
+          "oklch(84% 0.1553 88.35)",
+          "oklch(95% 0.1553 88.35)"
+        ]
+      },
+      "yellow-100": {
+        "role": "secondary",
+        "displayName": "yellow 100",
+        "tonalRamp": [
+          "oklch(15% 0.0619 95.40)",
+          "oklch(26% 0.0619 95.40)",
+          "oklch(38% 0.0619 95.40)",
+          "oklch(49% 0.0619 95.40)",
+          "oklch(61% 0.0619 95.40)",
+          "oklch(72% 0.0619 95.40)",
+          "oklch(84% 0.0619 95.40)",
+          "oklch(95% 0.0619 95.40)"
+        ]
+      },
+      "neutral-0": {
+        "role": "neutral",
+        "displayName": "neutral 0",
+        "tonalRamp": [
+          "oklch(15% 0.0000 0.00)",
+          "oklch(26% 0.0000 0.00)",
+          "oklch(38% 0.0000 0.00)",
+          "oklch(49% 0.0000 0.00)",
+          "oklch(61% 0.0000 0.00)",
+          "oklch(72% 0.0000 0.00)",
+          "oklch(84% 0.0000 0.00)",
+          "oklch(95% 0.0000 0.00)"
+        ]
+      },
+      "neutral-25": {
+        "role": "neutral",
+        "displayName": "neutral 25",
+        "tonalRamp": [
+          "oklch(15% 0.0017 145.56)",
+          "oklch(26% 0.0017 145.56)",
+          "oklch(38% 0.0017 145.56)",
+          "oklch(49% 0.0017 145.56)",
+          "oklch(61% 0.0017 145.56)",
+          "oklch(72% 0.0017 145.56)",
+          "oklch(84% 0.0017 145.56)",
+          "oklch(95% 0.0017 145.56)"
+        ]
+      },
+      "neutral-50": {
+        "role": "neutral",
+        "displayName": "neutral 50",
+        "tonalRamp": [
+          "oklch(15% 0.0025 165.08)",
+          "oklch(26% 0.0025 165.08)",
+          "oklch(38% 0.0025 165.08)",
+          "oklch(49% 0.0025 165.08)",
+          "oklch(61% 0.0025 165.08)",
+          "oklch(72% 0.0025 165.08)",
+          "oklch(84% 0.0025 165.08)",
+          "oklch(95% 0.0025 165.08)"
+        ]
+      },
+      "neutral-100": {
+        "role": "neutral",
+        "displayName": "neutral 100",
+        "tonalRamp": [
+          "oklch(15% 0.0060 170.44)",
+          "oklch(26% 0.0060 170.44)",
+          "oklch(38% 0.0060 170.44)",
+          "oklch(49% 0.0060 170.44)",
+          "oklch(61% 0.0060 170.44)",
+          "oklch(72% 0.0060 170.44)",
+          "oklch(84% 0.0060 170.44)",
+          "oklch(95% 0.0060 170.44)"
+        ]
+      },
+      "neutral-200": {
+        "role": "neutral",
+        "displayName": "neutral 200",
+        "tonalRamp": [
+          "oklch(15% 0.0095 171.77)",
+          "oklch(26% 0.0095 171.77)",
+          "oklch(38% 0.0095 171.77)",
+          "oklch(49% 0.0095 171.77)",
+          "oklch(61% 0.0095 171.77)",
+          "oklch(72% 0.0095 171.77)",
+          "oklch(84% 0.0095 171.77)",
+          "oklch(95% 0.0095 171.77)"
+        ]
+      },
+      "neutral-500": {
+        "role": "neutral",
+        "displayName": "neutral 500",
+        "tonalRamp": [
+          "oklch(15% 0.0185 172.10)",
+          "oklch(26% 0.0185 172.10)",
+          "oklch(38% 0.0185 172.10)",
+          "oklch(49% 0.0185 172.10)",
+          "oklch(61% 0.0185 172.10)",
+          "oklch(72% 0.0185 172.10)",
+          "oklch(84% 0.0185 172.10)",
+          "oklch(95% 0.0185 172.10)"
+        ]
+      },
+      "neutral-700": {
+        "role": "neutral",
+        "displayName": "neutral 700",
+        "tonalRamp": [
+          "oklch(15% 0.0190 176.13)",
+          "oklch(26% 0.0190 176.13)",
+          "oklch(38% 0.0190 176.13)",
+          "oklch(49% 0.0190 176.13)",
+          "oklch(61% 0.0190 176.13)",
+          "oklch(72% 0.0190 176.13)",
+          "oklch(84% 0.0190 176.13)",
+          "oklch(95% 0.0190 176.13)"
+        ]
+      },
+      "red-700": {
+        "role": "neutral",
+        "displayName": "red 700",
+        "tonalRamp": [
+          "oklch(15% 0.1411 27.21)",
+          "oklch(26% 0.1411 27.21)",
+          "oklch(38% 0.1411 27.21)",
+          "oklch(49% 0.1411 27.21)",
+          "oklch(61% 0.1411 27.21)",
+          "oklch(72% 0.1411 27.21)",
+          "oklch(84% 0.1411 27.21)",
+          "oklch(95% 0.1411 27.21)"
+        ]
+      },
+      "red-100": {
+        "role": "neutral",
+        "displayName": "red 100",
+        "tonalRamp": [
+          "oklch(15% 0.0210 24.79)",
+          "oklch(26% 0.0210 24.79)",
+          "oklch(38% 0.0210 24.79)",
+          "oklch(49% 0.0210 24.79)",
+          "oklch(61% 0.0210 24.79)",
+          "oklch(72% 0.0210 24.79)",
+          "oklch(84% 0.0210 24.79)",
+          "oklch(95% 0.0210 24.79)"
+        ]
+      },
+      "amber-700": {
+        "role": "neutral",
+        "displayName": "amber 700",
+        "tonalRamp": [
+          "oklch(15% 0.1000 70.05)",
+          "oklch(26% 0.1000 70.05)",
+          "oklch(38% 0.1000 70.05)",
+          "oklch(49% 0.1000 70.05)",
+          "oklch(61% 0.1000 70.05)",
+          "oklch(72% 0.1000 70.05)",
+          "oklch(84% 0.1000 70.05)",
+          "oklch(95% 0.1000 70.05)"
+        ]
+      },
+      "amber-100": {
+        "role": "neutral",
+        "displayName": "amber 100",
+        "tonalRamp": [
+          "oklch(15% 0.0368 84.59)",
+          "oklch(26% 0.0368 84.59)",
+          "oklch(38% 0.0368 84.59)",
+          "oklch(49% 0.0368 84.59)",
+          "oklch(61% 0.0368 84.59)",
+          "oklch(72% 0.0368 84.59)",
+          "oklch(84% 0.0368 84.59)",
+          "oklch(95% 0.0368 84.59)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "tonalRamp": [
+          "oklch(15% 0.0211 174.54)",
+          "oklch(26% 0.0211 174.54)",
+          "oklch(38% 0.0211 174.54)",
+          "oklch(49% 0.0211 174.54)",
+          "oklch(61% 0.0211 174.54)",
+          "oklch(72% 0.0211 174.54)",
+          "oklch(84% 0.0211 174.54)",
+          "oklch(95% 0.0211 174.54)"
+        ]
+      },
+      "surface-soft": {
+        "role": "neutral",
+        "displayName": "surface soft",
+        "tonalRamp": [
+          "oklch(15% 0.0069 174.38)",
+          "oklch(26% 0.0069 174.38)",
+          "oklch(38% 0.0069 174.38)",
+          "oklch(49% 0.0069 174.38)",
+          "oklch(61% 0.0069 174.38)",
+          "oklch(72% 0.0069 174.38)",
+          "oklch(84% 0.0069 174.38)",
+          "oklch(95% 0.0069 174.38)"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "border strong",
+        "tonalRamp": [
+          "oklch(15% 0.0180 173.91)",
+          "oklch(26% 0.0180 173.91)",
+          "oklch(38% 0.0180 173.91)",
+          "oklch(49% 0.0180 173.91)",
+          "oklch(61% 0.0180 173.91)",
+          "oklch(72% 0.0180 173.91)",
+          "oklch(84% 0.0180 173.91)",
+          "oklch(95% 0.0180 173.91)"
+        ]
+      },
+      "success-text": {
+        "role": "neutral",
+        "displayName": "success text",
+        "tonalRamp": [
+          "oklch(15% 0.0859 158.47)",
+          "oklch(26% 0.0859 158.47)",
+          "oklch(38% 0.0859 158.47)",
+          "oklch(49% 0.0859 158.47)",
+          "oklch(61% 0.0859 158.47)",
+          "oklch(72% 0.0859 158.47)",
+          "oklch(84% 0.0859 158.47)",
+          "oklch(95% 0.0859 158.47)"
+        ]
+      },
+      "success-surface": {
+        "role": "neutral",
+        "displayName": "success surface",
+        "tonalRamp": [
+          "oklch(15% 0.0256 161.93)",
+          "oklch(26% 0.0256 161.93)",
+          "oklch(38% 0.0256 161.93)",
+          "oklch(49% 0.0256 161.93)",
+          "oklch(61% 0.0256 161.93)",
+          "oklch(72% 0.0256 161.93)",
+          "oklch(84% 0.0256 161.93)",
+          "oklch(95% 0.0256 161.93)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Homepage Manrope",
+        "purpose": "Self-hosted hero heading; homepage search heading uses the same family with a smaller local scale."
+      },
+      "body": {
+        "displayName": "Incumbent UI stack",
+        "purpose": "Controls, navigation, results and workspaces retain the Inter-first system stack."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-soft",
+        "value": "0 1.25rem 3.25rem rgba(10, 28, 48, 0.09)",
+        "purpose": "Existing form, school and empty-state cards."
+      },
+      {
+        "name": "shadow-raised",
+        "value": "0 1rem 2rem rgba(10, 28, 48, 0.13)",
+        "purpose": "Floating mobile public navigation."
+      },
+      {
+        "name": "homepage-photo",
+        "value": "0 2rem 4rem rgba(0, 0, 0, 0.3)",
+        "purpose": "Local editorial hero image treatment."
+      }
+    ],
+    "motion": [
+      {
+        "name": "motion-fast",
+        "value": "160ms",
+        "purpose": "Control transitions; reduced motion resolves to 0ms."
+      },
+      {
+        "name": "motion-page",
+        "value": "280ms",
+        "purpose": "Content entry; reduced motion resolves to 0ms."
+      },
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Existing transform and content easing."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "hero-stack",
+        "value": "60rem"
+      },
+      {
+        "name": "compact-shell-and-discovery",
+        "value": "44rem"
+      },
+      {
+        "name": "primitive-stack",
+        "value": "36rem"
+      },
+      {
+        "name": "mark-only-brand",
+        "value": "24rem"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Reusable UI-01 Button tone. Source has no separate hover color or lift; focus and disabled states are preserved.",
+      "html": "<button type=\"button\" class=\"ds-ui-button ds-ui-button-primary ds-focus\">Servis işletmecilerini bul</button>",
+      "css": ".ds-ui-button {\n  display: inline-flex;\n  min-height: 2.75rem;\n  width: fit-content;\n  align-items: center;\n  justify-content: center;\n  border: 1px solid transparent;\n  border-radius: var(--radius-small, 0.75rem);\n  padding: 0.7rem 1rem;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 750;\n  text-decoration: none;\n  transition:\n    background-color var(--motion-fast, 160ms) ease,\n    border-color var(--motion-fast, 160ms) ease,\n    box-shadow var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),\n    color var(--motion-fast, 160ms) ease,\n    transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));\n}\n.ds-ui-button-primary {\n  background: var(--teal-600, #087f83);\n  color: var(--neutral-0, #ffffff);\n  box-shadow: 0 0.55rem 1.2rem rgba(8, 127, 131, 0.2);\n}\n.ds-ui-button:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  transform: none;\n}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}\n.ds-ui-button{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}\n@media(max-width:36rem){.ds-ui-button{width:100%;}}@media(prefers-reduced-motion:reduce){.ds-ui-button{transition:none;}}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Reusable UI-01 Button tone. Source has no separate hover color or lift; focus and disabled states are preserved.",
+      "html": "<button type=\"button\" class=\"ds-ui-button ds-ui-button-secondary ds-focus\">Önceki sayfa</button>",
+      "css": ".ds-ui-button {\n  display: inline-flex;\n  min-height: 2.75rem;\n  width: fit-content;\n  align-items: center;\n  justify-content: center;\n  border: 1px solid transparent;\n  border-radius: var(--radius-small, 0.75rem);\n  padding: 0.7rem 1rem;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 750;\n  text-decoration: none;\n  transition:\n    background-color var(--motion-fast, 160ms) ease,\n    border-color var(--motion-fast, 160ms) ease,\n    box-shadow var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),\n    color var(--motion-fast, 160ms) ease,\n    transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));\n}\n.ds-ui-button-secondary {\n  border-color: var(--neutral-200, #d7dfdc);\n  background: var(--neutral-0, #ffffff);\n  color: var(--navy-900, #102843);\n}\n.ds-ui-button:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  transform: none;\n}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}\n.ds-ui-button{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}\n@media(max-width:36rem){.ds-ui-button{width:100%;}}@media(prefers-reduced-motion:reduce){.ds-ui-button{transition:none;}}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Reusable UI-01 Button tone. Source has no separate hover color or lift; focus and disabled states are preserved.",
+      "html": "<button type=\"button\" class=\"ds-ui-button ds-ui-button-danger ds-focus\">Sil</button>",
+      "css": ".ds-ui-button {\n  display: inline-flex;\n  min-height: 2.75rem;\n  width: fit-content;\n  align-items: center;\n  justify-content: center;\n  border: 1px solid transparent;\n  border-radius: var(--radius-small, 0.75rem);\n  padding: 0.7rem 1rem;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 750;\n  text-decoration: none;\n  transition:\n    background-color var(--motion-fast, 160ms) ease,\n    border-color var(--motion-fast, 160ms) ease,\n    box-shadow var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),\n    color var(--motion-fast, 160ms) ease,\n    transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));\n}\n.ds-ui-button-danger {\n  border-color: color-mix(in srgb, var(--red-700, #9a312b) 32%, white);\n  background: var(--neutral-0, #ffffff);\n  color: var(--red-700, #9a312b);\n}\n.ds-ui-button:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  transform: none;\n}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}\n.ds-ui-button{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}\n@media(max-width:36rem){.ds-ui-button{width:100%;}}@media(prefers-reduced-motion:reduce){.ds-ui-button{transition:none;}}"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "refersTo": "button-quiet",
+      "description": "Reusable UI-01 Button tone. Source has no separate hover color or lift; focus and disabled states are preserved.",
+      "html": "<button type=\"button\" class=\"ds-ui-button ds-ui-button-quiet ds-focus\">Tekrar dene</button>",
+      "css": ".ds-ui-button {\n  display: inline-flex;\n  min-height: 2.75rem;\n  width: fit-content;\n  align-items: center;\n  justify-content: center;\n  border: 1px solid transparent;\n  border-radius: var(--radius-small, 0.75rem);\n  padding: 0.7rem 1rem;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 750;\n  text-decoration: none;\n  transition:\n    background-color var(--motion-fast, 160ms) ease,\n    border-color var(--motion-fast, 160ms) ease,\n    box-shadow var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),\n    color var(--motion-fast, 160ms) ease,\n    transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));\n}\n.ds-ui-button-quiet {\n  background: transparent;\n  color: var(--teal-700, #066b70);\n}\n.ds-ui-button:disabled {\n  cursor: not-allowed;\n  opacity: 0.55;\n  transform: none;\n}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}\n.ds-ui-button{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}\n@media(max-width:36rem){.ds-ui-button{width:100%;}}@media(prefers-reduced-motion:reduce){.ds-ui-button{transition:none;}}"
+    },
+    {
+      "name": "Form Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Explicitly associated label, native text control and hint; invalid controls use a danger border.",
+      "html": "<div class=\"ds-ui-field\"><label for=\"ds-school\">Okul adı</label><input class=\"ds-input ds-focus\" id=\"ds-school\" aria-describedby=\"ds-hint\" placeholder=\"Okul adıyla ara\"><small id=\"ds-hint\">Okulun konumunu filtreleyin.</small></div>",
+      "css": ".ds-ui-field {\n  display: grid;\n  gap: var(--space-2, 0.5rem);\n}\n.ds-ui-field > label {\n  color: var(--navy-900, #102843);\n  font-weight: 750;\n}\n.ds-ui-field > small {\n  color: var(--color-muted, #53635e);\n  line-height: 1.45;\n}.ds-ui-field{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-input{width:100%;border:1px solid #aebdaf;border-radius:var(--radius-small, 0.75rem);background:#fff;color:var(--color-text, #0a1c30);padding:.78rem .85rem;font:inherit;transition:border-color var(--motion-fast, 160ms) ease,box-shadow var(--motion-fast, 160ms) ease;}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}.ds-input[aria-invalid=\"true\"]{border-color:var(--color-danger, #9a312b);}@media(prefers-reduced-motion:reduce){.ds-input{transition:none;}}"
+    },
+    {
+      "name": "Public Navigation",
+      "kind": "nav",
+      "refersTo": "navigation-active",
+      "description": "Desktop public links with active, focus and pointer-hover states. Mobile panel behavior stays in the application shell.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Ana menü\"><a class=\"ds-active\" aria-current=\"page\" href=\"/\">Servis ara</a><a href=\"/demands\">Talep panosu</a></nav>",
+      "css": ".ds-nav{display:flex;flex-wrap:wrap;gap:var(--space-2, 0.5rem);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}.ds-nav a{display:inline-flex;align-items:center;min-height:2.75rem;padding:.55rem .75rem;border-radius:var(--radius-small, 0.75rem);color:var(--neutral-700, #3f4d49);font-weight:650;text-decoration:none;transition:color var(--motion-fast, 160ms) ease,background-color var(--motion-fast, 160ms) ease,transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));}.ds-nav .ds-active{background:var(--teal-100, #d8eff0);color:var(--teal-700, #066b70);}.ds-nav a:focus-visible{outline:3px solid var(--color-focus, #07959b);outline-offset:3px;}@media(hover:hover){.ds-nav a:hover{transform:translateY(-2px);color:var(--color-accent-strong, #066b70);background:rgba(23,107,77,.07);}}@media(prefers-reduced-motion:reduce){.ds-nav a{transition:none;}}"
+    },
+    {
+      "name": "Informational Status",
+      "kind": "chip",
+      "refersTo": "status-info",
+      "description": "Read-only status pill; not an interactive chip or certification.",
+      "html": "<span class=\"ds-ui-status ds-ui-status-info\">Bilgi</span>",
+      "css": ".ds-ui-status {\n  display: inline-flex;\n  min-height: 1.75rem;\n  width: fit-content;\n  align-items: center;\n  border-radius: var(--radius-pill, 999px);\n  padding: 0.25rem 0.65rem;\n  font-size: 0.8rem;\n  font-weight: 750;\n  line-height: 1.2;\n}\n.ds-ui-status-info {\n  background: var(--teal-100, #d8eff0);\n  color: var(--teal-700, #066b70);\n}.ds-ui-status{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}"
+    },
+    {
+      "name": "Surface Card",
+      "kind": "card",
+      "refersTo": "surface-card",
+      "description": "Reusable SurfaceCard is flat and unpadded. Its consumer supplies content layout.",
+      "html": "<div class=\"ds-ui-surface\">Okul ve mahalle ayrı seçilir.</div>",
+      "css": ".ds-ui-surface {\n  border: 1px solid var(--neutral-200, #d7dfdc);\n  border-radius: var(--radius-medium, 1rem);\n  background: var(--neutral-0, #ffffff);\n}.ds-ui-surface{color:var(--color-text, #0a1c30);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}"
+    },
+    {
+      "name": "Error State Panel",
+      "kind": "custom",
+      "description": "StatePanel composition with a visible error mark, title, explanation and optional action; alert semantics are preserved.",
+      "html": "<div class=\"ds-ui-surface ds-ui-state ds-ui-state-error\" role=\"alert\" aria-live=\"assertive\"><span class=\"ds-ui-state-mark\" aria-hidden=\"true\"></span><div><h2>Okul sonuçları yüklenemedi</h2><p>Filtrelerinizi koruduk; tekrar deneyebilirsiniz.</p></div><button class=\"ds-ui-button ds-ui-button-quiet ds-focus\" type=\"button\">Tekrar dene</button></div>",
+      "css": ".ds-ui-surface {\n  border: 1px solid var(--neutral-200, #d7dfdc);\n  border-radius: var(--radius-medium, 1rem);\n  background: var(--neutral-0, #ffffff);\n}\n.ds-ui-state {\n  display: grid;\n  grid-template-columns: auto minmax(0, 1fr) auto;\n  align-items: center;\n  gap: var(--space-4, 1rem);\n  padding: var(--space-5, 1.25rem);\n}\n.ds-ui-state h2,\n.ds-ui-state p {\n  margin: 0;\n}\n.ds-ui-state h2 {\n  color: var(--navy-900, #102843);\n  font-size: 1rem;\n}\n.ds-ui-state p {\n  margin: 0;\n}\n.ds-ui-state-mark {\n  width: 0.75rem;\n  height: 0.75rem;\n  border-radius: 50%;\n  background: var(--neutral-500, #63716c);\n}\n.ds-ui-state-error .ds-ui-state-mark {\n  background: var(--red-700, #9a312b);\n}\n.ds-ui-button {\n  display: inline-flex;\n  min-height: 2.75rem;\n  width: fit-content;\n  align-items: center;\n  justify-content: center;\n  border: 1px solid transparent;\n  border-radius: var(--radius-small, 0.75rem);\n  padding: 0.7rem 1rem;\n  cursor: pointer;\n  font: inherit;\n  font-weight: 750;\n  text-decoration: none;\n  transition:\n    background-color var(--motion-fast, 160ms) ease,\n    border-color var(--motion-fast, 160ms) ease,\n    box-shadow var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1)),\n    color var(--motion-fast, 160ms) ease,\n    transform var(--motion-fast, 160ms) var(--ease-out, cubic-bezier(0.22, 1, 0.36, 1));\n}\n.ds-ui-button-quiet {\n  background: transparent;\n  color: var(--teal-700, #066b70);\n}.ds-focus:focus-visible {border-color:var(--color-focus, #07959b);outline:3px solid color-mix(in srgb,var(--color-focus, #07959b) 32%,transparent);outline-offset:2px;}.ds-ui-state{font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}@media(max-width:36rem){.ds-ui-state{grid-template-columns:auto minmax(0,1fr);}.ds-ui-state>button{grid-column:1/-1;}}@media(prefers-reduced-motion:reduce){.ds-ui-button{transition:none;}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Calm Transit Editorial",
+    "overview": "ServisimiBul pairs the clarity of a practical transport directory with calm editorial hierarchy. Deep navy supplies structure, teal marks useful actions and selected states, warm yellow adds a small point of recognition, and pale neutral surfaces keep dense forms readable. This documents the incumbent UI-01 system and its approved UI-02 homepage extension; it does not establish a replacement identity.\n\nThe homepage extends that world with self-hosted Manrope headings and original, non-identifying İstanbul school-shuttle photography. The image establishes context while the live search remains the working product. Trust comes from honest labels, visible constraints, and recoverable states rather than promotional badges or unsupported assurances.",
+    "keyCharacteristics": [
+      "Calm navy structure with teal actions and restrained yellow detail.",
+      "Rounded, bordered form surfaces with generous readable spacing.",
+      "Expressive homepage headings over familiar UI body typography.",
+      "Visible loading, empty, error, selected, and disabled states."
+    ],
+    "rules": [
+      {
+        "name": "The Role Continuity Rule",
+        "body": "Preserve the incumbent palette and semantic aliases when extending screens. The yellow hero action is a homepage context, not a global button recolor.",
+        "section": "colors"
+      },
+      {
+        "name": "The Display Scope Rule",
+        "body": "Keep Manrope on the approved homepage headings. Do not replace body, control, or workspace typography as a side effect of extending the homepage.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "**Do** reuse UI-01 tokens, primitives, responsive behavior, and state treatments.",
+      "**Do** retain clear labels and visible keyboard focus alongside color changes.",
+      "**Do** keep school location and pickup location visibly separate.",
+      "**Do** scope the Manrope and photography extension to the approved homepage context.",
+      "**Do** use original, non-identifying shuttle imagery with honest contextual text."
+    ],
+    "donts": [
+      "**Don't** replace the incumbent navy, teal, yellow, and neutral identity during an extension.",
+      "**Don't** turn the homepage yellow action into a global primary-button change.",
+      "**Don't** add an eyebrow above the approved homepage heading.",
+      "**Don't** hide discovery loading, empty, error, retry, selected, or pagination states for visual simplicity.",
+      "**Don't** fabricate safety badges, operator endorsements, testimonials, or usage metrics.\r"
+    ]
+  }
+}

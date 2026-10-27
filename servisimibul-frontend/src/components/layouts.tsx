@@ -24,6 +24,7 @@ export function PublicLayout() {
   const [logoutError, setLogoutError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const location = useLocation()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -139,7 +140,10 @@ export function PublicLayout() {
           {logoutError}
         </div>
       )}
-      <main id="main-content" className="page-content">
+      <main
+        id="main-content"
+        className={`page-content${location.pathname === '/' ? ' home-page-content' : ''}`}
+      >
         <Outlet />
       </main>
     </div>
