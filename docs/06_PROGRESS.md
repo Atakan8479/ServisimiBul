@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-01 review findings ready for review
+## Current stage: UI-02 public homepage ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, and SEC-ARCH PR #127 are merged. UI-01 issue #115 is implemented on `codex/ui-01-design-system` in PR #128; the branch is reconciled with merged parent authentication and the requested review findings are locally verified. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, and UI-01 PR #128 are merged. UI-02 issue #117 is implemented on `codex/ui-02-homepage` in draft PR #130 and locally verified. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-02 public homepage and live school search — 2026-10-28
+
+- Draft PR #130 was opened before implementation with the exact issue title. The homepage now uses the established UI-01 navy/teal/yellow system, a self-hosted OFL Manrope display face, and original generated İstanbul school-shuttle photography whose embedded prompt excludes people, logos, readable plates, text, and certification claims.
+- The first viewport explains exact-school and separately selected pickup-neighborhood discovery, links directly into the live form, and provides a genuine `/demands` action. No unsupported safety, endorsement, operator, or usage claim was added.
+- Existing `getProvinces`, `getSchools`, `getDistricts`, `getNeighborhoods`, and `findOperators` flows are unchanged. Server-side school filters, search, sorting, pagination, request-race guards, school selection invalidation, same-province pickup geography, anonymous access, and loading/error/empty/retry states remain intact; result cards were not redesigned.
+- Responsive browser regressions cover 320, 390, 768, and 1440 pixels, the live-search anchor, school-to-pickup progression, image loading, and horizontal overflow. Before/after desktop and mobile evidence is stored under `docs/screenshots/ui-02`.
+- Frontend ESLint, strict TypeScript, all 111 Vitest tests, the production build, and `git diff --check` passed. The complete mocked Chromium suite passed all 22 tests, including WCAG 2.2 AA route scans, 200% text reflow, reduced motion, existing MVP journeys, UI-01 navigation/drawer regressions, and five UI-02 homepage tests.
+- The Impeccable detector reported no deterministic findings. Its independent finish review returned `ship` after removal of the hero eyebrow and explicit self-hosting of the display font. No backend source, endpoint, discovery rule, dependency, lockfile, database, migration, shared Supabase operation, or production setting changed.
 
 ## Verified Issue #124 parent authentication completion — 2026-10-27
 

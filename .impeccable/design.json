@@ -377,6 +377,10 @@
       "body": {
         "displayName": "Incumbent UI stack",
         "purpose": "Controls, navigation, results and workspaces retain the Inter-first system stack."
+      },
+      "code": {
+        "displayName": "Native monospace stack",
+        "purpose": "Structured technical input such as the admin tariff JSON editor uses ui-monospace, SFMono-Regular, Consolas, monospace for predictable character alignment."
       }
     },
     "shadows": [

@@ -50,6 +50,10 @@ typography:
     fontFamily: "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
+  code:
+    fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace"
+    fontSize: "0.9rem"
+    fontWeight: 400
   label:
     fontWeight: 750
   status:
@@ -159,6 +163,8 @@ The palette combines deep transit navy, clear teal, warm yellow, and slightly gr
 
 **Body Font:** The incumbent Inter-first UI/system stack in the frontmatter. Inter is a preferred family in CSS, not a newly bundled body font; the system fallback remains valid.
 
+**Code Font:** The native `ui-monospace, SFMono-Regular, Consolas, monospace` stack is reserved for structured technical input such as the admin tariff JSON editor. It is a semantic editor role, not a brand or display typeface.
+
 **Character:** Manrope gives the homepage headline and search heading a compact editorial voice. Form controls, navigation, results, and workspaces retain the established body stack.
 
 ### Hierarchy
@@ -167,6 +173,7 @@ The palette combines deep transit navy, clear teal, warm yellow, and slightly gr
 - **Headline:** other page h1 elements use the incumbent headline role.
 - **Section:** reusable section headings use the section role; the homepage search heading instead uses Manrope and `clamp(1.65rem, 3vw, 2.3rem)` with tight tracking.
 - **Body:** controls inherit the body font. Supporting paragraphs commonly use line-height from 1.5 to 1.7 and measures of roughly 60–68ch where specified; there is no universal body line-height token.
+- **Code:** structured configuration editors use the native monospace stack at `0.9rem` for predictable character alignment; ordinary labels, controls, and prose must not inherit it.
 - **Label:** strong sentence-case labels identify controls; status badges use the compact status role. The homepage begins directly with its heading, without an eyebrow.
 
 **The Display Scope Rule.** Keep Manrope on the approved homepage headings. Do not replace body, control, or workspace typography as a side effect of extending the homepage.
