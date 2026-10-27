@@ -76,7 +76,7 @@ export async function apiRequest<T>(
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     throw new ApiError({
-      title: 'Bir sorun oluştu'
+      title: 'Bir sorun oluştu',
       status: 502,
       detail: 'Bir sorun oluştu. Tekrar deneyin.',
       code: 'INVALID_API_RESPONSE',
