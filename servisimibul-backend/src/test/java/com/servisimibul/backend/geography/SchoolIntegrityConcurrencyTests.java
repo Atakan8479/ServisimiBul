@@ -21,11 +21,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.OffsetDateTime;
@@ -35,9 +37,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -52,6 +57,7 @@ class SchoolIntegrityConcurrencyTests {
     @Autowired private GeographyCatalogService geographyCatalogService;
     @Autowired private OperatorSchoolService operatorSchoolService;
     @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private AppUserRepository userRepository;
     @Autowired private OperatorProfileRepository profileRepository;
     @Autowired private ProvinceRepository provinceRepository;
@@ -161,27 +167,36 @@ class SchoolIntegrityConcurrencyTests {
     @Test
     void concurrentAdminPatchesPreserveBothChanges() throws Exception {
         createCommittedFixture(false);
-        CountDownLatch firstPatched = new CountDownLatch(1);
-        CountDownLatch secondCompleted = new CountDownLatch(1);
+        CountDownLatch firstLockHeld = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        CountDownLatch secondAttemptingLock = new CountDownLatch(1);
+        AtomicInteger firstPid = new AtomicInteger();
+        AtomicInteger secondPid = new AtomicInteger();
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             Future<?> first = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                firstPid.set(currentBackendPid());
                 SchoolPatchRequest request = new SchoolPatchRequest();
                 request.setName("Serialized school name");
                 geographyCatalogService.patchSchool(schoolId, request);
-                firstPatched.countDown();
-                waitUntilOrTimeout(secondCompleted, 1, TimeUnit.SECONDS);
+                firstLockHeld.countDown();
+                awaitRequired(releaseFirst, 10, TimeUnit.SECONDS);
             }));
-            Future<?> second = executor.submit(() -> {
-                awaitRequired(firstPatched, 10, TimeUnit.SECONDS);
-                try {
-                    SchoolPatchRequest request = new SchoolPatchRequest();
-                    request.setAddress("Serialized school address");
-                    geographyCatalogService.patchSchool(schoolId, request);
-                } finally {
-                    secondCompleted.countDown();
-                }
-            });
+            Future<?> second = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                awaitRequired(firstLockHeld, 10, TimeUnit.SECONDS);
+                secondPid.set(currentBackendPid());
+                secondAttemptingLock.countDown();
+                SchoolPatchRequest request = new SchoolPatchRequest();
+                request.setAddress("Serialized school address");
+                geographyCatalogService.patchSchool(schoolId, request);
+            }));
+
+            awaitRequired(secondAttemptingLock, 10, TimeUnit.SECONDS);
+            try {
+                awaitBackendBlockedBy(secondPid.get(), firstPid.get());
+            } finally {
+                releaseFirst.countDown();
+            }
 
             first.get(20, TimeUnit.SECONDS);
             second.get(20, TimeUnit.SECONDS);
@@ -195,33 +210,47 @@ class SchoolIntegrityConcurrencyTests {
     @Test
     void overlappingSchoolMoveAndCoverageReplacementCannotBreakProvinceInvariant() throws Exception {
         createCommittedFixture(false);
-        CountDownLatch schoolPatched = new CountDownLatch(1);
-        CountDownLatch coverageCompleted = new CountDownLatch(1);
+        CountDownLatch schoolLockHeld = new CountDownLatch(1);
+        CountDownLatch releaseSchoolMove = new CountDownLatch(1);
+        CountDownLatch coverageAttemptingLock = new CountDownLatch(1);
+        AtomicInteger schoolMovePid = new AtomicInteger();
+        AtomicInteger coveragePid = new AtomicInteger();
 
         try (var executor = Executors.newFixedThreadPool(2)) {
             Future<?> schoolMove = executor.submit(() -> transactionTemplate.executeWithoutResult(status -> {
+                schoolMovePid.set(currentBackendPid());
                 SchoolPatchRequest request = new SchoolPatchRequest();
                 request.setNeighborhoodId(foreignNeighborhoodId);
                 geographyCatalogService.patchSchool(schoolId, request);
-                schoolPatched.countDown();
-                waitUntilOrTimeout(coverageCompleted, 1, TimeUnit.SECONDS);
+                schoolLockHeld.countDown();
+                awaitRequired(releaseSchoolMove, 10, TimeUnit.SECONDS);
             }));
             Future<OperatorSchoolApiException> coverageReplacement = executor.submit(() -> {
-                awaitRequired(schoolPatched, 10, TimeUnit.SECONDS);
+                awaitRequired(schoolLockHeld, 10, TimeUnit.SECONDS);
                 authenticateOperator();
                 try {
-                    operatorSchoolService.replaceCoverage(
-                            relationshipId,
-                            new CoverageReplaceRequest(List.of(coverageNeighborhoodId))
-                    );
-                    return null;
+                    return transactionTemplate.execute(status -> {
+                        coveragePid.set(currentBackendPid());
+                        coverageAttemptingLock.countDown();
+                        operatorSchoolService.replaceCoverage(
+                                relationshipId,
+                                new CoverageReplaceRequest(List.of(coverageNeighborhoodId))
+                        );
+                        return null;
+                    });
                 } catch (OperatorSchoolApiException exception) {
                     return exception;
                 } finally {
-                    coverageCompleted.countDown();
                     SecurityContextHolder.clearContext();
                 }
             });
+
+            awaitRequired(coverageAttemptingLock, 10, TimeUnit.SECONDS);
+            try {
+                awaitBackendBlockedBy(coveragePid.get(), schoolMovePid.get());
+            } finally {
+                releaseSchoolMove.countDown();
+            }
 
             schoolMove.get(20, TimeUnit.SECONDS);
             OperatorSchoolApiException rejection = coverageReplacement.get(20, TimeUnit.SECONDS);
@@ -233,6 +262,65 @@ class SchoolIntegrityConcurrencyTests {
                 coverageRepository.findAllDetailedByOperatorSchoolId(relationshipId)
         );
         assertThat(coverage).isEmpty();
+        School school = transactionTemplate.execute(status -> schoolRepository.findDetailedById(schoolId).orElseThrow());
+        assertThat(school.getNeighborhood().getId()).isEqualTo(foreignNeighborhoodId);
+    }
+
+    @Test
+    void coverageReplacementThenCrossProvinceAdminMoveWaitsAndReturnsConflict() throws Exception {
+        createCommittedFixture(false);
+        CountDownLatch operatorLocksHeld = new CountDownLatch(1);
+        CountDownLatch releaseOperator = new CountDownLatch(1);
+        CountDownLatch adminAttemptStarted = new CountDownLatch(1);
+        AtomicInteger operatorPid = new AtomicInteger();
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<?> coverageReplacement = executor.submit(() -> {
+                authenticateOperator();
+                try {
+                    transactionTemplate.executeWithoutResult(status -> {
+                        operatorPid.set(currentBackendPid());
+                        operatorSchoolService.replaceCoverage(
+                                relationshipId,
+                                new CoverageReplaceRequest(List.of(coverageNeighborhoodId))
+                        );
+                        operatorLocksHeld.countDown();
+                        awaitRequired(releaseOperator, 10, TimeUnit.SECONDS);
+                    });
+                } finally {
+                    SecurityContextHolder.clearContext();
+                }
+            });
+            Future<MvcResult> schoolMove = executor.submit(() -> {
+                awaitRequired(operatorLocksHeld, 10, TimeUnit.SECONDS);
+                adminAttemptStarted.countDown();
+                return mockMvc.perform(patch("/api/v1/admin/schools/{id}", schoolId)
+                                .with(user("admin").roles("ADMIN"))
+                                .with(csrf())
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("""
+                                        {"neighborhoodId": %d}
+                                        """.formatted(foreignNeighborhoodId)))
+                        .andReturn();
+            });
+
+            awaitRequired(adminAttemptStarted, 10, TimeUnit.SECONDS);
+            try {
+                awaitAnyBackendBlockedBy(operatorPid.get());
+            } finally {
+                releaseOperator.countDown();
+            }
+
+            coverageReplacement.get(20, TimeUnit.SECONDS);
+            MvcResult result = schoolMove.get(20, TimeUnit.SECONDS);
+            status().isConflict().match(result);
+            content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON).match(result);
+            jsonPath("$.code").value("school_province_change_conflict").match(result);
+        }
+
+        School school = transactionTemplate.execute(status -> schoolRepository.findDetailedById(schoolId).orElseThrow());
+        assertThat(school.getNeighborhood().getId()).isEqualTo(schoolNeighborhoodId);
+        assertThat(coverageRepository.findValidCoverage(relationshipId, coverageNeighborhoodId)).isPresent();
     }
 
     private void createCommittedFixture(boolean withCoverage) {
@@ -297,6 +385,42 @@ class SchoolIntegrityConcurrencyTests {
                         List.of(new SimpleGrantedAuthority("ROLE_OPERATOR"))
                 )
         );
+    }
+
+    private int currentBackendPid() {
+        return jdbcTemplate.queryForObject("select pg_backend_pid()", Integer.class);
+    }
+
+    private void awaitBackendBlockedBy(int blockedPid, int blockerPid) {
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> assertThat(jdbcTemplate.queryForObject("""
+                                select exists (
+                                    select 1
+                                    from pg_stat_activity
+                                    where pid = ?
+                                      and wait_event_type = 'Lock'
+                                      and ? = any(pg_blocking_pids(pid))
+                                )
+                                """, Boolean.class, blockedPid, blockerPid))
+                        .as("PostgreSQL backend %s should be blocked by backend %s", blockedPid, blockerPid)
+                        .isTrue());
+    }
+
+    private void awaitAnyBackendBlockedBy(int blockerPid) {
+        await().atMost(10, TimeUnit.SECONDS)
+                .pollInterval(100, TimeUnit.MILLISECONDS)
+                .untilAsserted(() -> assertThat(jdbcTemplate.queryForObject("""
+                                select exists (
+                                    select 1
+                                    from pg_stat_activity
+                                    where pid <> pg_backend_pid()
+                                      and wait_event_type = 'Lock'
+                                      and ? = any(pg_blocking_pids(pid))
+                                )
+                                """, Boolean.class, blockerPid))
+                        .as("an ADMIN backend should be blocked by operator backend %s", blockerPid)
+                        .isTrue());
     }
 
     private void awaitRequired(CountDownLatch latch, long timeout, TimeUnit unit) {
