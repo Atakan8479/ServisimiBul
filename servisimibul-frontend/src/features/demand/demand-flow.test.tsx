@@ -528,7 +528,7 @@ describe('demand comments', () => {
 
     expect(await screen.findByText('Yorumunuz yayınlandı.')).toBeInTheDocument()
     expect(
-      screen.getByText('Servis saatini konuşabiliriz.'),
+      await screen.findByText('Servis saatini konuşabiliriz.'),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Yorumumu sil' }))
     expect(await screen.findByText('Yorumunuz silindi.')).toBeInTheDocument()
