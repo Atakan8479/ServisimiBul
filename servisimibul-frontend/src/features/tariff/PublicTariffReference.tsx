@@ -43,10 +43,9 @@ export function PublicTariffReference({
     <section className="tariff-reference" aria-live="polite">
       <div className="section-heading">
         <div>
-          <h2>Resmî tarife referansı</h2>
+          <h2>Okul servisi ücret tarifesi</h2>
           <p>
-            Bu tarife kişisel fiyat teklifi değildir. Kesin ücret için
-            işletmeciyle görüşün.
+            Kesin ücret için işletmeciyle görüşün.
           </p>
         </div>
       </div>
@@ -59,13 +58,13 @@ export function PublicTariffReference({
       )}
       {state === 'missing' && (
         <div className="empty-state">
-          <h3>Bu il için yayımlanmış tarife bulunmuyor.</h3>
-          <p>Arama sonuçlarını incelemeye devam edebilirsiniz.</p>
+          <h3>Bu il için henüz ücret tarifesi yok.</h3>
+          
         </div>
       )}
       {state === 'error' && (
         <div className="form-error" role="alert">
-          Resmî tarife şu anda yüklenemedi. Arama sonuçları etkilenmedi.
+          Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.
         </div>
       )}
       {tariff && <TariffDetails tariff={tariff} />}
@@ -99,8 +98,7 @@ function TariffDetails({ tariff }: { tariff: Tariff }) {
         ))}
       </div>
       <p className="tariff-disclaimer">
-        Mahalle seçimi mesafeyi belirlemez. Mesafe ve uygulanacak ücret ayrıca
-        teyit edilmelidir.
+        Ücret, servis mesafesine ve geçerli tarifeye göre belirlenir.
       </p>
       <a href={tariff.officialSourceUrl} rel="noreferrer" target="_blank">
         {tariff.sourceTitle} kaynağını aç
