@@ -118,7 +118,7 @@ export function PublicDiscoveryPage() {
       setProvinces(pilotProvinces)
       if (pilotProvinces.length === 0) {
         setLocationError(
-          'İstanbul bilgisi henüz okul kataloğunda bulunmuyor. Lütfen daha sonra tekrar deneyin.',
+          'İstanbul için okul bilgisi bulunamadı. Daha sonra tekrar deneyin.',
         )
       }
     } catch {
@@ -152,7 +152,7 @@ export function PublicDiscoveryPage() {
       } catch {
         if (request === schoolRequest.current) {
           setSchoolLoadError(
-            'Okul sonuçları yüklenemedi. Filtrelerinizi koruduk; tekrar deneyebilirsiniz.',
+            'Okulları yükleyemedik. Tekrar deneyin.',
           )
         }
       } finally {
@@ -204,7 +204,7 @@ export function PublicDiscoveryPage() {
 
     if (!districtMatches || !queryMatches) {
       clearSelectedSchool(
-        'Önceki okul seçimi yeni okul filtreleriyle eşleşmediği için kaldırıldı. Sonuçlardan yeniden okul seçin.',
+        'Filtreleri değiştirdiğiniz için okul seçimi temizlendi. Yeniden okul seçin.',
       )
     }
   }
@@ -470,21 +470,17 @@ export function PublicDiscoveryPage() {
     <section className="discovery-page">
       <div className="hero-card discovery-intro">
         <h1>ServisimiBul</h1>
-        <p className="hero-copy">Servis bulmanın yeni yolu.</p>
+        
         <p>
-          Okulunuzu ve mahallenizi seçin, o bölgede hizmet verdiğini belirten
-          işletmecilere doğrudan ulaşın.
+          Okulunuzu ve mahallenizi seçerek servis işletmecilerine ulaşın.
         </p>
       </div>
 
       <div className="form-card discovery-search">
         <div className="section-heading">
           <div>
-            <h2>Önce okulu bulun</h2>
-            <p>
-              Okulun konumunu filtreleyin. Servis alınacak ilçe ve mahalleyi
-              okulu seçtikten sonra ayrıca belirleyeceksiniz.
-            </p>
+            <h2>Önce okulunuzu seçin</h2>
+            
           </div>
         </div>
 
@@ -657,11 +653,8 @@ export function PublicDiscoveryPage() {
         >
           <div className="section-heading pickup-heading">
             <div>
-              <h2>Servis alınacak konumu seçin</h2>
-              <p>
-                Bu konum okulun ilçesinden farklı olabilir; aynı il içindeki
-                hizmet bölgeleri aranır.
-              </p>
+              <h2>Servise bineceğiniz yeri seçin</h2>
+              
             </div>
           </div>
 
@@ -730,10 +723,7 @@ export function PublicDiscoveryPage() {
           </div>
 
           <p className="discovery-note">
-            Mahalle eşleşmesi, belirli bir adresten kesin servis imkânı anlamına
-            gelmez. Ayrıntıları işletmeciyle görüşün. Koltuk bilgisi rezervasyon
-            değildir; UKOME tarifeleri yalnızca resmi referanstır, kişisel fiyat
-            teklifi değildir.
+            Güzergâh, boş yer ve ücret için işletmeciyle görüşün.
           </p>
 
           <button className="primary-button" disabled={searching} type="submit">
@@ -783,8 +773,8 @@ function SchoolResults({
   if (!visible) {
     return (
       <div className="school-browser-empty">
-        <h3>Okulları listelemek için il seçin</h3>
-        <p>İstanbul seçildikten sonra okul sonuçları burada görünecek.</p>
+        <h3>İl seçerek okulları görüntüleyin</h3>
+        
       </div>
     )
   }
@@ -828,10 +818,9 @@ function SchoolResults({
 
           {page.content.length === 0 ? (
             <div className="school-browser-empty">
-              <h3>Bu filtrelerle eşleşen okul yok</h3>
+              <h3>Okul bulunamadı</h3>
               <p>
-                Okul adını kısaltın, ilçe filtresini kaldırın veya tüm okul
-                filtrelerini temizleyin.
+                Farklı bir okul adı veya ilçe deneyin.
               </p>
             </div>
           ) : (
@@ -956,7 +945,7 @@ function DiscoveryResults({
 
           {page.content.length === 0 ? (
             <div className="empty-state">
-              <h3>Bu seçim için görünür bir işletmeci bulunamadı.</h3>
+              <h3>Bu bölgede henüz servis işletmecisi bulunamadı.</h3>
               <p>
                 Başka bir mahalle deneyebilir veya daha sonra tekrar arama
                 yapabilirsiniz.
@@ -1015,7 +1004,7 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
 
       {usefulOfferings.length > 0 && (
         <div className="offering-summary">
-          <h4>Paylaşılan servis bilgileri</h4>
+          <h4>Servis detayları</h4>
           <ul>
             {usefulOfferings.map((offering) => (
               <li key={offering.offeringId}>
@@ -1033,7 +1022,7 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
       )}
 
       <div className="operator-contact">
-        <span>Güzergâhı ve uygunluğu işletmeciyle doğrulayın.</span>
+        
         <a className="button-link" href={`tel:${operator.contactPhone}`}>
           {operator.contactPhone}
         </a>
