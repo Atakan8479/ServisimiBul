@@ -811,7 +811,6 @@ function SchoolResults({
 
           {page.content.length === 0 ? (
             <div className="school-browser-empty">
-              <h3>Okul bulunamadı</h3>
               <p>Farklı bir okul adı veya ilçe deneyin.</p>
             </div>
           ) : (
