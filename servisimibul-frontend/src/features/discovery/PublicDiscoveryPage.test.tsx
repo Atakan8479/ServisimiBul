@@ -78,7 +78,7 @@ describe('public operator discovery', () => {
     expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
     expect(
       screen.getByText(
-        'Bu tarife kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
+        'Kesin ücret için işletmeciyle görüşün.',
       ),
     ).toBeInTheDocument()
 
@@ -524,7 +524,7 @@ describe('public operator discovery', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Okullarda ara' }))
     expect(
-      await screen.findAllByRole('heading', {
+      await screen.findByRole('heading', {
         name: 'Okul bulunamadı',
       }),
     ).toBeInTheDocument()
