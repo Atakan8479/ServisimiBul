@@ -192,7 +192,9 @@ describe('application routes', () => {
       expect(
         screen.getByRole('heading', { name: 'ServisimiBul' }),
       ).toBeInTheDocument()
-      expect(screen.queryByText('Servis bulmanın yeni yolu.')).not.toBeInTheDocument()
+      expect(
+        screen.queryByText('Servis bulmanın yeni yolu.'),
+      ).not.toBeInTheDocument()
       // Let the public page's database-backed pilot location lookup finish.
       expect(
         await screen.findByRole('option', { name: 'İstanbul' }),

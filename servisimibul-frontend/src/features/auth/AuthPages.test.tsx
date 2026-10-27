@@ -74,9 +74,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText(
-        'Devam etmek için veli hesabınızla giriş yapın.',
-      ),
+      await screen.findByText('Devam etmek için veli hesabınızla giriş yapın.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Veli hesabınıza giriş yapın' }),
@@ -336,10 +334,14 @@ describe('operator authentication screens', () => {
       await screen.findByText('İşletme profilinizin görünürlüğü'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul/),
+      screen.getByText(
+        /Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul/,
+      ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir/),
+      screen.getByText(
+        /Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir/,
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Hesap oluştur' }),

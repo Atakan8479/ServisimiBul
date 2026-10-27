@@ -71,9 +71,7 @@ export function DemandFeedbackPanel({
       <div className="section-heading demand-feedback-heading">
         <div>
           <h2 id="feedback-title">Servis ihtiyacınız karşılandı mı?</h2>
-          <p>
-            Yanıtınız rezervasyon oluşturmaz.
-          </p>
+          <p>Yanıtınız rezervasyon oluşturmaz.</p>
         </div>
         {data?.feedback.some(
           (item) =>

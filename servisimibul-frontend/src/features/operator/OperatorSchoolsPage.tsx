@@ -428,7 +428,7 @@ export function OperatorSchoolsPage() {
         {relationships.length === 0 ? (
           <div className="empty-state">
             <h2>Henüz okul eklenmedi</h2>
-            
+
             <a className="text-button" href="#school-search-input">
               Okul aramasına git
             </a>
@@ -717,9 +717,7 @@ function CoverageEditor({
           <h3 ref={headingRef} tabIndex={-1}>
             {relationship.schoolName} için hizmet mahalleleri
           </h3>
-          <p>
-            Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.
-          </p>
+          <p>Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.</p>
         </div>
         <span className="count-badge">{selectedCount} seçili</span>
       </div>
@@ -747,7 +745,6 @@ function CoverageEditor({
           {districts.length === 0 && (
             <div className="empty-state compact-empty">
               <h4>Bu ilde henüz mahalle bilgisi bulunmuyor</h4>
-              
             </div>
           )}
           {districts.map((district) => {

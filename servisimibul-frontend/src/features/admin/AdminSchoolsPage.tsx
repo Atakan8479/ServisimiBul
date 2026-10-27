@@ -242,7 +242,6 @@ export function AdminSchoolsPage() {
     <section className="workspace-page">
       <p className="eyebrow">Okul kataloğu</p>
       <h1>Okulları yönetin</h1>
-      
 
       {error && (
         <div className="form-error" role="alert">

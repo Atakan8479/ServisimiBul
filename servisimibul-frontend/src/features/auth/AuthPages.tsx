@@ -166,16 +166,19 @@ export function RegisterPage() {
           <p>
             {emailVerificationRequired ? (
               <>
-                E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve mahalleleri ekleyin.
+                E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve
+                mahalleleri ekleyin.
               </>
             ) : (
               <>
-                Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul ve mahalleleri ekleyin.
+                Profilinizin aramalarda görünmesi için hizmet verdiğiniz okul ve
+                mahalleleri ekleyin.
               </>
             )}
           </p>
           <p>
-            Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir.
+            Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere
+            görünebilir.
           </p>
         </aside>
         <FormError message={formError} />

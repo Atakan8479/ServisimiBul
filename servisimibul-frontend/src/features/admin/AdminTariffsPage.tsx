@@ -132,7 +132,6 @@ export function AdminTariffsPage() {
   return (
     <section className="workspace-page tariff-admin-page">
       <h1>Resmî tarifeler</h1>
-      
 
       {loading ? (
         <div className="inline-loading" role="status">

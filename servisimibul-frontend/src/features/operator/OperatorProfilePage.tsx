@@ -191,7 +191,6 @@ export function OperatorProfilePage() {
       {profile && !user.operatorApprovalRequired && (
         <div className="status-banner success" role="status">
           <strong>Yönetici onayı gerekmiyor</strong>
-          
         </div>
       )}
       {loadError && (
@@ -227,7 +226,7 @@ export function OperatorProfilePage() {
           </label>
           <label className="form-field">
             <span>Herkese açık iletişim telefonu</span>
-            
+
             <input
               aria-invalid={Boolean(errors.contactPhone)}
               autoComplete="tel"

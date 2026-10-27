@@ -59,7 +59,6 @@ export function OperatorOverviewPage() {
     <section className="workspace-page">
       <p className="eyebrow">Genel bakış</p>
       <h1>Aramalarda görünmeye hazır mısınız?</h1>
-      
 
       {loading && <InlineLoading label="Arama uygunluğu yükleniyor" />}
 
@@ -170,10 +169,10 @@ export function OperatorOverviewPage() {
             aria-labelledby="optional-title"
           >
             <div>
-              <h2 id="optional-title">Araç ve servis bilgileri (isteğe bağlı)</h2>
-              <p>
-                Aramalarda görünmek için araç eklemek zorunda değilsiniz.
-              </p>
+              <h2 id="optional-title">
+                Araç ve servis bilgileri (isteğe bağlı)
+              </h2>
+              <p>Aramalarda görünmek için araç eklemek zorunda değilsiniz.</p>
             </div>
             {canManageSchools(readiness) && (
               <Link

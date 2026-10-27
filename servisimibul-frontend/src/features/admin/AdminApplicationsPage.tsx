@@ -65,7 +65,6 @@ export function AdminApplicationsPage() {
           ? 'İşletmeci başvuruları'
           : 'İşletmeciler'}
       </h1>
-      
 
       {user.operatorApprovalRequired && (
         <label className="form-field application-filter">

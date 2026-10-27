@@ -35,7 +35,9 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Aramalarda görünmek için araç eklemek zorunda değilsiniz/),
+      screen.getByText(
+        /Aramalarda görünmek için araç eklemek zorunda değilsiniz/,
+      ),
     ).toBeInTheDocument()
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
   })
@@ -134,7 +136,9 @@ describe('operator workspace flows', () => {
       await screen.findByText('Yönetici onayı gerekmiyor'),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText('Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.'),
+      screen.queryByText(
+        'Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.',
+      ),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Başvuruyu gönder' }),
@@ -280,9 +284,7 @@ describe('operator workspace flows', () => {
       await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
     )
     expect(
-      screen.getByText(
-        /Bu sayfadaki tüm okulları eklemişsiniz/,
-      ),
+      screen.getByText(/Bu sayfadaki tüm okulları eklemişsiniz/),
     ).toBeInTheDocument()
     expect(await screen.findByText('Seçili: Acıbadem')).toBeInTheDocument()
     expect(neighborhoodRequests).toEqual([])
@@ -500,7 +502,9 @@ describe('operator workspace flows', () => {
     })
     await waitFor(() => expect(heading).toHaveFocus())
     expect(
-      screen.getByText(/Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin/),
+      screen.getByText(
+        /Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin/,
+      ),
     ).toBeInTheDocument()
   })
 
@@ -778,7 +782,9 @@ describe('operator workspace flows', () => {
       within(secondCard!).getByText(/0 hizmet mahallesi/),
     ).toBeInTheDocument()
     expect(
-      within(secondCard!).getByText(/hizmet verdiğiniz mahalleleri seçip kaydedin/),
+      within(secondCard!).getByText(
+        /hizmet verdiğiniz mahalleleri seçip kaydedin/,
+      ),
     ).toBeInTheDocument()
   })
 

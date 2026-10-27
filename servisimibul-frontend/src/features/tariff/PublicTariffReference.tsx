@@ -44,9 +44,7 @@ export function PublicTariffReference({
       <div className="section-heading">
         <div>
           <h2>Okul servisi ücret tarifesi</h2>
-          <p>
-            Kesin ücret için işletmeciyle görüşün.
-          </p>
+          <p>Kesin ücret için işletmeciyle görüşün.</p>
         </div>
       </div>
 
@@ -59,7 +57,6 @@ export function PublicTariffReference({
       {state === 'missing' && (
         <div className="empty-state">
           <h3>Bu il için henüz ücret tarifesi yok.</h3>
-          
         </div>
       )}
       {state === 'error' && (

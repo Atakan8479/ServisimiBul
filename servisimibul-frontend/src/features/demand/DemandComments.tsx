@@ -190,7 +190,6 @@ export function DemandComments({
       <div className="section-heading">
         <div>
           <h2 id="comments-title">Yorumlar</h2>
-          
         </div>
         {open && !formOpen && (
           <button

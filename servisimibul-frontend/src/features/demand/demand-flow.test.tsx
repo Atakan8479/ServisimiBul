@@ -680,9 +680,7 @@ describe('demand-specific operator service responses', () => {
 
     expect(await screen.findByText('Moda Öğrenci Servisi')).toBeInTheDocument()
     expect(
-      screen.getByText(
-        /Bilgiler işletmeciler tarafından paylaşılır/,
-      ),
+      screen.getByText(/Bilgiler işletmeciler tarafından paylaşılır/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: '+905321234567 numarasını ara' }),
@@ -710,9 +708,7 @@ describe('demand-specific operator service responses', () => {
     )
 
     expect(
-      await screen.findByText(
-        /İşletmeci hesabınız yoksa/,
-      ),
+      await screen.findByText(/İşletmeci hesabınız yoksa/),
     ).toBeInTheDocument()
   })
 

@@ -89,9 +89,7 @@ export function DemandBoardPage() {
       } catch {
         if (request === demandRequest.current) {
           setDemands(undefined)
-          setDemandError(
-            'Talepleri yükleyemedik. Tekrar deneyin.',
-          )
+          setDemandError('Talepleri yükleyemedik. Tekrar deneyin.')
         }
       } finally {
         if (request === demandRequest.current) setLoadingDemands(false)
@@ -327,9 +325,7 @@ export function DemandBoardPage() {
     <section className="demand-page">
       <header className="demand-intro">
         <h1>Servis talep panosu</h1>
-        <p>
-          Okul ve mahallenizi seçerek servis taleplerini inceleyin.
-        </p>
+        <p>Okul ve mahallenizi seçerek servis taleplerini inceleyin.</p>
       </header>
 
       <section
@@ -339,7 +335,6 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2 id="demand-filter-title">Okul ve mahalleye göre bulun</h2>
-            
           </div>
           <button className="text-button" type="button" onClick={clearFilters}>
             Filtreleri temizle
@@ -363,7 +358,6 @@ export function DemandBoardPage() {
               aria-describedby={filterError ? 'academic-year-error' : undefined}
               onChange={(event) => setAcademicYear(event.target.value)}
             />
-            
           </label>
           <label className="form-field">
             Sıralama
@@ -403,7 +397,6 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2>Açık talepler</h2>
-            
           </div>
           {demands && (
             <span className="count-badge">{demands.totalElements} talep</span>
@@ -484,7 +477,6 @@ export function DemandBoardPage() {
                 <h2 id="create-demand-title">
                   Bu okul ve mahalle için zaten bir talep var
                 </h2>
-                
               </div>
               <Link
                 className="button-link"
@@ -498,10 +490,7 @@ export function DemandBoardPage() {
             <>
               <div className="section-heading">
                 <div>
-                  <h2 id="create-demand-title">
-                    Servise mi ihtiyacınız var?
-                  </h2>
-                  
+                  <h2 id="create-demand-title">Servise mi ihtiyacınız var?</h2>
                 </div>
                 {!operators && (
                   <button
@@ -553,7 +542,7 @@ export function DemandBoardPage() {
               {showCreateForm && (
                 <div className="demand-inline-form">
                   <h3>İhtiyacınızı ekleyin</h3>
-                  
+
                   <DemandSupportForm
                     busyLabel="Talep oluşturuluyor…"
                     submitLabel="Talebi ve desteğimi oluştur"
@@ -601,7 +590,8 @@ function OperatorCheckResult({
             : 'Görünür servis bulunamadı'}
         </h3>
         <p>
-          Listelenmesi servis garantisi değildir. Ücret ve güzergâh için işletmeciyle görüşün.
+          Listelenmesi servis garantisi değildir. Ücret ve güzergâh için
+          işletmeciyle görüşün.
         </p>
       </div>
       {operators.content.length > 0 && (

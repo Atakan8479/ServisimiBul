@@ -151,9 +151,7 @@ export function PublicDiscoveryPage() {
         if (request === schoolRequest.current) setSchoolPage(nextPage)
       } catch {
         if (request === schoolRequest.current) {
-          setSchoolLoadError(
-            'Okulları yükleyemedik. Tekrar deneyin.',
-          )
+          setSchoolLoadError('Okulları yükleyemedik. Tekrar deneyin.')
         }
       } finally {
         if (request === schoolRequest.current) setLoadingSchools(false)
@@ -470,17 +468,14 @@ export function PublicDiscoveryPage() {
     <section className="discovery-page">
       <div className="hero-card discovery-intro">
         <h1>ServisimiBul</h1>
-        
-        <p>
-          Okulunuzu ve mahallenizi seçerek servis işletmecilerine ulaşın.
-        </p>
+
+        <p>Okulunuzu ve mahallenizi seçerek servis işletmecilerine ulaşın.</p>
       </div>
 
       <div className="form-card discovery-search">
         <div className="section-heading">
           <div>
             <h2>Önce okulunuzu seçin</h2>
-            
           </div>
         </div>
 
@@ -654,7 +649,6 @@ export function PublicDiscoveryPage() {
           <div className="section-heading pickup-heading">
             <div>
               <h2>Servise bineceğiniz yeri seçin</h2>
-              
             </div>
           </div>
 
@@ -774,7 +768,6 @@ function SchoolResults({
     return (
       <div className="school-browser-empty">
         <h3>İl seçerek okulları görüntüleyin</h3>
-        
       </div>
     )
   }
@@ -819,9 +812,7 @@ function SchoolResults({
           {page.content.length === 0 ? (
             <div className="school-browser-empty">
               <h3>Okul bulunamadı</h3>
-              <p>
-                Farklı bir okul adı veya ilçe deneyin.
-              </p>
+              <p>Farklı bir okul adı veya ilçe deneyin.</p>
             </div>
           ) : (
             <ul className="school-result-list">
@@ -1022,7 +1013,6 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
       )}
 
       <div className="operator-contact">
-        
         <a className="button-link" href={`tel:${operator.contactPhone}`}>
           {operator.contactPhone}
         </a>

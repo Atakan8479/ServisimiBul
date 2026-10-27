@@ -11,7 +11,6 @@ export function LoadingPage() {
         <span />
       </div>
       <h1>Yükleniyor</h1>
-      
     </main>
   )
 }

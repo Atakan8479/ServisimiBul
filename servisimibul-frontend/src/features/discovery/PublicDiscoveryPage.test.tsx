@@ -74,7 +74,9 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { name: 'Okul servisi ücret tarifesi' }),
+      await screen.findByRole('heading', {
+        name: 'Okul servisi ücret tarifesi',
+      }),
     ).toBeInTheDocument()
     expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
     expect(
@@ -270,9 +272,7 @@ describe('public operator discovery', () => {
     fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
       target: { value: '34' },
     })
-    expect(
-      await screen.findByText(/Okulları yükleyemedik/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/Okulları yükleyemedik/)).toBeInTheDocument()
     expect(screen.queryByText('2 okul bulundu')).not.toBeInTheDocument()
     await screen.findByRole('option', { name: 'Kadıköy' })
     fireEvent.change(screen.getByLabelText('Okulun ilçesi'), {
@@ -396,7 +396,9 @@ describe('public operator discovery', () => {
     expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
     expect(
-      screen.getByText(/Filtreleri değiştirdiğiniz için okul seçimi temizlendi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul adında ara'), {
@@ -566,7 +568,9 @@ describe('public operator discovery', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByText('1 işletmeci bulundu')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Filtreleri değiştirdiğiniz için okul seçimi temizlendi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toHaveAttribute('role', 'status')
   })
 })

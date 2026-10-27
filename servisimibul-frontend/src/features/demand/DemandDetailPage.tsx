@@ -429,7 +429,7 @@ export function DemandDetailPage() {
           aria-labelledby="demand-count-title"
         >
           <h2 id="demand-count-title">Talep özeti</h2>
-          
+
           <dl className="demand-counts prominent">
             <div>
               <dt>Destekleyen veli</dt>
@@ -472,9 +472,12 @@ export function DemandDetailPage() {
       >
         <div className="section-heading demand-service-heading">
           <div>
-            <h2 id="service-responses-title">İşletmecilerin servis duyuruları</h2>
+            <h2 id="service-responses-title">
+              İşletmecilerin servis duyuruları
+            </h2>
             <p>
-              Bilgiler işletmeciler tarafından paylaşılır. Ücret ve müsaitliği işletmeciyle görüşün.
+              Bilgiler işletmeciler tarafından paylaşılır. Ücret ve müsaitliği
+              işletmeciyle görüşün.
             </p>
           </div>
           {serviceResponses && serviceResponses.totalElements > 0 && (
@@ -511,7 +514,6 @@ export function DemandDetailPage() {
                       <strong>
                         {response.businessName ?? 'İsimsiz işletmeci'}
                       </strong>
-                      
                     </div>
                     <div
                       className="demand-service-directions"
@@ -539,7 +541,6 @@ export function DemandDetailPage() {
             ) : (
               <div className="demand-service-empty">
                 <h3>Henüz servis bildirimi yok</h3>
-                
               </div>
             )}
             {serviceResponses.totalPages > 1 && (
@@ -581,7 +582,8 @@ export function DemandDetailPage() {
             <div>
               <h3>Bu konuma servis sunuyor musunuz?</h3>
               <p>
-                Bu okul ve mahallede hizmet veriyorsanız servis duyurusu paylaşabilirsiniz.
+                Bu okul ve mahallede hizmet veriyorsanız servis duyurusu
+                paylaşabilirsiniz.
               </p>
             </div>
             {!serviceEligibility && (
@@ -707,7 +709,6 @@ export function DemandDetailPage() {
         <div className="section-heading">
           <div>
             <h2 id="support-title">Sizin desteğiniz</h2>
-            
           </div>
           {activeSupport && (
             <span className="status-pill success">
