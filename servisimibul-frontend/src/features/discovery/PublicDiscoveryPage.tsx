@@ -761,18 +761,21 @@ export function PublicDiscoveryPage() {
       </div>
 
       <div className="discovery-content-rail">
-        <PublicTariffReference
-          key={selectedSchool?.provinceCode}
-          provinceCode={selectedSchool?.provinceCode}
-        />
         <DiscoveryResults
           error={searchError}
           loading={searching}
           onPageChange={(page) => {
             if (lastSelection) void runSearch(lastSelection, page)
           }}
+          onRetry={() => {
+            if (lastSelection) void runSearch(lastSelection, results?.page ?? 0)
+          }}
           page={results}
           selection={lastSelection}
+        />
+        <PublicTariffReference
+          key={selectedSchool?.provinceCode}
+          provinceCode={selectedSchool?.provinceCode}
         />
       </div>
     </section>
@@ -921,15 +924,25 @@ function DiscoveryResults({
   error,
   loading,
   onPageChange,
+  onRetry,
   page,
   selection,
 }: {
   error?: string
   loading: boolean
   onPageChange: (page: number) => void
+  onRetry: () => void
   page?: OperatorPage
   selection?: SearchSelection
 }) {
+  const headingRef = useRef<HTMLHeadingElement>(null)
+
+  useEffect(() => {
+    if (!loading && selection && (error || page)) {
+      headingRef.current?.focus()
+    }
+  }, [error, loading, page, selection])
+
   if (!selection && !error) return null
 
   return (
@@ -938,49 +951,84 @@ function DiscoveryResults({
       aria-busy={loading}
       aria-live="polite"
     >
-      {error && (
-        <div className="form-error" role="alert">
-          {error}
+      {!loading && error && (
+        <div className="discovery-result-state result-error" role="alert">
+          <div>
+            <h2 ref={headingRef} tabIndex={-1}>
+              Sonuçlar yüklenemedi
+            </h2>
+            <p>{error}</p>
+          </div>
+          <button className="secondary-button" onClick={onRetry} type="button">
+            Sonuçları yeniden dene
+          </button>
         </div>
       )}
 
       {loading && (
-        <div className="inline-loading" role="status">
+        <div className="discovery-result-state result-loading" role="status">
           <span className="loading-dot" aria-hidden="true" />
-          İşletmeciler aranıyor...
+          <div>
+            <strong>Uygun işletmeciler aranıyor</strong>
+            <span>Okul ve servis bölgesi eşleşmeleri kontrol ediliyor.</span>
+          </div>
         </div>
       )}
 
       {!loading && page && selection && (
         <>
-          <div className="section-heading discovery-result-heading">
+          <div className="discovery-result-heading">
             <div>
-              <h2>
+              <h2 ref={headingRef} tabIndex={-1}>
                 {page.totalElements === 0
                   ? 'Henüz bir eşleşme yok'
                   : `${page.totalElements} işletmeci bulundu`}
               </h2>
-              <p>
-                {selection.schoolName} · {selection.districtName} /{' '}
-                {selection.neighborhoodName}
-              </p>
+              <p>Seçtiğiniz okul ve servis bölgesi için gerçek sonuçlar.</p>
             </div>
+            <dl className="discovery-match-context">
+              <div>
+                <dt>Okul</dt>
+                <dd>{selection.schoolName}</dd>
+              </div>
+              <div>
+                <dt>Servis bölgesi</dt>
+                <dd>
+                  {selection.districtName} / {selection.neighborhoodName}
+                </dd>
+              </div>
+            </dl>
           </div>
 
           {page.content.length === 0 ? (
-            <div className="empty-state">
-              <h3>Bu bölgede henüz servis işletmecisi bulunamadı.</h3>
-              <p>
-                Başka bir mahalle deneyebilir veya daha sonra tekrar arama
-                yapabilirsiniz.
-              </p>
+            <div className="discovery-result-state result-empty">
+              <span className="result-state-mark" aria-hidden="true" />
+              <div>
+                <h3>Bu bölgede henüz servis işletmecisi bulunamadı.</h3>
+                <p>
+                  Farklı bir mahalle deneyebilir veya bölgedeki ihtiyacı talep
+                  panosunda görebilirsiniz.
+                </p>
+              </div>
+              <Link className="secondary-button" to="/demands" viewTransition>
+                Talep panosuna git
+              </Link>
             </div>
           ) : (
-            <div className="operator-result-list">
-              {page.content.map((operator) => (
-                <OperatorCard key={operator.operatorId} operator={operator} />
-              ))}
-            </div>
+            <>
+              <div className="discovery-result-guidance">
+                <p>
+                  Eşleşme; kesin adres, güzergâh, güncel kapasite veya fiyat
+                  garantisi değildir. Ayrıntıları işletmeciyle doğrudan görüşün.
+                </p>
+                <a href="#resmi-tarife">Resmî ücret tarifesine bak</a>
+              </div>
+              <div className="operator-result-list">
+                {page.content.map((operator) => (
+                  <OperatorCard key={operator.operatorId} operator={operator} />
+                ))}
+              </div>
+            </>
           )}
 
           {page.totalPages > 1 && (
@@ -1013,41 +1061,65 @@ function DiscoveryResults({
 }
 
 function OperatorCard({ operator }: { operator: PublicOperator }) {
-  const usefulOfferings = operator.publishedOfferings.filter(
-    (offering) => offering.description || offering.availableSeats !== null,
-  )
+  const displayName =
+    operator.businessName?.trim() || 'Bağımsız servis işletmecisi'
+  const description = operator.description?.trim()
+  const headingId = `operator-${operator.operatorId}-name`
 
   return (
-    <article className="school-card operator-result-card">
-      <div>
-        <h3>{operator.businessName || 'Bireysel servis işletmecisi'}</h3>
-        <p className="operator-school">{operator.matchingSchool.name}</p>
+    <article className="operator-result-card" aria-labelledby={headingId}>
+      <div className="operator-card-heading">
+        <div>
+          <p className="operator-match-label">Okul eşleşmesi</p>
+          <h3 id={headingId}>{displayName}</h3>
+          <p className="operator-school">{operator.matchingSchool.name}</p>
+        </div>
       </div>
 
-      {operator.description && <p>{operator.description}</p>}
+      {description && <p className="operator-description">{description}</p>}
 
-      {usefulOfferings.length > 0 && (
+      {operator.publishedOfferings.length > 0 ? (
         <div className="offering-summary">
-          <h4>Servis detayları</h4>
+          <h4>Yayımlanan servis bilgileri</h4>
           <ul>
-            {usefulOfferings.map((offering) => (
+            {operator.publishedOfferings.map((offering) => (
               <li key={offering.offeringId}>
                 {offering.description && <span>{offering.description}</span>}
-                {offering.availableSeats !== null && (
-                  <strong>
-                    Uygun koltuk: {offering.availableSeats}/
-                    {offering.vehicleCapacity}
-                  </strong>
-                )}
+                <dl>
+                  <div>
+                    <dt>Araç kapasitesi</dt>
+                    <dd>{offering.vehicleCapacity} kişi</dd>
+                  </div>
+                  {offering.availableSeats !== null && (
+                    <div>
+                      <dt>Yayımlanan uygun koltuk</dt>
+                      <dd>{offering.availableSeats}</dd>
+                    </div>
+                  )}
+                </dl>
               </li>
             ))}
           </ul>
         </div>
+      ) : (
+        <div className="operator-offering-empty">
+          <strong>Servis ayrıntısı yayımlanmamış</strong>
+          <span>
+            Araç ve koltuk bilgisi olmadan da bu işletmeciyle doğrudan
+            görüşebilirsiniz.
+          </span>
+        </div>
       )}
 
       <div className="operator-contact">
-        <a className="button-link" href={`tel:${operator.contactPhone}`}>
-          {operator.contactPhone}
+        <p>Doğrudan iletişim</p>
+        <a
+          aria-label={`Telefonla ara: ${operator.contactPhone}`}
+          className="operator-phone-link"
+          href={`tel:${operator.contactPhone}`}
+        >
+          <span>Telefonla ara</span>
+          <strong>{operator.contactPhone}</strong>
         </a>
       </div>
     </article>
