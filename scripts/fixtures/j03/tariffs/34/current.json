@@ -5,12 +5,31 @@
   "academicYear": "2026-2027",
   "currency": "TRY",
   "effectiveFrom": "2026-09-01",
-  "effectiveTo": "2027-08-31",
+  "effectiveTo": null,
   "sourceTitle": "J03 sentetik UKOME kararı",
-  "officialSourceUrl": "https://example.gov.tr/j03-ukome",
+  "officialSourceUrl": "https://fixtures.invalid/j03-ukome",
   "version": "j03-v1",
+  "additionalKilometerRule": {
+    "startsAfterDistanceKm": 25,
+    "monthlyAmountPerKilometerKurus": 8799
+  },
+  "notes": [
+    "Tutarlar KDV dahil sentetik azami test değerleridir.",
+    "Sentetik test koşulunda rehber personel ücreti ayrıca değerlendirilebilir.",
+    "Sentetik test koşulunda kardeş indirimi uygulanabilir."
+  ],
   "bands": [
-    { "minDistanceKm": 0, "maxDistanceKm": 3, "amountKurus": 120000 },
-    { "minDistanceKm": 3, "maxDistanceKm": null, "amountKurus": 150000 }
+    {
+      "minDistanceKm": 0,
+      "maxDistanceKm": 3,
+      "amountKurus": 1200000,
+      "annualAmountKurus": 10800000
+    },
+    {
+      "minDistanceKm": 3,
+      "maxDistanceKm": 25,
+      "amountKurus": 1500000,
+      "annualAmountKurus": 13500000
+    }
   ]
 }

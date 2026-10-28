@@ -1,8 +1,8 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-02 public homepage ready for review
+## Current stage: UKOME-02 authoritative tariff presentation ready for CI review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, and UI-01 PR #128 are merged. UI-02 issue #117 is implemented on `codex/ui-02-homepage` in draft PR #130 and locally verified. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, and UI-01 PR #128 are merged. UI-02 issue #117 is implemented on `codex/ui-02-homepage` in draft PR #130 and locally verified. UKOME-01 is ready for review in PR #131; UKOME-02 is stacked on it in draft PR #132 and has completed non-browser local verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
 ## Verified UI-02 public homepage and live school search — 2026-10-28
 
@@ -774,3 +774,12 @@ Never mark tasks done because code was generated: verification and review requir
 - Regression coverage proves legacy reads, extended immutable-version persistence, optimistic version conflicts, atomic saves and rollback, strict official values, 25/26/30 km boundary arithmetic, frontend legacy/new parsing, and public monthly/annual/surcharge rendering.
 - The complete backend verification passed on disposable PostgreSQL 17.11: all 16 Flyway migrations validated, Hibernate validation succeeded, and 282 tests passed with zero failures, errors, or skips. Frontend ESLint, strict TypeScript, all 114 Vitest/Testing Library/MSW tests, and the Vite production build passed.
 - No tariff was copied into `SB_TARIFF_STORAGE_DIR`, no live API or shared Supabase state was read or changed, and no migration, dependency, lockfile, credential, or production setting was changed. Publishing the reviewed fixture remains a separate explicitly approved operational action.
+
+## Verified UKOME-02 local tariff-presentation evidence — 2026-10-28
+
+- Draft PR #132 was opened before implementation with the exact issue title and targets the UKOME-01 branch because it consumes PR #131's validated annual amounts, source notes, nullable effective end date, and separate additional-kilometre rule.
+- Selecting a school now loads its province tariff directly from the existing anonymous backend endpoint and exposes a same-page tariff link before operator search. Missing, invalid, loading, and retry states remain isolated from discovery results.
+- The public tariff presents province, academic year, authority, effective period, version, source title/link, accessible monthly and annual columns, and the additional-kilometre rule as a separate row. Maximum/reference guidance is explicit, while guide-attendant and sibling conditions are selected from backend-provided notes; no fare is hardcoded in application source or inferred from neighborhood selection.
+- The ADMIN JSON workflow retains first creation, current-version reload, session/CSRF handling, schema validation, expected-version writes, and 409 draft preservation. A live preview uses the same tariff presentation component and identifies the first invalid field before save.
+- Frontend ESLint, strict TypeScript, all 118 Vitest/Testing Library/MSW tests, the Vite production build, scoped Prettier, `git diff --check`, and Playwright discovery of all 23 browser tests passed. The local browser process could not launch Edge inside the sandbox; the approved outside-sandbox retry was not executed because the environment approval reviewer reported a usage-limit failure. GitHub Actions browser and real full-stack jobs remain the execution gate.
+- No backend endpoint or authorization change, dependency, lockfile, migration, live tariff publication, shared Supabase operation, credential, or production-setting change was made. The only backend-facing fixture change is the disposable J-03 tariff volume used by real full-stack verification.

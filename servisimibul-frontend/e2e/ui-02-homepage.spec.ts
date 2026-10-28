@@ -83,6 +83,6 @@ test('hero CTA moves keyboard focus into the unchanged live search flow', async 
 
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')
   await expect(page.getByLabel('Okulun ilçesi')).toBeEnabled()
-  await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()
+  await page.getByRole('button', { name: 'Bu okulu seç: Örnek Okulu' }).click()
   await expect(page.getByLabel('Servis alınacak ilçe')).toBeEnabled()
 })

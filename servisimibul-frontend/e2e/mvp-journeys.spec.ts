@@ -243,12 +243,14 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(
       publicPage.getByRole('link', {
-        name: 'Güncel UKOME kararı kaynağını aç',
+        name: 'Resmî belgeyi aç (yeni sekmede)',
       }),
     ).toBeVisible()
     await expect(
-      publicPage.getByText('Bu tarife kişisel fiyat teklifi değildir.'),
+      publicPage.getByText('Bu tablo bir fiyat teklifi değildir.'),
     ).toBeVisible()
+    await expect(publicPage.getByText('₺39.970,00')).toBeVisible()
+    await expect(publicPage.getByText('+₺87,99')).toBeVisible()
   })
 
   await test.step('13. Suspend the operator and verify visibility and session removal', async () => {
@@ -319,7 +321,7 @@ test('edits school filters after listing and keeps pickup geography separate', a
   await expect(schoolNames).toHaveText(['Zübeyde Hanım İlkokulu'])
 
   await page
-    .getByRole('button', { name: 'Zübeyde Hanım İlkokulu okulunu seç' })
+    .getByRole('button', { name: 'Bu okulu seç: Zübeyde Hanım İlkokulu' })
     .click()
   await expect(page.getByText('Seçilen okul')).toBeVisible()
   await expect(page.getByLabel('Servis alınacak ilçe')).toBeEnabled()
@@ -404,7 +406,7 @@ async function search(page: Page, district: string, neighborhood: string) {
     .getByLabel('Okulun bulunduğu il')
     .selectOption({ label: 'İstanbul' })
   await page.getByText('Örnek Okulu', { exact: true }).waitFor()
-  await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()
+  await page.getByRole('button', { name: 'Bu okulu seç: Örnek Okulu' }).click()
   await page
     .locator('select[name="districtId"]')
     .selectOption({ label: district })

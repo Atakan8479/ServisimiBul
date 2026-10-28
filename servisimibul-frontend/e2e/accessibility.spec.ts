@@ -38,6 +38,11 @@ for (const viewport of viewports) {
 
     await page.goto('/')
     await audit(page, 'public discovery')
+    await selectSchoolForTariff(page)
+    await expect(
+      page.getByRole('heading', { name: 'Resmî UKOME tarifesi' }),
+    ).toBeVisible()
+    await audit(page, 'public UKOME tariff')
 
     state.demandCreated = true
     await page.goto('/demands')
@@ -118,6 +123,37 @@ for (const viewport of viewports) {
     expect(consoleProblems).toEqual([])
   })
 }
+
+test('compact tariff table and source conditions remain keyboard reachable', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  await page.setViewportSize({ width: 320, height: 844 })
+  await installMockApi(page, state)
+  await page.goto('/')
+  await selectSchoolForTariff(page)
+
+  const tableRegion = page.getByRole('region', {
+    name: 'Mesafeye göre aylık ve yıllık resmî ücretler',
+  })
+  await tableRegion.focus()
+  await expect(tableRegion).toBeFocused()
+  expect(
+    await tableRegion.evaluate(
+      (element) => element.scrollWidth > element.clientWidth,
+    ),
+  ).toBe(true)
+  await page.keyboard.press('ArrowRight')
+  await expect
+    .poll(() => tableRegion.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0)
+
+  const conditions = page.getByText('Kaynaktaki tüm koşulları göster (3)')
+  await conditions.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.locator('.tariff-all-notes')).toHaveAttribute('open', '')
+  await audit(page, 'expanded compact UKOME tariff')
+})
 
 test('route changes restore page context and mobile controls meet the touch target floor', async ({
   page,
@@ -287,6 +323,14 @@ async function audit(page: Page, surface: string) {
     () => document.documentElement.scrollWidth - window.innerWidth,
   )
   expect(overflow, `${surface} horizontal overflow`).toBeLessThanOrEqual(1)
+}
+
+async function selectSchoolForTariff(page: Page) {
+  await page
+    .getByLabel('Okulun bulunduğu il')
+    .selectOption({ label: 'İstanbul' })
+  await page.getByText('Örnek Okulu', { exact: true }).waitFor()
+  await page.getByRole('button', { name: 'Bu okulu seç: Örnek Okulu' }).click()
 }
 
 async function assertVisibleKeyboardFocus(page: Page) {
