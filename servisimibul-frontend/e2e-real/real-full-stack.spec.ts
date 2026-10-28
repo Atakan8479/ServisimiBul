@@ -1587,7 +1587,12 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(
           mobilePage.getByRole('link', { name: 'Veli girişi' }),
         ).toBeVisible()
+        await expect(mobilePage.locator('#public-navigation')).toHaveCSS(
+          'opacity',
+          '1',
+        )
         const accessibility = await new AxeBuilder({ page: mobilePage })
+          .include('#public-navigation')
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
           .analyze()
         expect(accessibility.violations).toEqual([])
