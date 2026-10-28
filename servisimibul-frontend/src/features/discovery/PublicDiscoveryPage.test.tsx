@@ -12,6 +12,25 @@ import { routes } from '../../app/router'
 import { server } from '../../test/server'
 
 describe('public operator discovery', () => {
+  it('introduces live discovery without replacing the real search controls', async () => {
+    server.use(...locationHandlers())
+    renderHome()
+
+    expect(
+      screen.getByRole('heading', {
+        name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Okul aramaya başla' }),
+    ).toHaveAttribute('href', '#school-search')
+    expect(
+      screen.getByRole('link', { name: 'Talep panosunu incele' }),
+    ).toHaveAttribute('href', '/demands')
+    expect(await screen.findByLabelText('Okulun bulunduğu il')).toBeEnabled()
+    expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
+  })
+
   it('recovers when the province endpoint temporarily has no network connection', async () => {
     let attempts = 0
     server.use(
@@ -75,7 +94,7 @@ describe('public operator discovery', () => {
         name: 'Okul servisi ücret tarifesi',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText('₺1.300,00')).toBeInTheDocument()
+    expect(screen.getByText('₺1.300,00 / ay')).toBeInTheDocument()
     expect(
       screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
     ).toBeInTheDocument()

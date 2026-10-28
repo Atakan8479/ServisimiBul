@@ -247,7 +247,7 @@ export function DemandDetailPage() {
       setServiceError(
         error instanceof ApiError
           ? error.problem.detail
-          : 'Servis bildirimi yayınlanamadı. Uygunluk bilgilerini yenileyin.',
+          : 'Servis bildirimi yayınlanamadı. Okul ve mahalle bilgilerinizi yenileyin.',
       )
     }
   }
@@ -594,7 +594,7 @@ export function DemandDetailPage() {
                 type="button"
               >
                 {servicePending
-                  ? 'Uygunluk kontrol ediliyor…'
+                  ? 'Bilgiler kontrol ediliyor…'
                   : 'Bu talep için servis ekle'}
               </button>
             )}

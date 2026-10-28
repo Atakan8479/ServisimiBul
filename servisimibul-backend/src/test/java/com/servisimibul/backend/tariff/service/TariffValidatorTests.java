@@ -1,5 +1,6 @@
 package com.servisimibul.backend.tariff.service;
 
+import com.servisimibul.backend.tariff.dto.TariffDtos.AdditionalKilometerRule;
 import com.servisimibul.backend.tariff.dto.TariffDtos.TariffBand;
 import com.servisimibul.backend.tariff.dto.TariffDtos.TariffDocument;
 import com.servisimibul.backend.tariff.exception.TariffApiException;
@@ -53,6 +54,88 @@ class TariffValidatorTests {
                                     "tariff.bands[1].amountKurus"
                             );
                 });
+    }
+
+    @Test
+    void acceptsAnnualAmountsAndSeparateAdditionalKilometerRuleWithoutAnEndDate() {
+        TariffDocument normalized = validator.validateAndNormalize(new TariffDocument(
+                "34",
+                "İstanbul",
+                "İBB Meclisi",
+                "2026-2027",
+                "TRY",
+                LocalDate.of(2026, 7, 20),
+                null,
+                "Official tariff",
+                "https://tuhim.ibb.gov.tr/tariff.pdf",
+                "2026-2027-ibb-813",
+                new AdditionalKilometerRule(new BigDecimal("25.0"), new BigDecimal("8799.0")),
+                List.of(" KDV dahil azami tarifedir. "),
+                List.of(
+                        new TariffBand(
+                                BigDecimal.ZERO,
+                                BigDecimal.ONE,
+                                new BigDecimal("445600.0"),
+                                new BigDecimal("3997000.0")
+                        ),
+                        new TariffBand(
+                                BigDecimal.ONE,
+                                new BigDecimal("25"),
+                                new BigDecimal("1043600"),
+                                new BigDecimal("9361000")
+                        )
+                )
+        ));
+
+        assertThat(normalized.effectiveTo()).isNull();
+        assertThat(normalized.notes()).containsExactly("KDV dahil azami tarifedir.");
+        assertThat(normalized.additionalKilometerRule().startsAfterDistanceKm())
+                .isEqualByComparingTo("25");
+        assertThat(normalized.additionalKilometerRule().monthlyAmountPerKilometerKurus())
+                .isEqualByComparingTo("8799");
+        assertThat(normalized.bands()).allSatisfy(
+                band -> assertThat(band.annualAmountKurus()).isNotNull()
+        );
+    }
+
+    @Test
+    void rejectsPartialAnnualTableAndMismatchedAdditionalKilometerThreshold() {
+        TariffDocument invalid = new TariffDocument(
+                "34",
+                "İstanbul",
+                "İBB Meclisi",
+                "2026-2027",
+                "TRY",
+                LocalDate.of(2026, 7, 20),
+                null,
+                "Official tariff",
+                "https://tuhim.ibb.gov.tr/tariff.pdf",
+                "v2",
+                new AdditionalKilometerRule(new BigDecimal("26"), new BigDecimal("8799.5")),
+                List.of(),
+                List.of(
+                        new TariffBand(
+                                BigDecimal.ZERO,
+                                BigDecimal.ONE,
+                                new BigDecimal("445600"),
+                                new BigDecimal("3997000")
+                        ),
+                        new TariffBand(
+                                BigDecimal.ONE,
+                                new BigDecimal("25"),
+                                new BigDecimal("1043600"),
+                                null
+                        )
+                )
+        );
+
+        assertThatThrownBy(() -> validator.validateAndNormalize(invalid))
+                .isInstanceOfSatisfying(TariffApiException.class, exception -> assertThat(exception.fieldErrors())
+                        .containsKeys(
+                                "tariff.bands[1].annualAmountKurus",
+                                "tariff.additionalKilometerRule.startsAfterDistanceKm",
+                                "tariff.additionalKilometerRule.monthlyAmountPerKilometerKurus"
+                        ));
     }
 
     @Test

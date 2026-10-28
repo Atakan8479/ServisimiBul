@@ -246,7 +246,7 @@ export function ParentSignupPage() {
       }
       if (!(error instanceof ApiError)) {
         setFormError(
-          'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+          'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
         )
         return
       }
@@ -434,7 +434,7 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
       setFormError(
         error instanceof ApiError
           ? applyFieldErrors(error, setError, loginFields)
-          : 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+          : 'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
       )
     }
   }

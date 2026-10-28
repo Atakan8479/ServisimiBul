@@ -1,0 +1,50 @@
+{
+  "provinceCode": "34",
+  "provinceName": "İstanbul",
+  "authority": "İstanbul Büyükşehir Belediyesi Meclisi",
+  "academicYear": "2026-2027",
+  "currency": "TRY",
+  "effectiveFrom": "2026-07-20",
+  "effectiveTo": null,
+  "sourceTitle": "Okul Servis Taşıtlarında Uygulanacak Ücret Tarifeleri - 17.07.2026 tarih ve 813 sayılı İBB Meclis kararı",
+  "officialSourceUrl": "https://tuhim.ibb.gov.tr/media/27492/okul-servis-ta%C5%9F%C4%B1mac%C4%B1l%C4%B1%C4%9F%C4%B1-%C3%BCcret-tarifesi.pdf",
+  "version": "2026-2027-ibb-813",
+  "additionalKilometerRule": {
+    "startsAfterDistanceKm": 25,
+    "monthlyAmountPerKilometerKurus": 8799
+  },
+  "notes": [
+    "Yıllık tutarlar 2026-2027 eğitim-öğretim süresi olan 8,97 ay üzerinden belirlenmiştir; okulun haftada 2, 3 veya 4 gün açık olması halinde aylık ücretin sırasıyla %60, %75 veya %90'ı ödenir.",
+    "Tutarlar KDV dahil azami ücretlerdir; tarife ve uyulması gereken kuralların üzerinde tasarrufta bulunulamaz.",
+    "Veliler sözleşme öncesi teklif aşaması dahil tarife dışında ücret ödemeye zorlanamaz.",
+    "Yıllık veya yarıyıllık bedel taksitlendirilebilir; tek çekim veya tek seferde nakit ödeme zorunlu tutulamaz ve peşin ödemede %5 indirim uygulanır.",
+    "Tarife, resmi ve özel eğitim kurumlarında okul ile öğrenci evi arasındaki okul servis taşımacılığı için geçerlidir.",
+    "Okul öncesi, ilkokul ve ortaokul öğrencilerini taşıyan servislerde rehber personel bulundurulması zorunludur.",
+    "Okul öncesi, ilkokul ve ortaokul taşıma ücretine en fazla %35 rehber personel ücreti eklenebilir; lise ve dengi okullarda eklenemez.",
+    "Gezi, özel ferdi kaza sigortası, kapasitenin altında taşıma, lüks veya yüksek modelli araç ve özel ambulans gibi ilave hizmetler bu tarifeyle ilişkilendirilemez.",
+    "Okullar ve bağlantılı kurumlar UKOME veya İBB Meclisi kararındaki yükümlülükler dışında ücretsiz taşıma, bağış, komisyon veya benzeri yükümlülükler getiremez; kararda belirtilen ihtiyaç sahibi bir öğrenci istisnası saklıdır.",
+    "Mesafe, ev ile okul arasındaki ulaşılabilir en yakın otobüs veya minibüs güzergahına göre; böyle bir güzergah yoksa ulaşılabilir en yakın mesafeye göre tek gidiş üzerinden belirlenir. Ücret gidiş-dönüş içindir.",
+    "25 km üzerindeki her kilometre için aylık 87,99 TL eklenir; köprü geçiş ücreti toplam öğrenci sayısına bölünerek eklenebilir.",
+    "Belgelenmiş ve aynı okula giden kardeşlerde ikinci çocuk için %10, üçüncü ve sonraki çocuklar için %20 indirim uygulanır; tam tarifeden en az %20 indirim varsa ayrıca kardeş indirimi uygulanmaz.",
+    "Öğretim yılı içindeki resmi ve idari tatiller ücrete tabidir; yarıyıl tatili için ücret alınmaz.",
+    "Ücret tarifesi servis taşıtının görünür bir yerinde bulundurulmalıdır.",
+    "İkametgah veya okul değişikliği, okuma hakkının kaybı ya da uzun süreli hastalık gibi hallerde servis ücreti iade edilmelidir.",
+    "Bazı güzergahlarda öğrenci sayısı dokuzdan azsa, öğrenci mesafe ücreti şoför hariç dokuz kişi üzerinden hesaplanıp mevcut öğrenci sayısına bölünebilir.",
+    "Taşımacı, sözleşmeli taşımacı ve veli sözleşmeleri TUHİM sitesindeki ilgili tip sözleşmelere göre yapılmalıdır."
+  ],
+  "bands": [
+    { "minDistanceKm": 0, "maxDistanceKm": 1, "amountKurus": 445600, "annualAmountKurus": 3997000 },
+    { "minDistanceKm": 1, "maxDistanceKm": 3, "amountKurus": 477200, "annualAmountKurus": 4280400 },
+    { "minDistanceKm": 3, "maxDistanceKm": 5, "amountKurus": 515700, "annualAmountKurus": 4625800 },
+    { "minDistanceKm": 5, "maxDistanceKm": 7, "amountKurus": 537900, "annualAmountKurus": 4824900 },
+    { "minDistanceKm": 7, "maxDistanceKm": 9, "amountKurus": 567100, "annualAmountKurus": 5086800 },
+    { "minDistanceKm": 9, "maxDistanceKm": 11, "amountKurus": 656900, "annualAmountKurus": 5892300 },
+    { "minDistanceKm": 11, "maxDistanceKm": 13, "amountKurus": 756100, "annualAmountKurus": 6782200 },
+    { "minDistanceKm": 13, "maxDistanceKm": 15, "amountKurus": 794200, "annualAmountKurus": 7123900 },
+    { "minDistanceKm": 15, "maxDistanceKm": 17, "amountKurus": 857300, "annualAmountKurus": 7689900 },
+    { "minDistanceKm": 17, "maxDistanceKm": 19, "amountKurus": 906400, "annualAmountKurus": 8130400 },
+    { "minDistanceKm": 19, "maxDistanceKm": 21, "amountKurus": 964500, "annualAmountKurus": 8651500 },
+    { "minDistanceKm": 21, "maxDistanceKm": 23, "amountKurus": 1004600, "annualAmountKurus": 9011200 },
+    { "minDistanceKm": 23, "maxDistanceKm": 25, "amountKurus": 1043600, "annualAmountKurus": 9361000 }
+  ]
+}

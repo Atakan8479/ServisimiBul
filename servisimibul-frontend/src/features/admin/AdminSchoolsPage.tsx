@@ -411,7 +411,7 @@ export function AdminSchoolsPage() {
 
       <section className="catalog-section" aria-labelledby="school-list-title">
         <div className="section-heading">
-          <h2 id="school-list-title">Katalog</h2>
+          <h2 id="school-list-title">Okullar</h2>
           <span className="count-badge">{result?.totalElements ?? 0} okul</span>
         </div>
         <form

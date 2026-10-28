@@ -85,6 +85,68 @@ class FileTariffStoreTests {
     }
 
     @Test
+    void readsLegacyJsonAndPreservesExtendedFieldsInANewVersion() throws Exception {
+        Path provinceDirectory = storageDirectory.resolve("34");
+        Files.createDirectories(provinceDirectory);
+        Files.writeString(provinceDirectory.resolve("current.json"), """
+                {
+                  "provinceCode": "34",
+                  "provinceName": "Istanbul",
+                  "authority": "IBB UKOME",
+                  "academicYear": "2025-2026",
+                  "currency": "TRY",
+                  "effectiveFrom": "2025-09-01",
+                  "effectiveTo": "2026-08-31",
+                  "sourceTitle": "Legacy official tariff",
+                  "officialSourceUrl": "https://example.gov.tr/legacy-tariff",
+                  "version": "legacy-v1",
+                  "bands": [
+                    {"minDistanceKm": 0, "maxDistanceKm": null, "amountKurus": 120000}
+                  ]
+                }
+                """);
+
+        FileTariffStore store = store();
+        assertThat(store.current("34").bands().getFirst().annualAmountKurus()).isNull();
+
+        TariffDocument extended = new TariffDocument(
+                "34",
+                "Istanbul",
+                "IBB UKOME",
+                "2026-2027",
+                "TRY",
+                LocalDate.of(2026, 7, 20),
+                null,
+                "Official tariff",
+                "https://tuhim.ibb.gov.tr/tariff.pdf",
+                "extended-v2",
+                new com.servisimibul.backend.tariff.dto.TariffDtos.AdditionalKilometerRule(
+                        BigDecimal.valueOf(25),
+                        BigDecimal.valueOf(8_799)
+                ),
+                List.of("KDV dahil azami tarifedir."),
+                List.of(new TariffBand(
+                        BigDecimal.ZERO,
+                        BigDecimal.valueOf(25),
+                        BigDecimal.valueOf(1_043_600),
+                        BigDecimal.valueOf(9_361_000)
+                ))
+        );
+
+        store.replace("34", "legacy-v1", extended);
+
+        TariffDocument current = store.current("34");
+        assertThat(current.version()).isEqualTo("extended-v2");
+        assertThat(current.bands().getFirst().annualAmountKurus())
+                .isEqualByComparingTo("9361000");
+        assertThat(current.additionalKilometerRule().monthlyAmountPerKilometerKurus())
+                .isEqualByComparingTo("8799");
+        assertThat(current.notes()).containsExactly("KDV dahil azami tarifedir.");
+        assertThat(provinceDirectory.resolve("versions/version-extended-v2.json"))
+                .isRegularFile();
+    }
+
+    @Test
     void missingStorageConfigurationFailsWithoutExposingAPath() {
         FileTariffStore store = new FileTariffStore(
                 new TariffProperties(" "),

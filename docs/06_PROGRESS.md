@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: Issue #124 parent authentication flow ready for review
+## Current stage: UI-02 public homepage ready for review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), and Issues #100/#104 are merged. Issue #124 is implemented on `codex/issue-124-parent-login` for review. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, and UI-01 PR #128 are merged. UI-02 issue #117 is implemented on `codex/ui-02-homepage` in draft PR #130 and locally verified. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-02 public homepage and live school search — 2026-10-28
+
+- Draft PR #130 was opened before implementation with the exact issue title. The homepage now uses the established UI-01 navy/teal/yellow system, a self-hosted OFL Manrope display face, and original generated İstanbul school-shuttle photography whose embedded prompt excludes people, logos, readable plates, text, and certification claims.
+- The first viewport explains exact-school and separately selected pickup-neighborhood discovery, links directly into the live form, and provides a genuine `/demands` action. No unsupported safety, endorsement, operator, or usage claim was added.
+- Existing `getProvinces`, `getSchools`, `getDistricts`, `getNeighborhoods`, and `findOperators` flows are unchanged. Server-side school filters, search, sorting, pagination, request-race guards, school selection invalidation, same-province pickup geography, anonymous access, and loading/error/empty/retry states remain intact; result cards were not redesigned.
+- Responsive browser regressions cover 320, 390, 768, and 1440 pixels, the live-search anchor, school-to-pickup progression, image loading, and horizontal overflow. Before/after desktop and mobile evidence is stored under `docs/screenshots/ui-02`.
+- Frontend ESLint, strict TypeScript, all 111 Vitest tests, the production build, and `git diff --check` passed. The complete mocked Chromium suite passed all 22 tests, including WCAG 2.2 AA route scans, 200% text reflow, reduced motion, existing MVP journeys, UI-01 navigation/drawer regressions, and five UI-02 homepage tests.
+- The Impeccable detector reported no deterministic findings. Its independent finish review returned `ship` after removal of the hero eyebrow and explicit self-hosting of the display font. No backend source, endpoint, discovery rule, dependency, lockfile, database, migration, shared Supabase operation, or production setting changed.
 
 ## Verified Issue #124 parent authentication completion — 2026-10-27
 
@@ -13,6 +22,16 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 - Node.js 24 verification passed Prettier on touched files, ESLint, strict TypeScript, all 103 Vitest tests, and the production build. The complete mocked Chromium suite passed 12/12, including WCAG 2.2 AA and overflow checks at 1440×900, 768×1024, 390×844, and 320×844.
 - The real Vite/Spring Boot/Playwright journey passed 1/1 against a fresh disposable PostgreSQL 17.4 database. It exercised real parent registration, immediate login, `/auth/me`, session persistence after reload, demand creation/support, notifications, secure logout, and denial of protected access after logout, then deleted the cluster, generated credentials, processes, and tariff directory.
 - No shared Supabase connection, schema/data write, migration, SMTP activation, production configuration, dependency, or lockfile change occurred. GitHub Actions and peer review remain required before merge.
+
+## Verified UI-01 shared design system — 2026-10-28
+
+- PR #128 establishes semantic navy/teal/yellow/neutral design tokens plus shared brand, button, card, badge, field, state, typography, and section-shell primitives without adding a dependency or changing the npm/Node baseline.
+- The branch now includes the merged parent-authentication journey from `main`. The public header preserves parent session state, notifications, secure logout, session-expiry handling, role-aware routes, and authentication errors while adding a compact keyboard-accessible mobile menu. Operator and admin layouts share one responsive workspace shell with their role-specific navigation and authorization behavior preserved.
+- The workspace uses a desktop sidebar and an off-canvas mobile dialog. Opening moves focus into the drawer and makes background content inert; Tab and Shift+Tab remain contained; Escape and backdrop dismissal restore the menu trigger; route selection leaves focus on the destination heading. The desktop sidebar remains unchanged, and the drawer retains 44-pixel controls, reduced motion, and 200% text reflow support.
+- Shared `FormField` controls now combine and deduplicate caller-provided help/error description IDs, preserve explicit control IDs and valid states, and force `aria-invalid` only when an error exists. Focused component regressions cover labels, descriptions, invalid state, drawer containment, restoration, and route focus.
+- Before/after public and operator screenshots were captured at 1440×900 and 390×844 under `docs/screenshots/ui-01`. The final visual pass uses reduced motion to avoid transition artifacts and confirms the reference archive's restrained deep-navy, teal, warm-yellow, and neutral direction without importing its mock data, routes, dependencies, or package-manager setup.
+- Frontend ESLint, strict TypeScript, all 110 Vitest tests, the production build, and `git diff --check` passed. The complete mocked Chromium Playwright suite passed all 17 tests, including WCAG route scans, 320-pixel/200%-text reflow, touch targets, reduced motion, all existing MVP journeys, the 320/390/768/1440 shared-navigation regression, and mobile drawer focus behavior. The real journey passed 1/1 against fresh disposable PostgreSQL 17.11 after replaying Flyway V1–V16, then deleted the database, tariff volume, and generated credentials.
+- Current React Router NavLink and transition guidance was checked through Context7. No backend source, API contract, authentication rule, dependency, lockfile, database, migration, shared Supabase operation, or production setting changed. GitHub Actions and peer review remain required before merge.
 
 ## Verified SEC-ARCH school integrity follow-up — 2026-10-27
 
@@ -745,3 +764,13 @@ Never mark tasks done because code was generated: verification and review requir
 - The final real full-stack Playwright rerun passed in 28 seconds against a separate disposable PostgreSQL 17.11 instance. It verifies that a parent report leaves the service response visible, and that only a subsequent reasoned admin moderation action withdraws it before an operator republishes and the normal feedback lifecycle continues.
 - The disposable PostgreSQL 17 backup/restore drill passed. The restored V14 target passed all 13 read-only migration checks for exact history/inventory, RLS, policies, restricted roles, grants, protected Flyway history, and existing schema invariants; backend startup and immutable tariff rollback also passed.
 - No shared Supabase read, migration, or mutation was performed. Shared Supabase remains recorded at V12; V13–V14 deployment is a separate approval-gated operation. Issue #90 remains the sole owner of notification delivery.
+
+## Verified UKOME-01 official 2026–2027 tariff evidence — 2026-10-28
+
+- Branch: `codex/ukome-01-tariff`; GitHub issue #116; pull request #131. The PR was opened as a draft before implementation, with the issue title preserved exactly.
+- The two-page official İBB/UKOME school-transport tariff PDF was downloaded from the issue's source URL, rendered, visually inspected, and text-extracted. Its SHA-256 is `e8726703956f82a563e2ee2e163d48c9145473f5de2ef78ed261272ab4bf4e0e`.
+- The canonical review fixture records decision 813 dated 2026-07-17, its 2026-07-20 effective date, all 13 fixed distance bands with exact monthly and annual integer-kuruş amounts, the separate 87.99 TRY monthly surcharge for every kilometre above 25 km, and 17 concise source conditions.
+- The tariff contract remains backward compatible with existing JSON. Annual amounts, the above-25-km rule, notes, and an open-ended effective period are optional; legacy documents retain their open-ended final band, while extended documents require complete annual values and an explicit surcharge boundary matching the final fixed band.
+- Regression coverage proves legacy reads, extended immutable-version persistence, optimistic version conflicts, atomic saves and rollback, strict official values, 25/26/30 km boundary arithmetic, frontend legacy/new parsing, and public monthly/annual/surcharge rendering.
+- The complete backend verification passed on disposable PostgreSQL 17.11: all 16 Flyway migrations validated, Hibernate validation succeeded, and 282 tests passed with zero failures, errors, or skips. Frontend ESLint, strict TypeScript, all 114 Vitest/Testing Library/MSW tests, and the Vite production build passed.
+- No tariff was copied into `SB_TARIFF_STORAGE_DIR`, no live API or shared Supabase state was read or changed, and no migration, dependency, lockfile, credential, or production setting was changed. Publishing the reviewed fixture remains a separate explicitly approved operational action.

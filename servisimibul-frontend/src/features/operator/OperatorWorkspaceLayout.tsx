@@ -1,10 +1,6 @@
 import { useState } from 'react'
-import {
-  NavLink,
-  Outlet,
-  useNavigate,
-  useRouteLoaderData,
-} from 'react-router-dom'
+import { NavLink, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
 import { NotificationNavLink } from '../notification/NotificationNavLink'
@@ -41,19 +37,14 @@ export function OperatorWorkspaceLayout() {
   }
 
   return (
-    <div className="workspace-shell">
-      <a className="skip-link" href="#workspace-content">
-        İçeriğe geç
-      </a>
-      <aside className="workspace-sidebar">
-        <NavLink className="brand" to="/" viewTransition>
-          ServisimiBul
-        </NavLink>
-        <div>
-          <p className="workspace-label">İşletmeci alanı</p>
-          <small>{user.email}</small>
-        </div>
-        <nav aria-label="İşletmeci alanı menüsü">
+    <WorkspaceShell
+      accountLabel="İşletmeci alanı"
+      email={user.email}
+      error={error}
+      loggingOut={loggingOut}
+      onSignOut={signOut}
+      navigation={
+        <>
           <NavLink to="/operator" end viewTransition>
             Genel bakış
           </NavLink>
@@ -71,24 +62,8 @@ export function OperatorWorkspaceLayout() {
               </NavLink>
             </>
           )}
-        </nav>
-        <button
-          className="secondary-button sidebar-action"
-          disabled={loggingOut}
-          onClick={signOut}
-          type="button"
-        >
-          {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-        </button>
-        {error && (
-          <p className="field-error" role="alert">
-            {error}
-          </p>
-        )}
-      </aside>
-      <main id="workspace-content" className="workspace-content">
-        <Outlet />
-      </main>
-    </div>
+        </>
+      }
+    />
   )
 }

@@ -225,7 +225,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sunucuya ulaşılamadı.',
+      'Bağlantı kurulamadı.',
     )
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })

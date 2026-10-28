@@ -1,6 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
+import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import {
   findOperators,
@@ -466,17 +467,45 @@ export function PublicDiscoveryPage() {
 
   return (
     <section className="discovery-page">
-      <div className="hero-card discovery-intro">
-        <h1>ServisimiBul</h1>
+      <section className="discovery-hero" aria-labelledby="discovery-title">
+        <div className="discovery-hero-inner">
+          <div className="discovery-hero-copy">
+            <h1 id="discovery-title">
+              Okulunu seç. Mahallene hizmet veren işletmecileri bul.
+            </h1>
+            <div className="discovery-hero-actions">
+              <a className="primary-button" href="#school-search">
+                Okul aramaya başla
+              </a>
+              <Link className="secondary-button" to="/demands" viewTransition>
+                Talep panosunu incele
+              </Link>
+            </div>
+            <ul className="discovery-principles" aria-label="Arama özellikleri">
+              <li>Üyelik gerekmez</li>
+              <li>Okul ve mahalle ayrı seçilir</li>
+              <li>Adres garantisi değildir</li>
+            </ul>
+          </div>
+          <figure className="discovery-hero-visual">
+            <img
+              alt="İstanbul'da ilerleyen sarı okul servis aracı"
+              src="/assets/istanbul-school-shuttle-hero.png"
+            />
+            <figcaption>
+              <strong>Canlı okul araması</strong>
+              <span>İl, ilçe, okul ve servis bölgesi adım adım seçilir.</span>
+            </figcaption>
+          </figure>
+        </div>
+      </section>
 
-        <p>Okulunuzu ve mahallenizi seçerek servis işletmecilerine ulaşın.</p>
-      </div>
-
-      <div className="form-card discovery-search">
-        <div className="section-heading">
+      <div className="form-card discovery-search" id="school-search">
+        <div className="discovery-search-heading">
           <div>
             <h2>Önce okulunuzu seçin</h2>
           </div>
+          <p className="discovery-search-status">İstanbul okulları</p>
         </div>
 
         {locationError && (
@@ -728,19 +757,21 @@ export function PublicDiscoveryPage() {
         </form>
       </div>
 
-      <DiscoveryResults
-        error={searchError}
-        loading={searching}
-        onPageChange={(page) => {
-          if (lastSelection) void runSearch(lastSelection, page)
-        }}
-        page={results}
-        selection={lastSelection}
-      />
-      <PublicTariffReference
-        key={lastSelection?.provinceCode}
-        provinceCode={lastSelection?.provinceCode}
-      />
+      <div className="discovery-content-rail">
+        <DiscoveryResults
+          error={searchError}
+          loading={searching}
+          onPageChange={(page) => {
+            if (lastSelection) void runSearch(lastSelection, page)
+          }}
+          page={results}
+          selection={lastSelection}
+        />
+        <PublicTariffReference
+          key={lastSelection?.provinceCode}
+          provinceCode={lastSelection?.provinceCode}
+        />
+      </div>
     </section>
   )
 }
