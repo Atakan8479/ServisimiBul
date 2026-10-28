@@ -56,7 +56,7 @@ describe('application routes', () => {
     // Wait for the overview's async GET before this test resets its MSW handlers.
     expect(
       await screen.findByText(
-        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+        'Profiliniz henüz arama sonuçlarında görünmüyor.',
       ),
     ).toBeInTheDocument()
   })
@@ -194,6 +194,9 @@ describe('application routes', () => {
           name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
         }),
       ).toBeInTheDocument()
+      expect(
+        screen.queryByText('Servis bulmanın yeni yolu.'),
+      ).not.toBeInTheDocument()
       expect(
         screen.getByRole('link', { name: 'Talep panosunu incele' }),
       ).toHaveAttribute('href', '/demands')

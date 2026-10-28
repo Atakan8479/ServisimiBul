@@ -40,7 +40,7 @@ for (const viewport of viewports) {
     await audit(page, 'public discovery')
     await selectSchoolForTariff(page)
     await expect(
-      page.getByRole('heading', { name: 'Resmî UKOME tarifesi' }),
+      page.getByRole('heading', { name: 'Okul servisi ücret tarifesi' }),
     ).toBeVisible()
     await audit(page, 'public UKOME tariff')
 

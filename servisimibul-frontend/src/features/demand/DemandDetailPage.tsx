@@ -159,7 +159,7 @@ export function DemandDetailPage() {
       const user = await currentUser()
       if (user.role !== 'PARENT') {
         setActionError(
-          'Talep desteği yalnızca doğrulanmış veli hesabıyla yönetilebilir.',
+          'Desteğinizi yönetmek için veli hesabınızla giriş yapın.',
         )
         return
       }
@@ -247,7 +247,7 @@ export function DemandDetailPage() {
       setServiceError(
         error instanceof ApiError
           ? error.problem.detail
-          : 'Servis bildirimi yayınlanamadı. Uygunluk bilgilerini yenileyin.',
+          : 'Servis bildirimi yayınlanamadı. Okul ve mahalle bilgilerinizi yenileyin.',
       )
     }
   }
@@ -428,11 +428,8 @@ export function DemandDetailPage() {
           className="demand-detail-card"
           aria-labelledby="demand-count-title"
         >
-          <h2 id="demand-count-title">Toplu ihtiyaç görünümü</h2>
-          <p>
-            Bu sayılar yalnızca etkin, doğrulanmış veli hesaplarının anonim
-            desteklerini gösterir.
-          </p>
+          <h2 id="demand-count-title">Talep özeti</h2>
+
           <dl className="demand-counts prominent">
             <div>
               <dt>Destekleyen veli</dt>
@@ -464,7 +461,7 @@ export function DemandDetailPage() {
               ))}
             </ul>
           ) : (
-            <p>Henüz toplu neden verisi bulunmuyor.</p>
+            <p>Henüz neden belirtilmemiş.</p>
           )}
         </section>
       </div>
@@ -475,11 +472,12 @@ export function DemandDetailPage() {
       >
         <div className="section-heading demand-service-heading">
           <div>
-            <h2 id="service-responses-title">İşletmeci servis bildirimleri</h2>
+            <h2 id="service-responses-title">
+              İşletmecilerin servis duyuruları
+            </h2>
             <p>
-              Bu bildirimler işletmecilerin kendi beyanıdır; ServisimiBul
-              tarafından doğrulanmış koltuk, fiyat veya hizmet garantisi
-              değildir.
+              Bilgiler işletmeciler tarafından paylaşılır. Ücret ve müsaitliği
+              işletmeciyle görüşün.
             </p>
           </div>
           {serviceResponses && serviceResponses.totalElements > 0 && (
@@ -516,7 +514,6 @@ export function DemandDetailPage() {
                       <strong>
                         {response.businessName ?? 'İsimsiz işletmeci'}
                       </strong>
-                      <span>İşletmeci beyanı · Garanti değildir</span>
                     </div>
                     <div
                       className="demand-service-directions"
@@ -544,10 +541,6 @@ export function DemandDetailPage() {
             ) : (
               <div className="demand-service-empty">
                 <h3>Henüz servis bildirimi yok</h3>
-                <p>
-                  Uygun işletmeciler bu talep için servis sunduklarını burada
-                  doğrudan yayınlayabilir.
-                </p>
               </div>
             )}
             {serviceResponses.totalPages > 1 && (
@@ -589,8 +582,8 @@ export function DemandDetailPage() {
             <div>
               <h3>Bu konuma servis sunuyor musunuz?</h3>
               <p>
-                Yalnızca mevcut okul ve mahalle kapsamınız uygunsa bildirim
-                yayınlanır. Araç veya ayrıntılı servis ilanı gerekmez.
+                Bu okul ve mahallede hizmet veriyorsanız servis duyurusu
+                paylaşabilirsiniz.
               </p>
             </div>
             {!serviceEligibility && (
@@ -601,7 +594,7 @@ export function DemandDetailPage() {
                 type="button"
               >
                 {servicePending
-                  ? 'Uygunluk kontrol ediliyor…'
+                  ? 'Bilgiler kontrol ediliyor…'
                   : 'Bu talep için servis ekle'}
               </button>
             )}
@@ -666,7 +659,7 @@ export function DemandDetailPage() {
                 yönü{' '}
                 {serviceEligibility.response.currentlyPublic
                   ? 'velilere gösteriliyor.'
-                  : 'uygunluk yeniden sağlanana kadar velilere gösterilmiyor.'}
+                  : 'gerekli koşullar sağlanana kadar velilere gösterilmiyor.'}
               </p>
             </div>
             <button
@@ -716,10 +709,6 @@ export function DemandDetailPage() {
         <div className="section-heading">
           <div>
             <h2 id="support-title">Sizin desteğiniz</h2>
-            <p>
-              Öğrenci adı ve açık adres istenmez. Tercihleriniz yalnızca toplu
-              sayılara katılır.
-            </p>
           </div>
           {activeSupport && (
             <span className="status-pill success">

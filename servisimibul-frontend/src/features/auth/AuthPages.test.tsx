@@ -74,9 +74,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText(
-        'Kayıt isteğiniz alındı. Devam etmek için veli hesabınızla giriş yapın.',
-      ),
+      await screen.findByText('Devam etmek için veli hesabınızla giriş yapın.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Veli hesabınıza giriş yapın' }),
@@ -131,7 +129,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText(/Kayıt isteğiniz alındı/),
+      await screen.findByText(/Devam etmek için veli hesabınızla giriş yapın/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
@@ -227,7 +225,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sunucuya ulaşılamadı.',
+      'Bağlantı kurulamadı.',
     )
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })
@@ -336,10 +334,14 @@ describe('operator authentication screens', () => {
       await screen.findByText('İşletme profilinizin görünürlüğü'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/işletme profiliniz herkese açık arama sonuçlarında/),
+      screen.getByText(
+        /E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve mahalleleri ekleyin/,
+      ),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/İletişim telefonunuz.*ziyaretçiler tarafından/),
+      screen.getByText(
+        /Telefonunuz ve paylaştığınız işletme bilgileri ziyaretçilere görünebilir/,
+      ),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Hesap oluştur' }),
@@ -537,7 +539,7 @@ describe('operator authentication screens', () => {
     // Avoid leaving the overview's readiness request in flight after teardown.
     expect(
       await screen.findByText(
-        'Profiliniz henüz ebeveyn aramalarına uygun değil.',
+        'Profiliniz henüz arama sonuçlarında görünmüyor.',
       ),
     ).toBeInTheDocument()
   })

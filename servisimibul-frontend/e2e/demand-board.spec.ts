@@ -32,7 +32,9 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page.getByLabel('Şifre').fill('parent password')
   await page.getByRole('button', { name: 'Veli hesabı oluştur' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?.*registered=parent/)
-  await expect(page.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+  await expect(
+    page.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
+  ).toBeVisible()
   expect(state.parentRegistered).toBe(true)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
@@ -48,9 +50,7 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
     .click()
 
-  await expect(
-    page.getByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
-  ).toBeVisible()
+  await expect(page.getByText('Talebiniz oluşturuldu.')).toBeVisible()
   await expect(page.getByText('Destekliyorsunuz')).toBeVisible()
   expect(state.demandCreated).toBe(true)
   expect(state.parentSupport?.status).toBe('ACTIVE')
@@ -109,9 +109,7 @@ test('eligible operator publishes and withdraws a demand-specific service respon
   await page.goto(`/demands/481be36b-c8ee-4c03-868e-47bbc19b7735`)
   await page.getByRole('button', { name: 'Bu talep için servis ekle' }).click()
   await expect(page).toHaveURL(/\/operator\/login\?next=/)
-  await expect(
-    page.getByText(/Servis bildirimi yayınlamak için işletmeci hesabınızla/),
-  ).toBeVisible()
+  await expect(page.getByText(/İşletmeci hesabınız yoksa/)).toBeVisible()
 
   await page.getByLabel('E-posta').fill('operator@example.com')
   await page.getByLabel('Şifre').fill('operator password')

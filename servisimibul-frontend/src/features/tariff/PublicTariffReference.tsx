@@ -46,6 +46,11 @@ export function PublicTariffReference({
   const visibleState = resolvedProvinceCode === provinceCode ? state : 'loading'
   const visibleTariff =
     resolvedProvinceCode === provinceCode ? tariff : undefined
+  const retryTariff = () => {
+    setTariff(undefined)
+    setState('loading')
+    setRequestKey((value) => value + 1)
+  }
 
   return (
     <section
@@ -55,11 +60,8 @@ export function PublicTariffReference({
     >
       <div className="section-heading">
         <div>
-          <h2>Resmî UKOME tarifesi</h2>
-          <p>
-            Kaynağı, yürürlük bilgisi ve sürümü doğrulanmış azami ücret
-            referansı.
-          </p>
+          <h2>Okul servisi ücret tarifesi</h2>
+          <p>Kesin ücret için işletmeciyle görüşün.</p>
         </div>
       </div>
 
@@ -71,23 +73,27 @@ export function PublicTariffReference({
       )}
       {visibleState === 'missing' && (
         <div className="empty-state">
-          <h3>Bu il için yayımlanmış tarife bulunmuyor.</h3>
-          <p>Arama sonuçlarını incelemeye devam edebilirsiniz.</p>
+          <h3>Bu il için henüz ücret tarifesi yok.</h3>
+          <button
+            className="secondary-button"
+            onClick={retryTariff}
+            type="button"
+          >
+            Tarifeyi yeniden dene
+          </button>
         </div>
       )}
       {visibleState === 'error' && (
         <div className="state-panel tariff-load-error" role="alert">
           <div>
-            <h3>Resmî tarife yüklenemedi.</h3>
-            <p>İşletmeci araması etkilenmedi. Bağlantıyı yeniden deneyin.</p>
+            <p>
+              Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar
+              deneyin.
+            </p>
           </div>
           <button
             className="secondary-button"
-            onClick={() => {
-              setTariff(undefined)
-              setState('loading')
-              setRequestKey((value) => value + 1)
-            }}
+            onClick={retryTariff}
             type="button"
           >
             Tarifeyi yeniden dene
@@ -198,11 +204,9 @@ export function TariffDetails({ tariff }: { tariff: Tariff }) {
       </div>
 
       <div className="tariff-guidance">
-        <strong>Bu tablo bir fiyat teklifi değildir.</strong>
         <p>
-          Tutarlar resmî azami referanstır. Mahalle seçimi mesafeyi belirlemez;
-          güzergâh, koşullar ve uygulanacak ücret işletmeciyle ayrıca teyit
-          edilmelidir.
+          Ücret, servis mesafesine ve geçerli tarifeye göre belirlenir. Tutarlar
+          resmî azami referanstır; mahalle seçimi mesafeyi belirlemez.
         </p>
       </div>
 

@@ -86,14 +86,13 @@ describe('public operator discovery', () => {
     )
     expect(screen.getByText('Uygun koltuk: 3/16')).toBeInTheDocument()
     expect(
-      screen.getByText(/Koltuk bilgisi rezervasyon değildir/),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/UKOME tarifeleri yalnızca resmi referanstır/),
+      screen.getByText(/Güzergâh, boş yer ve ücret için işletmeciyle görüşün/),
     ).toBeInTheDocument()
     expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { name: 'Resmî UKOME tarifesi' }),
+      await screen.findByRole('heading', {
+        name: 'Okul servisi ücret tarifesi',
+      }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Resmî tarifeyi incele' }),
@@ -103,7 +102,7 @@ describe('public operator discovery', () => {
     expect(screen.getByText('₺39.970,00')).toBeInTheDocument()
     expect(screen.getByText('+₺87,99')).toBeInTheDocument()
     expect(
-      screen.getByText('Bu tablo bir fiyat teklifi değildir.'),
+      screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
     ).toBeInTheDocument()
     expect(screen.getAllByText(/ikinci çocuk için %10/)).not.toHaveLength(0)
 
@@ -139,7 +138,7 @@ describe('public operator discovery', () => {
       await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Bu seçim için görünür bir işletmeci bulunamadı.'),
+      screen.getByText('Bu bölgede henüz servis işletmecisi bulunamadı.'),
     ).toBeInTheDocument()
   })
 
@@ -212,13 +211,75 @@ describe('public operator discovery', () => {
       await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
     ).toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { name: 'Resmî tarife yüklenemedi.' }),
+      await screen.findByText(
+        'Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.',
+      ),
     ).toBeInTheDocument()
     fireEvent.click(
       screen.getByRole('button', { name: 'Tarifeyi yeniden dene' }),
     )
     expect(await screen.findByText('2026-2027-ibb-813')).toBeInTheDocument()
     expect(tariffAttempts).toBe(2)
+  })
+
+  it('retries a missing tariff without resetting discovery', async () => {
+    let tariffAttempts = 0
+    let operatorAttempts = 0
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/tariffs', () => {
+        tariffAttempts += 1
+        if (tariffAttempts > 1) {
+          return HttpResponse.json(authoritativeTariff())
+        }
+        return HttpResponse.json(
+          {
+            title: 'Not found',
+            status: 404,
+            detail: 'Tariff not found',
+            code: 'tariff_not_found',
+          },
+          { status: 404 },
+        )
+      }),
+      http.get('/api/v1/operators', () => {
+        operatorAttempts += 1
+        return HttpResponse.json({
+          content: [operator('Acıbadem Servis')],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Bu il için henüz ücret tarifesi yok.',
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tarifeyi yeniden dene' }),
+    )
+
+    expect(await screen.findByText('2026-2027-ibb-813')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Örnek İlkokulu')).not.toHaveLength(0)
+    expect(tariffAttempts).toBe(2)
+    expect(operatorAttempts).toBe(1)
   })
 
   it.each([
@@ -233,16 +294,17 @@ describe('public operator discovery', () => {
         },
         status: 404,
       },
-      heading: 'Bu il için yayımlanmış tarife bulunmuyor.',
+      message: 'Bu il için henüz ücret tarifesi yok.',
     },
     {
       name: 'invalid',
       response: { body: { provinceCode: '34' }, status: 200 },
-      heading: 'Resmî tarife yüklenemedi.',
+      message:
+        'Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.',
     },
   ])(
     'keeps discovery usable when the tariff response is $name',
-    async ({ response, heading }) => {
+    async ({ response, message }) => {
       server.use(
         ...locationHandlers(),
         http.get('/api/v1/tariffs', () =>
@@ -268,9 +330,7 @@ describe('public operator discovery', () => {
       expect(
         await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
       ).toBeInTheDocument()
-      expect(
-        await screen.findByRole('heading', { name: heading }),
-      ).toBeInTheDocument()
+      expect(await screen.findByText(message)).toBeInTheDocument()
     },
   )
 
@@ -321,7 +381,7 @@ describe('public operator discovery', () => {
     renderHome()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'İstanbul bilgisi henüz okul kataloğunda bulunmuyor. Lütfen daha sonra tekrar deneyin.',
+      'İstanbul için okul bilgisi bulunamadı. Daha sonra tekrar deneyin.',
     )
     expect(screen.getByLabelText('Okulun bulunduğu il')).toBeDisabled()
     expect(
@@ -355,9 +415,7 @@ describe('public operator discovery', () => {
     fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
       target: { value: '34' },
     })
-    expect(
-      await screen.findByText(/Okul sonuçları yüklenemedi/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/Okulları yükleyemedik/)).toBeInTheDocument()
     expect(screen.queryByText('2 okul bulundu')).not.toBeInTheDocument()
     await screen.findByRole('option', { name: 'Kadıköy' })
     fireEvent.change(screen.getByLabelText('Okulun ilçesi'), {
@@ -481,7 +539,9 @@ describe('public operator discovery', () => {
     expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
     expect(
-      screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul adında ara'), {
@@ -597,7 +657,7 @@ describe('public operator discovery', () => {
     })
     expect(screen.getByRole('status')).toHaveTextContent('Okullar yükleniyor')
     expect(
-      (await screen.findByText(/Okul sonuçları yüklenemedi/)).closest(
+      (await screen.findByText(/Okulları yükleyemedik/)).closest(
         '[role="alert"]',
       ),
     ).toBeInTheDocument()
@@ -611,7 +671,7 @@ describe('public operator discovery', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Okullarda ara' }))
     expect(
       await screen.findByRole('heading', {
-        name: 'Bu filtrelerle eşleşen okul yok',
+        name: 'Okul bulunamadı',
       }),
     ).toBeInTheDocument()
     expect(
@@ -651,7 +711,9 @@ describe('public operator discovery', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByText('1 işletmeci bulundu')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toHaveAttribute('role', 'status')
   })
 })

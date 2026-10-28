@@ -35,7 +35,9 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Araç eklemeden veya ayrıntılı hizmet ilanı/),
+      screen.getByText(
+        /Aramalarda görünmek için araç eklemek zorunda değilsiniz/,
+      ),
     ).toBeInTheDocument()
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
   })
@@ -134,10 +136,10 @@ describe('operator workspace flows', () => {
       await screen.findByText('Yönetici onayı gerekmiyor'),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(
+      screen.queryByText(
         'Başvuru göndermeniz veya yönetici onayı beklemeniz gerekmez.',
       ),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Başvuruyu gönder' }),
     ).not.toBeInTheDocument()
@@ -282,9 +284,7 @@ describe('operator workspace flows', () => {
       await screen.findByRole('button', { name: 'Kapsamı düzenle' }),
     )
     expect(
-      screen.getByText(
-        /Bu sayfadaki tüm okullar zaten hizmet ağınıza eklenmiş/,
-      ),
+      screen.getByText(/Bu sayfadaki tüm okulları eklemişsiniz/),
     ).toBeInTheDocument()
     expect(await screen.findByText('Seçili: Acıbadem')).toBeInTheDocument()
     expect(neighborhoodRequests).toEqual([])
@@ -502,7 +502,9 @@ describe('operator workspace flows', () => {
     })
     await waitFor(() => expect(heading).toHaveFocus())
     expect(
-      screen.getByText(/kapsam kaydedilmeden okul aramalara katkı sağlamaz/),
+      screen.getByText(
+        /Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin/,
+      ),
     ).toBeInTheDocument()
   })
 
@@ -780,7 +782,9 @@ describe('operator workspace flows', () => {
       within(secondCard!).getByText(/0 hizmet mahallesi/),
     ).toBeInTheDocument()
     expect(
-      within(secondCard!).getByText(/hizmet mahallesi seçin/),
+      within(secondCard!).getByText(
+        /hizmet verdiğiniz mahalleleri seçip kaydedin/,
+      ),
     ).toBeInTheDocument()
   })
 

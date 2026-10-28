@@ -15,7 +15,7 @@ export function SignupChoicePage() {
     <section className="auth-card" aria-labelledby="account-type-title">
       <p className="eyebrow">Kayıt</p>
       <h1 id="account-type-title">Nasıl kullanmak istiyorsunuz?</h1>
-      <p>Veli ve işletmeci hesaplarının yetkileri farklıdır.</p>
+
       <div className="form-stack">
         <Link
           className="button-link"
