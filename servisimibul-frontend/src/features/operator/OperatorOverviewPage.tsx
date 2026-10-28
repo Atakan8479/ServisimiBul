@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import type { AuthUser } from '../auth/auth-api'
 import { getDiscoveryReadiness, type DiscoveryReadiness } from './operator-api'
 
 export function OperatorOverviewPage() {
-  const user = useRouteLoaderData('operator') as AuthUser
   const navigate = useNavigate()
   const [readiness, setReadiness] = useState<DiscoveryReadiness>()
   const [loading, setLoading] = useState(true)
@@ -61,10 +59,6 @@ export function OperatorOverviewPage() {
     <section className="workspace-page">
       <p className="eyebrow">Genel bakış</p>
       <h1>Aramalarda görünmeye hazır mısınız?</h1>
-      <p className="page-lead">
-        {user.email} hesabınızın ebeveyn aramalarında görünebilmesi için gereken
-        adımları buradan takip edin.
-      </p>
 
       {loading && <InlineLoading label="Arama uygunluğu yükleniyor" />}
 
@@ -90,12 +84,12 @@ export function OperatorOverviewPage() {
             <strong>
               {readiness.discoveryEligible
                 ? 'Profiliniz uygun aramalarda görünebilir.'
-                : 'Profiliniz henüz ebeveyn aramalarına uygun değil.'}
+                : 'Profiliniz henüz arama sonuçlarında görünmüyor.'}
             </strong>
             <span>
               {readiness.discoveryEligible
                 ? 'Yalnızca seçtiğiniz okullar ve hizmet mahalleleriyle eşleşen aramalarda listelenirsiniz.'
-                : 'Eksik adımları tamamladığınızda uygun okul ve mahalle aramalarında listelenebilirsiniz.'}
+                : 'Eksik adımları tamamlayın.'}
             </span>
           </div>
 
@@ -138,7 +132,7 @@ export function OperatorOverviewPage() {
                   : 'Aktif bir okula bağlı en az bir okul bağlantısı ekleyin.'
               }
               to={canManageSchools(readiness) ? '/operator/schools' : undefined}
-              title="Aktif okul bağlantısı"
+              title="Hizmet verdiğiniz okullar"
             />
             <ReadinessItem
               action="Hizmet mahallelerini seç"
@@ -149,7 +143,7 @@ export function OperatorOverviewPage() {
                   : 'Aktif okullarınızdan en az biri için hizmet mahallesi seçin.'
               }
               to={canManageSchools(readiness) ? '/operator/schools' : undefined}
-              title="Okula özel hizmet kapsamı"
+              title="Hizmet verdiğiniz mahalleler"
             />
           </ol>
 
@@ -175,12 +169,10 @@ export function OperatorOverviewPage() {
             aria-labelledby="optional-title"
           >
             <div>
-              <h2 id="optional-title">İsterseniz daha sonra ayrıntı ekleyin</h2>
-              <p>
-                Araçlar ve ayrıntılı hizmet ilanları isteğe bağlıdır. Araç
-                eklemeden veya ayrıntılı hizmet ilanı oluşturmadan ebeveyn
-                aramalarında görünebilirsiniz.
-              </p>
+              <h2 id="optional-title">
+                Araç ve servis bilgileri (isteğe bağlı)
+              </h2>
+              <p>Aramalarda görünmek için araç eklemek zorunda değilsiniz.</p>
             </div>
             {canManageSchools(readiness) && (
               <Link

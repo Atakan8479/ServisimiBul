@@ -242,9 +242,6 @@ export function AdminSchoolsPage() {
     <section className="workspace-page">
       <p className="eyebrow">Okul kataloğu</p>
       <h1>Okulları yönetin</h1>
-      <p className="page-lead">
-        İletişim kurduğunuz okulları ekleyin ve durumlarını yönetin.
-      </p>
 
       {error && (
         <div className="form-error" role="alert">
@@ -414,7 +411,7 @@ export function AdminSchoolsPage() {
 
       <section className="catalog-section" aria-labelledby="school-list-title">
         <div className="section-heading">
-          <h2 id="school-list-title">Katalog</h2>
+          <h2 id="school-list-title">Okullar</h2>
           <span className="count-badge">{result?.totalElements ?? 0} okul</span>
         </div>
         <form

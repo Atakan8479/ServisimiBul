@@ -47,7 +47,7 @@ describe('reporting and moderation flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
     expect(
-      await screen.findByText(/içeriği otomatik olarak gizlemez/),
+      await screen.findByText(/İçerik hemen kaldırılmaz/),
     ).toBeInTheDocument()
     fireEvent.change(screen.getByLabelText('Bildirim nedeni'), {
       target: { value: 'PERSONAL_DATA' },

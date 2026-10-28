@@ -88,10 +88,7 @@ export function DemandSupportForm({
 
       <fieldset aria-describedby={errors.reasons ? 'reason-error' : undefined}>
         <legend>Neden yeni bir servise ihtiyaç duyuyorsunuz?</legend>
-        <p className="fieldset-help">
-          Birden fazla neden seçebilirsiniz. Bu bilgiler yalnızca toplu sayılar
-          halinde gösterilir.
-        </p>
+
         <div className="demand-reason-grid">
           {supportReasons.map((reason) => (
             <label className="checkbox-row compact" key={reason}>

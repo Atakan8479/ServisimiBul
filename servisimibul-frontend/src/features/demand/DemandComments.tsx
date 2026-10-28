@@ -190,10 +190,6 @@ export function DemandComments({
       <div className="section-heading">
         <div>
           <h2 id="comments-title">Yorumlar</h2>
-          <p>
-            Veliler ve servis işletmecileri bu talep hakkında açıkça bilgi
-            paylaşabilir.
-          </p>
         </div>
         {open && !formOpen && (
           <button

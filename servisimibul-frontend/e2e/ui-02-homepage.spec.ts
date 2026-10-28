@@ -78,7 +78,7 @@ test('hero CTA moves keyboard focus into the unchanged live search flow', async 
 
   await expect(page).toHaveURL(/#school-search$/)
   await expect(
-    page.getByRole('heading', { name: 'Önce doğru okulu bulun' }),
+    page.getByRole('heading', { name: 'Önce okulunuzu seçin' }),
   ).toBeInViewport()
 
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')

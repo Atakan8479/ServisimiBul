@@ -86,20 +86,17 @@ describe('public operator discovery', () => {
     )
     expect(screen.getByText('Uygun koltuk: 3/16')).toBeInTheDocument()
     expect(
-      screen.getByText(/Koltuk bilgisi rezervasyon değildir/),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(/UKOME tarifeleri yalnızca resmi referanstır/),
+      screen.getByText(/Güzergâh, boş yer ve ücret için işletmeciyle görüşün/),
     ).toBeInTheDocument()
     expect(screen.queryByText('operator@example.com')).not.toBeInTheDocument()
     expect(
-      await screen.findByRole('heading', { name: 'Resmî tarife referansı' }),
+      await screen.findByRole('heading', {
+        name: 'Okul servisi ücret tarifesi',
+      }),
     ).toBeInTheDocument()
     expect(screen.getByText('₺1.300,00 / ay')).toBeInTheDocument()
     expect(
-      screen.getByText(
-        'Bu tarife kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
-      ),
+      screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
@@ -134,7 +131,7 @@ describe('public operator discovery', () => {
       await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByText('Bu seçim için görünür bir işletmeci bulunamadı.'),
+      screen.getByText('Bu bölgede henüz servis işletmecisi bulunamadı.'),
     ).toBeInTheDocument()
   })
 
@@ -203,7 +200,7 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
     expect(
       await screen.findByText(
-        'Resmî tarife şu anda yüklenemedi. Arama sonuçları etkilenmedi.',
+        'Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.',
       ),
     ).toHaveAttribute('role', 'alert')
   })
@@ -255,7 +252,7 @@ describe('public operator discovery', () => {
     renderHome()
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'İstanbul bilgisi henüz okul kataloğunda bulunmuyor. Lütfen daha sonra tekrar deneyin.',
+      'İstanbul için okul bilgisi bulunamadı. Daha sonra tekrar deneyin.',
     )
     expect(screen.getByLabelText('Okulun bulunduğu il')).toBeDisabled()
     expect(
@@ -289,9 +286,7 @@ describe('public operator discovery', () => {
     fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
       target: { value: '34' },
     })
-    expect(
-      await screen.findByText(/Okul sonuçları yüklenemedi/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/Okulları yükleyemedik/)).toBeInTheDocument()
     expect(screen.queryByText('2 okul bulundu')).not.toBeInTheDocument()
     await screen.findByRole('option', { name: 'Kadıköy' })
     fireEvent.change(screen.getByLabelText('Okulun ilçesi'), {
@@ -415,7 +410,9 @@ describe('public operator discovery', () => {
     expect(screen.queryByText('Seçilen okul')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
     expect(
-      screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul adında ara'), {
@@ -531,7 +528,7 @@ describe('public operator discovery', () => {
     })
     expect(screen.getByRole('status')).toHaveTextContent('Okullar yükleniyor')
     expect(
-      (await screen.findByText(/Okul sonuçları yüklenemedi/)).closest(
+      (await screen.findByText(/Okulları yükleyemedik/)).closest(
         '[role="alert"]',
       ),
     ).toBeInTheDocument()
@@ -545,7 +542,7 @@ describe('public operator discovery', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Okullarda ara' }))
     expect(
       await screen.findByRole('heading', {
-        name: 'Bu filtrelerle eşleşen okul yok',
+        name: 'Okul bulunamadı',
       }),
     ).toBeInTheDocument()
     expect(
@@ -585,7 +582,9 @@ describe('public operator discovery', () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByText('1 işletmeci bulundu')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Önceki okul seçimi yeni okul filtreleriyle eşleşmedi/),
+      screen.getByText(
+        /Filtreleri değiştirdiğiniz için okul seçimi temizlendi/,
+      ),
     ).toHaveAttribute('role', 'status')
   })
 })

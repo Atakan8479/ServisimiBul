@@ -80,10 +80,6 @@ export function NotificationCenterPage() {
       <div className="page-heading notification-heading">
         <div>
           <h1>Bildirim merkezi</h1>
-          <p>
-            Talepler, işletmeci beyanları, geri bildirim süreleri ve yönetim
-            incelemeleriyle ilgili güncellemeler burada görünür.
-          </p>
         </div>
         {result && result.totalElements > 0 && (
           <span className="count-badge">{result.totalElements} bildirim</span>

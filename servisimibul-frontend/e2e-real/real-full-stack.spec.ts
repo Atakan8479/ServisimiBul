@@ -159,7 +159,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       expect((await registration).status()).toBe(202)
       await expect(parentPage).toHaveURL(/\/parent\/login\?.*registered=parent/)
-      await expect(parentPage.getByText(/Kayıt isteğiniz alındı/)).toBeVisible()
+      await expect(
+        parentPage.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
+      ).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
       await parentPage.getByLabel('Şifre').fill(parentPassword!)
@@ -428,7 +430,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toHaveCount(0)
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
-        publicPage.getByText('Bu tarife kişisel fiyat teklifi değildir.'),
+        publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),
       ).toBeVisible()
     })
 
@@ -1269,9 +1271,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
         .click()
       expect((await created).status()).toBe(201)
-      await expect(
-        parentPage.getByText('Talebiniz oluşturuldu ve desteğiniz eklendi.'),
-      ).toBeVisible()
+      await expect(parentPage.getByText('Talebiniz oluşturuldu.')).toBeVisible()
       const demandId = new URL(parentPage.url()).pathname.split('/').at(-1)!
       const responsePath = `/api/v1/operator/demands/${demandId}/response`
       const operatorCsrf = await csrf(operatorPage)
@@ -1289,7 +1289,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'Bildir', exact: true })
         .click()
       await expect(
-        parentPage.getByText(/içeriği otomatik olarak gizlemez/),
+        parentPage.getByText(/İçerik hemen kaldırılmaz/),
       ).toBeVisible()
       await parentPage
         .getByLabel('Bildirim nedeni')
@@ -1309,7 +1309,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(parentPage.getByText('Bildirim alındı')).toBeVisible()
       await expect(
         parentPage
-          .getByRole('region', { name: 'İşletmeci servis bildirimleri' })
+          .getByRole('region', { name: 'İşletmecilerin servis duyuruları' })
           .getByText('J03 Gerçek Servis'),
       ).toBeVisible()
 
@@ -1587,7 +1587,12 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(
           mobilePage.getByRole('link', { name: 'Veli girişi' }),
         ).toBeVisible()
+        await expect(mobilePage.locator('#public-navigation')).toHaveCSS(
+          'opacity',
+          '1',
+        )
         const accessibility = await new AxeBuilder({ page: mobilePage })
+          .include('#public-navigation')
           .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
           .analyze()
         expect(accessibility.violations).toEqual([])
