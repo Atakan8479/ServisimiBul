@@ -1,8 +1,18 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UKOME-02 authoritative tariff presentation ready for CI review
+## Current stage: UI-03 operator discovery results ready for CI review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, and UKOME-01 PR #131 are merged. UKOME-02 PR #132 now targets `main`, has its merge conflicts resolved, and has completed local unit, browser, and disposable real full-stack verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, and UKOME-02 PR #132 are merged. UI-03 is implemented on `codex/ui-03-operator-results` in draft PR #133 and has completed local unit, build, accessibility, responsive, and mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-03 operator-result and contact presentation — 2026-10-28
+
+- Draft PR #133 was opened before implementation with the exact issue title and starts from the merged UI-02/UKOME-02 `main` state. The real `PublicOperator` DTO remains the only content source; no API, matching, ordering, filter, pagination, anonymous-access, or tariff business rule changed.
+- Results now appear immediately after the completed search and before the separate authoritative tariff reference. The result summary retains the chosen school and pickup geography, explains that coverage is not an address, route, capacity, or price guarantee, and links forward to the official tariff.
+- Operator cards use the nullable business name/description safely, keep operators with no vehicle or offering visible, show every real published offering's vehicle capacity and optional published seat count, and map each card's actual `contactPhone` to a prominent `tel:` action. No rating, review, verification badge, certification, portrait, route distance, or other unsupported claim was added.
+- Search completion and failure move keyboard focus to the result-state heading. Loading, empty, error, same-selection retry, pagination, compact contact actions, and 320-pixel overflow are explicit and accessible.
+- Frontend ESLint, strict TypeScript, all 123 Vitest/Testing Library/MSW tests, scoped Prettier, the Vite production build, and `git diff --check` passed. The complete mocked Chromium suite passed all 25 tests, including the new desktop/mobile UI-03 axe, focus, exact-phone, no-offering, and overflow journeys.
+- Verified desktop and mobile screenshots are stored under `docs/screenshots/ui-03/after`. The real full-stack test selector was updated for the new accessible phone label; GitHub Actions remains the execution gate for that disposable PostgreSQL journey.
+- No backend source, endpoint, authorization, dependency, lockfile, database, migration, shared Supabase operation, credential, live tariff publication, or production setting changed.
 
 ## Verified UI-02 public homepage and live school search — 2026-10-28
 

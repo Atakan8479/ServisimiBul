@@ -80,11 +80,26 @@ describe('public operator discovery', () => {
     expect(
       await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '+905321234567' })).toHaveAttribute(
-      'href',
-      'tel:+905321234567',
-    )
-    expect(screen.getByText('Uygun koltuk: 3/16')).toBeInTheDocument()
+    const resultHeading = screen.getByRole('heading', {
+      name: '2 işletmeci bulundu',
+    })
+    expect(resultHeading).toHaveFocus()
+    const operatorCard = screen.getByRole('article', {
+      name: 'Acıbadem Servis',
+    })
+    expect(
+      within(operatorCard).getByRole('link', {
+        name: 'Telefonla ara: +905321234567',
+      }),
+    ).toHaveAttribute('href', 'tel:+905321234567')
+    expect(
+      within(operatorCard).getByText('Araç kapasitesi'),
+    ).toBeInTheDocument()
+    expect(within(operatorCard).getByText('16 kişi')).toBeInTheDocument()
+    expect(
+      within(operatorCard).getByText('Yayımlanan uygun koltuk'),
+    ).toBeInTheDocument()
+    expect(within(operatorCard).getByText('3')).toBeInTheDocument()
     expect(
       screen.getByText(/Güzergâh, boş yer ve ücret için işletmeciyle görüşün/),
     ).toBeInTheDocument()
@@ -111,6 +126,59 @@ describe('public operator discovery', () => {
       await screen.findByRole('heading', { name: 'İkinci Servis' }),
     ).toBeInTheDocument()
     expect(requestedPages).toEqual(['0', '1'])
+  })
+
+  it('keeps nullable operators without offerings visible and maps each phone correctly', async () => {
+    const firstOperator = {
+      ...operator('Geçici ad'),
+      operatorId: '11111111-1111-4111-8111-111111111111',
+      businessName: null,
+      contactPhone: '+905321111111',
+      description: null,
+      publishedOfferings: [],
+    }
+    const secondOperator = {
+      ...operator('Kuzey Servis'),
+      operatorId: '22222222-2222-4222-8222-222222222222',
+      contactPhone: '+905322222222',
+    }
+    server.use(
+      ...locationHandlers(),
+      tariffHandler(),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json({
+          content: [firstOperator, secondOperator],
+          page: 0,
+          size: 10,
+          totalElements: 2,
+          totalPages: 1,
+        }),
+      ),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    const fallbackCard = await screen.findByRole('article', {
+      name: 'Bağımsız servis işletmecisi',
+    })
+    expect(
+      within(fallbackCard).getByText('Servis ayrıntısı yayımlanmamış'),
+    ).toBeInTheDocument()
+    expect(
+      within(fallbackCard).getByRole('link', {
+        name: 'Telefonla ara: +905321111111',
+      }),
+    ).toHaveAttribute('href', 'tel:+905321111111')
+    expect(
+      within(screen.getByRole('article', { name: 'Kuzey Servis' })).getByRole(
+        'link',
+        { name: 'Telefonla ara: +905322222222' },
+      ),
+    ).toHaveAttribute('href', 'tel:+905322222222')
   })
 
   it('explains an empty result without treating it as an error', async () => {
@@ -142,12 +210,23 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
   })
 
-  it('shows a Turkish recovery message when discovery fails', async () => {
+  it('focuses the error and retries the same discovery selection', async () => {
+    let attempts = 0
     server.use(
       ...locationHandlers(),
       tariffHandler(),
-      http.get('/api/v1/operators', () =>
-        HttpResponse.json(
+      http.get('/api/v1/operators', () => {
+        attempts += 1
+        if (attempts > 1) {
+          return HttpResponse.json({
+            content: [operator('Kurtarılan Servis')],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+          })
+        }
+        return HttpResponse.json(
           {
             title: 'Service Unavailable',
             status: 503,
@@ -155,8 +234,8 @@ describe('public operator discovery', () => {
             code: 'temporary_failure',
           },
           { status: 503 },
-        ),
-      ),
+        )
+      }),
     )
 
     renderHome()
@@ -168,7 +247,18 @@ describe('public operator discovery', () => {
     const message = await screen.findByText(
       'Servis işletmecileri yüklenemedi. Lütfen tekrar deneyin.',
     )
-    expect(message).toHaveAttribute('role', 'alert')
+    expect(message.closest('[role="alert"]')).not.toBeNull()
+    expect(
+      screen.getByRole('heading', { name: 'Sonuçlar yüklenemedi' }),
+    ).toHaveFocus()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Sonuçları yeniden dene' }),
+    )
+    expect(
+      await screen.findByRole('heading', { name: 'Kurtarılan Servis' }),
+    ).toBeInTheDocument()
+    expect(attempts).toBe(2)
   })
 
   it('keeps discovery usable and retries when the tariff cannot load', async () => {
