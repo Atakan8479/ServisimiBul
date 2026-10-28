@@ -423,11 +423,13 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
       await expect(publicPage.getByText('J03 Gerçek Servis')).toBeVisible()
       await expect(
-        publicPage.getByRole('link', { name: '+905321112244' }),
+        publicPage.getByRole('link', {
+          name: 'Telefonla ara: +905321112244',
+        }),
       ).toBeVisible()
       await expect(
-        publicPage.getByText('Paylaşılan servis bilgileri'),
-      ).toHaveCount(0)
+        publicPage.getByText('Servis ayrıntısı yayımlanmamış'),
+      ).toBeVisible()
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
         publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),

@@ -164,11 +164,13 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     ).toBeVisible()
     await expect(publicPage.getByText('Örnek Servis')).toBeVisible()
     await expect(
-      publicPage.getByRole('link', { name: '+905321234568' }),
+      publicPage.getByRole('link', {
+        name: 'Telefonla ara: +905321234568',
+      }),
     ).toBeVisible()
     await expect(
-      publicPage.getByText('Paylaşılan servis bilgileri'),
-    ).toHaveCount(0)
+      publicPage.getByText('Servis ayrıntısı yayımlanmamış'),
+    ).toBeVisible()
     await expect(publicPage.getByText('operator@example.com')).toHaveCount(0)
   })
 
@@ -219,7 +221,8 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   await test.step('11. Show the offering only in its specific coverage', async () => {
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(publicPage.getByText('Sabah ve akşam servisi')).toBeVisible()
-    await expect(publicPage.getByText('Uygun koltuk: 4/16')).toBeVisible()
+    await expect(publicPage.getByText('Yayımlanan uygun koltuk')).toBeVisible()
+    await expect(publicPage.getByText('Araç kapasitesi')).toBeVisible()
 
     await search(publicPage, 'Üsküdar', 'Acıbadem')
     await expect(
