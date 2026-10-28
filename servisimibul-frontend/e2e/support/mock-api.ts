@@ -877,17 +877,36 @@ function tariff(version: string) {
   return {
     provinceCode: '34',
     provinceName: 'İstanbul',
-    authority: 'İBB UKOME',
-    academicYear: '2026–2027',
+    authority: 'İstanbul Büyükşehir Belediyesi Meclisi',
+    academicYear: '2026-2027',
     currency: 'TRY' as const,
-    effectiveFrom: '2026-09-01',
-    effectiveTo: '2027-08-31',
-    sourceTitle: 'UKOME kararı',
-    officialSourceUrl: 'https://example.com/ukome',
+    effectiveFrom: '2026-07-20',
+    effectiveTo: null,
+    sourceTitle: '17.07.2026 tarih ve 813 sayılı İBB Meclis kararı',
+    officialSourceUrl: 'https://fixtures.invalid/ukome.pdf',
     version,
+    additionalKilometerRule: {
+      startsAfterDistanceKm: 25,
+      monthlyAmountPerKilometerKurus: 8_799,
+    },
+    notes: [
+      'Tutarlar KDV dahil azami ücretlerdir.',
+      'Okul öncesi ve ilköğretim taşıma ücretine en fazla %35 rehber personel ücreti eklenebilir.',
+      'Aynı okula giden kardeşlerde ikinci çocuk için %10 indirim uygulanır.',
+    ],
     bands: [
-      { minDistanceKm: 0, maxDistanceKm: 3, amountKurus: 130_000 },
-      { minDistanceKm: 3, maxDistanceKm: null, amountKurus: 150_000 },
+      {
+        minDistanceKm: 0,
+        maxDistanceKm: 1,
+        amountKurus: 445_600,
+        annualAmountKurus: 3_997_000,
+      },
+      {
+        minDistanceKm: 1,
+        maxDistanceKm: 25,
+        amountKurus: 1_043_600,
+        annualAmountKurus: 9_361_000,
+      },
     ],
   }
 }

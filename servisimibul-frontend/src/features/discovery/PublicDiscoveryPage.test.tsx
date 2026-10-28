@@ -94,10 +94,17 @@ describe('public operator discovery', () => {
         name: 'Okul servisi ücret tarifesi',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByText('₺1.300,00 / ay')).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Resmî tarifeyi incele' }),
+    ).toHaveAttribute('href', '#resmi-tarife')
+    expect(screen.getByText('2026-2027-ibb-813')).toBeInTheDocument()
+    expect(screen.getByText('₺4.456,00')).toBeInTheDocument()
+    expect(screen.getByText('₺39.970,00')).toBeInTheDocument()
+    expect(screen.getByText('+₺87,99')).toBeInTheDocument()
     expect(
       screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
     ).toBeInTheDocument()
+    expect(screen.getAllByText(/ikinci çocuk için %10/)).not.toHaveLength(0)
 
     fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
     expect(
@@ -164,11 +171,16 @@ describe('public operator discovery', () => {
     expect(message).toHaveAttribute('role', 'alert')
   })
 
-  it('keeps discovery results usable when the tariff cannot load', async () => {
+  it('keeps discovery usable and retries when the tariff cannot load', async () => {
+    let tariffAttempts = 0
     server.use(
       ...locationHandlers(),
-      http.get('/api/v1/tariffs', () =>
-        HttpResponse.json(
+      http.get('/api/v1/tariffs', () => {
+        tariffAttempts += 1
+        if (tariffAttempts > 1) {
+          return HttpResponse.json(authoritativeTariff())
+        }
+        return HttpResponse.json(
           {
             title: 'Service Unavailable',
             status: 503,
@@ -176,8 +188,8 @@ describe('public operator discovery', () => {
             code: 'tariff_storage_unavailable',
           },
           { status: 503 },
-        ),
-      ),
+        )
+      }),
       http.get('/api/v1/operators', () =>
         HttpResponse.json({
           content: [operator('Acıbadem Servis')],
@@ -202,8 +214,125 @@ describe('public operator discovery', () => {
       await screen.findByText(
         'Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.',
       ),
-    ).toHaveAttribute('role', 'alert')
+    ).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tarifeyi yeniden dene' }),
+    )
+    expect(await screen.findByText('2026-2027-ibb-813')).toBeInTheDocument()
+    expect(tariffAttempts).toBe(2)
   })
+
+  it('retries a missing tariff without resetting discovery', async () => {
+    let tariffAttempts = 0
+    let operatorAttempts = 0
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/tariffs', () => {
+        tariffAttempts += 1
+        if (tariffAttempts > 1) {
+          return HttpResponse.json(authoritativeTariff())
+        }
+        return HttpResponse.json(
+          {
+            title: 'Not found',
+            status: 404,
+            detail: 'Tariff not found',
+            code: 'tariff_not_found',
+          },
+          { status: 404 },
+        )
+      }),
+      http.get('/api/v1/operators', () => {
+        operatorAttempts += 1
+        return HttpResponse.json({
+          content: [operator('Acıbadem Servis')],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        })
+      }),
+    )
+
+    renderHome()
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Bu il için henüz ücret tarifesi yok.',
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tarifeyi yeniden dene' }),
+    )
+
+    expect(await screen.findByText('2026-2027-ibb-813')).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Acıbadem Servis' }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Örnek İlkokulu')).not.toHaveLength(0)
+    expect(tariffAttempts).toBe(2)
+    expect(operatorAttempts).toBe(1)
+  })
+
+  it.each([
+    {
+      name: 'missing',
+      response: {
+        body: {
+          title: 'Not found',
+          status: 404,
+          detail: 'Tariff not found',
+          code: 'tariff_not_found',
+        },
+        status: 404,
+      },
+      message: 'Bu il için henüz ücret tarifesi yok.',
+    },
+    {
+      name: 'invalid',
+      response: { body: { provinceCode: '34' }, status: 200 },
+      message:
+        'Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar deneyin.',
+    },
+  ])(
+    'keeps discovery usable when the tariff response is $name',
+    async ({ response, message }) => {
+      server.use(
+        ...locationHandlers(),
+        http.get('/api/v1/tariffs', () =>
+          HttpResponse.json(response.body, { status: response.status }),
+        ),
+        http.get('/api/v1/operators', () =>
+          HttpResponse.json({
+            content: [operator('Acıbadem Servis')],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+          }),
+        ),
+      )
+
+      renderHome()
+      await selectLocation()
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+      )
+
+      expect(
+        await screen.findByRole('heading', { name: 'Acıbadem Servis' }),
+      ).toBeInTheDocument()
+      expect(await screen.findByText(message)).toBeInTheDocument()
+    },
+  )
 
   it('requires a database-backed pilot province before loading schools', async () => {
     let schoolRequests = 0
@@ -651,23 +780,46 @@ function locationHandlers() {
 
 function tariffHandler() {
   return http.get('/api/v1/tariffs', () =>
-    HttpResponse.json({
-      provinceCode: '34',
-      provinceName: 'İstanbul',
-      authority: 'İBB UKOME',
-      academicYear: '2026–2027',
-      currency: 'TRY',
-      effectiveFrom: '2026-09-01',
-      effectiveTo: '2027-08-31',
-      sourceTitle: 'UKOME kararı',
-      officialSourceUrl: 'https://example.com/ukome',
-      version: 'v1',
-      bands: [
-        { minDistanceKm: 0, maxDistanceKm: 3, amountKurus: 130_000 },
-        { minDistanceKm: 3, maxDistanceKm: null, amountKurus: 150_000 },
-      ],
-    }),
+    HttpResponse.json(authoritativeTariff()),
   )
+}
+
+function authoritativeTariff() {
+  return {
+    provinceCode: '34',
+    provinceName: 'İstanbul',
+    authority: 'İstanbul Büyükşehir Belediyesi Meclisi',
+    academicYear: '2026-2027',
+    currency: 'TRY',
+    effectiveFrom: '2026-07-20',
+    effectiveTo: null,
+    sourceTitle: '17.07.2026 tarih ve 813 sayılı İBB Meclis kararı',
+    officialSourceUrl: 'https://fixtures.invalid/ukome.pdf',
+    version: '2026-2027-ibb-813',
+    additionalKilometerRule: {
+      startsAfterDistanceKm: 25,
+      monthlyAmountPerKilometerKurus: 8_799,
+    },
+    notes: [
+      'Tutarlar KDV dahil azami ücretlerdir.',
+      'Okul öncesi ve ilköğretim taşıma ücretine en fazla %35 rehber personel ücreti eklenebilir.',
+      'Aynı okula giden kardeşlerde ikinci çocuk için %10 indirim uygulanır.',
+    ],
+    bands: [
+      {
+        minDistanceKm: 0,
+        maxDistanceKm: 1,
+        amountKurus: 445_600,
+        annualAmountKurus: 3_997_000,
+      },
+      {
+        minDistanceKm: 1,
+        maxDistanceKm: 25,
+        amountKurus: 1_043_600,
+        annualAmountKurus: 9_361_000,
+      },
+    ],
+  }
 }
 
 function operator(businessName: string) {
@@ -702,7 +854,7 @@ async function selectLocation() {
 
   await screen.findByText('Örnek İlkokulu')
   fireEvent.click(
-    screen.getByRole('button', { name: 'Örnek İlkokulu okulunu seç' }),
+    screen.getByRole('button', { name: 'Bu okulu seç: Örnek İlkokulu' }),
   )
 
   const pickupDistrict = screen.getByLabelText('Servis alınacak ilçe')

@@ -432,6 +432,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(
         publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),
       ).toBeVisible()
+      await expect(publicPage.getByText('₺12.000,00')).toBeVisible()
+      await expect(publicPage.getByText('₺108.000,00')).toBeVisible()
+      await expect(publicPage.getByText('+₺87,99')).toBeVisible()
     })
 
     await test.step('invalidate and restore publication through profile and coverage state', async () => {
@@ -502,8 +505,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
         publicPage.getByRole('link', {
-          name: 'J03 güncel sentetik UKOME kararı kaynağını aç',
+          name: 'Resmî belgeyi aç (yeni sekmede)',
         }),
+      ).toBeVisible()
+      await expect(
+        publicPage.getByText('J03 güncel sentetik UKOME kararı'),
       ).toBeVisible()
     })
 
@@ -1686,7 +1692,7 @@ async function search(page: Page, district: string, neighborhood: string) {
     .getByLabel('Okulun bulunduğu il')
     .selectOption({ label: 'İstanbul' })
   await page
-    .getByRole('button', { name: 'J03 Gerçek Okulu okulunu seç' })
+    .getByRole('button', { name: 'Bu okulu seç: J03 Gerçek Okulu' })
     .click()
   await selectLoadedOption(page, 'Servis alınacak ilçe', district)
   await selectLoadedOption(page, 'Servis alınacak mahalle', neighborhood)
