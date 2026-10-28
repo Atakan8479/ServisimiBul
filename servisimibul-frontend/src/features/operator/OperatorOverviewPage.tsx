@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import { getDiscoveryReadiness, type DiscoveryReadiness } from './operator-api'
 
 export function OperatorOverviewPage() {
@@ -56,9 +57,14 @@ export function OperatorOverviewPage() {
   }, [navigate])
 
   return (
-    <section className="workspace-page">
-      <p className="eyebrow">Genel bakış</p>
-      <h1>Aramalarda görünmeye hazır mısınız?</h1>
+    <section className="workspace-page operator-workspace-page operator-overview-page">
+      <header className="operator-page-header">
+        <h1>Aramalarda görünmeye hazır mısınız?</h1>
+        <p>
+          Profilinizin velilerin aramalarında görünmesi için gereken adımları
+          buradan takip edin.
+        </p>
+      </header>
 
       {loading && <InlineLoading label="Arama uygunluğu yükleniyor" />}
 
@@ -78,7 +84,7 @@ export function OperatorOverviewPage() {
       {readiness && (
         <>
           <div
-            className={`status-banner ${readiness.discoveryEligible ? 'success' : 'warning'}`}
+            className={`status-banner operator-readiness-summary ${readiness.discoveryEligible ? 'success' : 'warning'}`}
             role="status"
           >
             <strong>
@@ -93,59 +99,77 @@ export function OperatorOverviewPage() {
             </span>
           </div>
 
-          <ol className="readiness-list" aria-label="Arama uygunluğu adımları">
-            <ReadinessItem
-              complete={readiness.emailVerified && readiness.accountEnabled}
-              description={
-                readiness.emailVerified && readiness.accountEnabled
-                  ? 'E-posta doğrulandı ve hesap kullanıma açık.'
-                  : 'Doğrulanmış ve kullanıma açık bir hesap gereklidir.'
-              }
-              title="Hesap doğrulaması"
-            />
-            <ReadinessItem
-              action="Profili düzenle"
-              complete={readiness.profileActive && readiness.publiclyVisible}
-              description={profileGuidance(readiness)}
-              to="/operator/profile"
-              title="Aktif ve herkese açık profil"
-            />
-            {readiness.approvalRequired && (
+          <section
+            className="operator-task-section"
+            aria-labelledby="readiness-steps-title"
+          >
+            <div className="operator-section-heading">
+              <div>
+                <h2 id="readiness-steps-title">Kurulum adımları</h2>
+                <p>Eksik adımların bağlantılarını izleyerek devam edin.</p>
+              </div>
+            </div>
+            <ol
+              className="readiness-list"
+              aria-label="Arama uygunluğu adımları"
+            >
               <ReadinessItem
-                action="Başvuruyu görüntüle"
-                complete={readiness.approvalSatisfied}
+                complete={readiness.emailVerified && readiness.accountEnabled}
                 description={
-                  readiness.approvalSatisfied
-                    ? 'Yönetici onayı tamamlandı.'
-                    : 'Bu ortamda arama görünürlüğü için yönetici onayı gereklidir.'
+                  readiness.emailVerified && readiness.accountEnabled
+                    ? 'E-posta doğrulandı ve hesap kullanıma açık.'
+                    : 'Doğrulanmış ve kullanıma açık bir hesap gereklidir.'
                 }
-                to="/operator/profile"
-                title="Yönetici onayı"
+                title="Hesap doğrulaması"
               />
-            )}
-            <ReadinessItem
-              action="Okulları yönet"
-              complete={readiness.hasActiveSchoolRelationship}
-              description={
-                readiness.hasActiveSchoolRelationship
-                  ? 'En az bir aktif okul bağlantınız var.'
-                  : 'Aktif bir okula bağlı en az bir okul bağlantısı ekleyin.'
-              }
-              to={canManageSchools(readiness) ? '/operator/schools' : undefined}
-              title="Hizmet verdiğiniz okullar"
-            />
-            <ReadinessItem
-              action="Hizmet mahallelerini seç"
-              complete={readiness.hasEligibleSchoolCoverage}
-              description={
-                readiness.hasEligibleSchoolCoverage
-                  ? 'En az bir uygun okul için geçerli hizmet mahallesi seçildi.'
-                  : 'Aktif okullarınızdan en az biri için hizmet mahallesi seçin.'
-              }
-              to={canManageSchools(readiness) ? '/operator/schools' : undefined}
-              title="Hizmet verdiğiniz mahalleler"
-            />
-          </ol>
+              <ReadinessItem
+                action="Profili düzenle"
+                complete={readiness.profileActive && readiness.publiclyVisible}
+                description={profileGuidance(readiness)}
+                to="/operator/profile"
+                title="Aktif ve herkese açık profil"
+              />
+              {readiness.approvalRequired && (
+                <ReadinessItem
+                  action="Başvuruyu görüntüle"
+                  complete={readiness.approvalSatisfied}
+                  description={
+                    readiness.approvalSatisfied
+                      ? 'Yönetici onayı tamamlandı.'
+                      : 'Bu ortamda arama görünürlüğü için yönetici onayı gereklidir.'
+                  }
+                  to="/operator/profile"
+                  title="Yönetici onayı"
+                />
+              )}
+              <ReadinessItem
+                action="Okulları yönet"
+                complete={readiness.hasActiveSchoolRelationship}
+                description={
+                  readiness.hasActiveSchoolRelationship
+                    ? 'En az bir aktif okul bağlantınız var.'
+                    : 'Aktif bir okula bağlı en az bir okul bağlantısı ekleyin.'
+                }
+                to={
+                  canManageSchools(readiness) ? '/operator/schools' : undefined
+                }
+                title="Hizmet verdiğiniz okullar"
+              />
+              <ReadinessItem
+                action="Hizmet mahallelerini seç"
+                complete={readiness.hasEligibleSchoolCoverage}
+                description={
+                  readiness.hasEligibleSchoolCoverage
+                    ? 'En az bir uygun okul için geçerli hizmet mahallesi seçildi.'
+                    : 'Aktif okullarınızdan en az biri için hizmet mahallesi seçin.'
+                }
+                to={
+                  canManageSchools(readiness) ? '/operator/schools' : undefined
+                }
+                title="Hizmet verdiğiniz mahalleler"
+              />
+            </ol>
+          </section>
 
           {readiness.schools.length > 0 && (
             <section
@@ -179,7 +203,7 @@ export function OperatorOverviewPage() {
                 className="secondary-button button-link"
                 to="/operator/offerings"
               >
-                Araçlar ve ilanlar
+                Araçlar ve servis bilgileri
               </Link>
             )}
           </section>
@@ -204,7 +228,9 @@ function ReadinessItem({
 }) {
   return (
     <li className={complete ? 'complete' : 'incomplete'}>
-      <span className="readiness-state">{complete ? 'Tamam' : 'Eksik'}</span>
+      <StatusBadge tone={complete ? 'success' : 'warning'}>
+        {complete ? 'Tamam' : 'Eksik'}
+      </StatusBadge>
       <div>
         <strong>{title}</strong>
         <p>{description}</p>
