@@ -670,13 +670,16 @@ export function PublicDiscoveryPage() {
                 {selectedSchool.name} · {selectedSchool.districtName}
               </span>
             </div>
-            <button
-              className="text-button"
-              onClick={() => clearSelectedSchool('Okul seçimi kaldırıldı.')}
-              type="button"
-            >
-              Seçimi kaldır
-            </button>
+            <div className="selected-school-actions">
+              <a href="#resmi-tarife">Resmî tarifeyi incele</a>
+              <button
+                className="text-button"
+                onClick={() => clearSelectedSchool('Okul seçimi kaldırıldı.')}
+                type="button"
+              >
+                Seçimi kaldır
+              </button>
+            </div>
           </div>
         )}
 
@@ -776,6 +779,10 @@ export function PublicDiscoveryPage() {
       </div>
 
       <div className="discovery-content-rail">
+        <PublicTariffReference
+          key={selectedSchool?.provinceCode}
+          provinceCode={selectedSchool?.provinceCode}
+        />
         <DiscoveryResults
           error={searchError}
           loading={searching}
@@ -784,10 +791,6 @@ export function PublicDiscoveryPage() {
           }}
           page={results}
           selection={lastSelection}
-        />
-        <PublicTariffReference
-          key={lastSelection?.provinceCode}
-          provinceCode={lastSelection?.provinceCode}
         />
       </div>
     </section>
@@ -883,7 +886,7 @@ function SchoolResults({
                       aria-label={
                         selected
                           ? `${school.name} seçildi`
-                          : `${school.name} okulunu seç`
+                          : `Bu okulu seç: ${school.name}`
                       }
                       aria-pressed={selected}
                       className={selected ? 'secondary-button' : 'text-button'}
