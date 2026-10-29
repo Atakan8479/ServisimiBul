@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom'
+import './auth-ui.css'
 
 function nextForDemand(next: string | null): string {
   if (next === '/demands') return next
@@ -12,9 +13,13 @@ export function SignupChoicePage() {
   const next = encodeURIComponent(nextForDemand(params.get('next')))
 
   return (
-    <section className="auth-card" aria-labelledby="account-type-title">
-      <p className="eyebrow">Kayıt</p>
-      <h1 id="account-type-title">Nasıl kullanmak istiyorsunuz?</h1>
+    <section
+      className="auth-card auth-ui-card signup-choice-card"
+      aria-labelledby="account-type-title"
+    >
+      <header className="auth-ui-heading">
+        <h1 id="account-type-title">Nasıl kullanmak istiyorsunuz?</h1>
+      </header>
 
       <div className="form-stack">
         <Link

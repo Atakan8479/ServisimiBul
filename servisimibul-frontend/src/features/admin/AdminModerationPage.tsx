@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import {
   getModerationCase,
   listModerationCases,
@@ -45,18 +46,28 @@ const actionLabels: Record<ModerationAction, string> = {
   SUSPEND_OPERATOR: 'İşletmeciyi askıya al',
   CLOSE_DEMAND: 'Talebi kapat',
 }
+const statusTones: Record<
+  ModerationCaseStatus,
+  'neutral' | 'info' | 'success' | 'warning'
+> = {
+  OPEN: 'warning',
+  IN_REVIEW: 'info',
+  RESOLVED: 'success',
+  DISMISSED: 'neutral',
+}
+const defaultFilters = {
+  status: 'OPEN' as ModerationCaseStatus | '',
+  targetType: '' as ModerationTargetType | '',
+  reason: '' as ReportReason | '',
+  reportedFrom: '',
+  reportedTo: '',
+}
 
 export function AdminModerationPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const openedCaseId = useRef<string | undefined>(undefined)
-  const [filters, setFilters] = useState({
-    status: 'OPEN' as ModerationCaseStatus | '',
-    targetType: '' as ModerationTargetType | '',
-    reason: '' as ReportReason | '',
-    reportedFrom: '',
-    reportedTo: '',
-  })
+  const [filters, setFilters] = useState({ ...defaultFilters })
   const [submitted, setSubmitted] = useState(filters)
   const [page, setPage] = useState(0)
   const [result, setResult] = useState<ModerationCasePage>()
@@ -162,6 +173,14 @@ export function AdminModerationPage() {
       return
     }
     if (!selected) return
+    if (
+      isEnforcementAction(action) &&
+      !window.confirm(
+        `${actionLabels[action]} işlemi içeriğin veya hesabın görünürlüğünü etkileyebilir. Devam edilsin mi?`,
+      )
+    ) {
+      return
+    }
     setPendingAction(action)
     setError(undefined)
     setNotice(undefined)
@@ -183,16 +202,14 @@ export function AdminModerationPage() {
   }
 
   return (
-    <section className="workspace-page moderation-page">
-      <div className="page-heading">
-        <div>
-          <h1>İçerik bildirimleri</h1>
-          <p>
-            Bildirilen içerikleri inceleyin. Bildirilmesi içeriği otomatik
-            olarak kaldırmaz.
-          </p>
-        </div>
-      </div>
+    <section className="workspace-page admin-page moderation-page">
+      <header className="admin-page-header">
+        <h1>İçerik bildirimleri</h1>
+        <p>
+          Bildirilen içerikleri inceleyin. Bildirilmesi içeriği otomatik olarak
+          kaldırmaz.
+        </p>
+      </header>
 
       <form className="moderation-filters" onSubmit={applyFilters}>
         <label>
@@ -252,34 +269,50 @@ export function AdminModerationPage() {
             ))}
           </select>
         </label>
-        <label>
-          Başlangıç
-          <input
-            type="datetime-local"
-            value={filters.reportedFrom}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                reportedFrom: event.target.value,
-              }))
-            }
-          />
-        </label>
-        <label>
-          Bitiş
-          <input
-            type="datetime-local"
-            value={filters.reportedTo}
-            onChange={(event) =>
-              setFilters((current) => ({
-                ...current,
-                reportedTo: event.target.value,
-              }))
-            }
-          />
-        </label>
+        <details className="admin-advanced-filters">
+          <summary>Tarih aralığı</summary>
+          <div>
+            <label>
+              Başlangıç
+              <input
+                type="datetime-local"
+                value={filters.reportedFrom}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    reportedFrom: event.target.value,
+                  }))
+                }
+              />
+            </label>
+            <label>
+              Bitiş
+              <input
+                type="datetime-local"
+                value={filters.reportedTo}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    reportedTo: event.target.value,
+                  }))
+                }
+              />
+            </label>
+          </div>
+        </details>
         <button className="primary-button" type="submit">
           Filtrele
+        </button>
+        <button
+          className="text-button"
+          onClick={() => {
+            setFilters({ ...defaultFilters })
+            setSubmitted({ ...defaultFilters })
+            setPage(0)
+          }}
+          type="button"
+        >
+          Seçimleri temizle
         </button>
       </form>
 
@@ -328,11 +361,9 @@ export function AdminModerationPage() {
                       </small>
                     </span>
                     <span className="moderation-case-meta">
-                      <span
-                        className={`status-pill moderation-${item.status.toLowerCase()}`}
-                      >
+                      <StatusBadge tone={statusTones[item.status]}>
                         {statusLabels[item.status]}
-                      </span>
+                      </StatusBadge>
                       <span>{item.reporterCount} bildiren</span>
                     </span>
                   </button>
@@ -405,14 +436,14 @@ function ModerationDetail({
   onAction: (action: ModerationAction) => Promise<void>
 }) {
   const actions = availableActions(detail)
+  const caseActions = actions.filter((action) => !isEnforcementAction(action))
+  const enforcementActions = actions.filter(isEnforcementAction)
   return (
     <div className="moderation-detail-content">
       <div>
-        <span
-          className={`status-pill moderation-${detail.summary.status.toLowerCase()}`}
-        >
+        <StatusBadge tone={statusTones[detail.summary.status]}>
           {statusLabels[detail.summary.status]}
-        </span>
+        </StatusBadge>
         <h3>{detail.summary.target.title}</h3>
         <p className="moderation-snapshot">{detail.summary.target.snapshot}</p>
         <p>
@@ -453,28 +484,48 @@ function ModerationDetail({
       <small className="character-count">
         {Array.from(decisionReason).length}/500 karakter
       </small>
-      <div className="button-row moderation-actions">
-        {actions.map((action) => (
-          <button
-            className={
-              [
-                'HIDE_COMMENT',
-                'WITHDRAW_SERVICE_RESPONSE',
-                'SUSPEND_OPERATOR',
-                'CLOSE_DEMAND',
-              ].includes(action)
-                ? 'danger-button'
-                : 'secondary-button'
-            }
-            disabled={Boolean(pendingAction)}
-            key={action}
-            onClick={() => void onAction(action)}
-            type="button"
-          >
-            {pendingAction === action ? 'Kaydediliyor…' : actionLabels[action]}
-          </button>
-        ))}
-      </div>
+      {caseActions.length > 0 && (
+        <section className="moderation-action-group">
+          <h3>İnceleme durumu</h3>
+          <p>Kaydı incelemeye alın veya bildirim sürecini sonuçlandırın.</p>
+          <div className="button-row moderation-actions">
+            {caseActions.map((action) => (
+              <button
+                className="secondary-button"
+                disabled={Boolean(pendingAction)}
+                key={action}
+                onClick={() => void onAction(action)}
+                type="button"
+              >
+                {pendingAction === action
+                  ? 'Kaydediliyor…'
+                  : actionLabels[action]}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {enforcementActions.length > 0 && (
+        <section className="moderation-action-group moderation-enforcement">
+          <h3>İçerik veya hesap işlemleri</h3>
+          <p>Bu işlemler görünürlüğü veya hesap erişimini etkiler.</p>
+          <div className="button-row moderation-actions">
+            {enforcementActions.map((action) => (
+              <button
+                className="danger-button"
+                disabled={Boolean(pendingAction)}
+                key={action}
+                onClick={() => void onAction(action)}
+                type="button"
+              >
+                {pendingAction === action
+                  ? 'Kaydediliyor…'
+                  : actionLabels[action]}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {detail.audit.length > 0 && (
         <section className="moderation-audit">
           <h3>İşlem geçmişi</h3>
@@ -493,6 +544,16 @@ function ModerationDetail({
       )}
     </div>
   )
+}
+
+function isEnforcementAction(action: ModerationAction) {
+  return [
+    'HIDE_COMMENT',
+    'RESTORE_COMMENT',
+    'WITHDRAW_SERVICE_RESPONSE',
+    'SUSPEND_OPERATOR',
+    'CLOSE_DEMAND',
+  ].includes(action)
 }
 
 function availableActions(detail: ModerationCaseDetail): ModerationAction[] {

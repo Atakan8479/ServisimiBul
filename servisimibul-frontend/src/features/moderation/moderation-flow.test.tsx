@@ -5,13 +5,16 @@ import {
   RouterProvider,
   createMemoryRouter,
 } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
 import { ReportControl } from './ReportControl'
 
-afterEach(() => resetCsrfToken())
+afterEach(() => {
+  resetCsrfToken()
+  vi.restoreAllMocks()
+})
 
 describe('reporting and moderation flows', () => {
   it('submits a bounded report while explaining that content remains visible', async () => {
@@ -108,6 +111,7 @@ describe('reporting and moderation flows', () => {
 
   it('shows grouped admin cases without reporter identity and records a reasoned action', async () => {
     let actionBody: unknown
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     server.use(
       authHandler('ADMIN'),
       csrfHandler(),
@@ -172,6 +176,7 @@ describe('reporting and moderation flows', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Yorumu gizle' }))
 
+    expect(confirm).toHaveBeenCalledOnce()
     expect(
       await screen.findByText('Yorumu gizle işlemi kaydedildi.'),
     ).toBeInTheDocument()

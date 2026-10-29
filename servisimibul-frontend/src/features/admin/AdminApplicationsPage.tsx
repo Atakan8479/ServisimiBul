@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
   Link,
   useNavigate,
@@ -6,6 +6,7 @@ import {
   useRouteLoaderData,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatePanel, StatusBadge } from '../../components/design-system'
 import type { AuthUser } from '../auth/auth-api'
 import {
   approveApplication,
@@ -25,6 +26,16 @@ const statusLabels: Record<ApplicationStatus, string> = {
   APPROVED: 'Onaylandı',
 }
 
+const statusTones: Record<
+  ApplicationStatus,
+  'neutral' | 'warning' | 'success'
+> = {
+  DRAFT: 'neutral',
+  PENDING: 'warning',
+  CHANGES_REQUESTED: 'warning',
+  APPROVED: 'success',
+}
+
 export function AdminApplicationsPage() {
   const navigate = useNavigate()
   const user = useRouteLoaderData('admin') as AuthUser
@@ -36,8 +47,10 @@ export function AdminApplicationsPage() {
   const [error, setError] = useState<string>()
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     let active = true
+    setLoading(true)
+    setError(undefined)
     void getApplications(status, page)
       .then((response) => {
         if (active) setResult(response)
@@ -53,18 +66,31 @@ export function AdminApplicationsPage() {
     }
   }, [navigate, page, status])
 
+  useEffect(() => {
+    let cleanup: (() => void) | undefined
+    const timer = window.setTimeout(() => {
+      cleanup = load()
+    }, 0)
+    return () => {
+      window.clearTimeout(timer)
+      cleanup?.()
+    }
+  }, [load])
+
   return (
-    <section className="workspace-page">
-      <p className="eyebrow">
-        {user.operatorApprovalRequired
-          ? 'Başvuru yönetimi'
-          : 'İşletmeci yönetimi'}
-      </p>
-      <h1>
-        {user.operatorApprovalRequired
-          ? 'İşletmeci başvuruları'
-          : 'İşletmeciler'}
-      </h1>
+    <section className="workspace-page admin-page admin-applications-page">
+      <header className="admin-page-header">
+        <h1>
+          {user.operatorApprovalRequired
+            ? 'İşletmeci başvuruları'
+            : 'İşletmeciler'}
+        </h1>
+        <p>
+          {user.operatorApprovalRequired
+            ? 'Başvuruları inceleyin ve gerekli düzeltmeleri açıkça iletin.'
+            : 'İşletmeci profillerini inceleyin ve hesap durumlarını yönetin.'}
+        </p>
+      </header>
 
       {user.operatorApprovalRequired && (
         <label className="form-field application-filter">
@@ -87,26 +113,39 @@ export function AdminApplicationsPage() {
         </label>
       )}
 
-      {error && (
-        <div className="form-error" role="alert">
-          {error}
-        </div>
-      )}
-      {loading ? (
-        <InlineLoading label="Başvurular yükleniyor" />
+      {error ? (
+        <StatePanel
+          action={
+            <button className="secondary-button" onClick={() => void load()}>
+              Tekrar dene
+            </button>
+          }
+          detail={error}
+          title="Kayıtlar yüklenemedi"
+          tone="error"
+        />
+      ) : loading ? (
+        <StatePanel
+          detail="Güncel başvuru kayıtları getiriliyor."
+          title="Kayıtlar yükleniyor"
+          tone="loading"
+        />
       ) : result?.content.length ? (
-        <div className="school-list">
+        <div className="school-list admin-application-list">
           {result.content.map((profile) => (
-            <article className="school-card" key={profile.id}>
+            <article
+              className="school-card admin-application-card"
+              key={profile.id}
+            >
               <div className="school-title-row">
                 <div>
                   <h2>{profile.businessName || 'İsimsiz işletme'}</h2>
                   <p>{profile.contactPhone}</p>
                 </div>
                 {user.operatorApprovalRequired && (
-                  <span className="status-pill neutral">
+                  <StatusBadge tone={statusTones[profile.approvalStatus]}>
                     {statusLabels[profile.approvalStatus]}
-                  </span>
+                  </StatusBadge>
                 )}
               </div>
               <Link to={`/admin/applications/${profile.id}`} viewTransition>
@@ -246,23 +285,31 @@ export function AdminApplicationDetailPage() {
     }
   }
 
-  if (!detail && !error) return <InlineLoading label="Başvuru yükleniyor" />
+  if (!detail && !error) {
+    return (
+      <StatePanel
+        detail="İşletmeci bilgileri ve inceleme geçmişi getiriliyor."
+        title="Başvuru yükleniyor"
+        tone="loading"
+      />
+    )
+  }
 
   const profile = detail?.profile
   return (
-    <section className="workspace-page">
-      <Link to="/admin/applications" viewTransition>
+    <section className="workspace-page admin-page admin-application-detail-page">
+      <Link className="admin-back-link" to="/admin/applications" viewTransition>
         ←{' '}
         {user.operatorApprovalRequired
           ? 'Başvurulara dön'
           : 'İşletmecilere dön'}
       </Link>
-      <p className="eyebrow">
-        {user.operatorApprovalRequired
-          ? 'Başvuru detayı'
-          : 'İşletmeci yönetimi'}
-      </p>
-      <h1>{profile?.businessName || 'İsimsiz işletme'}</h1>
+      <header className="admin-page-header">
+        <h1>{profile?.businessName || 'İsimsiz işletme'}</h1>
+        <p>
+          Profil bilgilerini, başvuru durumunu ve inceleme geçmişini yönetin.
+        </p>
+      </header>
 
       {error && (
         <div className="form-error" role="alert">
@@ -281,9 +328,9 @@ export function AdminApplicationDetailPage() {
             <div className="school-title-row">
               <h2>Profil bilgileri</h2>
               {user.operatorApprovalRequired && (
-                <span className="status-pill neutral">
+                <StatusBadge tone={statusTones[profile.approvalStatus]}>
                   {statusLabels[profile.approvalStatus]}
-                </span>
+                </StatusBadge>
               )}
             </div>
             <dl className="detail-list">
@@ -388,15 +435,6 @@ function handleSession(
     error instanceof ApiError
       ? error.problem.detail
       : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
-  )
-}
-
-function InlineLoading({ label }: { label: string }) {
-  return (
-    <div className="inline-loading" aria-busy="true" aria-live="polite">
-      <span className="loading-dot" aria-hidden="true" />
-      {label}
-    </div>
   )
 }
 

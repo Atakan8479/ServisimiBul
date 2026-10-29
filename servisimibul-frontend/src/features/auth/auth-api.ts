@@ -50,6 +50,20 @@ export function verifyEmail(token: string) {
   })
 }
 
+export function forgotPassword(email: string) {
+  return apiRequest('/auth/forgot-password', {
+    method: 'POST',
+    json: { email },
+  })
+}
+
+export function resetPassword(token: string, newPassword: string) {
+  return apiRequest('/auth/reset-password', {
+    method: 'POST',
+    json: { token, newPassword },
+  })
+}
+
 export async function login(request: LoginRequest): Promise<AuthUser> {
   const user = await apiRequest('/auth/login', {
     method: 'POST',
