@@ -122,8 +122,8 @@ export function OperatorOverviewPage() {
               value={String(readiness.schools.length)}
             />
             <SummaryCard
-              label="Hizmet mahallesi"
-              note="Okul bazında geçerli kapsam"
+              label="Okul-mahalle kapsamı"
+              note="Okul bazındaki geçerli kayıt toplamı"
               tone="accent"
               value={String(coverageCount(readiness))}
             />

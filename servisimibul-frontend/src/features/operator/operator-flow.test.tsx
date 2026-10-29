@@ -40,6 +40,36 @@ describe('operator workspace flows', () => {
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
   })
 
+  it('labels the summed school coverage as school-neighborhood records', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({
+        schools: [
+          schoolReadiness({ validCoverageCount: 1 }),
+          schoolReadiness({
+            operatorSchoolId: '9e1c6d39-ed33-421a-88f4-15cf57bbef03',
+            schoolId: '5d24f11d-0832-4b79-81a8-78726b69b035',
+            schoolName: 'İkinci Okul',
+            validCoverageCount: 2,
+          }),
+        ],
+      }),
+    )
+
+    renderRoute('/operator')
+
+    const coverageSummary = (
+      await screen.findByText('Okul-mahalle kapsamı')
+    ).closest('article')
+    expect(coverageSummary).not.toBeNull()
+    expect(within(coverageSummary!).getByText('3')).toBeInTheDocument()
+    expect(
+      within(coverageSummary!).getByText(
+        'Okul bazındaki geçerli kayıt toplamı',
+      ),
+    ).toBeInTheDocument()
+  })
+
   it('shows approval and profile guidance only when the server reports them incomplete', async () => {
     server.use(
       authHandler(true, 'PENDING'),

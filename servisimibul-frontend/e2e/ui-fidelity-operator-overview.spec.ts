@@ -12,7 +12,7 @@ const viewports = [
 for (const viewport of viewports) {
   test(`operator overview preserves readiness and reflow at ${viewport.width}px`, async ({
     page,
-  }) => {
+  }, testInfo) => {
     const state = createMockApiState()
     state.registered = true
     state.verified = true
@@ -37,9 +37,16 @@ for (const viewport of viewports) {
     expect(results.violations).toEqual([])
 
     if (viewport.name === 'desktop' || viewport.name === 'mobile') {
+      const screenshotPath = testInfo.outputPath(
+        `operator-overview-${viewport.name}.png`,
+      )
       await page.screenshot({
         fullPage: true,
-        path: `../docs/screenshots/ui-fidelity-01/after/operator-overview-${viewport.name}.png`,
+        path: screenshotPath,
+      })
+      await testInfo.attach(`operator overview ${viewport.name}`, {
+        path: screenshotPath,
+        contentType: 'image/png',
       })
     }
   })
