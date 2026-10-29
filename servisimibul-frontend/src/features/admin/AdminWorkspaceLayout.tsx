@@ -4,6 +4,7 @@ import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
 import { NotificationNavLink } from '../notification/NotificationNavLink'
+import './admin-workspace.css'
 
 export function AdminWorkspaceLayout() {
   const user = useRouteLoaderData('admin') as AuthUser
@@ -32,29 +33,31 @@ export function AdminWorkspaceLayout() {
   }
 
   return (
-    <WorkspaceShell
-      accountLabel="Yönetim alanı"
-      email={user.email}
-      error={error}
-      loggingOut={loggingOut}
-      onSignOut={signOut}
-      navigation={
-        <>
-          <NavLink to="/admin/applications" viewTransition>
-            {user.operatorApprovalRequired ? 'Başvurular' : 'İşletmeciler'}
-          </NavLink>
-          <NavLink to="/admin/schools" viewTransition>
-            Okullar
-          </NavLink>
-          <NavLink to="/admin/tariffs" viewTransition>
-            Tarifeler
-          </NavLink>
-          <NavLink to="/admin/moderation" viewTransition>
-            İçerik inceleme
-          </NavLink>
-          <NotificationNavLink to="/admin/notifications" />
-        </>
-      }
-    />
+    <div className="admin-workspace">
+      <WorkspaceShell
+        accountLabel="Yönetim alanı"
+        email={user.email}
+        error={error}
+        loggingOut={loggingOut}
+        onSignOut={signOut}
+        navigation={
+          <>
+            <NavLink to="/admin/applications" viewTransition>
+              {user.operatorApprovalRequired ? 'Başvurular' : 'İşletmeciler'}
+            </NavLink>
+            <NavLink to="/admin/schools" viewTransition>
+              Okullar
+            </NavLink>
+            <NavLink to="/admin/tariffs" viewTransition>
+              Tarifeler
+            </NavLink>
+            <NavLink to="/admin/moderation" viewTransition>
+              İçerik inceleme
+            </NavLink>
+            <NotificationNavLink to="/admin/notifications" />
+          </>
+        }
+      />
+    </div>
   )
 }

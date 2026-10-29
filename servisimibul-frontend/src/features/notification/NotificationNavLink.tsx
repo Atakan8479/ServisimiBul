@@ -3,6 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { clearKnownAuthRole } from '../auth/auth-api'
 import { unreadNotificationCount } from './notification-api'
+import './notification-ui.css'
 
 export function NotificationNavLink({ to }: { to: string }) {
   const location = useLocation()

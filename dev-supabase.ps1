@@ -73,6 +73,8 @@ try {
     $backendEnvironment['SB_COOKIE_SECURE'] = 'false'
     $backendEnvironment['SERVER_SERVLET_SESSION_COOKIE_SECURE'] = 'false'
     $backendEnvironment['SB_EMAIL_VERIFICATION_REQUIRED'] = 'false'
+    $backendEnvironment['SB_PARENT_REGISTRATION_ENABLED'] = 'true'
+    $backendEnvironment['SB_PARENT_EMAIL_VERIFICATION_REQUIRED'] = 'false'
     $backendEnvironment['APP_AUTH_EMAIL_VERIFICATION_REQUIRED'] = 'false'
     $backendEnvironment['OPERATOR_APPROVAL_REQUIRED'] = 'false'
     $backendEnvironment['APP_OPERATOR_APPROVAL_REQUIRED'] = 'false'

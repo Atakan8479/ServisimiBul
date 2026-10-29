@@ -245,6 +245,67 @@ describe('parent account onboarding', () => {
     expect(
       screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+    expect(
+      screen.getByRole('link', { name: 'Şifremi unuttum' }),
+    ).toHaveAttribute('href', '/forgot-password?from=parent')
+  })
+
+  it('requests password recovery without revealing whether the account exists', async () => {
+    let requestBody: unknown
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/forgot-password', async ({ request }) => {
+        requestBody = await request.json()
+        return new HttpResponse(null, { status: 202 })
+      }),
+    )
+
+    renderRoute('/forgot-password?from=parent')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Yenileme bağlantısı gönder' }),
+    )
+
+    expect(
+      await screen.findByText(/Hesap uygunsa şifre yenileme bağlantısı/),
+    ).toBeInTheDocument()
+    expect(requestBody).toEqual({ email: 'parent@example.test' })
+    expect(
+      screen.getByRole('link', { name: 'Giriş sayfasına dön' }),
+    ).toHaveAttribute('href', '/parent/login')
+  })
+
+  it('resets a password using the token from the recovery link', async () => {
+    let requestBody: unknown
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/reset-password', async ({ request }) => {
+        requestBody = await request.json()
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderRoute('/reset-password?token=reset-token')
+    expect(await screen.findByLabelText('Şifre yenileme kodu')).toHaveValue(
+      'reset-token',
+    )
+    fireEvent.change(screen.getByLabelText('Yeni şifre'), {
+      target: { value: 'new secure password' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Şifreyi yenile' }))
+
+    expect(await screen.findByText(/Şifreniz yenilendi/)).toBeInTheDocument()
+    expect(requestBody).toEqual({
+      token: 'reset-token',
+      newPassword: 'new secure password',
+    })
+    expect(
+      screen
+        .getAllByRole('link', { name: 'Veli girişi' })
+        .some((link) => link.classList.contains('button-link')),
+    ).toBe(true)
   })
 
   it('returns a parent to notifications but rejects an external URL', async () => {

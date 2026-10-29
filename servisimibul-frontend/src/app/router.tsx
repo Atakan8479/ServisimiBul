@@ -100,6 +100,24 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'forgot-password',
+        handle: { pageTitle: 'Şifre yenileme' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages'))
+            .ForgotPasswordPage,
+        }),
+      },
+      {
+        path: 'reset-password',
+        handle: { pageTitle: 'Yeni şifre' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages'))
+            .ResetPasswordPage,
+        }),
+      },
+      {
         path: 'operator/login',
         handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,

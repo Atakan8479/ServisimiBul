@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatePanel } from '../../components/design-system'
 import {
   listNotifications,
   markNotificationRead,
   type NotificationItem,
   type NotificationPage,
 } from './notification-api'
+import './notification-ui.css'
 
 export function NotificationCenterPage() {
   const navigate = useNavigate()
@@ -80,6 +82,7 @@ export function NotificationCenterPage() {
       <div className="page-heading notification-heading">
         <div>
           <h1>Bildirim merkezi</h1>
+          <p>Hesabınızla ilgili yeni gelişmeleri tek yerde takip edin.</p>
         </div>
         {result && result.totalElements > 0 && (
           <span className="count-badge">{result.totalElements} bildirim</span>
@@ -100,14 +103,16 @@ export function NotificationCenterPage() {
       )}
 
       {loading ? (
-        <p className="notification-state" role="status">
-          Bildirimler yükleniyor…
-        </p>
+        <StatePanel
+          detail="Güncel bildirimleriniz getiriliyor."
+          title="Bildirimler yükleniyor"
+          tone="loading"
+        />
       ) : !result || result.content.length === 0 ? (
-        <div className="empty-state notification-empty">
-          <h2>Henüz bildiriminiz yok</h2>
-          <p>Yeni bir gelişme olduğunda burada göreceksiniz.</p>
-        </div>
+        <StatePanel
+          detail="Yeni bir gelişme olduğunda burada göreceksiniz."
+          title="Henüz bildiriminiz yok"
+        />
       ) : (
         <ol className="notification-list">
           {result.content.map((notification) => (

@@ -16,12 +16,15 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/client'
 import {
+  forgotPassword,
   login,
   logout,
   registerOperator,
   registerParent,
+  resetPassword,
   verifyEmail,
 } from './auth-api'
+import './auth-ui.css'
 
 const passwordSchema = z
   .string()
@@ -61,10 +64,21 @@ const verificationSchema = z.object({
   token: z.string().trim().min(1, 'Doğrulama kodu zorunludur.'),
 })
 
+const forgotPasswordSchema = z.object({
+  email: z.string().trim().email('Geçerli bir e-posta adresi girin.'),
+})
+
+const resetPasswordSchema = z.object({
+  token: z.string().trim().min(1, 'Şifre yenileme kodu zorunludur.'),
+  newPassword: passwordSchema,
+})
+
 type RegistrationForm = z.infer<typeof registrationSchema>
 type ParentRegistrationForm = z.infer<typeof parentRegistrationSchema>
 type LoginForm = z.infer<typeof loginSchema>
 type VerificationForm = z.infer<typeof verificationSchema>
+type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
+type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 
 export function RegisterPage() {
   const emailVerificationRequired =
@@ -91,7 +105,6 @@ export function RegisterPage() {
   if (complete) {
     return (
       <AuthCard
-        eyebrow="Kayıt alındı"
         title={
           emailVerificationRequired
             ? 'E-postanızı kontrol edin'
@@ -116,7 +129,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard eyebrow="İşletmeci kaydı" title="Hesap oluşturun">
+    <AuthCard title="İşletmeci hesabı oluşturun">
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -255,7 +268,7 @@ export function ParentSignupPage() {
   }
 
   return (
-    <AuthCard eyebrow="Veli kaydı" title="Veli hesabı oluşturun">
+    <AuthCard title="Veli hesabı oluşturun">
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -328,7 +341,7 @@ export function VerifyEmailPage() {
   }
 
   return (
-    <AuthCard eyebrow="E-posta doğrulama" title="Hesabınızı doğrulayın">
+    <AuthCard title="Hesabınızı doğrulayın">
       {complete ? (
         <>
           <p>
@@ -356,6 +369,155 @@ export function VerifyEmailPage() {
             type="submit"
           >
             {isSubmitting ? 'Doğrulanıyor…' : 'E-postayı doğrula'}
+          </button>
+        </form>
+      )}
+    </AuthCard>
+  )
+}
+
+export function ForgotPasswordPage() {
+  const [searchParams] = useSearchParams()
+  const [complete, setComplete] = useState(false)
+  const [formError, setFormError] = useState<string>()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordForm>({
+    resolver: zodResolver(forgotPasswordSchema),
+  })
+  const loginPath =
+    searchParams.get('from') === 'parent' ? '/parent/login' : '/operator/login'
+
+  async function submit({ email }: ForgotPasswordForm) {
+    setFormError(undefined)
+    try {
+      await forgotPassword(email)
+      setComplete(true)
+    } catch (error) {
+      setFormError(applyFieldErrors(error, setError, ['email']))
+    }
+  }
+
+  return (
+    <AuthCard title="Şifrenizi yenileyin">
+      {complete ? (
+        <div className="auth-completion" role="status">
+          <p>
+            Hesap uygunsa şifre yenileme bağlantısı e-posta adresine gönderildi.
+          </p>
+          <Link className="button-link" to={loginPath} viewTransition>
+            Giriş sayfasına dön
+          </Link>
+        </div>
+      ) : (
+        <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
+          <p className="auth-form-intro">
+            Hesabınızda kullandığınız e-posta adresini girin.
+          </p>
+          <FormField
+            label="E-posta"
+            error={errors.email?.message}
+            input={
+              <input type="email" autoComplete="email" {...register('email')} />
+            }
+          />
+          <FormError message={formError} />
+          <button
+            className="primary-button"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? 'Gönderiliyor…' : 'Yenileme bağlantısı gönder'}
+          </button>
+        </form>
+      )}
+      {!complete && (
+        <p className="auth-switch">
+          <Link to={loginPath} viewTransition>
+            Giriş sayfasına dön
+          </Link>
+        </p>
+      )}
+    </AuthCard>
+  )
+}
+
+export function ResetPasswordPage() {
+  const [searchParams] = useSearchParams()
+  const [complete, setComplete] = useState(false)
+  const [formError, setFormError] = useState<string>()
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<ResetPasswordForm>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: { token: searchParams.get('token') ?? '' },
+  })
+
+  async function submit({ token, newPassword }: ResetPasswordForm) {
+    setFormError(undefined)
+    try {
+      await resetPassword(token, newPassword)
+      setComplete(true)
+    } catch (error) {
+      setFormError(applyFieldErrors(error, setError, ['token', 'newPassword']))
+    }
+  }
+
+  return (
+    <AuthCard title="Yeni şifrenizi belirleyin">
+      {complete ? (
+        <div className="auth-completion" role="status">
+          <p>
+            Şifreniz yenilendi. Açık oturumlarınız güvenli biçimde kapatıldı.
+          </p>
+          <div className="auth-completion-actions">
+            <Link className="button-link" to="/parent/login" viewTransition>
+              Veli girişi
+            </Link>
+            <Link
+              className="secondary-button"
+              to="/operator/login"
+              viewTransition
+            >
+              İşletmeci veya yönetici girişi
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
+          <FormField
+            label="Şifre yenileme kodu"
+            hint="E-postadaki bağlantı bu alanı otomatik doldurur."
+            error={errors.token?.message}
+            input={
+              <input autoComplete="one-time-code" {...register('token')} />
+            }
+          />
+          <FormField
+            label="Yeni şifre"
+            hint="12–64 karakter; boşluk kullanabilirsiniz."
+            error={errors.newPassword?.message}
+            input={
+              <input
+                type="password"
+                autoComplete="new-password"
+                {...register('newPassword')}
+              />
+            }
+          />
+          <FormError message={formError} />
+          <button
+            className="primary-button"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}
           </button>
         </form>
       )}
@@ -441,8 +603,7 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
 
   return (
     <AuthCard
-      eyebrow={parentOnly ? 'Veli girişi' : 'Giriş'}
-      title={parentOnly ? 'Veli hesabınıza giriş yapın' : 'Hoş geldiniz'}
+      title={parentOnly ? 'Veli hesabınıza giriş yapın' : 'Giriş yapın'}
     >
       {searchParams.get('registered') === 'parent' && (
         <div className="status-banner success" role="status">
@@ -473,14 +634,22 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
             />
           }
         />
-        <button
-          aria-pressed={showPassword}
-          className="text-button"
-          onClick={() => setShowPassword((visible) => !visible)}
-          type="button"
-        >
-          {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-        </button>
+        <div className="auth-password-actions">
+          <button
+            aria-pressed={showPassword}
+            className="text-button"
+            onClick={() => setShowPassword((visible) => !visible)}
+            type="button"
+          >
+            {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+          </button>
+          <Link
+            to={`/forgot-password?from=${parentOnly ? 'parent' : 'operator'}`}
+            viewTransition
+          >
+            Şifremi unuttum
+          </Link>
+        </div>
         <label className="checkbox-row">
           <input type="checkbox" {...register('rememberMe')} />
           <strong>Beni hatırla</strong>
@@ -611,19 +780,12 @@ function applyFieldErrors<T extends FieldValues>(
   return error.problem.detail
 }
 
-function AuthCard({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string
-  title: string
-  children: ReactNode
-}) {
+function AuthCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="auth-card">
-      <p className="eyebrow">{eyebrow}</p>
-      <h1>{title}</h1>
+    <section className="auth-card auth-ui-card">
+      <header className="auth-ui-heading">
+        <h1>{title}</h1>
+      </header>
       {children}
     </section>
   )

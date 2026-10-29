@@ -1,0 +1,30 @@
+{
+  "routes": [
+    { "path": "/", "title": "Anasayfa ve Okul Keşfi" },
+    { "path": "/arama", "title": "İşletmeci Arama Sonuçları" },
+    { "path": "/tarife", "title": "Resmî UKOME Tarife Referansı" },
+    { "path": "/demands", "title": "Servis Talep Panosu" },
+    { "path": "/demands/:demandId", "title": "Servis Talebi Ayrıntısı" },
+    { "path": "/register", "title": "Hesap Türü Seçimi" },
+    { "path": "/parent/register", "title": "Ebeveyn Kaydı" },
+    { "path": "/parent/login", "title": "Ebeveyn Girişi" },
+    { "path": "/operator/register", "title": "İşletmeci Kaydı" },
+    { "path": "/operator/login", "title": "İşletmeci Girişi" },
+    { "path": "/operator/verify-email", "title": "E-posta Doğrulama" },
+    { "path": "/forgot-password", "title": "Şifremi Unuttum" },
+    { "path": "/reset-password", "title": "Şifre Yenileme" },
+    { "path": "/operator", "title": "İşletmeci Genel Bakış" },
+    { "path": "/isletmeci", "title": "İşletmeci Genel Bakış (Eski Rota)" },
+    { "path": "/operator/profile", "title": "İşletmeci Profili" },
+    { "path": "/operator/schools", "title": "Okullar ve Hizmet Kapsamı" },
+    { "path": "/operator/offerings", "title": "Araçlar ve Servis Teklifleri" },
+    { "path": "/admin/applications", "title": "İşletmeci Yönetimi" },
+    { "path": "/admin/applications/:applicationId", "title": "İşletmeci Ayrıntısı" },
+    { "path": "/admin/schools", "title": "Okul Yönetimi" },
+    { "path": "/admin/tariffs", "title": "UKOME Tarife Yönetimi" },
+    { "path": "/admin/moderation", "title": "Raporlama ve Moderasyon" },
+    { "path": "/notifications", "title": "Ebeveyn Bildirimleri" },
+    { "path": "/operator/notifications", "title": "İşletmeci Bildirimleri" },
+    { "path": "/admin/notifications", "title": "Yönetim Bildirimleri" }
+  ]
+}

@@ -1,6 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import {
   createSchool,
   getAdminSchools,
@@ -30,6 +31,7 @@ const emptyForm = {
 
 export function AdminSchoolsPage() {
   const navigate = useNavigate()
+  const editorHeadingRef = useRef<HTMLHeadingElement>(null)
   const [result, setResult] = useState<SchoolPage>()
   const [provinces, setProvinces] = useState<Province[]>([])
   const [districts, setDistricts] = useState<District[]>([])
@@ -129,7 +131,7 @@ export function AdminSchoolsPage() {
         sourceCode: school.sourceCode ?? '',
         active: school.active,
       })
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      window.requestAnimationFrame(() => editorHeadingRef.current?.focus())
     } catch (failure) {
       setEditing(undefined)
       handleSession(failure, navigate, setError)
@@ -239,9 +241,13 @@ export function AdminSchoolsPage() {
   }
 
   return (
-    <section className="workspace-page">
-      <p className="eyebrow">Okul kataloğu</p>
-      <h1>Okulları yönetin</h1>
+    <section className="workspace-page admin-page admin-schools-page">
+      <header className="admin-page-header">
+        <h1>Okulları yönetin</h1>
+        <p>
+          Test ettiğiniz okulları ekleyin ve katalogdaki durumlarını yönetin.
+        </p>
+      </header>
 
       {error && (
         <div className="form-error" role="alert">
@@ -254,9 +260,14 @@ export function AdminSchoolsPage() {
         </div>
       )}
 
-      <form className="form-card compact-card form-stack" onSubmit={save}>
+      <form
+        className="form-card compact-card form-stack admin-school-editor"
+        onSubmit={save}
+      >
         <div className="section-heading">
-          <h2>{editing ? 'Okulu düzenle' : 'Yeni okul ekle'}</h2>
+          <h2 ref={editorHeadingRef} tabIndex={-1}>
+            {editing ? `${editing.name} okulunu düzenle` : 'Yeni okul ekle'}
+          </h2>
           {editing && (
             <button className="text-button" onClick={resetForm} type="button">
               İptal
@@ -409,7 +420,10 @@ export function AdminSchoolsPage() {
         </button>
       </form>
 
-      <section className="catalog-section" aria-labelledby="school-list-title">
+      <section
+        className="catalog-section admin-school-catalog"
+        aria-labelledby="school-list-title"
+      >
         <div className="section-heading">
           <h2 id="school-list-title">Okullar</h2>
           <span className="count-badge">{result?.totalElements ?? 0} okul</span>
@@ -451,11 +465,9 @@ export function AdminSchoolsPage() {
                       {school.provinceName}
                     </p>
                   </div>
-                  <span
-                    className={`status-pill ${school.active ? 'success' : 'neutral'}`}
-                  >
+                  <StatusBadge tone={school.active ? 'success' : 'neutral'}>
                     {school.active ? 'Aktif' : 'Pasif'}
-                  </span>
+                  </StatusBadge>
                 </div>
                 <div className="button-row">
                   <button

@@ -83,7 +83,7 @@ describe('public operator discovery', () => {
     const resultHeading = screen.getByRole('heading', {
       name: '2 işletmeci bulundu',
     })
-    expect(resultHeading).toHaveFocus()
+    await waitFor(() => expect(resultHeading).toHaveFocus())
     const operatorCard = screen.getByRole('article', {
       name: 'Acıbadem Servis',
     })
@@ -248,9 +248,11 @@ describe('public operator discovery', () => {
       'Servis işletmecileri yüklenemedi. Lütfen tekrar deneyin.',
     )
     expect(message.closest('[role="alert"]')).not.toBeNull()
-    expect(
-      screen.getByRole('heading', { name: 'Sonuçlar yüklenemedi' }),
-    ).toHaveFocus()
+    await waitFor(() =>
+      expect(
+        screen.getByRole('heading', { name: 'Sonuçlar yüklenemedi' }),
+      ).toHaveFocus(),
+    )
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Sonuçları yeniden dene' }),
