@@ -111,7 +111,8 @@ export function ReportControl({
   if (sent) {
     return (
       <span className="report-sent" role="status">
-        Bildirim alındı
+        <strong>Bildirim alındı</strong>
+        <small>İçerik inceleme sırasında görünür kalır.</small>
       </span>
     )
   }
@@ -130,7 +131,10 @@ export function ReportControl({
       ) : (
         <form className="report-form" onSubmit={submit}>
           <strong>İçeriği bildir</strong>
-          <p>Bildiriminiz incelenecek. İçerik hemen kaldırılmaz.</p>
+          <p className="report-review-note">
+            İçerik hemen kaldırılmaz. Bildiriminiz inceleme sırasına alınır ve
+            içerik yalnızca yetkili bir moderasyon kararıyla değişir.
+          </p>
           <label htmlFor={`${fieldId}-reason`}>Bildirim nedeni</label>
           <select
             id={`${fieldId}-reason`}

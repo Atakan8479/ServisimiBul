@@ -190,17 +190,26 @@ export function DemandComments({
       <div className="section-heading">
         <div>
           <h2 id="comments-title">Yorumlar</h2>
+          <p>
+            Veliler takma adla görünür; öğrenci ve açık adres bilgisi
+            paylaşılmaz.
+          </p>
         </div>
-        {open && !formOpen && (
-          <button
-            className="secondary-button"
-            ref={commentButtonRef}
-            type="button"
-            onClick={() => void beginComment()}
-          >
-            Yorum yaz
-          </button>
-        )}
+        <div className="demand-comment-heading-actions">
+          {pageInfo && pageInfo.totalElements > 0 && (
+            <span className="count-badge">{pageInfo.totalElements} yorum</span>
+          )}
+          {open && !formOpen && (
+            <button
+              className="secondary-button"
+              ref={commentButtonRef}
+              type="button"
+              onClick={() => void beginComment()}
+            >
+              Yorum yaz
+            </button>
+          )}
+        </div>
       </div>
 
       {formOpen && (

@@ -102,6 +102,12 @@ export function DemandFeedbackPanel({
                   </strong>
                   <span>{directionLabel(item)}</span>
                   <small>{feedbackStateLabel(item)}</small>
+                  {item.status === 'AWAITING_FEEDBACK' && (
+                    <time dateTime={item.expiresAt}>
+                      {formatFeedbackDeadline(item.expiresAt)} tarihine kadar
+                      yanıtlayın
+                    </time>
+                  )}
                 </div>
                 {item.canEvaluate && (
                   <div className="demand-feedback-actions">
@@ -160,4 +166,11 @@ function feedbackStateLabel(item: DemandFeedback) {
     case 'SUPERSEDED':
       return 'Bu bildirim geri çekildi veya daha yeni bir yayınla değiştirildi.'
   }
+}
+
+function formatFeedbackDeadline(value: string) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
