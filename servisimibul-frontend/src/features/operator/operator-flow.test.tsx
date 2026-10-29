@@ -867,6 +867,41 @@ describe('operator workspace flows', () => {
     ).not.toBeInTheDocument()
   })
 
+  it('retries a failed offerings load without showing misleading empty states', async () => {
+    let attempts = 0
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () => {
+        if (attempts++ === 0) {
+          return HttpResponse.json(
+            {
+              title: 'Service Unavailable',
+              status: 503,
+              detail: 'Servis bilgileri şu anda alınamıyor.',
+              code: 'offerings_unavailable',
+            },
+            { status: 503 },
+          )
+        }
+        return HttpResponse.json([])
+      }),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+    )
+
+    renderRoute('/operator/offerings')
+
+    expect(
+      await screen.findByText('Servis bilgileri şu anda alınamıyor.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Henüz araç eklenmedi.')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yeniden dene' }))
+
+    expect(await screen.findByText('Henüz araç eklenmedi.')).toBeInTheDocument()
+    expect(attempts).toBe(2)
+  })
+
   it('saves only parent coverage neighborhoods and publishes the offering', async () => {
     let coverageBody: unknown
     let published = false

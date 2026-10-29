@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import {
   addOperatorSchool,
   getDiscoveryReadiness,
@@ -249,12 +250,11 @@ export function OperatorSchoolsPage() {
   }
 
   return (
-    <section className="workspace-page">
-      <p className="eyebrow">Okullar ve kapsam</p>
-      <h1>Hizmet ağınız</h1>
-      <p className="page-lead">
-        Hizmet verdiğiniz okulları ve mahalleleri ekleyin.
-      </p>
+    <section className="workspace-page operator-workspace-page operator-schools-page">
+      <header className="operator-page-header">
+        <h1>Hizmet ağınız</h1>
+        <p>Hizmet verdiğiniz okulları ve mahalleleri ekleyin.</p>
+      </header>
 
       {error && (
         <div className="form-error" role="alert">
@@ -262,7 +262,10 @@ export function OperatorSchoolsPage() {
         </div>
       )}
       {notice && (
-        <div className={`status-banner ${notice.tone}`} role="status">
+        <div
+          className={`status-banner operator-action-notice ${notice.tone}`}
+          role="status"
+        >
           {notice.message}
         </div>
       )}
@@ -285,13 +288,13 @@ export function OperatorSchoolsPage() {
       )}
 
       <section
-        className="form-card compact-card"
+        className="form-card compact-card operator-add-school"
         aria-labelledby="add-school-title"
       >
         <div className="section-heading">
           <div>
-            <p className="eyebrow">Yeni bağlantı</p>
             <h2 id="add-school-title">Okul ekle</h2>
+            <p>Okulu arayın, seçin ve ardından hizmet mahallelerini ekleyin.</p>
           </div>
           <span className="count-badge">{relationships.length} okul</span>
         </div>
@@ -439,15 +442,19 @@ export function OperatorSchoolsPage() {
               <div className="school-card-copy">
                 <div className="school-title-row">
                   <h2>{relationship.schoolName}</h2>
-                  <span
-                    className={`status-pill ${relationship.active && relationship.schoolActive ? 'success' : 'neutral'}`}
+                  <StatusBadge
+                    tone={
+                      relationship.active && relationship.schoolActive
+                        ? 'success'
+                        : 'neutral'
+                    }
                   >
                     {!relationship.schoolActive
                       ? 'Okul pasif'
                       : relationship.active
                         ? 'Aktif'
                         : 'Bağlantı pasif'}
-                  </span>
+                  </StatusBadge>
                 </div>
                 <p>
                   {relationship.schoolProvinceName} ·{' '}

@@ -4,6 +4,7 @@ import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
 import { NotificationNavLink } from '../notification/NotificationNavLink'
+import './operator-workspace.css'
 
 export function OperatorWorkspaceLayout() {
   const user = useRouteLoaderData('operator') as AuthUser

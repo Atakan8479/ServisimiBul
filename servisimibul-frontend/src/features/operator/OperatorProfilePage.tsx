@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { useNavigate, useRouteLoaderData } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import type { AuthUser } from '../auth/auth-api'
 import {
   getProfile,
@@ -167,24 +168,35 @@ export function OperatorProfilePage() {
     !user.operatorApprovalRequired || profile?.approvalStatus !== 'PENDING'
 
   return (
-    <section className="workspace-page">
-      <p className="eyebrow">
-        {user.operatorApprovalRequired
-          ? 'Profil ve başvuru'
-          : 'İşletmeci profili'}
-      </p>
-      <h1>İşletme bilgileriniz</h1>
-      {user.operatorApprovalRequired && (
-        <p className="page-lead">
-          İletişim telefonu onaydan sonra velilere gösterilir.
+    <section className="workspace-page operator-workspace-page operator-profile-page">
+      <header className="operator-page-header">
+        <h1>İşletme bilgileriniz</h1>
+        <p>
+          Velilerin göreceği iletişim ve profil bilgilerini güncel tutun.
+          {user.operatorApprovalRequired && (
+            <> İletişim telefonu onaydan sonra velilere gösterilir.</>
+          )}
         </p>
-      )}
+      </header>
 
       {profile && user.operatorApprovalRequired && (
         <div
-          className={`status-banner ${statusContent[profile.approvalStatus].tone}`}
+          className={`status-banner operator-profile-status ${statusContent[profile.approvalStatus].tone}`}
+          role="status"
         >
-          <strong>{statusContent[profile.approvalStatus].label}</strong>
+          <StatusBadge
+            tone={
+              profile.approvalStatus === 'APPROVED'
+                ? 'success'
+                : profile.approvalStatus === 'CHANGES_REQUESTED'
+                  ? 'warning'
+                  : profile.approvalStatus === 'PENDING'
+                    ? 'info'
+                    : 'neutral'
+            }
+          >
+            {statusContent[profile.approvalStatus].label}
+          </StatusBadge>
           <span>{statusContent[profile.approvalStatus].detail}</span>
         </div>
       )}
@@ -199,14 +211,17 @@ export function OperatorProfilePage() {
         </div>
       )}
       {notice && (
-        <div className="status-banner success" role="status">
+        <div
+          className="status-banner operator-action-notice success"
+          role="status"
+        >
           {notice}
         </div>
       )}
 
       {profile && (
         <form
-          className="form-card form-stack"
+          className="form-card form-stack operator-profile-form"
           onSubmit={handleSubmit(save)}
           noValidate
         >

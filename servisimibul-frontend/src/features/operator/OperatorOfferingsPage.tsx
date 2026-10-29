@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatePanel, StatusBadge } from '../../components/design-system'
 import { getOperatorSchools, type OperatorSchool } from './operator-api'
 import {
   createOffering,
@@ -22,6 +23,8 @@ export function OperatorOfferingsPage() {
   const [offerings, setOfferings] = useState<ServiceOffering[]>([])
   const [schools, setSchools] = useState<OperatorSchool[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadRetry, setLoadRetry] = useState(0)
   const [pending, setPending] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
@@ -36,7 +39,9 @@ export function OperatorOfferingsPage() {
         setSchools(nextSchools)
       })
       .catch((reason: unknown) => {
-        if (active) handleSession(reason, navigate, setError)
+        if (!active) return
+        setLoadFailed(true)
+        handleSession(reason, navigate, setError)
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -44,7 +49,7 @@ export function OperatorOfferingsPage() {
     return () => {
       active = false
     }
-  }, [navigate])
+  }, [loadRetry, navigate])
 
   const activeVehicles = vehicles.filter((vehicle) => vehicle.active)
   const activeSchools = schools.filter((school) => school.active)
@@ -121,157 +126,210 @@ export function OperatorOfferingsPage() {
   if (loading) return <InlineLoading label="Araçlar ve servisler yükleniyor" />
 
   return (
-    <section className="workspace-page">
-      <h1>Servis ayrıntılarınız</h1>
-      <p className="page-lead">
-        Servis ilanı oluşturmak için araç, okul ve mahalle bilgilerinizi
-        tamamlayın. Aramalarda görünmek için araç eklemek zorunda değilsiniz.
-      </p>
+    <section className="workspace-page operator-workspace-page operator-offerings-page">
+      <header className="operator-page-header">
+        <h1>Servis ayrıntılarınız</h1>
+        <p>
+          Araç ve servis bilgileri isteğe bağlıdır. Aramalarda görünmek için
+          araç eklemek zorunda değilsiniz.
+        </p>
+      </header>
 
       {error && (
         <div className="form-error" role="alert">
-          {error}
+          <span>{error}</span>
+          {loadFailed && (
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setLoading(true)
+                setLoadFailed(false)
+                setError(undefined)
+                setLoadRetry((current) => current + 1)
+              }}
+              type="button"
+            >
+              Yeniden dene
+            </button>
+          )}
         </div>
       )}
       {notice && (
-        <div className="status-banner success" role="status">
+        <div
+          className="status-banner operator-action-notice success"
+          role="status"
+        >
           {notice}
         </div>
       )}
 
-      <VehicleCreateForm
-        onCreated={(vehicle) => {
-          setVehicles((current) => [...current, vehicle])
-          setNotice('Araç eklendi.')
-        }}
-        onError={(reason) => handleSession(reason, navigate, setError)}
-      />
-
-      <section aria-labelledby="vehicles-title" className="management-section">
-        <div className="section-heading">
-          <div>
-            <h2 id="vehicles-title">Araçlar</h2>
-          </div>
-          <span className="count-badge">{vehicles.length} araç</span>
-        </div>
-        {vehicles.length === 0 ? (
-          <div className="empty-state">
-            <h3>Henüz araç eklenmedi</h3>
-            <p>Servis ayrıntısı eklemek için önce bir araç oluşturun.</p>
-          </div>
-        ) : (
-          <div className="management-grid">
-            {vehicles.map((vehicle) => (
-              <article className="school-card management-card" key={vehicle.id}>
-                <div className="school-title-row">
-                  <h3>{vehicle.plate}</h3>
-                  <span
-                    className={`status-pill ${vehicle.active ? 'success' : 'neutral'}`}
+      {!loadFailed && (
+        <>
+          <section
+            aria-labelledby="vehicles-title"
+            className="management-section operator-flow-stage"
+          >
+            <div className="section-heading">
+              <div>
+                <h2 id="vehicles-title">Araçlar</h2>
+                <p>Servis ayrıntısı paylaşacaksanız önce aracınızı ekleyin.</p>
+              </div>
+              <span className="count-badge">{vehicles.length} araç</span>
+            </div>
+            <VehicleCreateForm
+              onCreated={(vehicle) => {
+                setVehicles((current) => [...current, vehicle])
+                setNotice('Araç eklendi.')
+              }}
+              onError={(reason) => handleSession(reason, navigate, setError)}
+            />
+            {vehicles.length === 0 ? (
+              <p className="operator-section-note">Henüz araç eklenmedi.</p>
+            ) : (
+              <div className="management-grid">
+                {vehicles.map((vehicle) => (
+                  <article
+                    className="school-card management-card"
+                    key={vehicle.id}
                   >
-                    {vehicle.active ? 'Etkin' : 'Pasif'}
-                  </span>
-                </div>
-                <p>{vehicle.capacity} kişilik kapasite</p>
-                <VehicleEditor
-                  onError={(reason) =>
-                    handleSession(reason, navigate, setError)
-                  }
-                  onUpdated={(updated) => {
-                    updateVehicleState(updated)
-                    setNotice('Araç bilgileri kaydedildi.')
-                  }}
-                  vehicle={vehicle}
-                />
-                <button
-                  className={
-                    vehicle.active ? 'danger-button' : 'secondary-button'
-                  }
-                  disabled={pending === `vehicle-${vehicle.id}`}
-                  onClick={() => void toggleVehicle(vehicle)}
-                  type="button"
-                >
-                  {vehicle.active ? 'Pasife al' : 'Etkinleştir'}
-                </button>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+                    <div className="school-title-row">
+                      <h3>{vehicle.plate}</h3>
+                      <StatusBadge
+                        tone={vehicle.active ? 'success' : 'neutral'}
+                      >
+                        {vehicle.active ? 'Etkin' : 'Pasif'}
+                      </StatusBadge>
+                    </div>
+                    <p>{vehicle.capacity} kişilik kapasite</p>
+                    <VehicleEditor
+                      onError={(reason) =>
+                        handleSession(reason, navigate, setError)
+                      }
+                      onUpdated={(updated) => {
+                        updateVehicleState(updated)
+                        setNotice('Araç bilgileri kaydedildi.')
+                      }}
+                      vehicle={vehicle}
+                    />
+                    <button
+                      className={
+                        vehicle.active ? 'danger-button' : 'secondary-button'
+                      }
+                      disabled={pending === `vehicle-${vehicle.id}`}
+                      onClick={() => void toggleVehicle(vehicle)}
+                      type="button"
+                    >
+                      {vehicle.active ? 'Pasife al' : 'Etkinleştir'}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
 
-      <OfferingCreateForm
-        onCreated={(offering) => {
-          setOfferings((current) => [...current, offering])
-          setNotice('Servis taslağı oluşturuldu.')
-        }}
-        onError={(reason) => handleSession(reason, navigate, setError)}
-        schools={activeSchools}
-        vehicles={activeVehicles}
-      />
-
-      <section aria-labelledby="offerings-title" className="management-section">
-        <div className="section-heading">
-          <div>
-            <h2 id="offerings-title">Servisler</h2>
-          </div>
-          <span className="count-badge">{offerings.length} servis</span>
-        </div>
-        {offerings.length === 0 ? (
-          <div className="empty-state">
-            <h3>Henüz servis taslağı yok</h3>
-            <p>İlk servis ayrıntınızı yukarıdaki formdan oluşturabilirsiniz.</p>
-          </div>
-        ) : (
-          <div className="management-grid">
-            {offerings.map((offering) => (
-              <article
-                className="school-card management-card"
-                key={offering.id}
-              >
-                <div className="school-title-row">
-                  <h3>{offering.schoolName}</h3>
-                  <span
-                    className={`status-pill ${offering.published ? 'success' : 'neutral'}`}
-                  >
-                    {offering.published ? 'Yayında' : 'Taslak'}
-                  </span>
-                </div>
+          <section
+            aria-labelledby="offerings-title"
+            className="management-section operator-flow-stage"
+          >
+            <div className="section-heading">
+              <div>
+                <h2 id="offerings-title">Servis bilgileri</h2>
                 <p>
-                  {offering.vehiclePlate} · {offering.coverage.length} mahalle
+                  Etkin bir okul ve araç seçerek paylaşacağınız servisi
+                  hazırlayın.
                 </p>
-                {offering.availableSeats !== null && (
-                  <p>
-                    Uygun koltuk: {offering.availableSeats}/
-                    {offering.vehicleCapacity}
-                  </p>
-                )}
-                {offering.description && <p>{offering.description}</p>}
-                <OfferingEditor
-                  offering={offering}
-                  onError={(reason) =>
-                    handleSession(reason, navigate, setError)
-                  }
-                  onUpdated={(updated, message) => {
-                    updateOfferingState(updated)
-                    setNotice(message)
-                  }}
-                  schools={activeSchools}
-                  vehicles={activeVehicles}
-                />
-                <button
-                  className={
-                    offering.published ? 'secondary-button' : 'primary-button'
-                  }
-                  disabled={pending === `offering-${offering.id}`}
-                  onClick={() => void toggleOffering(offering)}
-                  type="button"
-                >
-                  {offering.published ? 'Yayından kaldır' : 'Yayımla'}
-                </button>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+              </div>
+              <span className="count-badge">{offerings.length} servis</span>
+            </div>
+            {activeSchools.length === 0 || activeVehicles.length === 0 ? (
+              <StatePanel
+                action={
+                  activeSchools.length === 0 ? (
+                    <Link
+                      className="secondary-button button-link"
+                      to="/operator/schools"
+                    >
+                      Okullara git
+                    </Link>
+                  ) : undefined
+                }
+                detail={
+                  activeSchools.length === 0
+                    ? 'Servis bilgisi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
+                    : 'Servis bilgisi oluşturmak için yukarıdan etkin bir araç ekleyin.'
+                }
+                title="Önce gerekli bilgileri tamamlayın"
+              />
+            ) : (
+              <OfferingCreateForm
+                onCreated={(offering) => {
+                  setOfferings((current) => [...current, offering])
+                  setNotice('Servis taslağı oluşturuldu.')
+                }}
+                onError={(reason) => handleSession(reason, navigate, setError)}
+                schools={activeSchools}
+                vehicles={activeVehicles}
+              />
+            )}
+            {offerings.length === 0 ? (
+              <p className="operator-section-note">Henüz servis taslağı yok.</p>
+            ) : (
+              <div className="management-grid">
+                {offerings.map((offering) => (
+                  <article
+                    className="school-card management-card"
+                    key={offering.id}
+                  >
+                    <div className="school-title-row">
+                      <h3>{offering.schoolName}</h3>
+                      <StatusBadge
+                        tone={offering.published ? 'success' : 'neutral'}
+                      >
+                        {offering.published ? 'Yayında' : 'Taslak'}
+                      </StatusBadge>
+                    </div>
+                    <p>
+                      {offering.vehiclePlate} · {offering.coverage.length}{' '}
+                      mahalle
+                    </p>
+                    {offering.availableSeats !== null && (
+                      <p>
+                        Uygun koltuk: {offering.availableSeats}/
+                        {offering.vehicleCapacity}
+                      </p>
+                    )}
+                    {offering.description && <p>{offering.description}</p>}
+                    <OfferingEditor
+                      offering={offering}
+                      onError={(reason) =>
+                        handleSession(reason, navigate, setError)
+                      }
+                      onUpdated={(updated, message) => {
+                        updateOfferingState(updated)
+                        setNotice(message)
+                      }}
+                      schools={activeSchools}
+                      vehicles={activeVehicles}
+                    />
+                    <button
+                      className={
+                        offering.published
+                          ? 'secondary-button'
+                          : 'primary-button'
+                      }
+                      disabled={pending === `offering-${offering.id}`}
+                      onClick={() => void toggleOffering(offering)}
+                      type="button"
+                    >
+                      {offering.published ? 'Yayından kaldır' : 'Yayımla'}
+                    </button>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </section>
   )
 }

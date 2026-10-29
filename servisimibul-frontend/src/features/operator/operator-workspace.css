@@ -1,0 +1,243 @@
+.operator-workspace-page {
+  display: grid;
+  gap: clamp(1.5rem, 3vw, 2.25rem);
+  width: min(70rem, 100%);
+}
+
+.operator-page-header {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 48rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.operator-page-header h1 {
+  max-width: 15ch;
+  font-size: clamp(2.25rem, 5vw, 3.5rem);
+  line-height: 1.05;
+}
+
+.operator-page-header p,
+.operator-section-heading p,
+.operator-flow-stage > .section-heading p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+.operator-workspace-page > .form-error,
+.operator-workspace-page > .status-banner {
+  margin: 0;
+}
+
+.operator-action-notice {
+  position: sticky;
+  z-index: 2;
+  top: 1rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.operator-readiness-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.35rem 0.75rem;
+  padding: 1.25rem;
+  border-left-width: 0.3rem;
+  border-radius: var(--radius-medium);
+}
+
+.operator-readiness-summary::before {
+  grid-row: 1 / span 2;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-top: 0.35rem;
+  border-radius: 999px;
+  background: currentColor;
+  content: '';
+}
+
+.operator-task-section,
+.operator-flow-stage {
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--neutral-0);
+  box-shadow: var(--shadow-soft);
+}
+
+.operator-section-heading,
+.operator-flow-stage > .section-heading {
+  margin-bottom: 1.25rem;
+}
+
+.operator-section-heading h2,
+.operator-flow-stage > .section-heading h2 {
+  margin: 0 0 0.35rem;
+  color: var(--navy-900);
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+}
+
+.operator-task-section .readiness-list {
+  margin-top: 0;
+  border-bottom: 0;
+}
+
+.operator-task-section .readiness-list li {
+  padding-block: 1.15rem;
+}
+
+.operator-task-section .readiness-list li:first-child {
+  border-top: 1px solid var(--color-border);
+}
+
+.operator-task-section .readiness-list a {
+  min-height: 2.75rem;
+  align-content: center;
+}
+
+.operator-overview-page .readiness-schools,
+.operator-overview-page .optional-next-steps {
+  margin-top: 0;
+}
+
+.operator-overview-page .readiness-schools {
+  padding-inline: 0.25rem;
+}
+
+.operator-overview-page .optional-next-steps {
+  border: 1px solid var(--color-border);
+  background: var(--teal-100);
+}
+
+.operator-workspace-page a.button-link {
+  color: var(--neutral-0);
+}
+
+.operator-profile-status {
+  align-items: center;
+}
+
+.operator-profile-form {
+  width: min(48rem, 100%);
+  max-width: none;
+  margin-top: 0;
+}
+
+.operator-add-school {
+  max-width: none;
+  margin-top: 0;
+  border-radius: var(--radius-large);
+}
+
+.operator-add-school > .section-heading {
+  align-items: flex-start;
+}
+
+.operator-add-school > .section-heading p {
+  max-width: 52ch;
+  margin: 0.35rem 0 0;
+}
+
+.operator-schools-page .school-list {
+  margin-top: 0;
+}
+
+.operator-schools-page .school-card,
+.operator-offerings-page .management-card {
+  border-radius: var(--radius-large);
+  box-shadow: 0 0.75rem 2rem rgba(13, 42, 35, 0.06);
+}
+
+.operator-schools-page .coverage-editor {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-soft);
+}
+
+.operator-offerings-page .management-section {
+  margin-top: 0;
+}
+
+.operator-flow-stage > .form-card {
+  max-width: none;
+  margin: 0 0 1.25rem;
+  border-color: color-mix(in srgb, var(--color-border) 72%, transparent);
+  background: var(--color-surface-soft);
+  box-shadow: none;
+}
+
+.operator-flow-stage .ui-state {
+  margin-bottom: 1.25rem;
+}
+
+.operator-flow-stage .management-grid {
+  margin-top: 1.25rem;
+}
+
+.operator-section-note {
+  margin: 0;
+  padding: 1rem 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 44rem) {
+  .operator-workspace-page {
+    gap: 1.25rem;
+  }
+
+  .operator-action-notice {
+    top: 5rem;
+  }
+
+  .operator-page-header {
+    padding-bottom: 1.25rem;
+  }
+
+  .operator-page-header h1 {
+    max-width: none;
+    font-size: clamp(2rem, 11vw, 2.75rem);
+  }
+
+  .operator-task-section,
+  .operator-flow-stage {
+    padding: 1rem;
+    border-radius: var(--radius-medium);
+  }
+
+  .operator-readiness-summary {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .operator-task-section .readiness-list li {
+    gap: 0.75rem;
+  }
+
+  .operator-task-section .readiness-list li > .ui-status {
+    justify-self: start;
+  }
+
+  .operator-add-school .search-row,
+  .operator-schools-page .button-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .operator-add-school .search-row > *,
+  .operator-add-school .search-row > button,
+  .operator-schools-page .button-row > button {
+    width: 100%;
+  }
+
+  .operator-add-school .grow {
+    flex-basis: auto;
+  }
+
+  .operator-schools-page .coverage-editor {
+    padding: 1rem;
+  }
+}
