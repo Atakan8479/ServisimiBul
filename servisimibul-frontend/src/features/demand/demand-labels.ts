@@ -1,4 +1,4 @@
-import type { SupportReason } from './demand-api'
+import type { Demand, SupportReason } from './demand-api'
 
 const reasonLabels: Record<SupportReason, string> = {
   NO_SUITABLE_SERVICE: 'Uygun servis bulamıyorum',
@@ -11,4 +11,15 @@ const reasonLabels: Record<SupportReason, string> = {
 
 export function reasonLabel(reason: SupportReason): string {
   return reasonLabels[reason]
+}
+
+export function demandStateLabel(
+  demand: Pick<Demand, 'status' | 'closureReason'>,
+): string {
+  if (demand.status === 'OPEN') return 'Katılıma açık'
+  if (demand.status === 'ARCHIVED') return 'Arşivlendi'
+  if (demand.closureReason === 'FULFILLED') return 'İhtiyaç karşılandı'
+  if (demand.closureReason === 'INACTIVE')
+    return 'Hareketsizlik nedeniyle kapandı'
+  return 'Yönetim tarafından kapatıldı'
 }

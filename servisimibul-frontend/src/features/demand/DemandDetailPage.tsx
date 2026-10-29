@@ -7,6 +7,7 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatusBadge } from '../../components/design-system'
 import { currentUser } from '../auth/auth-api'
 import {
   getDemand,
@@ -24,7 +25,7 @@ import {
   type ServiceResponseValues,
   type SupportValues,
 } from './demand-api'
-import { reasonLabel } from './demand-labels'
+import { demandStateLabel, reasonLabel } from './demand-labels'
 import { DemandServiceResponseForm } from './DemandServiceResponseForm'
 import { DemandSupportForm } from './DemandSupportForm'
 import { DemandComments } from './DemandComments'
@@ -395,8 +396,13 @@ export function DemandDetailPage() {
         ← Talep panosuna dön
       </Link>
       <header className="demand-detail-header">
-        <div>
-          <span className="eyebrow">{demand.academicYear} eğitim yılı</span>
+        <div className="demand-detail-heading">
+          <div className="demand-detail-meta">
+            <StatusBadge>{demand.academicYear} eğitim yılı</StatusBadge>
+            <StatusBadge tone={open ? 'success' : 'warning'}>
+              {open ? 'Katılıma açık' : 'Katılıma kapalı'}
+            </StatusBadge>
+          </div>
           <h1>{demand.school.name}</h1>
           <p>
             {demand.neighborhood.provinceName} ·{' '}
@@ -404,9 +410,6 @@ export function DemandDetailPage() {
           </p>
         </div>
         <div className="demand-detail-header-actions">
-          <span className={`status-pill ${open ? 'success' : 'neutral'}`}>
-            {open ? 'Açık talep' : 'Katılıma kapalı'}
-          </span>
           {open && (
             <ReportControl
               label="Talebi bildir"
@@ -416,6 +419,31 @@ export function DemandDetailPage() {
           )}
         </div>
       </header>
+
+      <section className="demand-lifecycle-summary" aria-label="Talep durumu">
+        <div>
+          <h2>{demandStateLabel(demand)}</h2>
+          <p>{demandLifecycleDescription(demand)}</p>
+        </div>
+        <dl>
+          <div>
+            <dt>Oluşturulma</dt>
+            <dd>
+              <time dateTime={demand.createdAt}>
+                {formatDemandDate(demand.createdAt)}
+              </time>
+            </dd>
+          </div>
+          <div>
+            <dt>{demand.closedAt ? 'Kapanma' : 'Son güncelleme'}</dt>
+            <dd>
+              <time dateTime={demand.closedAt ?? demand.updatedAt}>
+                {formatDemandDate(demand.closedAt ?? demand.updatedAt)}
+              </time>
+            </dd>
+          </div>
+        </dl>
+      </section>
 
       {notice && (
         <div className="status-banner success" role="status">
@@ -514,6 +542,12 @@ export function DemandDetailPage() {
                       <strong>
                         {response.businessName ?? 'İsimsiz işletmeci'}
                       </strong>
+                      <span>
+                        Yayın {response.publicationVersion} ·{' '}
+                        <time dateTime={response.publishedAt}>
+                          {formatDemandDate(response.publishedAt)}
+                        </time>
+                      </span>
                     </div>
                     <div
                       className="demand-service-directions"
@@ -709,6 +743,10 @@ export function DemandDetailPage() {
         <div className="section-heading">
           <div>
             <h2 id="support-title">Sizin desteğiniz</h2>
+            <p>
+              Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
+              yönetilir.
+            </p>
           </div>
           {activeSupport && (
             <span className="status-pill success">
@@ -729,6 +767,26 @@ export function DemandDetailPage() {
               : demand.closureReason === 'FULFILLED'
                 ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
                 : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
+          </div>
+        )}
+
+        {demand.currentUserSupport && (
+          <div className="demand-current-support" aria-label="Katılım özetiniz">
+            <div>
+              <span>Katılım durumu</span>
+              <strong>
+                {supportStateLabel(demand.currentUserSupport.status)}
+              </strong>
+            </div>
+            <div>
+              <span>İhtiyaç yönü</span>
+              <strong>
+                {directionSummary(
+                  demand.currentUserSupport.needsMorning,
+                  demand.currentUserSupport.needsAfternoon,
+                )}
+              </strong>
+            </div>
           </div>
         )}
 
@@ -788,6 +846,53 @@ export function DemandDetailPage() {
       />
     </section>
   )
+}
+
+function demandLifecycleDescription(
+  demand: Pick<Demand, 'status' | 'closureReason'>,
+) {
+  if (demand.status === 'OPEN') {
+    return 'Yeni veli destekleri, uygun işletmeci bildirimleri ve yorumlar kabul ediliyor.'
+  }
+  if (demand.status === 'ARCHIVED') {
+    return 'Talep geçmiş kaydı olarak korunuyor; yeni katılım ve yayın kabul edilmiyor.'
+  }
+  if (demand.closureReason === 'FULFILLED') {
+    return 'En az bir veli, yayımlanan servis bildiriminin ihtiyacını karşıladığını bildirdi.'
+  }
+  if (demand.closureReason === 'INACTIVE') {
+    return 'Etkin destek kalmadığı için talep kapandı; uygun bir veli desteği yeniden açabilir.'
+  }
+  return 'Talep yönetim kararıyla kapatıldı; geçmiş katılım bilgileri korunuyor.'
+}
+
+function supportStateLabel(
+  status: NonNullable<Demand['currentUserSupport']>['status'],
+) {
+  switch (status) {
+    case 'ACTIVE':
+      return 'Etkin destek'
+    case 'AWAITING_FEEDBACK':
+      return 'Geri bildirim bekleniyor'
+    case 'SATISFIED':
+      return 'İhtiyaç karşılandı'
+    case 'INACTIVE_EXPIRED':
+      return 'Yanıt süresi doldu'
+    case 'WITHDRAWN':
+      return 'Geri çekildi'
+  }
+}
+
+function directionSummary(morning: boolean, afternoon: boolean) {
+  if (morning && afternoon) return 'Sabah ve öğleden sonra'
+  return morning ? 'Sabah' : 'Öğleden sonra'
+}
+
+function formatDemandDate(value: string) {
+  return new Intl.DateTimeFormat('tr-TR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
 }
 
 function serviceResponseBlockerMessage(blocker: ServiceResponseBlocker) {

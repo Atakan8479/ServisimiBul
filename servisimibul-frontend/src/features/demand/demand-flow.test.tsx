@@ -679,6 +679,7 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
 
     expect(await screen.findByText('Moda Öğrenci Servisi')).toBeInTheDocument()
+    expect(screen.getByText(/Yayın 1 ·/)).toBeInTheDocument()
     expect(
       screen.getByText(/Bilgiler işletmeciler tarafından paylaşılır/),
     ).toBeInTheDocument()

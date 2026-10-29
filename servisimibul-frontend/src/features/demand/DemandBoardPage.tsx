@@ -324,8 +324,18 @@ export function DemandBoardPage() {
   return (
     <section className="demand-page">
       <header className="demand-intro">
-        <h1>Servis talep panosu</h1>
-        <p>Okul ve mahallenizi seçerek servis taleplerini inceleyin.</p>
+        <div>
+          <h1>Servis talep panosu</h1>
+          <p>
+            Okul ve servis alınacak mahalle için oluşan gerçek ihtiyacı görün;
+            adres veya öğrenci bilgisi paylaşmadan mevcut talebe katılın.
+          </p>
+        </div>
+        <ul aria-label="Talep panosu özellikleri">
+          <li>Hesapsız inceleme</li>
+          <li>Okul ve mahalle bazında</li>
+          <li>Veli kimliği gizli</li>
+        </ul>
       </header>
 
       <section
@@ -335,6 +345,7 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2 id="demand-filter-title">Okul ve mahalleye göre bulun</h2>
+            <p>Okulun konumu ile servis alınacak konumu ayrı ayrı seçin.</p>
           </div>
           <button className="text-button" type="button" onClick={clearFilters}>
             Filtreleri temizle
@@ -396,7 +407,8 @@ export function DemandBoardPage() {
       <section className="demand-board-results" aria-live="polite">
         <div className="section-heading">
           <div>
-            <h2>Açık talepler</h2>
+            <h2>Açık servis talepleri</h2>
+            <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
           </div>
           {demands && (
             <span className="count-badge">{demands.totalElements} talep</span>
