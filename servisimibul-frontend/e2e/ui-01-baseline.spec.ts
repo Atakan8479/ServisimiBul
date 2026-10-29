@@ -24,26 +24,27 @@ for (const viewport of viewports) {
     await page.goto('/')
 
     const publicToggle = page.getByRole('button', { name: 'Menü' })
-    if (viewport.width <= 704) {
+    const publicNavigation = page.getByRole('navigation', { name: 'Ana menü' })
+    if (viewport.width <= 1024) {
       await expect(publicToggle).toBeVisible()
       await publicToggle.click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'true')
       await expect(
-        page.getByRole('link', { name: 'Veli girişi' }),
+        publicNavigation.getByRole('link', { name: 'Veli girişi' }),
       ).toBeVisible()
-      await expect(page.getByRole('link', { name: 'Veli kaydı' })).toBeVisible()
       await expect(
-        page.getByRole('link', { name: 'İşletmeci girişi' }),
+        publicNavigation.getByRole('link', { name: 'Veli kaydı' }),
       ).toBeVisible()
-      await page
+      await expect(
+        publicNavigation.getByRole('link', { name: 'İşletmeci girişi' }),
+      ).toBeVisible()
+      await publicNavigation
         .getByRole('link', { name: 'Talep panosu', exact: true })
         .click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'false')
     } else {
       await expect(publicToggle).toBeHidden()
-      await expect(
-        page.getByRole('navigation', { name: 'Ana menü' }),
-      ).toBeVisible()
+      await expect(publicNavigation).toBeVisible()
     }
     await expectNoHorizontalOverflow(page)
 

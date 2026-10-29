@@ -24,6 +24,9 @@ export function PublicLayout() {
   const [logoutError, setLogoutError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const navigationRef = useRef<HTMLElement>(null)
+  const restoreMenuFocusRef = useRef(true)
+  const wasMenuOpenRef = useRef(false)
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -36,14 +39,63 @@ export function PublicLayout() {
   }, [])
 
   useEffect(() => {
-    if (!menuOpen) return
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      setMenuOpen(false)
-      menuButtonRef.current?.focus()
+    if (!menuOpen) {
+      if (wasMenuOpenRef.current && restoreMenuFocusRef.current) {
+        menuButtonRef.current?.focus()
+      }
+      wasMenuOpenRef.current = false
+      return
     }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
+
+    wasMenuOpenRef.current = true
+    restoreMenuFocusRef.current = true
+    const navigation = navigationRef.current
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    navigation
+      ?.querySelector<HTMLElement>('a[href], button:not([disabled])')
+      ?.focus()
+
+    const focusableElements = () =>
+      Array.from(
+        navigation?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled])',
+        ) ?? [],
+      )
+
+    const containFocus = (event: FocusEvent) => {
+      if (navigation?.contains(event.target as Node)) return
+      focusableElements()[0]?.focus()
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setMenuOpen(false)
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const focusable = focusableElements()
+      const first = focusable[0]
+      const last = focusable.at(-1)
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('focusin', containFocus)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener('focusin', containFocus)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [menuOpen])
 
   async function signOutParent() {
@@ -90,11 +142,13 @@ export function PublicLayout() {
           Menü
         </button>
         <nav
+          ref={navigationRef}
           aria-label="Ana menü"
           className={`site-nav${menuOpen ? ' open' : ''}`}
           id="public-navigation"
           onClick={(event) => {
             if ((event.target as HTMLElement).closest('a, button')) {
+              restoreMenuFocusRef.current = false
               setMenuOpen(false)
             }
           }}
@@ -119,22 +173,49 @@ export function PublicLayout() {
             </>
           ) : (
             <>
-              <NavLink to="/parent/login" viewTransition>
+              <NavLink
+                className="site-nav-login"
+                to="/parent/login"
+                viewTransition
+              >
                 Veli girişi
               </NavLink>
-              <NavLink to="/parent/register" viewTransition>
+              <NavLink
+                className="site-nav-primary"
+                to="/parent/register"
+                viewTransition
+              >
                 Veli kaydı
               </NavLink>
-              <NavLink to="/operator/login" viewTransition>
+              <NavLink
+                className="site-nav-operator"
+                to="/operator/login"
+                viewTransition
+              >
                 İşletmeci girişi
               </NavLink>
-              <NavLink to="/operator/register" viewTransition>
+              <NavLink
+                className="site-nav-operator"
+                to="/operator/register"
+                viewTransition
+              >
                 İşletmeci kaydı
               </NavLink>
             </>
           )}
         </nav>
       </header>
+      {menuOpen && (
+        <button
+          aria-hidden="true"
+          className="site-nav-backdrop"
+          onClick={() => {
+            setMenuOpen(false)
+          }}
+          tabIndex={-1}
+          type="button"
+        />
+      )}
       {logoutError && (
         <div className="form-error site-alert" role="alert">
           {logoutError}
@@ -146,6 +227,20 @@ export function PublicLayout() {
       >
         <Outlet />
       </main>
+      <footer className="site-footer">
+        <div className="site-footer-inner">
+          <div>
+            <BrandLockup />
+            <p>Okul servisi aramanın daha açık yolu.</p>
+          </div>
+          <nav aria-label="Alt menü">
+            <NavLink to="/">Ana sayfa</NavLink>
+            <NavLink to="/demands">Talep panosu</NavLink>
+            <NavLink to="/parent/register">Veli kaydı</NavLink>
+            <NavLink to="/operator/register">İşletmeci kaydı</NavLink>
+          </nav>
+        </div>
+      </footer>
     </div>
   )
 }

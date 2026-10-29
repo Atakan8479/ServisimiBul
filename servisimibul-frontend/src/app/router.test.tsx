@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import {
   RouterProvider,
   createMemoryRouter,
@@ -207,17 +213,21 @@ describe('application routes', () => {
       expect(
         screen.queryByRole('link', { name: 'Yönetim' }),
       ).not.toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Veli kaydı' })).toHaveAttribute(
-        'href',
-        '/parent/register',
+      const primaryNavigation = within(
+        screen.getByRole('navigation', { name: 'Ana menü' }),
       )
       expect(
-        screen.getByRole('link', { name: 'İşletmeci girişi' }),
+        primaryNavigation.getByRole('link', { name: 'Veli kaydı' }),
+      ).toHaveAttribute('href', '/parent/register')
+      expect(
+        primaryNavigation.getByRole('link', { name: 'İşletmeci girişi' }),
       ).toHaveAttribute('href', '/operator/login')
       expect(
-        screen.getByRole('link', { name: 'İşletmeci kaydı' }),
+        primaryNavigation.getByRole('link', { name: 'İşletmeci kaydı' }),
       ).toHaveAttribute('href', '/operator/register')
-      fireEvent.click(screen.getByRole('link', { name: 'Veli girişi' }))
+      fireEvent.click(
+        primaryNavigation.getByRole('link', { name: 'Veli girişi' }),
+      )
 
       const loginHeading = await screen.findByRole('heading', {
         name: 'Veli hesabınıza giriş yapın',
