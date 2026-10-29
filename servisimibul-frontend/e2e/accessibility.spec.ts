@@ -67,7 +67,9 @@ for (const viewport of viewports) {
     await assertVisibleKeyboardFocus(page)
     await audit(page, 'parent login')
     await page.getByRole('button', { name: 'Şifreyi göster' }).click()
-    await expect(page.getByLabel('Şifre')).toHaveAttribute('type', 'text')
+    await expect(
+      page.getByRole('textbox', { name: 'Şifre', exact: true }),
+    ).toHaveAttribute('type', 'text')
 
     await page.goto('/operator/login')
     await assertVisibleKeyboardFocus(page)

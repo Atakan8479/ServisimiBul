@@ -29,7 +29,9 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
-  await page.getByLabel('Şifre').fill('parent password')
+  await page
+    .getByRole('textbox', { name: 'Şifre', exact: true })
+    .fill('parent password')
   await page.getByRole('button', { name: 'Veli hesabı oluştur' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?.*registered=parent/)
   await expect(
@@ -38,7 +40,9 @@ test('parent creates and manages an anonymous demand after checking operators', 
   expect(state.parentRegistered).toBe(true)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
-  await page.getByLabel('Şifre').fill('parent password')
+  await page
+    .getByRole('textbox', { name: 'Şifre', exact: true })
+    .fill('parent password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   await expect(page.getByText(/Seçiminiz korundu/)).toBeVisible()
   await page
