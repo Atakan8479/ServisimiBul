@@ -35,11 +35,39 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
     expect(
-      screen.getByText(
-        /Aramalarda görünmek için araç eklemek zorunda değilsiniz/,
-      ),
+      screen.getByText(/Araç bilgileri arama görünürlüğü için isteğe bağlıdır/),
     ).toBeInTheDocument()
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
+  })
+
+  it('labels the summed school coverage as school-neighborhood records', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      readinessHandler({
+        schools: [
+          schoolReadiness({ validCoverageCount: 1 }),
+          schoolReadiness({
+            operatorSchoolId: '9e1c6d39-ed33-421a-88f4-15cf57bbef03',
+            schoolId: '5d24f11d-0832-4b79-81a8-78726b69b035',
+            schoolName: 'İkinci Okul',
+            validCoverageCount: 2,
+          }),
+        ],
+      }),
+    )
+
+    renderRoute('/operator')
+
+    const coverageSummary = (
+      await screen.findByText('Okul-mahalle kapsamı')
+    ).closest('article')
+    expect(coverageSummary).not.toBeNull()
+    expect(within(coverageSummary!).getByText('3')).toBeInTheDocument()
+    expect(
+      within(coverageSummary!).getByText(
+        'Okul bazındaki geçerli kayıt toplamı',
+      ),
+    ).toBeInTheDocument()
   })
 
   it('shows approval and profile guidance only when the server reports them incomplete', async () => {
@@ -55,7 +83,7 @@ describe('operator workspace flows', () => {
 
     renderRoute('/operator')
 
-    expect(await screen.findByText('Yönetici onayı')).toBeInTheDocument()
+    expect(await screen.findAllByText('Yönetici onayı')).not.toHaveLength(0)
     expect(
       screen.getByText(/Askıya alınmış veya etkin olmayan profil/),
     ).toBeInTheDocument()
@@ -120,6 +148,7 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     release()
     expect(await screen.findByText('Hesap doğrulaması')).toBeInTheDocument()
+    expect(screen.getByText(/Henüz bağlı okulunuz yok/)).toBeInTheDocument()
   })
 
   it('hides the approval workflow and keeps draft profile editing available in pilot mode', async () => {
