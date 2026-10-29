@@ -32,12 +32,29 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page
     .getByRole('textbox', { name: 'Şifre', exact: true })
     .fill('parent password')
+
+  const registrationResponsePromise = page.waitForResponse(
+    (response) =>
+      response.request().method() === 'POST' &&
+      response.url().endsWith('/api/v1/auth/parent/register'),
+  )
   await page.getByRole('button', { name: 'Veli hesabı oluştur' }).click()
+
+  const registrationResponse = await registrationResponsePromise
+  expect(registrationResponse.status()).toBe(202)
+  expect(registrationResponse.request().postDataJSON()).toEqual({
+    email: 'parent@example.com',
+    password: 'parent password',
+  })
+  expect(registrationResponse.request().headers()['x-csrf-token']).toBe(
+    'e2e-csrf-token',
+  )
+  expect(state.parentRegistered).toBe(true)
+
   await expect(page).toHaveURL(/\/parent\/login\?.*registered=parent/)
   await expect(
     page.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
   ).toBeVisible()
-  expect(state.parentRegistered).toBe(true)
 
   await page.getByLabel('E-posta').fill('parent@example.com')
   await page
