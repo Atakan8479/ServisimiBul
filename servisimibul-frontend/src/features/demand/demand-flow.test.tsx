@@ -71,7 +71,7 @@ describe('public demand board', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       }),
     ).toBeInTheDocument()
     expect(operatorChecks).toBe(1)
@@ -616,7 +616,7 @@ describe('demand comments', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       }),
     ).toBeInTheDocument()
   })

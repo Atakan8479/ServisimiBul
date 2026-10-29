@@ -156,7 +156,7 @@ describe('application routes', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       }),
     ).toBeInTheDocument()
     expect(
@@ -220,7 +220,7 @@ describe('application routes', () => {
       fireEvent.click(screen.getByRole('link', { name: 'Veli girişi' }))
 
       const loginHeading = await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       })
       await waitFor(() => expect(loginHeading).toHaveFocus())
       expect(document.title).toBe('Veli girişi | ServisimiBul')

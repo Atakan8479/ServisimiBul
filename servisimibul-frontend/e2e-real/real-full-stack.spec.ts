@@ -148,7 +148,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         `/parent/register?next=${encodeURIComponent(parentDemandPath)}`,
       )
       await parentPage.getByLabel('E-posta').fill(parentEmail)
-      await parentPage.getByLabel('Şifre').fill(parentPassword!)
+      await parentPage
+        .getByRole('textbox', { name: 'Şifre', exact: true })
+        .fill(parentPassword!)
       const registration = parentPage.waitForResponse(
         (response) =>
           response.request().method() === 'POST' &&
@@ -164,7 +166,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
-      await parentPage.getByLabel('Şifre').fill(parentPassword!)
+      await parentPage
+        .getByRole('textbox', { name: 'Şifre', exact: true })
+        .fill(parentPassword!)
       await parentPage.getByRole('button', { name: 'Giriş yap' }).click()
       await expect
         .poll(() => {
@@ -1673,7 +1677,7 @@ async function login(
     expectedRole === 'parent' ? '/parent/login' : '/operator/login',
   )
   await page.getByLabel('E-posta').fill(email)
-  await page.getByLabel('Şifre').fill(password)
+  await page.getByRole('textbox', { name: 'Şifre', exact: true }).fill(password)
   const response = page.waitForResponse(
     (candidate) =>
       candidate.request().method() === 'POST' &&
