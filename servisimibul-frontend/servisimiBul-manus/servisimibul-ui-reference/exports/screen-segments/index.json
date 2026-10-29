@@ -1,0 +1,1261 @@
+{
+  "createdAt": "2026-10-29T15:55:46.010Z",
+  "source": "http://127.0.0.1:3000",
+  "primaryScreens": 25,
+  "viewportDefinitions": [
+    {
+      "key": "masaustu",
+      "label": "Masaüstü",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "key": "mobil",
+      "label": "Mobil",
+      "width": 390,
+      "height": 844
+    }
+  ],
+  "overlapPx": 80,
+  "totalSegmentScreenshots": 98,
+  "screens": [
+    {
+      "id": "P01",
+      "slug": "anasayfa",
+      "title": "Anasayfa ve okul keşfi",
+      "route": "/",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 3628,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P01-anasayfa/masaustu/anasayfa_01.png",
+          "scrollY": 0,
+          "bytes": 577884
+        },
+        {
+          "index": 2,
+          "file": "P01-anasayfa/masaustu/anasayfa_02.png",
+          "scrollY": 820,
+          "bytes": 106165
+        },
+        {
+          "index": 3,
+          "file": "P01-anasayfa/masaustu/anasayfa_03.png",
+          "scrollY": 1640,
+          "bytes": 80951
+        },
+        {
+          "index": 4,
+          "file": "P01-anasayfa/masaustu/anasayfa_04.png",
+          "scrollY": 2460,
+          "bytes": 87599
+        },
+        {
+          "index": 5,
+          "file": "P01-anasayfa/masaustu/anasayfa_05.png",
+          "scrollY": 2728,
+          "bytes": 92403
+        }
+      ]
+    },
+    {
+      "id": "P01",
+      "slug": "anasayfa",
+      "title": "Anasayfa ve okul keşfi",
+      "route": "/",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 4834,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P01-anasayfa/mobil/anasayfa_01.png",
+          "scrollY": 0,
+          "bytes": 228795
+        },
+        {
+          "index": 2,
+          "file": "P01-anasayfa/mobil/anasayfa_02.png",
+          "scrollY": 764,
+          "bytes": 54266
+        },
+        {
+          "index": 3,
+          "file": "P01-anasayfa/mobil/anasayfa_03.png",
+          "scrollY": 1528,
+          "bytes": 53841
+        },
+        {
+          "index": 4,
+          "file": "P01-anasayfa/mobil/anasayfa_04.png",
+          "scrollY": 2292,
+          "bytes": 49810
+        },
+        {
+          "index": 5,
+          "file": "P01-anasayfa/mobil/anasayfa_05.png",
+          "scrollY": 3056,
+          "bytes": 60645
+        },
+        {
+          "index": 6,
+          "file": "P01-anasayfa/mobil/anasayfa_06.png",
+          "scrollY": 3820,
+          "bytes": 54840
+        },
+        {
+          "index": 7,
+          "file": "P01-anasayfa/mobil/anasayfa_07.png",
+          "scrollY": 3990,
+          "bytes": 58212
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "slug": "isletmeci_arama_sonuclari",
+      "title": "İşletmeci arama sonuçları",
+      "route": "/arama",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1504,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P02-isletmeci_arama_sonuclari/masaustu/isletmeci_arama_sonuclari_01.png",
+          "scrollY": 0,
+          "bytes": 140490
+        },
+        {
+          "index": 2,
+          "file": "P02-isletmeci_arama_sonuclari/masaustu/isletmeci_arama_sonuclari_02.png",
+          "scrollY": 604,
+          "bytes": 126279
+        }
+      ]
+    },
+    {
+      "id": "P02",
+      "slug": "isletmeci_arama_sonuclari",
+      "title": "İşletmeci arama sonuçları",
+      "route": "/arama",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 2048,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P02-isletmeci_arama_sonuclari/mobil/isletmeci_arama_sonuclari_01.png",
+          "scrollY": 0,
+          "bytes": 70420
+        },
+        {
+          "index": 2,
+          "file": "P02-isletmeci_arama_sonuclari/mobil/isletmeci_arama_sonuclari_02.png",
+          "scrollY": 764,
+          "bytes": 64853
+        },
+        {
+          "index": 3,
+          "file": "P02-isletmeci_arama_sonuclari/mobil/isletmeci_arama_sonuclari_03.png",
+          "scrollY": 1204,
+          "bytes": 61336
+        }
+      ]
+    },
+    {
+      "id": "P03",
+      "slug": "ukome_tarife_referansi",
+      "title": "Resmî UKOME tarife referansı",
+      "route": "/tarife",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1615,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P03-ukome_tarife_referansi/masaustu/ukome_tarife_referansi_01.png",
+          "scrollY": 0,
+          "bytes": 88266
+        },
+        {
+          "index": 2,
+          "file": "P03-ukome_tarife_referansi/masaustu/ukome_tarife_referansi_02.png",
+          "scrollY": 715,
+          "bytes": 100912
+        }
+      ]
+    },
+    {
+      "id": "P03",
+      "slug": "ukome_tarife_referansi",
+      "title": "Resmî UKOME tarife referansı",
+      "route": "/tarife",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1960,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "P03-ukome_tarife_referansi/mobil/ukome_tarife_referansi_01.png",
+          "scrollY": 0,
+          "bytes": 58860
+        },
+        {
+          "index": 2,
+          "file": "P03-ukome_tarife_referansi/mobil/ukome_tarife_referansi_02.png",
+          "scrollY": 764,
+          "bytes": 62445
+        },
+        {
+          "index": 3,
+          "file": "P03-ukome_tarife_referansi/mobil/ukome_tarife_referansi_03.png",
+          "scrollY": 1116,
+          "bytes": 63956
+        }
+      ]
+    },
+    {
+      "id": "D01",
+      "slug": "talep_panosu",
+      "title": "Talep panosu",
+      "route": "/demands",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1948,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "D01-talep_panosu/masaustu/talep_panosu_01.png",
+          "scrollY": 0,
+          "bytes": 128673
+        },
+        {
+          "index": 2,
+          "file": "D01-talep_panosu/masaustu/talep_panosu_02.png",
+          "scrollY": 820,
+          "bytes": 94422
+        },
+        {
+          "index": 3,
+          "file": "D01-talep_panosu/masaustu/talep_panosu_03.png",
+          "scrollY": 1048,
+          "bytes": 90859
+        }
+      ]
+    },
+    {
+      "id": "D01",
+      "slug": "talep_panosu",
+      "title": "Talep panosu",
+      "route": "/demands",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 2778,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "D01-talep_panosu/mobil/talep_panosu_01.png",
+          "scrollY": 0,
+          "bytes": 71028
+        },
+        {
+          "index": 2,
+          "file": "D01-talep_panosu/mobil/talep_panosu_02.png",
+          "scrollY": 764,
+          "bytes": 62403
+        },
+        {
+          "index": 3,
+          "file": "D01-talep_panosu/mobil/talep_panosu_03.png",
+          "scrollY": 1528,
+          "bytes": 55111
+        },
+        {
+          "index": 4,
+          "file": "D01-talep_panosu/mobil/talep_panosu_04.png",
+          "scrollY": 1934,
+          "bytes": 50077
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "slug": "talep_ayrintisi",
+      "title": "Talep ayrıntısı",
+      "route": "/demands/d-1042",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1433,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "D02-talep_ayrintisi/masaustu/talep_ayrintisi_01.png",
+          "scrollY": 0,
+          "bytes": 128580
+        },
+        {
+          "index": 2,
+          "file": "D02-talep_ayrintisi/masaustu/talep_ayrintisi_02.png",
+          "scrollY": 533,
+          "bytes": 99560
+        }
+      ]
+    },
+    {
+      "id": "D02",
+      "slug": "talep_ayrintisi",
+      "title": "Talep ayrıntısı",
+      "route": "/demands/d-1042",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 2312,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "D02-talep_ayrintisi/mobil/talep_ayrintisi_01.png",
+          "scrollY": 0,
+          "bytes": 65676
+        },
+        {
+          "index": 2,
+          "file": "D02-talep_ayrintisi/mobil/talep_ayrintisi_02.png",
+          "scrollY": 764,
+          "bytes": 64219
+        },
+        {
+          "index": 3,
+          "file": "D02-talep_ayrintisi/mobil/talep_ayrintisi_03.png",
+          "scrollY": 1468,
+          "bytes": 50887
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "slug": "hesap_turu_secimi",
+      "title": "Hesap türü seçimi",
+      "route": "/register",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A01-hesap_turu_secimi/masaustu/hesap_turu_secimi_01.png",
+          "scrollY": 0,
+          "bytes": 793665
+        }
+      ]
+    },
+    {
+      "id": "A01",
+      "slug": "hesap_turu_secimi",
+      "title": "Hesap türü seçimi",
+      "route": "/register",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A01-hesap_turu_secimi/mobil/hesap_turu_secimi_01.png",
+          "scrollY": 0,
+          "bytes": 44462
+        }
+      ]
+    },
+    {
+      "id": "A02",
+      "slug": "ebeveyn_kaydi",
+      "title": "Ebeveyn kaydı",
+      "route": "/parent/register",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A02-ebeveyn_kaydi/masaustu/ebeveyn_kaydi_01.png",
+          "scrollY": 0,
+          "bytes": 796279
+        }
+      ]
+    },
+    {
+      "id": "A02",
+      "slug": "ebeveyn_kaydi",
+      "title": "Ebeveyn kaydı",
+      "route": "/parent/register",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 886,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A02-ebeveyn_kaydi/mobil/ebeveyn_kaydi_01.png",
+          "scrollY": 0,
+          "bytes": 43519
+        },
+        {
+          "index": 2,
+          "file": "A02-ebeveyn_kaydi/mobil/ebeveyn_kaydi_02.png",
+          "scrollY": 42,
+          "bytes": 43848
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "slug": "ebeveyn_girisi",
+      "title": "Ebeveyn girişi",
+      "route": "/parent/login",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A03-ebeveyn_girisi/masaustu/ebeveyn_girisi_01.png",
+          "scrollY": 0,
+          "bytes": 784160
+        }
+      ]
+    },
+    {
+      "id": "A03",
+      "slug": "ebeveyn_girisi",
+      "title": "Ebeveyn girişi",
+      "route": "/parent/login",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A03-ebeveyn_girisi/mobil/ebeveyn_girisi_01.png",
+          "scrollY": 0,
+          "bytes": 35486
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "slug": "isletmeci_kaydi",
+      "title": "İşletmeci kaydı",
+      "route": "/operator/register",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A04-isletmeci_kaydi/masaustu/isletmeci_kaydi_01.png",
+          "scrollY": 0,
+          "bytes": 805004
+        }
+      ]
+    },
+    {
+      "id": "A04",
+      "slug": "isletmeci_kaydi",
+      "title": "İşletmeci kaydı",
+      "route": "/operator/register",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 882,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A04-isletmeci_kaydi/mobil/isletmeci_kaydi_01.png",
+          "scrollY": 0,
+          "bytes": 51273
+        },
+        {
+          "index": 2,
+          "file": "A04-isletmeci_kaydi/mobil/isletmeci_kaydi_02.png",
+          "scrollY": 38,
+          "bytes": 51641
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "slug": "isletmeci_girisi",
+      "title": "İşletmeci girişi",
+      "route": "/operator/login",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A05-isletmeci_girisi/masaustu/isletmeci_girisi_01.png",
+          "scrollY": 0,
+          "bytes": 788046
+        }
+      ]
+    },
+    {
+      "id": "A05",
+      "slug": "isletmeci_girisi",
+      "title": "İşletmeci girişi",
+      "route": "/operator/login",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A05-isletmeci_girisi/mobil/isletmeci_girisi_01.png",
+          "scrollY": 0,
+          "bytes": 39150
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "slug": "eposta_dogrulama",
+      "title": "E-posta doğrulama",
+      "route": "/operator/verify-email",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A06-eposta_dogrulama/masaustu/eposta_dogrulama_01.png",
+          "scrollY": 0,
+          "bytes": 796313
+        }
+      ]
+    },
+    {
+      "id": "A06",
+      "slug": "eposta_dogrulama",
+      "title": "E-posta doğrulama",
+      "route": "/operator/verify-email",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A06-eposta_dogrulama/mobil/eposta_dogrulama_01.png",
+          "scrollY": 0,
+          "bytes": 46105
+        }
+      ]
+    },
+    {
+      "id": "A07",
+      "slug": "sifre_unuttum",
+      "title": "Şifremi unuttum",
+      "route": "/forgot-password",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A07-sifre_unuttum/masaustu/sifre_unuttum_01.png",
+          "scrollY": 0,
+          "bytes": 786848
+        }
+      ]
+    },
+    {
+      "id": "A07",
+      "slug": "sifre_unuttum",
+      "title": "Şifremi unuttum",
+      "route": "/forgot-password",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A07-sifre_unuttum/mobil/sifre_unuttum_01.png",
+          "scrollY": 0,
+          "bytes": 38592
+        }
+      ]
+    },
+    {
+      "id": "A08",
+      "slug": "sifre_yenileme",
+      "title": "Şifre yenileme",
+      "route": "/reset-password",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A08-sifre_yenileme/masaustu/sifre_yenileme_01.png",
+          "scrollY": 0,
+          "bytes": 789554
+        }
+      ]
+    },
+    {
+      "id": "A08",
+      "slug": "sifre_yenileme",
+      "title": "Şifre yenileme",
+      "route": "/reset-password",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 844,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "A08-sifre_yenileme/mobil/sifre_yenileme_01.png",
+          "scrollY": 0,
+          "bytes": 40100
+        }
+      ]
+    },
+    {
+      "id": "O01",
+      "slug": "isletmeci_genel_bakis",
+      "title": "İşletmeci genel bakış",
+      "route": "/operator",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1234,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O01-isletmeci_genel_bakis/masaustu/isletmeci_genel_bakis_01.png",
+          "scrollY": 0,
+          "bytes": 128498
+        },
+        {
+          "index": 2,
+          "file": "O01-isletmeci_genel_bakis/masaustu/isletmeci_genel_bakis_02.png",
+          "scrollY": 334,
+          "bytes": 133796
+        }
+      ]
+    },
+    {
+      "id": "O01",
+      "slug": "isletmeci_genel_bakis",
+      "title": "İşletmeci genel bakış",
+      "route": "/operator",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 2059,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O01-isletmeci_genel_bakis/mobil/isletmeci_genel_bakis_01.png",
+          "scrollY": 0,
+          "bytes": 66006
+        },
+        {
+          "index": 2,
+          "file": "O01-isletmeci_genel_bakis/mobil/isletmeci_genel_bakis_02.png",
+          "scrollY": 764,
+          "bytes": 56338
+        },
+        {
+          "index": 3,
+          "file": "O01-isletmeci_genel_bakis/mobil/isletmeci_genel_bakis_03.png",
+          "scrollY": 1215,
+          "bytes": 49657
+        }
+      ]
+    },
+    {
+      "id": "O02",
+      "slug": "isletmeci_profili",
+      "title": "İşletmeci profili",
+      "route": "/operator/profile",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1032,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O02-isletmeci_profili/masaustu/isletmeci_profili_01.png",
+          "scrollY": 0,
+          "bytes": 106441
+        },
+        {
+          "index": 2,
+          "file": "O02-isletmeci_profili/masaustu/isletmeci_profili_02.png",
+          "scrollY": 132,
+          "bytes": 107373
+        }
+      ]
+    },
+    {
+      "id": "O02",
+      "slug": "isletmeci_profili",
+      "title": "İşletmeci profili",
+      "route": "/operator/profile",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1248,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O02-isletmeci_profili/mobil/isletmeci_profili_01.png",
+          "scrollY": 0,
+          "bytes": 56641
+        },
+        {
+          "index": 2,
+          "file": "O02-isletmeci_profili/mobil/isletmeci_profili_02.png",
+          "scrollY": 404,
+          "bytes": 55519
+        }
+      ]
+    },
+    {
+      "id": "O03",
+      "slug": "isletmeci_okul_kapsami",
+      "title": "İşletmeci okul ve mahalle kapsamı",
+      "route": "/operator/schools",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O03-isletmeci_okul_kapsami/masaustu/isletmeci_okul_kapsami_01.png",
+          "scrollY": 0,
+          "bytes": 111707
+        }
+      ]
+    },
+    {
+      "id": "O03",
+      "slug": "isletmeci_okul_kapsami",
+      "title": "İşletmeci okul ve mahalle kapsamı",
+      "route": "/operator/schools",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 955,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O03-isletmeci_okul_kapsami/mobil/isletmeci_okul_kapsami_01.png",
+          "scrollY": 0,
+          "bytes": 61105
+        },
+        {
+          "index": 2,
+          "file": "O03-isletmeci_okul_kapsami/mobil/isletmeci_okul_kapsami_02.png",
+          "scrollY": 111,
+          "bytes": 54484
+        }
+      ]
+    },
+    {
+      "id": "O04",
+      "slug": "isletmeci_servis_teklifleri",
+      "title": "İşletmeci araç ve servis teklifleri",
+      "route": "/operator/offerings",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 1142,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O04-isletmeci_servis_teklifleri/masaustu/isletmeci_servis_teklifleri_01.png",
+          "scrollY": 0,
+          "bytes": 127292
+        },
+        {
+          "index": 2,
+          "file": "O04-isletmeci_servis_teklifleri/masaustu/isletmeci_servis_teklifleri_02.png",
+          "scrollY": 242,
+          "bytes": 120263
+        }
+      ]
+    },
+    {
+      "id": "O04",
+      "slug": "isletmeci_servis_teklifleri",
+      "title": "İşletmeci araç ve servis teklifleri",
+      "route": "/operator/offerings",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1274,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "O04-isletmeci_servis_teklifleri/mobil/isletmeci_servis_teklifleri_01.png",
+          "scrollY": 0,
+          "bytes": 66559
+        },
+        {
+          "index": 2,
+          "file": "O04-isletmeci_servis_teklifleri/mobil/isletmeci_servis_teklifleri_02.png",
+          "scrollY": 430,
+          "bytes": 60600
+        }
+      ]
+    },
+    {
+      "id": "M01",
+      "slug": "yonetim_isletmeci_listesi",
+      "title": "Yönetim — işletmeci listesi",
+      "route": "/admin/applications",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 915,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M01-yonetim_isletmeci_listesi/masaustu/yonetim_isletmeci_listesi_01.png",
+          "scrollY": 0,
+          "bytes": 132780
+        },
+        {
+          "index": 2,
+          "file": "M01-yonetim_isletmeci_listesi/masaustu/yonetim_isletmeci_listesi_02.png",
+          "scrollY": 15,
+          "bytes": 133161
+        }
+      ]
+    },
+    {
+      "id": "M01",
+      "slug": "yonetim_isletmeci_listesi",
+      "title": "Yönetim — işletmeci listesi",
+      "route": "/admin/applications",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1316,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M01-yonetim_isletmeci_listesi/mobil/yonetim_isletmeci_listesi_01.png",
+          "scrollY": 0,
+          "bytes": 52751
+        },
+        {
+          "index": 2,
+          "file": "M01-yonetim_isletmeci_listesi/mobil/yonetim_isletmeci_listesi_02.png",
+          "scrollY": 472,
+          "bytes": 53615
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "slug": "yonetim_isletmeci_detayi",
+      "title": "Yönetim — işletmeci ayrıntısı",
+      "route": "/admin/applications/op1",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 996,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M02-yonetim_isletmeci_detayi/masaustu/yonetim_isletmeci_detayi_01.png",
+          "scrollY": 0,
+          "bytes": 130602
+        },
+        {
+          "index": 2,
+          "file": "M02-yonetim_isletmeci_detayi/masaustu/yonetim_isletmeci_detayi_02.png",
+          "scrollY": 96,
+          "bytes": 129576
+        }
+      ]
+    },
+    {
+      "id": "M02",
+      "slug": "yonetim_isletmeci_detayi",
+      "title": "Yönetim — işletmeci ayrıntısı",
+      "route": "/admin/applications/op1",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1424,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M02-yonetim_isletmeci_detayi/mobil/yonetim_isletmeci_detayi_01.png",
+          "scrollY": 0,
+          "bytes": 60716
+        },
+        {
+          "index": 2,
+          "file": "M02-yonetim_isletmeci_detayi/mobil/yonetim_isletmeci_detayi_02.png",
+          "scrollY": 580,
+          "bytes": 58031
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "slug": "yonetim_okul_yonetimi",
+      "title": "Yönetim — okul kataloğu",
+      "route": "/admin/schools",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 947,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M03-yonetim_okul_yonetimi/masaustu/yonetim_okul_yonetimi_01.png",
+          "scrollY": 0,
+          "bytes": 127201
+        },
+        {
+          "index": 2,
+          "file": "M03-yonetim_okul_yonetimi/masaustu/yonetim_okul_yonetimi_02.png",
+          "scrollY": 47,
+          "bytes": 130264
+        }
+      ]
+    },
+    {
+      "id": "M03",
+      "slug": "yonetim_okul_yonetimi",
+      "title": "Yönetim — okul kataloğu",
+      "route": "/admin/schools",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1108,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M03-yonetim_okul_yonetimi/mobil/yonetim_okul_yonetimi_01.png",
+          "scrollY": 0,
+          "bytes": 57826
+        },
+        {
+          "index": 2,
+          "file": "M03-yonetim_okul_yonetimi/mobil/yonetim_okul_yonetimi_02.png",
+          "scrollY": 264,
+          "bytes": 51425
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "slug": "yonetim_ukome_tarife",
+      "title": "Yönetim — UKOME tarife",
+      "route": "/admin/tariffs",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 967,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M04-yonetim_ukome_tarife/masaustu/yonetim_ukome_tarife_01.png",
+          "scrollY": 0,
+          "bytes": 127226
+        },
+        {
+          "index": 2,
+          "file": "M04-yonetim_ukome_tarife/masaustu/yonetim_ukome_tarife_02.png",
+          "scrollY": 67,
+          "bytes": 129098
+        }
+      ]
+    },
+    {
+      "id": "M04",
+      "slug": "yonetim_ukome_tarife",
+      "title": "Yönetim — UKOME tarife",
+      "route": "/admin/tariffs",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1395,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M04-yonetim_ukome_tarife/mobil/yonetim_ukome_tarife_01.png",
+          "scrollY": 0,
+          "bytes": 60041
+        },
+        {
+          "index": 2,
+          "file": "M04-yonetim_ukome_tarife/mobil/yonetim_ukome_tarife_02.png",
+          "scrollY": 551,
+          "bytes": 49964
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "slug": "yonetim_moderasyon",
+      "title": "Yönetim — raporlama ve moderasyon",
+      "route": "/admin/moderation",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 966,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M05-yonetim_moderasyon/masaustu/yonetim_moderasyon_01.png",
+          "scrollY": 0,
+          "bytes": 112795
+        },
+        {
+          "index": 2,
+          "file": "M05-yonetim_moderasyon/masaustu/yonetim_moderasyon_02.png",
+          "scrollY": 66,
+          "bytes": 114647
+        }
+      ]
+    },
+    {
+      "id": "M05",
+      "slug": "yonetim_moderasyon",
+      "title": "Yönetim — raporlama ve moderasyon",
+      "route": "/admin/moderation",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1092,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "M05-yonetim_moderasyon/mobil/yonetim_moderasyon_01.png",
+          "scrollY": 0,
+          "bytes": 68296
+        },
+        {
+          "index": 2,
+          "file": "M05-yonetim_moderasyon/mobil/yonetim_moderasyon_02.png",
+          "scrollY": 248,
+          "bytes": 58935
+        }
+      ]
+    },
+    {
+      "id": "N01",
+      "slug": "ebeveyn_bildirimleri",
+      "title": "Ebeveyn bildirimleri",
+      "route": "/notifications",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 913,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N01-ebeveyn_bildirimleri/masaustu/ebeveyn_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 77732
+        },
+        {
+          "index": 2,
+          "file": "N01-ebeveyn_bildirimleri/masaustu/ebeveyn_bildirimleri_02.png",
+          "scrollY": 13,
+          "bytes": 77720
+        }
+      ]
+    },
+    {
+      "id": "N01",
+      "slug": "ebeveyn_bildirimleri",
+      "title": "Ebeveyn bildirimleri",
+      "route": "/notifications",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1108,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N01-ebeveyn_bildirimleri/mobil/ebeveyn_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 54848
+        },
+        {
+          "index": 2,
+          "file": "N01-ebeveyn_bildirimleri/mobil/ebeveyn_bildirimleri_02.png",
+          "scrollY": 264,
+          "bytes": 52005
+        }
+      ]
+    },
+    {
+      "id": "N02",
+      "slug": "isletmeci_bildirimleri",
+      "title": "İşletmeci bildirimleri",
+      "route": "/operator/notifications",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N02-isletmeci_bildirimleri/masaustu/isletmeci_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 94300
+        }
+      ]
+    },
+    {
+      "id": "N02",
+      "slug": "isletmeci_bildirimleri",
+      "title": "İşletmeci bildirimleri",
+      "route": "/operator/notifications",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1023,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N02-isletmeci_bildirimleri/mobil/isletmeci_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 56162
+        },
+        {
+          "index": 2,
+          "file": "N02-isletmeci_bildirimleri/mobil/isletmeci_bildirimleri_02.png",
+          "scrollY": 179,
+          "bytes": 52947
+        }
+      ]
+    },
+    {
+      "id": "N03",
+      "slug": "yonetim_bildirimleri",
+      "title": "Yönetim bildirimleri",
+      "route": "/admin/notifications",
+      "viewport": "Masaüstü",
+      "width": 1440,
+      "height": 900,
+      "documentHeight": 900,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N03-yonetim_bildirimleri/masaustu/yonetim_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 96613
+        }
+      ]
+    },
+    {
+      "id": "N03",
+      "slug": "yonetim_bildirimleri",
+      "title": "Yönetim bildirimleri",
+      "route": "/admin/notifications",
+      "viewport": "Mobil",
+      "width": 390,
+      "height": 844,
+      "documentHeight": 1000,
+      "overlapPx": 80,
+      "parts": [
+        {
+          "index": 1,
+          "file": "N03-yonetim_bildirimleri/mobil/yonetim_bildirimleri_01.png",
+          "scrollY": 0,
+          "bytes": 57911
+        },
+        {
+          "index": 2,
+          "file": "N03-yonetim_bildirimleri/mobil/yonetim_bildirimleri_02.png",
+          "scrollY": 156,
+          "bytes": 52289
+        }
+      ]
+    }
+  ]
+}
