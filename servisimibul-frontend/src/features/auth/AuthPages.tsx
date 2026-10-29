@@ -24,6 +24,7 @@ import {
   resetPassword,
   verifyEmail,
 } from './auth-api'
+import { AuthFrame } from './AuthFrame'
 import './auth-ui.css'
 
 const passwordSchema = z
@@ -223,6 +224,7 @@ export function ParentSignupPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formError, setFormError] = useState<string>()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -268,7 +270,10 @@ export function ParentSignupPage() {
   }
 
   return (
-    <AuthCard title="Veli hesabı oluşturun">
+    <AuthFrame
+      title="Veli hesabı oluşturun"
+      subtitle="Servis taleplerini takip etmek, desteklemek ve bildirimlerinizi yönetmek için hesabınızı oluşturun."
+    >
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -281,38 +286,55 @@ export function ParentSignupPage() {
           label="Şifre"
           hint="12–64 karakter; boşluk kullanabilirsiniz."
           error={errors.password?.message}
+          endAction={
+            <PasswordVisibilityButton
+              visible={showPassword}
+              onToggle={() => setShowPassword((visible) => !visible)}
+            />
+          }
           input={
             <input
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               autoComplete="new-password"
               {...register('password')}
             />
           }
         />
+        <p className="auth-security-note">
+          Veli hesabı servis aramak için zorunlu değildir; yalnızca talep ve
+          bildirim işlemlerinde kullanılır.
+        </p>
         <FormError message={formError} />
         <button
-          className="primary-button"
+          className="primary-button auth-submit"
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Kaydediliyor…' : 'Veli hesabı oluştur'}
+          <span>{isSubmitting ? 'Kaydediliyor…' : 'Veli hesabı oluştur'}</span>
+          {!isSubmitting && <span className="auth-arrow" aria-hidden="true" />}
         </button>
       </form>
-      <p className="auth-switch">
-        Zaten hesabınız var mı?{' '}
+      <div className="auth-context-link">
+        <span>Zaten hesabınız var mı?</span>
         <Link
           to={`/parent/login?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
           viewTransition
         >
-          Giriş yapın
+          Veli girişi
         </Link>
-      </p>
-      <p className="auth-switch">
+      </div>
+      <div className="auth-context-link">
+        <span>İşletmeci misiniz?</span>
+        <Link to="/operator/login" viewTransition>
+          İşletmeci girişi
+        </Link>
+      </div>
+      <p className="auth-back-link">
         <Link to="/register" viewTransition>
           Hesap türüne geri dön
         </Link>
       </p>
-    </AuthCard>
+    </AuthFrame>
   )
 }
 
@@ -601,10 +623,8 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
     }
   }
 
-  return (
-    <AuthCard
-      title={parentOnly ? 'Veli hesabınıza giriş yapın' : 'Giriş yapın'}
-    >
+  const content = (
+    <>
       {searchParams.get('registered') === 'parent' && (
         <div className="status-banner success" role="status">
           Devam etmek için veli hesabınızla giriş yapın.
@@ -626,6 +646,14 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
         <FormField
           label="Şifre"
           error={errors.password?.message}
+          endAction={
+            parentOnly ? (
+              <PasswordVisibilityButton
+                visible={showPassword}
+                onToggle={() => setShowPassword((visible) => !visible)}
+              />
+            ) : undefined
+          }
           input={
             <input
               type={showPassword ? 'text' : 'password'}
@@ -635,14 +663,16 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           }
         />
         <div className="auth-password-actions">
-          <button
-            aria-pressed={showPassword}
-            className="text-button"
-            onClick={() => setShowPassword((visible) => !visible)}
-            type="button"
-          >
-            {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-          </button>
+          {!parentOnly && (
+            <button
+              aria-pressed={showPassword}
+              className="text-button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              type="button"
+            >
+              {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
+            </button>
+          )}
           <Link
             to={`/forgot-password?from=${parentOnly ? 'parent' : 'operator'}`}
             viewTransition
@@ -656,17 +686,20 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
         </label>
         <FormError message={formError} />
         <button
-          className="primary-button"
+          className={`primary-button${parentOnly ? ' auth-submit' : ''}`}
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Giriş yapılıyor…' : 'Giriş yap'}
+          <span>{isSubmitting ? 'Giriş yapılıyor…' : 'Giriş yap'}</span>
+          {parentOnly && !isSubmitting && (
+            <span className="auth-arrow" aria-hidden="true" />
+          )}
         </button>
       </form>
-      <p className="auth-switch">
+      <div className={parentOnly ? 'auth-context-link' : 'auth-switch'}>
         {parentOnly ? (
           <>
-            Hesabınız yok mu?{' '}
+            <span>Hesabınız yok mu?</span>
             <Link
               to={`/parent/register?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
               viewTransition
@@ -701,16 +734,27 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
             </Link>
           </>
         )}
-      </p>
+      </div>
       {parentOnly && (
-        <p className="auth-switch">
-          İşletmeci veya yönetici misiniz?{' '}
+        <div className="auth-context-link">
+          <span>İşletmeci veya yönetici misiniz?</span>
           <Link to="/operator/login" viewTransition>
             İşletmeci girişi
           </Link>
-        </p>
+        </div>
       )}
-    </AuthCard>
+    </>
+  )
+
+  return parentOnly ? (
+    <AuthFrame
+      title="Yeniden hoş geldiniz."
+      subtitle="Servis taleplerinizi ve bildirimlerinizi yönetmek için giriş yapın."
+    >
+      {content}
+    </AuthFrame>
+  ) : (
+    <AuthCard title="Giriş yapın">{content}</AuthCard>
   )
 }
 
@@ -795,11 +839,13 @@ function FormField({
   label,
   hint,
   error,
+  endAction,
   input,
 }: {
   label: string
   hint?: string
   error?: string
+  endAction?: ReactNode
   input: ReactElement<InputHTMLAttributes<HTMLInputElement>>
 }) {
   const id = `field-${label.toLocaleLowerCase('tr-TR').replaceAll(' ', '-')}`
@@ -811,11 +857,14 @@ function FormField({
     <div className="form-field">
       <label htmlFor={id}>{label}</label>
       {hint && <small id={`${id}-hint`}>{hint}</small>}
-      {cloneElement(input, {
-        id,
-        'aria-invalid': Boolean(error),
-        'aria-describedby': describedBy || undefined,
-      })}
+      <div className="auth-input-wrap">
+        {cloneElement(input, {
+          id,
+          'aria-invalid': Boolean(error),
+          'aria-describedby': describedBy || undefined,
+        })}
+        {endAction}
+      </div>
       {error && (
         <small className="field-error" id={`${id}-error`}>
           {error}
@@ -831,4 +880,28 @@ function FormError({ message }: { message?: string }) {
       {message}
     </div>
   ) : null
+}
+
+function PasswordVisibilityButton({
+  visible,
+  onToggle,
+}: {
+  visible: boolean
+  onToggle: () => void
+}) {
+  return (
+    <button
+      aria-label={visible ? 'Şifreyi gizle' : 'Şifreyi göster'}
+      aria-pressed={visible}
+      className="auth-field-action"
+      onClick={onToggle}
+      type="button"
+    >
+      <svg aria-hidden="true" viewBox="0 0 24 24">
+        <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+        <circle cx="12" cy="12" r="2.75" />
+        {visible && <path d="m4 4 16 16" />}
+      </svg>
+    </button>
+  )
 }

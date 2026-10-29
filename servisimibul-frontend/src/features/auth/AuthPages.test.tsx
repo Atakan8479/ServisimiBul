@@ -19,17 +19,16 @@ describe('parent account onboarding', () => {
     renderRoute('/register?next=%2Fdemands')
     expect(
       await screen.findByRole('heading', {
-        name: 'Nasıl kullanmak istiyorsunuz?',
+        name: 'Nasıl katılmak istersiniz?',
       }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Veliyim/ })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Veli olarak/ })).toHaveAttribute(
       'href',
       '/parent/register?next=%2Fdemands',
     )
-    expect(screen.getByRole('link', { name: /İşletmeciyim/ })).toHaveAttribute(
-      'href',
-      '/operator/register',
-    )
+    expect(
+      screen.getByRole('link', { name: /İşletmeci olarak/ }),
+    ).toHaveAttribute('href', '/operator/register')
   })
 
   it('registers a parent with CSRF and returns through login to the intended demand page', async () => {
@@ -77,7 +76,7 @@ describe('parent account onboarding', () => {
       await screen.findByText('Devam etmek için veli hesabınızla giriş yapın.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Veli hesabınıza giriş yapın' }),
+      screen.getByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/doğrulama bağlantısı/i)).not.toBeInTheDocument()
     expect(requestBody).toEqual({
@@ -104,7 +103,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Çıkış yap' }))
     expect(
       await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
@@ -235,7 +234,7 @@ describe('parent account onboarding', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Veli hesabınıza giriş yapın',
+        name: 'Yeniden hoş geldiniz.',
       }),
     ).toBeInTheDocument()
     const password = screen.getByLabelText('Şifre')
