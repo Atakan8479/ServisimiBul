@@ -35,9 +35,7 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
     expect(
-      screen.getByText(
-        /Aramalarda görünmek için araç eklemek zorunda değilsiniz/,
-      ),
+      screen.getByText(/Araç bilgileri arama görünürlüğü için isteğe bağlıdır/),
     ).toBeInTheDocument()
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
   })
@@ -55,7 +53,7 @@ describe('operator workspace flows', () => {
 
     renderRoute('/operator')
 
-    expect(await screen.findByText('Yönetici onayı')).toBeInTheDocument()
+    expect(await screen.findAllByText('Yönetici onayı')).not.toHaveLength(0)
     expect(
       screen.getByText(/Askıya alınmış veya etkin olmayan profil/),
     ).toBeInTheDocument()
@@ -120,6 +118,7 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     release()
     expect(await screen.findByText('Hesap doğrulaması')).toBeInTheDocument()
+    expect(screen.getByText(/Henüz bağlı okulunuz yok/)).toBeInTheDocument()
   })
 
   it('hides the approval workflow and keeps draft profile editing available in pilot mode', async () => {

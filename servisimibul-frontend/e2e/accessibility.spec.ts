@@ -74,7 +74,7 @@ for (const viewport of viewports) {
     await login(page, 'operator@example.com')
     await expect(
       page.getByRole('heading', {
-        name: 'Aramalarda görünmeye hazır mısınız?',
+        name: 'Genel bakış',
       }),
     ).toBeVisible()
     await audit(page, 'operator readiness overview')
@@ -170,7 +170,7 @@ test('route changes restore page context and mobile controls meet the touch targ
   await login(page, 'operator@example.com')
 
   const overviewHeading = page.getByRole('heading', {
-    name: 'Aramalarda görünmeye hazır mısınız?',
+    name: 'Genel bakış',
   })
   await expect(overviewHeading).toBeFocused()
   await expect(page).toHaveTitle('Genel bakış | ServisimiBul')

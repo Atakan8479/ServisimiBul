@@ -115,9 +115,7 @@ async function login(page: Page) {
   await page.getByLabel('E-posta').fill('operator@example.com')
   await page.getByLabel('Şifre').fill('Password123!')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
-  await expect(
-    page.getByRole('heading', { name: 'Aramalarda görünmeye hazır mısınız?' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Genel bakış' })).toBeVisible()
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

@@ -40,22 +40,51 @@
 }
 
 .operator-readiness-summary {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 0.35rem 0.75rem;
-  padding: 1.25rem;
-  border-left-width: 0.3rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.15rem 1.25rem;
+  border-left-width: 1px;
   border-radius: var(--radius-medium);
 }
 
 .operator-readiness-summary::before {
-  grid-row: 1 / span 2;
-  width: 0.65rem;
-  height: 0.65rem;
-  margin-top: 0.35rem;
+  content: none;
+}
+
+.operator-readiness-summary > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.operator-readiness-icon {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-small);
+  background: color-mix(in srgb, currentColor 9%, white);
+}
+
+.operator-readiness-icon::before,
+.operator-readiness-icon::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
   border-radius: 999px;
-  background: currentColor;
   content: '';
+  transform: translate(-50%, -50%);
+}
+
+.operator-readiness-icon::before {
+  width: 1rem;
+  height: 0.65rem;
+  border: 2px solid currentColor;
+}
+
+.operator-readiness-icon::after {
+  width: 0.3rem;
+  height: 0.3rem;
+  background: currentColor;
 }
 
 .operator-task-section,
@@ -98,17 +127,365 @@
 }
 
 .operator-overview-page .readiness-schools,
-.operator-overview-page .optional-next-steps {
+.operator-overview-page .operator-quick-links,
+.operator-overview-page .operator-account-status {
   margin-top: 0;
 }
 
-.operator-overview-page .readiness-schools {
-  padding-inline: 0.25rem;
+.operator-overview-page {
+  gap: 1rem;
+  width: min(76rem, 100%);
 }
 
-.operator-overview-page .optional-next-steps {
+.operator-overview-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  max-width: none;
+  padding-bottom: 0.25rem;
+  border-bottom: 0;
+}
+
+.operator-overview-header > div {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.operator-overview-header h1 {
+  max-width: none;
+  font-size: clamp(2.25rem, 4vw, 3rem);
+}
+
+.operator-overview-page .operator-overview-header a.button-link,
+.operator-overview-page a.operator-school-action.button-link {
+  margin-top: 0;
+  border-color: var(--color-border);
+  background: var(--neutral-0);
+  color: var(--navy-900);
+  box-shadow: none;
+}
+
+.operator-overview-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.operator-summary-card {
+  position: relative;
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  padding: 1rem 1.1rem 1rem 3.75rem;
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--neutral-0);
+  box-shadow: 0 0.55rem 1.5rem rgba(13, 42, 35, 0.05);
+}
+
+.operator-summary-card::before {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
   background: var(--teal-100);
+  content: '';
+}
+
+.operator-summary-card::after {
+  position: absolute;
+  top: 1.7rem;
+  left: 1.7rem;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--teal-700);
+  content: '';
+}
+
+.operator-summary-card.info::before {
+  background: #e7f1fb;
+}
+
+.operator-summary-card.info::after {
+  background: #4d83bd;
+}
+
+.operator-summary-card.accent::before {
+  background: var(--yellow-100);
+}
+
+.operator-summary-card.accent::after {
+  background: #a36d08;
+}
+
+.operator-summary-card.warning::before {
+  background: var(--amber-100);
+}
+
+.operator-summary-card.warning::after {
+  background: var(--amber-700);
+}
+
+.operator-summary-card > span {
+  color: var(--color-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+}
+
+.operator-summary-card > strong {
+  color: var(--navy-900);
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.operator-summary-card > small {
+  color: var(--color-muted);
+  line-height: 1.35;
+}
+
+.operator-overview-primary-grid,
+.operator-overview-secondary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.8fr);
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.operator-overview-page .operator-task-section,
+.operator-overview-page .readiness-schools,
+.operator-overview-page .operator-quick-links,
+.operator-overview-page .operator-account-status {
+  padding: clamp(1.15rem, 2vw, 1.5rem);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--neutral-0);
+  box-shadow: 0 0.75rem 2rem rgba(13, 42, 35, 0.06);
+}
+
+.operator-overview-page .operator-section-heading {
+  margin-bottom: 0.75rem;
+}
+
+.operator-overview-page .readiness-list li {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding-block: 0.9rem;
+}
+
+.operator-overview-page .readiness-list a,
+.operator-card-link,
+.operator-card-heading a {
+  min-height: 2.75rem;
+  align-content: center;
+  text-decoration: none;
+}
+
+.operator-readiness-state {
+  position: relative;
+  display: block;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: var(--amber-100);
+}
+
+.operator-readiness-state::before,
+.operator-readiness-state::after {
+  position: absolute;
+  content: '';
+}
+
+.operator-readiness-state::before {
+  top: 0.55rem;
+  left: 0.9rem;
+  width: 0.2rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: var(--amber-700);
+}
+
+.operator-readiness-state::after {
+  bottom: 0.45rem;
+  left: 0.9rem;
+  width: 0.2rem;
+  height: 0.2rem;
+  border-radius: 999px;
+  background: var(--amber-700);
+}
+
+.operator-readiness-state[data-complete='true'] {
+  background: var(--teal-100);
+}
+
+.operator-readiness-state[data-complete='true']::before {
+  top: 0.55rem;
+  left: 0.7rem;
+  width: 0.65rem;
+  height: 0.35rem;
+  border-bottom: 0.15rem solid var(--teal-700);
+  border-left: 0.15rem solid var(--teal-700);
+  border-radius: 0;
+  background: transparent;
+  transform: rotate(-45deg);
+}
+
+.operator-readiness-state[data-complete='true']::after {
+  content: none;
+}
+
+.operator-card-link {
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+.operator-card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.operator-card-heading h2,
+.operator-quick-links h2,
+.operator-account-status h2 {
+  margin: 0;
+  color: var(--navy-900);
+  font-size: clamp(1.2rem, 2vw, 1.4rem);
+}
+
+.operator-overview-page .readiness-schools {
+  display: flex;
+  flex-direction: column;
+}
+
+.operator-overview-page .readiness-schools ul {
+  gap: 0;
+  margin: 0.75rem 0 1rem;
+}
+
+.operator-overview-page .readiness-schools li {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 0.85rem;
+}
+
+.operator-overview-page .readiness-schools li > div {
+  min-width: 0;
+}
+
+.operator-overview-page .readiness-schools li > div > span {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.operator-school-mark {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: var(--teal-100);
+  color: var(--teal-700) !important;
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.operator-school-action {
+  width: 100% !important;
+  margin-top: auto;
+  justify-content: center;
+  text-align: center;
+}
+
+.operator-overview-empty {
+  margin: 1rem 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.operator-overview-secondary-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(18rem, 0.8fr);
+}
+
+.operator-quick-links > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.operator-quick-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 4.25rem;
+  padding: 0.8rem 2.5rem 0.8rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-small);
+  color: var(--navy-900) !important;
+  text-decoration: none;
+  transition:
+    border-color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
+}
+
+.operator-quick-link::after {
+  position: absolute;
+  top: 50%;
+  right: 1rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-top: 2px solid var(--color-muted);
+  border-right: 2px solid var(--color-muted);
+  content: '';
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.operator-quick-link:hover {
+  border-color: var(--teal-600);
+  background: var(--color-surface-soft);
+}
+
+.operator-quick-link span,
+.operator-quick-link small {
+  display: block;
+}
+
+.operator-quick-link small {
+  margin-top: 0.2rem;
+  color: var(--color-muted);
+  font-weight: 500;
+}
+
+.operator-account-status > p {
+  margin: 0.6rem 0 1rem;
+  color: var(--color-muted);
+  line-height: 1.5;
+}
+
+.operator-status-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  min-height: 3.25rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 70rem) {
+  .operator-overview-primary-grid,
+  .operator-overview-secondary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .operator-workspace-page a.button-link {
@@ -203,6 +580,34 @@
     font-size: clamp(2rem, 11vw, 2.75rem);
   }
 
+  .operator-overview-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .operator-overview-header .button-link {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .operator-overview-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operator-overview-summary > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .operator-overview-primary-grid,
+  .operator-overview-secondary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operator-quick-links > div {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .operator-task-section,
   .operator-flow-stage {
     padding: 1rem;
@@ -210,15 +615,11 @@
   }
 
   .operator-readiness-summary {
-    grid-template-columns: auto minmax(0, 1fr);
+    align-items: flex-start;
   }
 
   .operator-task-section .readiness-list li {
     gap: 0.75rem;
-  }
-
-  .operator-task-section .readiness-list li > .ui-status {
-    justify-self: start;
   }
 
   .operator-add-school .search-row,
@@ -239,5 +640,23 @@
 
   .operator-schools-page .coverage-editor {
     padding: 1rem;
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .operator-overview-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operator-overview-summary > :last-child:nth-child(odd) {
+    grid-column: auto;
+  }
+
+  .operator-overview-page .readiness-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operator-overview-page .readiness-list a {
+    justify-self: start;
   }
 }

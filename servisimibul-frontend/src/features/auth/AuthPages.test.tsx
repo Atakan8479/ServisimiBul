@@ -589,7 +589,7 @@ describe('operator authentication screens', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Aramalarda görünmeye hazır mısınız?',
+        name: 'Genel bakış',
       }),
     ).toBeInTheDocument()
     expect(loginBody).toEqual({

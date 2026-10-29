@@ -55,7 +55,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     await login(operatorPage, 'operator@example.com')
     await expect(
       operatorPage.getByRole('heading', {
-        name: 'Aramalarda görünmeye hazır mısınız?',
+        name: 'Genel bakış',
       }),
     ).toBeVisible()
     await operatorPage.goto('/operator/profile')
