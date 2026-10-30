@@ -4,17 +4,23 @@ import { BrandLockup, Button } from './design-system'
 
 export function WorkspaceShell({
   accountLabel,
+  currentPage,
   email,
   error,
   loggingOut,
   navigation,
+  homePath,
+  notificationPath,
   onSignOut,
 }: {
   accountLabel: string
+  currentPage: string
   email: string
   error?: string
   loggingOut: boolean
   navigation: ReactNode
+  homePath: string
+  notificationPath: string
   onSignOut: () => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -23,11 +29,26 @@ export function WorkspaceShell({
   const menuButtonRef = useRef<HTMLButtonElement>(null)
   const restoreFocusRef = useRef(true)
   const wasOpenRef = useRef(false)
-
   function closeMenu(restoreFocus = true) {
     restoreFocusRef.current = restoreFocus
     setMenuOpen(false)
   }
+
+  useEffect(() => {
+    if (!window.matchMedia) return
+
+    const desktop = window.matchMedia('(min-width: 44.0625rem)')
+    const resetDesktopMenu = () => {
+      if (!desktop.matches || !menuOpen) return
+      restoreFocusRef.current = false
+      drawerRef.current?.querySelector<HTMLElement>('nav a[href]')?.focus()
+      setMenuOpen(false)
+    }
+
+    resetDesktopMenu()
+    desktop.addEventListener('change', resetDesktopMenu)
+    return () => desktop.removeEventListener('change', resetDesktopMenu)
+  }, [menuOpen])
 
   useEffect(() => {
     if (!menuOpen) {
@@ -102,9 +123,10 @@ export function WorkspaceShell({
         İçeriğe geç
       </a>
       <header className="workspace-mobile-bar" inert={menuOpen || undefined}>
-        <Link aria-label="ServisimiBul ana sayfa" to="/" viewTransition>
-          <BrandLockup compact />
-        </Link>
+        <div className="workspace-mobile-context">
+          <small>{accountLabel}</small>
+          <strong>{currentPage}</strong>
+        </div>
         <button
           ref={menuButtonRef}
           className="workspace-menu-toggle"
@@ -165,6 +187,9 @@ export function WorkspaceShell({
         >
           {navigation}
         </nav>
+        <Link className="workspace-home-link" to="/" viewTransition>
+          Ana sayfaya dön
+        </Link>
         <Button
           className="sidebar-action"
           disabled={loggingOut}
@@ -180,6 +205,29 @@ export function WorkspaceShell({
           </p>
         )}
       </aside>
+      <header className="workspace-topbar" inert={menuOpen || undefined}>
+        <nav aria-label="Sayfa yolu">
+          <Link to={homePath} viewTransition>
+            {accountLabel}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{currentPage}</span>
+        </nav>
+        <div className="workspace-topbar-actions">
+          <Link to={notificationPath} viewTransition>
+            Bildirimler
+          </Link>
+          <span className="workspace-topbar-account">
+            <span className="workspace-account-mark" aria-hidden="true">
+              {email.slice(0, 1).toLocaleUpperCase('tr-TR')}
+            </span>
+            <span>
+              <strong>{accountLabel}</strong>
+              <small>{email}</small>
+            </span>
+          </span>
+        </div>
+      </header>
       <main
         id="workspace-content"
         className="workspace-content"

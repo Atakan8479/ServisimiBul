@@ -11,9 +11,12 @@ function renderShell(onSignOut = vi.fn()) {
           element={
             <WorkspaceShell
               accountLabel="İşletmeci alanı"
+              currentPage="Genel bakış"
               email="operator@example.com"
+              homePath="/workspace"
               loggingOut={false}
               navigation={<Link to="/workspace/profile">Profil</Link>}
+              notificationPath="/workspace/notifications"
               onSignOut={onSignOut}
             />
           }
@@ -35,7 +38,7 @@ describe('WorkspaceShell', () => {
     expect(
       screen.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),
     ).toBeVisible()
-    expect(screen.getByText('operator@example.com')).toBeVisible()
+    expect(screen.getAllByText('operator@example.com')).toHaveLength(2)
 
     fireEvent.click(screen.getByRole('button', { name: 'Çıkış yap' }))
     expect(onSignOut).toHaveBeenCalledOnce()

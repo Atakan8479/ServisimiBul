@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { NavLink, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import {
+  NavLink,
+  useMatches,
+  useNavigate,
+  useRouteLoaderData,
+} from 'react-router-dom'
 import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
@@ -9,10 +14,19 @@ import './operator-workspace.css'
 export function OperatorWorkspaceLayout() {
   const user = useRouteLoaderData('operator') as AuthUser
   const navigate = useNavigate()
+  const matches = useMatches()
   const [error, setError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
   const canManageResources =
     !user.operatorApprovalRequired || user.approvalStatus === 'APPROVED'
+  const currentPage =
+    [...matches]
+      .reverse()
+      .map(
+        (match) =>
+          (match.handle as { pageTitle?: string } | undefined)?.pageTitle,
+      )
+      .find(Boolean) ?? 'Genel bakış'
 
   async function signOut() {
     setLoggingOut(true)
@@ -40,9 +54,12 @@ export function OperatorWorkspaceLayout() {
   return (
     <WorkspaceShell
       accountLabel="İşletmeci alanı"
+      currentPage={currentPage}
       email={user.email}
       error={error}
+      homePath="/operator"
       loggingOut={loggingOut}
+      notificationPath="/operator/notifications"
       onSignOut={signOut}
       navigation={
         <>

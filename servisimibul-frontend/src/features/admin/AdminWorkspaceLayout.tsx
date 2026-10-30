@@ -1,5 +1,10 @@
 import { useState } from 'react'
-import { NavLink, useNavigate, useRouteLoaderData } from 'react-router-dom'
+import {
+  NavLink,
+  useMatches,
+  useNavigate,
+  useRouteLoaderData,
+} from 'react-router-dom'
 import { WorkspaceShell } from '../../components/WorkspaceShell'
 import { ApiError } from '../../api/client'
 import { logout, type AuthUser } from '../auth/auth-api'
@@ -9,8 +14,17 @@ import './admin-workspace.css'
 export function AdminWorkspaceLayout() {
   const user = useRouteLoaderData('admin') as AuthUser
   const navigate = useNavigate()
+  const matches = useMatches()
   const [error, setError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
+  const currentPage =
+    [...matches]
+      .reverse()
+      .map(
+        (match) =>
+          (match.handle as { pageTitle?: string } | undefined)?.pageTitle,
+      )
+      .find(Boolean) ?? 'Yönetim'
 
   async function signOut() {
     setLoggingOut(true)
@@ -36,9 +50,12 @@ export function AdminWorkspaceLayout() {
     <div className="admin-workspace">
       <WorkspaceShell
         accountLabel="Yönetim alanı"
+        currentPage={currentPage}
         email={user.email}
         error={error}
+        homePath="/admin/applications"
         loggingOut={loggingOut}
+        notificationPath="/admin/notifications"
         onSignOut={signOut}
         navigation={
           <>
