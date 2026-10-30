@@ -1038,13 +1038,9 @@ function DiscoveryResults({
 
   if (!selection && !error) return null
 
-  return (
-    <section
-      className="discovery-results"
-      aria-busy={loading}
-      aria-live="polite"
-    >
-      {!loading && error && (
+  if (!selection) {
+    return (
+      <section className="discovery-results" aria-live="polite">
         <div className="discovery-result-state result-error" role="alert">
           <div>
             <h2 ref={headingRef} tabIndex={-1}>
@@ -1056,44 +1052,82 @@ function DiscoveryResults({
             Sonuçları yeniden dene
           </button>
         </div>
-      )}
+      </section>
+    )
+  }
 
-      {loading && (
-        <div className="discovery-result-state result-loading" role="status">
-          <span className="loading-dot" aria-hidden="true" />
-          <div>
-            <strong>Uygun işletmeciler aranıyor</strong>
-            <span>Okul ve servis bölgesi eşleşmeleri kontrol ediliyor.</span>
-          </div>
+  const resultTitle = loading
+    ? 'Uygun işletmeciler aranıyor'
+    : error
+      ? 'Sonuçlar yüklenemedi'
+      : page?.totalElements === 0
+        ? 'Henüz bir eşleşme yok'
+        : `${page?.totalElements ?? 0} işletmeci bulundu`
+
+  return (
+    <section
+      className="discovery-results"
+      aria-busy={loading}
+      aria-live="polite"
+    >
+      <header className="discovery-result-heading">
+        <div>
+          <h2 ref={headingRef} tabIndex={-1}>
+            {resultTitle}
+          </h2>
+          <p>Seçtiğiniz okul ve servis bölgesi için yayımlanan profiller.</p>
         </div>
-      )}
+        <a href="#school-search">Aramayı düzenle</a>
+      </header>
 
-      {!loading && page && selection && (
-        <>
-          <div className="discovery-result-heading">
-            <div>
-              <h2 ref={headingRef} tabIndex={-1}>
-                {page.totalElements === 0
-                  ? 'Henüz bir eşleşme yok'
-                  : `${page.totalElements} işletmeci bulundu`}
-              </h2>
-              <p>Seçtiğiniz okul ve servis bölgesi için gerçek sonuçlar.</p>
+      <details className="discovery-context-disclosure">
+        <summary>Arama ölçütlerini göster</summary>
+        <SearchContext selection={selection} />
+      </details>
+
+      <div className="discovery-result-layout">
+        <aside className="discovery-context-panel" aria-label="Arama ölçütleri">
+          <SearchContext selection={selection} />
+        </aside>
+
+        <div className="discovery-result-content">
+          {loading && (
+            <div
+              aria-label="Okul ve servis bölgesi eşleşmeleri kontrol ediliyor."
+              className="result-loading"
+              role="status"
+            >
+              {[0, 1, 2].map((item) => (
+                <div
+                  className="operator-result-skeleton"
+                  key={item}
+                  aria-hidden="true"
+                >
+                  <span />
+                  <span />
+                  <span />
+                </div>
+              ))}
             </div>
-            <dl className="discovery-match-context">
-              <div>
-                <dt>Okul</dt>
-                <dd>{selection.schoolName}</dd>
-              </div>
-              <div>
-                <dt>Servis bölgesi</dt>
-                <dd>
-                  {selection.districtName} / {selection.neighborhoodName}
-                </dd>
-              </div>
-            </dl>
-          </div>
+          )}
 
-          {page.content.length === 0 ? (
+          {!loading && error && (
+            <div className="discovery-result-state result-error" role="alert">
+              <div>
+                <h3>İşletmeci profilleri alınamadı.</h3>
+                <p>{error}</p>
+              </div>
+              <button
+                className="secondary-button"
+                onClick={onRetry}
+                type="button"
+              >
+                Sonuçları yeniden dene
+              </button>
+            </div>
+          )}
+
+          {!loading && page && page.content.length === 0 && (
             <div className="discovery-result-state result-empty">
               <span className="result-state-mark" aria-hidden="true" />
               <div>
@@ -1107,8 +1141,15 @@ function DiscoveryResults({
                 Talep panosuna git
               </Link>
             </div>
-          ) : (
+          )}
+
+          {!loading && page && page.content.length > 0 && (
             <>
+              <div className="operator-result-list">
+                {page.content.map((operator) => (
+                  <OperatorCard key={operator.operatorId} operator={operator} />
+                ))}
+              </div>
               <div className="discovery-result-guidance">
                 <p>
                   Eşleşme; kesin adres, güzergâh, güncel kapasite veya fiyat
@@ -1116,15 +1157,10 @@ function DiscoveryResults({
                 </p>
                 <a href="#resmi-tarife">Resmî ücret tarifesine bak</a>
               </div>
-              <div className="operator-result-list">
-                {page.content.map((operator) => (
-                  <OperatorCard key={operator.operatorId} operator={operator} />
-                ))}
-              </div>
             </>
           )}
 
-          {page.totalPages > 1 && (
+          {!loading && page && page.totalPages > 1 && (
             <nav className="pagination" aria-label="Arama sonuçları sayfaları">
               <button
                 className="secondary-button"
@@ -1147,9 +1183,31 @@ function DiscoveryResults({
               </button>
             </nav>
           )}
-        </>
-      )}
+        </div>
+      </div>
     </section>
+  )
+}
+
+function SearchContext({ selection }: { selection: SearchSelection }) {
+  return (
+    <div className="discovery-context-content">
+      <h3>Arama ölçütleri</h3>
+      <dl className="discovery-match-context">
+        <div>
+          <dt>Okul</dt>
+          <dd>{selection.schoolName}</dd>
+        </div>
+        <div>
+          <dt>Servis bölgesi</dt>
+          <dd>
+            {selection.districtName} / {selection.neighborhoodName}
+          </dd>
+        </div>
+      </dl>
+      <p>Sonuçlar okul ve mahalle eşleşmesine göre gösterilir.</p>
+      <a href="#resmi-tarife">Resmî ücret tarifesini incele</a>
+    </div>
   )
 }
 
@@ -1158,14 +1216,24 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
     operator.businessName?.trim() || 'Bağımsız servis işletmecisi'
   const description = operator.description?.trim()
   const headingId = `operator-${operator.operatorId}-name`
+  const initials = displayName
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join('')
+    .toLocaleUpperCase('tr-TR')
 
   return (
     <article className="operator-result-card" aria-labelledby={headingId}>
       <div className="operator-card-heading">
+        <span className="operator-avatar" aria-hidden="true">
+          {initials}
+        </span>
         <div>
-          <p className="operator-match-label">Okul eşleşmesi</p>
           <h3 id={headingId}>{displayName}</h3>
-          <p className="operator-school">{operator.matchingSchool.name}</p>
+          <p className="operator-school">
+            {operator.matchingSchool.name} ile eşleşiyor
+          </p>
         </div>
       </div>
 
@@ -1205,13 +1273,13 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
       )}
 
       <div className="operator-contact">
-        <p>Doğrudan iletişim</p>
+        <p>İletişim bilgisi</p>
         <a
           aria-label={`Telefonla ara: ${operator.contactPhone}`}
           className="operator-phone-link"
           href={`tel:${operator.contactPhone}`}
         >
-          <span>Telefonla ara</span>
+          <span>Ara</span>
           <strong>{operator.contactPhone}</strong>
         </a>
       </div>
