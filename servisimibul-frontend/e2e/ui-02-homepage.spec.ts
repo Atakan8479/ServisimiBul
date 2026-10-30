@@ -14,6 +14,10 @@ for (const viewport of viewports) {
   }) => {
     await page.setViewportSize(viewport)
     await installMockApi(page, createMockApiState())
+    await page.route('**/api/v1/schools**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      await route.fallback()
+    })
     await page.goto('/')
 
     await expect(
@@ -38,9 +42,38 @@ for (const viewport of viewports) {
     ).toBeGreaterThan(0)
 
     await expect(page.getByLabel('Okulun bulunduğu il')).toBeEnabled()
+    const schoolFilters = page.getByRole('group', {
+      name: 'Okul kataloğu filtreleri',
+    })
+    await expect(schoolFilters).toBeVisible()
+    await expect(schoolFilters.getByLabel('Okulun bulunduğu il')).toBeVisible()
     await expect(page.getByLabel('Okulun ilçesi')).toBeDisabled()
     await expect(page.getByLabel('Servis alınacak ilçe')).toBeDisabled()
     await expect(page.getByLabel('Servis alınacak mahalle')).toBeDisabled()
+
+    await page.getByLabel('Okulun bulunduğu il').selectOption('34')
+    const expectedColumns =
+      viewport.width <= 704 ? 1 : viewport.width <= 960 ? 2 : 3
+    const schoolLoading = page.locator('.school-result-loading')
+    await expect(schoolLoading).toHaveAttribute('role', 'status')
+    await expect(schoolLoading).toContainText('Okullar yükleniyor...')
+    expect(
+      await page
+        .locator('.school-result-loading > div')
+        .evaluate(
+          (element) =>
+            getComputedStyle(element).gridTemplateColumns.split(' ').length,
+        ),
+    ).toBe(expectedColumns)
+
+    const schoolResults = page.locator('.school-result-list')
+    await expect(schoolResults).toBeVisible()
+    expect(
+      await schoolResults.evaluate(
+        (element) =>
+          getComputedStyle(element).gridTemplateColumns.split(' ').length,
+      ),
+    ).toBe(expectedColumns)
 
     expect(
       await page.evaluate(

@@ -550,6 +550,7 @@ export function PublicDiscoveryPage() {
         <div
           className="school-filter-grid"
           aria-label="Okul kataloğu filtreleri"
+          role="group"
         >
           <label className="form-field">
             Okulun bulunduğu il
