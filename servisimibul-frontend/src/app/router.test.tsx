@@ -197,14 +197,14 @@ describe('application routes', () => {
       expect(document.querySelector('.road-backdrop')).toBeInTheDocument()
       expect(
         screen.getByRole('heading', {
-          name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+          name: 'Okul servisini birlikte bulalım.',
         }),
       ).toBeInTheDocument()
       expect(
         screen.queryByText('Servis bulmanın yeni yolu.'),
       ).not.toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'Talep panosunu incele' }),
+        screen.getByRole('link', { name: 'Talep panosunu keşfet' }),
       ).toHaveAttribute('href', '/demands')
       // Let the public page's database-backed pilot location lookup finish.
       expect(

@@ -14,15 +14,19 @@ for (const viewport of viewports) {
   }) => {
     await page.setViewportSize(viewport)
     await installMockApi(page, createMockApiState())
+    await page.route('**/api/v1/schools**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 150))
+      await route.fallback()
+    })
     await page.goto('/')
 
     await expect(
       page.getByRole('heading', {
-        name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+        name: 'Okul servisini birlikte bulalım.',
       }),
     ).toBeVisible()
     await expect(
-      page.getByRole('link', { name: 'Talep panosunu incele' }),
+      page.getByRole('link', { name: 'Talep panosunu keşfet' }),
     ).toHaveAttribute('href', '/demands')
     await expect(
       page.getByRole('img', {
@@ -38,9 +42,38 @@ for (const viewport of viewports) {
     ).toBeGreaterThan(0)
 
     await expect(page.getByLabel('Okulun bulunduğu il')).toBeEnabled()
+    const schoolFilters = page.getByRole('group', {
+      name: 'Okul kataloğu filtreleri',
+    })
+    await expect(schoolFilters).toBeVisible()
+    await expect(schoolFilters.getByLabel('Okulun bulunduğu il')).toBeVisible()
     await expect(page.getByLabel('Okulun ilçesi')).toBeDisabled()
     await expect(page.getByLabel('Servis alınacak ilçe')).toBeDisabled()
     await expect(page.getByLabel('Servis alınacak mahalle')).toBeDisabled()
+
+    await page.getByLabel('Okulun bulunduğu il').selectOption('34')
+    const expectedColumns =
+      viewport.width <= 704 ? 1 : viewport.width <= 960 ? 2 : 3
+    const schoolLoading = page.locator('.school-result-loading')
+    await expect(schoolLoading).toHaveAttribute('role', 'status')
+    await expect(schoolLoading).toContainText('Okullar yükleniyor...')
+    expect(
+      await page
+        .locator('.school-result-loading > div')
+        .evaluate(
+          (element) =>
+            getComputedStyle(element).gridTemplateColumns.split(' ').length,
+        ),
+    ).toBe(expectedColumns)
+
+    const schoolResults = page.locator('.school-result-list')
+    await expect(schoolResults).toBeVisible()
+    expect(
+      await schoolResults.evaluate(
+        (element) =>
+          getComputedStyle(element).gridTemplateColumns.split(' ').length,
+      ),
+    ).toBe(expectedColumns)
 
     expect(
       await page.evaluate(
@@ -72,13 +105,13 @@ test('hero CTA moves keyboard focus into the unchanged live search flow', async 
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  const searchCta = page.getByRole('link', { name: 'Okul aramaya başla' })
+  const searchCta = page.getByRole('link', { name: 'Okulunu seç' })
   await searchCta.focus()
   await page.keyboard.press('Enter')
 
   await expect(page).toHaveURL(/#school-search$/)
   await expect(
-    page.getByRole('heading', { name: 'Önce okulunuzu seçin' }),
+    page.getByRole('heading', { name: 'Hangi okula servis arıyorsunuz?' }),
   ).toBeInViewport()
 
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')
