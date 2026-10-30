@@ -339,6 +339,21 @@
   line-height: 1.55;
 }
 
+.auth-experience .registration-disclosure {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border: 0;
+  background: var(--color-surface-soft);
+}
+
+.auth-experience .registration-disclosure p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .auth-experience .auth-submit {
   display: inline-flex;
   width: 100%;
@@ -540,6 +555,31 @@
   .auth-field-action:hover {
     background: var(--color-surface-soft);
     color: var(--teal-700);
+  }
+}
+
+@media (min-width: 60.01rem) {
+  .auth-experience:has(#public-profile-disclosure-title) .auth-experience-main {
+    padding-block: 2rem;
+  }
+
+  .auth-experience:has(#public-profile-disclosure-title)
+    .auth-experience-heading {
+    margin-bottom: 1.35rem;
+  }
+
+  .auth-experience:has(#public-profile-disclosure-title) .form-stack {
+    gap: 0.85rem;
+  }
+
+  .auth-experience:has(#public-profile-disclosure-title) .auth-context-link {
+    padding-block: 0.7rem;
+  }
+
+  .auth-experience:has(#public-profile-disclosure-title)
+    .auth-experience-footer {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
   }
 }
 

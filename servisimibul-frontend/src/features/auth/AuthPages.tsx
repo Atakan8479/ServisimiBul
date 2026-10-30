@@ -86,6 +86,7 @@ export function RegisterPage() {
     import.meta.env.VITE_EMAIL_VERIFICATION_REQUIRED !== 'false'
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -105,57 +106,50 @@ export function RegisterPage() {
 
   if (complete) {
     return (
-      <AuthCard
+      <AuthFrame
         title={
           emailVerificationRequired
             ? 'E-postanızı kontrol edin'
             : 'Hesabınız hazır'
         }
+        subtitle={
+          emailVerificationRequired
+            ? 'Doğrulama bağlantısı gönderildiyse hesabınızı etkinleştirmek için bağlantıyı açın.'
+            : 'İşletmeci hesabınız oluşturuldu; şimdi güvenli oturum açabilirsiniz.'
+        }
       >
-        <p>
-          {emailVerificationRequired ? (
-            <>
-              Hesap varsa doğrulama bağlantısı gönderildi. Bağlantıyı açtıktan
-              sonra giriş yapabilirsiniz.
-            </>
-          ) : (
-            <>Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.</>
-          )}
-        </p>
-        <Link className="button-link" to="/operator/login" viewTransition>
-          Giriş sayfasına git
-        </Link>
-      </AuthCard>
+        <div className="auth-completion" role="status">
+          <p>
+            {emailVerificationRequired
+              ? 'Hesap varsa doğrulama bağlantısı gönderildi. Bağlantıyı açtıktan sonra giriş yapabilirsiniz.'
+              : 'Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.'}
+          </p>
+          <Link className="button-link" to="/operator/login" viewTransition>
+            İşletmeci girişine git
+          </Link>
+        </div>
+      </AuthFrame>
     )
   }
 
   return (
-    <AuthCard title="İşletmeci hesabı oluşturun">
+    <AuthFrame
+      title="İşletmenizi tanıtalım."
+      subtitle="Hizmet verdiğiniz okul ve mahalle kapsamını paylaşın."
+    >
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
-        <FormField
-          label="E-posta"
-          error={errors.email?.message}
-          input={
-            <input type="email" autoComplete="email" {...register('email')} />
-          }
-        />
-        <FormField
-          label="Şifre"
-          hint="12–64 karakter; boşluk kullanabilirsiniz."
-          error={errors.password?.message}
-          input={
-            <input
-              type="password"
-              autoComplete="new-password"
-              {...register('password')}
-            />
-          }
-        />
         <FormField
           label="İşletme adı (isteğe bağlı)"
           error={errors.businessName?.message}
           input={
             <input autoComplete="organization" {...register('businessName')} />
+          }
+        />
+        <FormField
+          label="E-posta"
+          error={errors.email?.message}
+          input={
+            <input type="email" autoComplete="email" {...register('email')} />
           }
         />
         <FormField
@@ -167,6 +161,24 @@ export function RegisterPage() {
               type="tel"
               autoComplete="tel"
               {...register('contactPhone')}
+            />
+          }
+        />
+        <FormField
+          label="Şifre"
+          hint="12–64 karakter; boşluk kullanabilirsiniz."
+          error={errors.password?.message}
+          endAction={
+            <PasswordVisibilityButton
+              visible={showPassword}
+              onToggle={() => setShowPassword((visible) => !visible)}
+            />
+          }
+          input={
+            <input
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
+              {...register('password')}
             />
           }
         />
@@ -197,26 +209,37 @@ export function RegisterPage() {
         </aside>
         <FormError message={formError} />
         <button
-          className="primary-button"
+          className="primary-button auth-submit"
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Kaydediliyor…' : 'Hesap oluştur'}
+          <span>
+            {isSubmitting ? 'Kaydediliyor…' : 'İşletmeci hesabı oluştur'}
+          </span>
+          {!isSubmitting && <span className="auth-arrow" aria-hidden="true" />}
         </button>
       </form>
-      <p className="auth-switch">
-        Zaten hesabınız var mı?{' '}
+      <div className="auth-context-link">
+        <span>Zaten hesabınız var mı?</span>
         <Link to="/operator/login" viewTransition>
-          Giriş yapın
+          İşletmeci girişi
         </Link>
-      </p>
-      <p className="auth-switch">
-        Veli misiniz?{' '}
-        <Link to="/parent/register" viewTransition>
-          Veli hesabı oluşturun
+      </div>
+      {emailVerificationRequired && (
+        <div className="auth-context-link">
+          <span>Doğrulama bağlantınız var mı?</span>
+          <Link to="/operator/verify-email" viewTransition>
+            E-postayı doğrulayın
+          </Link>
+        </div>
+      )}
+      <div className="auth-context-link">
+        <span>Veli misiniz?</span>
+        <Link to="/parent/login" viewTransition>
+          Veli girişi
         </Link>
-      </p>
-    </AuthCard>
+      </div>
+    </AuthFrame>
   )
 }
 
@@ -363,17 +386,20 @@ export function VerifyEmailPage() {
   }
 
   return (
-    <AuthCard title="Hesabınızı doğrulayın">
+    <AuthFrame
+      title="E-posta adresinizi doğrulayın"
+      subtitle="E-postanızdaki bağlantı hesabınıza ait güvenli doğrulama bilgisini bu ekrana taşır."
+    >
       {complete ? (
-        <>
+        <div className="auth-completion" role="status">
           <p>
-            E-posta adresiniz doğrulandı. Artık güvenli şekilde giriş
-            yapabilirsiniz.
+            E-posta adresiniz doğrulandı. Artık işletmeci hesabınızla güvenli
+            şekilde giriş yapabilirsiniz.
           </p>
           <Link className="button-link" to="/operator/login" viewTransition>
-            Giriş yap
+            İşletmeci girişi
           </Link>
-        </>
+        </div>
       ) : (
         <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
           <FormField
@@ -386,15 +412,34 @@ export function VerifyEmailPage() {
           />
           <FormError message={formError} />
           <button
-            className="primary-button"
+            className="primary-button auth-submit"
             disabled={isSubmitting}
             type="submit"
           >
-            {isSubmitting ? 'Doğrulanıyor…' : 'E-postayı doğrula'}
+            <span>
+              {isSubmitting ? 'Doğrulanıyor…' : 'E-posta adresini doğrula'}
+            </span>
+            {!isSubmitting && (
+              <span className="auth-arrow" aria-hidden="true" />
+            )}
           </button>
         </form>
       )}
-    </AuthCard>
+      {!complete && (
+        <div className="auth-context-link">
+          <span>Bağlantınız çalışmıyor mu?</span>
+          <Link to="/operator/register" viewTransition>
+            Kayıt adımına dönün
+          </Link>
+        </div>
+      )}
+      <div className="auth-context-link">
+        <span>Veli misiniz?</span>
+        <Link to="/parent/login" viewTransition>
+          Veli girişi
+        </Link>
+      </div>
+    </AuthFrame>
   )
 }
 
@@ -647,12 +692,10 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           label="Şifre"
           error={errors.password?.message}
           endAction={
-            parentOnly ? (
-              <PasswordVisibilityButton
-                visible={showPassword}
-                onToggle={() => setShowPassword((visible) => !visible)}
-              />
-            ) : undefined
+            <PasswordVisibilityButton
+              visible={showPassword}
+              onToggle={() => setShowPassword((visible) => !visible)}
+            />
           }
           input={
             <input
@@ -663,16 +706,6 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           }
         />
         <div className="auth-password-actions">
-          {!parentOnly && (
-            <button
-              aria-pressed={showPassword}
-              className="text-button"
-              onClick={() => setShowPassword((visible) => !visible)}
-              type="button"
-            >
-              {showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
-            </button>
-          )}
           <Link
             to={`/forgot-password?from=${parentOnly ? 'parent' : 'operator'}`}
             viewTransition
@@ -686,14 +719,12 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
         </label>
         <FormError message={formError} />
         <button
-          className={`primary-button${parentOnly ? ' auth-submit' : ''}`}
+          className="primary-button auth-submit"
           disabled={isSubmitting}
           type="submit"
         >
           <span>{isSubmitting ? 'Giriş yapılıyor…' : 'Giriş yap'}</span>
-          {parentOnly && !isSubmitting && (
-            <span className="auth-arrow" aria-hidden="true" />
-          )}
+          {!isSubmitting && <span className="auth-arrow" aria-hidden="true" />}
         </button>
       </form>
       <div className={parentOnly ? 'auth-context-link' : 'auth-switch'}>
@@ -754,7 +785,12 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
       {content}
     </AuthFrame>
   ) : (
-    <AuthCard title="Giriş yapın">{content}</AuthCard>
+    <AuthFrame
+      title="İşletmeci paneline giriş"
+      subtitle="Profilinizi, okul kapsamınızı ve bildirimlerinizi yönetin."
+    >
+      {content}
+    </AuthFrame>
   )
 }
 
@@ -891,7 +927,7 @@ function PasswordVisibilityButton({
 }) {
   return (
     <button
-      aria-label={visible ? 'Şifreyi gizle' : 'Şifreyi göster'}
+      aria-label={visible ? 'Parolayı gizle' : 'Parolayı göster'}
       aria-pressed={visible}
       className="auth-field-action"
       onClick={onToggle}

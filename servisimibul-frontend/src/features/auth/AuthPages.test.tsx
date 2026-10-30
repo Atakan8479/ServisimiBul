@@ -239,7 +239,7 @@ describe('parent account onboarding', () => {
     ).toBeInTheDocument()
     const password = screen.getByLabelText('Şifre')
     expect(password).toHaveAttribute('type', 'password')
-    fireEvent.click(screen.getByRole('button', { name: 'Şifreyi göster' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Parolayı göster' }))
     expect(password).toHaveAttribute('type', 'text')
     expect(
       screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
@@ -404,11 +404,16 @@ describe('operator authentication screens', () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('button', { name: 'Hesap oluştur' }),
+      screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
-    ).toHaveAttribute('href', '/parent/register')
+      screen
+        .getAllByRole('link', { name: 'Veli girişi' })
+        .some((link) => link.getAttribute('href') === '/parent/login'),
+    ).toBe(true)
+    expect(
+      screen.getByRole('button', { name: 'Parolayı göster' }),
+    ).toBeInTheDocument()
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
   })
 
@@ -482,7 +487,9 @@ describe('operator authentication screens', () => {
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
       target: { value: '0532 123 45 67' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Hesap oluştur' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
+    )
 
     expect(
       await screen.findByRole('heading', { name: 'E-postanızı kontrol edin' }),
@@ -518,7 +525,9 @@ describe('operator authentication screens', () => {
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
       target: { value: '0532 123 45 67' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Hesap oluştur' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
+    )
 
     expect(
       await screen.findByRole('heading', { name: 'Hesabınız hazır' }),
@@ -540,12 +549,14 @@ describe('operator authentication screens', () => {
 
     renderRoute('/operator/verify-email?token=email-token')
     fireEvent.click(
-      await screen.findByRole('button', { name: 'E-postayı doğrula' }),
+      await screen.findByRole('button', {
+        name: 'E-posta adresini doğrula',
+      }),
     )
 
     expect(
       await screen.findByText(
-        'E-posta adresiniz doğrulandı. Artık güvenli şekilde giriş yapabilirsiniz.',
+        'E-posta adresiniz doğrulandı. Artık işletmeci hesabınızla güvenli şekilde giriş yapabilirsiniz.',
       ),
     ).toBeInTheDocument()
     expect(token).toEqual({ token: 'email-token' })
@@ -742,7 +753,9 @@ describe('operator authentication screens', () => {
     fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
       target: { value: '12345' },
     })
-    fireEvent.click(screen.getByRole('button', { name: 'Hesap oluştur' }))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
+    )
 
     await waitFor(() =>
       expect(

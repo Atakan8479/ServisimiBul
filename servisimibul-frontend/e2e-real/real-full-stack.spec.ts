@@ -133,7 +133,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await operatorPage
         .getByLabel('Herkese açık iletişim telefonu')
         .fill('0532 111 22 33')
-      await operatorPage.getByRole('button', { name: 'Hesap oluştur' }).click()
+      await operatorPage
+        .getByRole('button', { name: 'İşletmeci hesabı oluştur' })
+        .click()
       await expect(
         operatorPage.getByRole('heading', { name: 'Hesabınız hazır' }),
       ).toBeVisible()

@@ -54,7 +54,7 @@ for (const viewport of viewports) {
           page.getByRole('textbox', { name: 'Şifre', exact: true }),
         ).toBeVisible()
         await expect(
-          page.getByRole('button', { name: 'Şifreyi göster' }),
+          page.getByRole('button', { name: 'Parolayı göster' }),
         ).toBeVisible()
       }
       await assertAccessibleAndContained(page)

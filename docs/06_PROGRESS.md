@@ -1,8 +1,19 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-08 parent authentication ready for CI review
+## Current stage: UI-FIDELITY-09 operator authentication ready for CI review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation are present on `main`. UI-FIDELITY-08 is implemented on `codex/ui-fidelity-08-auth` in draft PR #157 and has completed local unit, build, accessibility, responsive, mocked-browser, and disposable real-full-stack verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation are present on `main`. UI-FIDELITY-09 is implemented on `codex/ui-fidelity-09-operator-auth` in draft PR #159 and has completed local unit, build, accessibility, responsive, mocked-browser, and disposable real-full-stack verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-FIDELITY-09 operator registration, login, and verification — 2026-10-30
+
+- Draft PR #159 was opened before production implementation with the exact issue title. The branch was then rebased cleanly onto `main` commit `2326dba`, which contains the merged shared-shell redesign from PR #158.
+- A04 `/operator/register`, A05 `/operator/login`, and A06 `/operator/verify-email` now use the established responsive authentication composition and production visual system. Registration presents the optional business name, email, mandatory public contact phone with its publication disclosure, and password in a clearer order; login retains remember-me presentation and recovery; verification keeps the opaque token flow and now has an explicit completion state.
+- Existing server-session, HttpOnly-cookie, CSRF, email-verification, role, redirect, loading, validation, and error behavior remains authoritative. The registration payload and D043 public-phone disclosure are unchanged, disabled-mail local behavior remains truthful, and no social login, certification, approval promise, simulated authentication, or unsupported trust claim was introduced.
+- Password visibility controls are keyboard accessible and named independently from their associated `Şifre` inputs, preserving unambiguous form labels and existing browser-test helpers. Responsive WCAG 2.2 AA, horizontal-overflow, and production-validation coverage spans 320, 390, 768, and 1440 pixels.
+- Before/after desktop and mobile captures for A04–A06 plus A04 mobile validation evidence are stored under `docs/screenshots/ui-fidelity-09`. The Impeccable deterministic detector returned no findings, and visual inspection confirmed the change extends the existing design doctrine without requiring a `DESIGN.md` update.
+- Frontend ESLint, strict TypeScript, scoped Prettier, `git diff --check`, all 128 Vitest tests, and the production build passed. The complete mocked Chromium suite passed all 50 tests, including every existing journey plus five A04–A06 fidelity cases.
+- The documented J-03 Spring Boot/Vite/Playwright harness passed 1/1 against fresh disposable PostgreSQL 17.11 after replaying Flyway V1–V16 and validating Hibernate. It exercised the real API/session/CSRF journey, then deleted the database, tariff volume, processes, and generated credentials.
+- No backend source, API contract, dependency, lockfile, database migration, shared Supabase operation, credential, tariff publication, or production setting changed.
 
 ## Verified UI-FIDELITY-08 account choice and parent authentication — 2026-10-29
 
