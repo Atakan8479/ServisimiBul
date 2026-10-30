@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-09 operator authentication ready for CI review
+## Current stage: UI-FIDELITY-04 operator search results ready for CI review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation are present on `main`. UI-FIDELITY-09 is implemented on `codex/ui-fidelity-09-operator-auth` in draft PR #159 and has completed local unit, build, accessibility, responsive, mocked-browser, and disposable real-full-stack verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #160 are present on `main`. UI-FIDELITY-04 is implemented on `codex/issue-142-p02-manus-results` and has completed focused unit, build, accessibility, responsive, and complete mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-FIDELITY-04 P02 operator search results — 2026-10-31
+
+- P02 on `/` now follows the approved Manus result hierarchy without adding a route or unsupported controls: a desktop search-context rail becomes a native disclosure on tablet/mobile, and real operator profiles use a compact single-column list with direct `tel:` contact actions.
+- Existing anonymous discovery, exact school and pickup-neighborhood matching, nullable operator fields, every published offering, no-offering profiles, pagination, tariff guidance, retry behavior, and stale-request protection remain intact. No rating, price, vehicle guarantee, sort, filter, or profile-detail capability was invented.
+- Loading skeletons and empty/error recovery states use the same result composition. Search completion and failure still focus the state heading; 320, 390, 768, and 1440-pixel browser checks found no horizontal overflow, and axe reported no WCAG 2.2 A/AA violations.
+- Before/after desktop and mobile captures plus loading, empty, error, and mobile-context evidence are stored under `docs/screenshots/ui-fidelity-04`. The Impeccable detector reported no findings, and the change extends the existing visual system without requiring a design-system update.
+- Focused discovery tests passed 19/19. ESLint, strict TypeScript, production build, scoped Prettier, and the complete mocked Chromium suite passed; the browser suite passed all 52 tests. The repository-wide Vitest run passed 127/128 tests, with one pre-existing demand-feedback test still failing in isolation because its notification request is unhandled; no demand or notification file was changed here.
+- No backend source, API contract, dependency, lockfile, database, migration, shared Supabase operation, credential, production configuration, P01 hero/catalog, P03 detail flow, authentication page, or workspace changed.
 
 ## Verified UI-FIDELITY-09 operator registration, login, and verification — 2026-10-30
 
