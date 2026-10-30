@@ -1580,7 +1580,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(skipLink).toBeAttached()
         await expect(
           mobilePage.getByRole('heading', {
-            name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+            name: 'Okul servisini birlikte bulalım.',
           }),
         ).toBeVisible()
         await mobilePage.bringToFront()

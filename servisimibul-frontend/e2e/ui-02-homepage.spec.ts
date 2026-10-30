@@ -18,11 +18,11 @@ for (const viewport of viewports) {
 
     await expect(
       page.getByRole('heading', {
-        name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+        name: 'Okul servisini birlikte bulalım.',
       }),
     ).toBeVisible()
     await expect(
-      page.getByRole('link', { name: 'Talep panosunu incele' }),
+      page.getByRole('link', { name: 'Talep panosunu keşfet' }),
     ).toHaveAttribute('href', '/demands')
     await expect(
       page.getByRole('img', {
@@ -72,13 +72,13 @@ test('hero CTA moves keyboard focus into the unchanged live search flow', async 
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  const searchCta = page.getByRole('link', { name: 'Okul aramaya başla' })
+  const searchCta = page.getByRole('link', { name: 'Okulunu seç' })
   await searchCta.focus()
   await page.keyboard.press('Enter')
 
   await expect(page).toHaveURL(/#school-search$/)
   await expect(
-    page.getByRole('heading', { name: 'Önce okulunuzu seçin' }),
+    page.getByRole('heading', { name: 'Hangi okula servis arıyorsunuz?' }),
   ).toBeInViewport()
 
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')

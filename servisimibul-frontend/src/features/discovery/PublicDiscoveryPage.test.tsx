@@ -18,15 +18,19 @@ describe('public operator discovery', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Okulunu seç. Mahallene hizmet veren işletmecileri bul.',
+        name: 'Okul servisini birlikte bulalım.',
       }),
     ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Okulunu seç' })).toHaveAttribute(
+      'href',
+      '#school-search',
+    )
     expect(
-      screen.getByRole('link', { name: 'Okul aramaya başla' }),
-    ).toHaveAttribute('href', '#school-search')
-    expect(
-      screen.getByRole('link', { name: 'Talep panosunu incele' }),
+      screen.getByRole('link', { name: 'Talep panosunu keşfet' }),
     ).toHaveAttribute('href', '/demands')
+    expect(
+      screen.getByRole('heading', { name: 'Üç adımda servis keşfi' }),
+    ).toBeInTheDocument()
     expect(await screen.findByLabelText('Okulun bulunduğu il')).toBeEnabled()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
   })

@@ -470,15 +470,20 @@ export function PublicDiscoveryPage() {
       <section className="discovery-hero" aria-labelledby="discovery-title">
         <div className="discovery-hero-inner">
           <div className="discovery-hero-copy">
+            <p className="discovery-kicker">İstanbul'da okul servisi keşfi</p>
             <h1 id="discovery-title">
-              Okulunu seç. Mahallene hizmet veren işletmecileri bul.
+              Okul servisini <em>birlikte bulalım.</em>
             </h1>
+            <p className="discovery-hero-lede">
+              Okulunu ve mahalleni seç. Kapsama uyan işletmecileri gör, hizmet
+              ayrıntılarını doğrudan teyit et.
+            </p>
             <div className="discovery-hero-actions">
               <a className="primary-button" href="#school-search">
-                Okul aramaya başla
+                Okulunu seç
               </a>
               <Link className="secondary-button" to="/demands" viewTransition>
-                Talep panosunu incele
+                Talep panosunu keşfet
               </Link>
             </div>
             <ul className="discovery-principles" aria-label="Arama özellikleri">
@@ -488,24 +493,45 @@ export function PublicDiscoveryPage() {
             </ul>
           </div>
           <figure className="discovery-hero-visual">
+            <div className="discovery-hero-float" aria-hidden="true">
+              <span />
+              <div>
+                <strong>İhtiyacına göre ara</strong>
+                <small>Okul · ilçe · mahalle</small>
+              </div>
+            </div>
             <img
               alt="İstanbul'da ilerleyen sarı okul servis aracı"
               src="/assets/istanbul-school-shuttle-hero.png"
             />
             <figcaption>
-              <strong>Canlı okul araması</strong>
-              <span>İl, ilçe, okul ve servis bölgesi adım adım seçilir.</span>
+              <span className="discovery-caption-mark" aria-hidden="true" />
+              <span>
+                <strong>Mahalle kapsamını gör</strong>
+                <small>Okuluna uygun seçenekler</small>
+              </span>
             </figcaption>
           </figure>
+        </div>
+        <div className="discovery-route-line" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
       </section>
 
       <div className="form-card discovery-search" id="school-search">
         <div className="discovery-search-heading">
           <div>
-            <h2>Önce okulunuzu seçin</h2>
+            <p className="discovery-section-label">Aramanı kişiselleştir</p>
+            <h2>Hangi okula servis arıyorsunuz?</h2>
           </div>
-          <p className="discovery-search-status">İstanbul okulları</p>
+          <ol className="discovery-search-steps" aria-hidden="true">
+            <li className="current">01</li>
+            <li>02</li>
+            <li>03</li>
+          </ol>
         </div>
 
         {locationError && (
@@ -521,7 +547,10 @@ export function PublicDiscoveryPage() {
           </div>
         )}
 
-        <div className="school-filter-grid">
+        <div
+          className="school-filter-grid"
+          aria-label="Okul kataloğu filtreleri"
+        >
           <label className="form-field">
             Okulun bulunduğu il
             <select
@@ -680,6 +709,7 @@ export function PublicDiscoveryPage() {
         >
           <div className="section-heading pickup-heading">
             <div>
+              <p className="discovery-section-label">Servis bölgesi</p>
               <h2>Servise bineceğiniz yeri seçin</h2>
             </div>
           </div>
@@ -773,11 +803,73 @@ export function PublicDiscoveryPage() {
           page={results}
           selection={lastSelection}
         />
+      </div>
+
+      <section className="discovery-how" aria-labelledby="discovery-how-title">
+        <div className="discovery-how-inner">
+          <div className="discovery-section-heading centered">
+            <p className="discovery-section-label">Basit ve açık</p>
+            <h2 id="discovery-how-title">Üç adımda servis keşfi</h2>
+            <p>
+              ServisimiBul, işletmecilerle doğrudan iletişim kurmanızı
+              kolaylaştırır.
+            </p>
+          </div>
+          <ol className="discovery-how-steps">
+            <li>
+              <span aria-hidden="true">01</span>
+              <h3>Okulunuzu seçin</h3>
+              <p>Aramanızı okul, ilçe ve mahalle kapsamıyla daraltın.</p>
+            </li>
+            <li>
+              <span aria-hidden="true">02</span>
+              <h3>Seçenekleri inceleyin</h3>
+              <p>Paylaşılan okul ve mahalle kapsamını karşılaştırın.</p>
+            </li>
+            <li>
+              <span aria-hidden="true">03</span>
+              <h3>Doğrudan teyit edin</h3>
+              <p>Hizmet koşullarını işletmeciyle doğrudan görüşün.</p>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <aside
+        className="discovery-demand-promo"
+        aria-labelledby="demand-promo-title"
+      >
+        <span className="discovery-demand-mark" aria-hidden="true" />
+        <div>
+          <p className="discovery-section-label">Birlikte daha görünür</p>
+          <h2 id="demand-promo-title">
+            Okulunuzda servis seçeneği bulamadınız mı?
+          </h2>
+          <p>
+            Mahallenizdeki ailelerle ortak bir servis talebi oluşturun. Bu bir
+            rezervasyon değildir; talebinizi görünür kılar.
+          </p>
+        </div>
+        <Link className="secondary-button" to="/demands" viewTransition>
+          Talep panosuna git
+        </Link>
+      </aside>
+
+      <div className="discovery-content-rail discovery-tariff-rail">
         <PublicTariffReference
           key={selectedSchool?.provinceCode}
           provinceCode={selectedSchool?.provinceCode}
         />
       </div>
+
+      <section className="discovery-closing-cta" aria-label="Aramaya başla">
+        <div>
+          <strong>İlk adım okulunuzu seçmek.</strong>
+          <a className="primary-button" href="#school-search">
+            Aramaya başla
+          </a>
+        </div>
+      </section>
     </section>
   )
 }
