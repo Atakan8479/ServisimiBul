@@ -22,6 +22,7 @@ describe('PublicLayout', () => {
     const toggle = screen.getByRole('button', { name: 'Menü' })
     fireEvent.click(toggle)
 
+    const dialog = screen.getByRole('dialog', { name: 'Ana menü' })
     const navigation = screen.getByRole('navigation', { name: 'Ana menü' })
     const firstLink = within(navigation).getByRole('link', {
       name: 'Ana sayfa',
@@ -30,6 +31,11 @@ describe('PublicLayout', () => {
       name: 'İşletmeci kaydı',
     })
     expect(firstLink).toHaveFocus()
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(document.querySelector('main')).toHaveAttribute('inert')
+    expect(screen.getByRole('contentinfo', { hidden: true })).toHaveAttribute(
+      'inert',
+    )
 
     firstLink.focus()
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })

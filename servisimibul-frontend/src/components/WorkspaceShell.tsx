@@ -35,6 +35,22 @@ export function WorkspaceShell({
   }
 
   useEffect(() => {
+    if (!window.matchMedia) return
+
+    const desktop = window.matchMedia('(min-width: 44.0625rem)')
+    const resetDesktopMenu = () => {
+      if (!desktop.matches || !menuOpen) return
+      restoreFocusRef.current = false
+      drawerRef.current?.querySelector<HTMLElement>('nav a[href]')?.focus()
+      setMenuOpen(false)
+    }
+
+    resetDesktopMenu()
+    desktop.addEventListener('change', resetDesktopMenu)
+    return () => desktop.removeEventListener('change', resetDesktopMenu)
+  }, [menuOpen])
+
+  useEffect(() => {
     if (!menuOpen) {
       if (wasOpenRef.current && restoreFocusRef.current) {
         menuButtonRef.current?.focus()

@@ -421,7 +421,7 @@ a:focus-visible {
     transform var(--motion-fast) var(--ease-out);
 }
 
-.site-nav,
+.site-nav > nav,
 .workspace-sidebar nav {
   display: flex;
   flex-wrap: wrap;
@@ -4357,6 +4357,11 @@ button:disabled {
       transform var(--motion-fast) var(--ease-out),
       visibility var(--motion-fast) step-end;
     visibility: hidden;
+  }
+
+  .site-nav > nav {
+    display: grid;
+    gap: var(--space-1);
   }
 
   .site-nav.open {

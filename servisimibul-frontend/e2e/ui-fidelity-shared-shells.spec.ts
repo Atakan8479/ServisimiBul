@@ -48,6 +48,33 @@ test('public shell keeps real navigation accessible at every supported width', a
   await expectNoOverflow(page)
 })
 
+test('public mobile menu resets safely across its desktop breakpoint', async ({
+  page,
+}) => {
+  await installMockApi(page, createMockApiState())
+  await page.setViewportSize(viewports[2])
+  await page.goto('/')
+
+  const toggle = page.getByRole('button', { name: 'Menü' })
+  await toggle.click()
+  await expect(page.getByRole('dialog', { name: 'Ana menü' })).toBeVisible()
+  await expect(page.locator('main')).toHaveAttribute('inert', '')
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
+
+  await page.setViewportSize(viewports[0])
+  await expect(page.getByRole('dialog', { name: 'Ana menü' })).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Ana menü' })).toBeVisible()
+  await expect(page.locator('main')).not.toHaveAttribute('inert', '')
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
+  await expect(page.locator(':focus')).toBeVisible()
+
+  await page.setViewportSize(viewports[2])
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await toggle.click()
+  await expect(page.getByRole('dialog', { name: 'Ana menü' })).toBeVisible()
+  await expectAxeClean(page)
+})
+
 for (const account of [
   {
     email: 'operator@example.com',
@@ -98,6 +125,48 @@ for (const account of [
     await expectNoOverflow(page)
   })
 }
+
+test('workspace mobile menu resets safely across its desktop breakpoint', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.registered = true
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  await installMockApi(page, state)
+  await page.setViewportSize(viewports[2])
+  await login(page, 'operator@example.com')
+
+  const toggle = page.getByRole('button', { name: 'Menü' })
+  await toggle.click()
+  await expect(
+    page.getByRole('dialog', { name: 'İşletmeci alanı menüsü' }),
+  ).toBeVisible()
+  await expect(page.locator('.workspace-content')).toHaveAttribute('inert', '')
+  await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
+
+  await page.setViewportSize(viewports[0])
+  await expect(
+    page.getByRole('dialog', { name: 'İşletmeci alanı menüsü' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),
+  ).toBeVisible()
+  await expect(page.locator('.workspace-content')).not.toHaveAttribute(
+    'inert',
+    '',
+  )
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
+  await expect(page.locator(':focus')).toBeVisible()
+
+  await page.setViewportSize(viewports[2])
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await toggle.click()
+  await expect(
+    page.getByRole('dialog', { name: 'İşletmeci alanı menüsü' }),
+  ).toBeVisible()
+  await expectAxeClean(page)
+})
 
 async function login(page: Page, email: string) {
   await page.goto('/operator/login')

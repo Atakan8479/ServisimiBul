@@ -24,11 +24,26 @@ export function PublicLayout() {
   const [logoutError, setLogoutError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
-  const navigationRef = useRef<HTMLElement>(null)
+  const navigationRef = useRef<HTMLDivElement>(null)
   const restoreMenuFocusRef = useRef(true)
   const wasMenuOpenRef = useRef(false)
   const location = useLocation()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    if (!window.matchMedia) return
+
+    const desktop = window.matchMedia('(min-width: 64.0625rem)')
+    const resetDesktopMenu = () => {
+      if (!desktop.matches || !menuOpen) return
+      restoreMenuFocusRef.current = false
+      setMenuOpen(false)
+    }
+
+    resetDesktopMenu()
+    desktop.addEventListener('change', resetDesktopMenu)
+    return () => desktop.removeEventListener('change', resetDesktopMenu)
+  }, [menuOpen])
 
   useEffect(() => {
     const refreshRole = () => setRole(knownAuthRole())
@@ -118,11 +133,17 @@ export function PublicLayout() {
   return (
     <div className="app-shell">
       <RoadBackdrop />
-      <a className="skip-link" href="#main-content">
+      <a
+        aria-hidden={menuOpen || undefined}
+        className="skip-link"
+        href="#main-content"
+        tabIndex={menuOpen ? -1 : undefined}
+      >
         İçeriğe geç
       </a>
       <header className="site-header">
         <NavLink
+          inert={menuOpen || undefined}
           aria-label="ServisimiBul ana sayfa"
           className="brand"
           to="/"
@@ -132,6 +153,7 @@ export function PublicLayout() {
         </NavLink>
         <button
           ref={menuButtonRef}
+          inert={menuOpen || undefined}
           className="site-nav-toggle"
           type="button"
           aria-controls="public-navigation"
@@ -141,11 +163,13 @@ export function PublicLayout() {
           <span aria-hidden="true" />
           Menü
         </button>
-        <nav
+        <div
           ref={navigationRef}
-          aria-label="Ana menü"
+          aria-label={menuOpen ? 'Ana menü' : undefined}
+          aria-modal={menuOpen || undefined}
           className={`site-nav${menuOpen ? ' open' : ''}`}
           id="public-navigation"
+          role={menuOpen ? 'dialog' : undefined}
           onClick={(event) => {
             if ((event.target as HTMLElement).closest('a, button')) {
               restoreMenuFocusRef.current = false
@@ -153,57 +177,59 @@ export function PublicLayout() {
             }
           }}
         >
-          <NavLink to="/" viewTransition>
-            Ana sayfa
-          </NavLink>
-          <NavLink to="/demands" viewTransition>
-            Talep panosu
-          </NavLink>
-          {role === 'PARENT' ? (
-            <>
-              <span className="nav-session">Veli oturumu açık</span>
-              <NotificationNavLink to="/notifications" />
-              <button
-                disabled={loggingOut}
-                onClick={() => void signOutParent()}
-                type="button"
-              >
-                {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-              </button>
-            </>
-          ) : (
-            <>
-              <NavLink
-                className="site-nav-login"
-                to="/parent/login"
-                viewTransition
-              >
-                Veli girişi
-              </NavLink>
-              <NavLink
-                className="site-nav-primary"
-                to="/parent/register"
-                viewTransition
-              >
-                Veli kaydı
-              </NavLink>
-              <NavLink
-                className="site-nav-operator"
-                to="/operator/login"
-                viewTransition
-              >
-                İşletmeci girişi
-              </NavLink>
-              <NavLink
-                className="site-nav-operator"
-                to="/operator/register"
-                viewTransition
-              >
-                İşletmeci kaydı
-              </NavLink>
-            </>
-          )}
-        </nav>
+          <nav aria-label="Ana menü">
+            <NavLink to="/" viewTransition>
+              Ana sayfa
+            </NavLink>
+            <NavLink to="/demands" viewTransition>
+              Talep panosu
+            </NavLink>
+            {role === 'PARENT' ? (
+              <>
+                <span className="nav-session">Veli oturumu açık</span>
+                <NotificationNavLink to="/notifications" />
+                <button
+                  disabled={loggingOut}
+                  onClick={() => void signOutParent()}
+                  type="button"
+                >
+                  {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+                </button>
+              </>
+            ) : (
+              <>
+                <NavLink
+                  className="site-nav-login"
+                  to="/parent/login"
+                  viewTransition
+                >
+                  Veli girişi
+                </NavLink>
+                <NavLink
+                  className="site-nav-primary"
+                  to="/parent/register"
+                  viewTransition
+                >
+                  Veli kaydı
+                </NavLink>
+                <NavLink
+                  className="site-nav-operator"
+                  to="/operator/login"
+                  viewTransition
+                >
+                  İşletmeci girişi
+                </NavLink>
+                <NavLink
+                  className="site-nav-operator"
+                  to="/operator/register"
+                  viewTransition
+                >
+                  İşletmeci kaydı
+                </NavLink>
+              </>
+            )}
+          </nav>
+        </div>
       </header>
       {menuOpen && (
         <button
@@ -217,17 +243,22 @@ export function PublicLayout() {
         />
       )}
       {logoutError && (
-        <div className="form-error site-alert" role="alert">
+        <div
+          className="form-error site-alert"
+          inert={menuOpen || undefined}
+          role="alert"
+        >
           {logoutError}
         </div>
       )}
       <main
         id="main-content"
         className={`page-content${location.pathname === '/' ? ' home-page-content' : ''}`}
+        inert={menuOpen || undefined}
       >
         <Outlet />
       </main>
-      <footer className="site-footer">
+      <footer className="site-footer" inert={menuOpen || undefined}>
         <div className="site-footer-inner">
           <div>
             <BrandLockup />
