@@ -34,10 +34,16 @@ for (const viewport of viewports) {
 
     for (const route of routes) {
       await page.goto(route.path)
+      const captureStage = process.env.UI_FIDELITY_09_CAPTURE
+      await expect(page.locator('main h1')).toBeVisible()
+      if (captureStage === 'before') {
+        await assertAccessibleAndContained(page)
+        await capture(page, route.id, viewport.name)
+        continue
+      }
+
       await expect(
-        process.env.UI_FIDELITY_09_CAPTURE === 'before'
-          ? page.locator('main h1')
-          : page.getByRole('heading', { name: route.heading }),
+        page.getByRole('heading', { name: route.heading }),
       ).toBeVisible()
       await expect(page.locator('.auth-experience')).toBeVisible()
       if (viewport.name === 'desktop') {
@@ -58,7 +64,7 @@ for (const viewport of viewports) {
         ).toBeVisible()
       } else if (route.id === 'A05') {
         await expect(
-          page.getByRole('button', { name: 'Şifreyi göster' }),
+          page.getByRole('button', { name: 'Parolayı göster' }),
         ).toBeVisible()
         await expect(page.getByLabel('Beni hatırla')).toBeVisible()
         await expect(
@@ -84,7 +90,15 @@ test('A04 keeps production validation visible and associated', async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/operator/register')
-  await page.getByRole('button', { name: 'İşletmeci hesabı oluştur' }).click()
+  const captureStage = process.env.UI_FIDELITY_09_CAPTURE
+  await page
+    .getByRole('button', {
+      name:
+        captureStage === 'before'
+          ? 'Hesap oluştur'
+          : 'İşletmeci hesabı oluştur',
+    })
+    .click()
 
   await expect(
     page.getByText('Geçerli bir e-posta adresi girin.'),
@@ -98,10 +112,16 @@ test('A04 keeps production validation visible and associated', async ({
   ).not.toHaveAttribute('aria-invalid', 'true')
   await assertAccessibleAndContained(page)
 
-  const stage = process.env.UI_FIDELITY_09_CAPTURE
+  const stage = captureStage
   if (stage === 'before' || stage === 'after') {
-    await page.screenshot({
-      fullPage: true,
+    await page.evaluate(() => {
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur()
+      }
+      window.scrollTo(0, 0)
+    })
+    await page.waitForTimeout(100)
+    await page.locator('main').screenshot({
       path: `../docs/screenshots/ui-fidelity-09/${stage}/state-A04-validation-mobile.png`,
     })
   }

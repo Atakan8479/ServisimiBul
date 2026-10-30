@@ -37,14 +37,16 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     await operatorPage
       .getByLabel('Herkese açık iletişim telefonu')
       .fill('0532 123 45 67')
-    await operatorPage.getByRole('button', { name: 'Hesap oluştur' }).click()
+    await operatorPage
+      .getByRole('button', { name: 'İşletmeci hesabı oluştur' })
+      .click()
     await expect(
       operatorPage.getByRole('heading', { name: 'E-postanızı kontrol edin' }),
     ).toBeVisible()
 
     await operatorPage.goto('/operator/verify-email?token=e2e-token')
     await operatorPage
-      .getByRole('button', { name: 'E-postayı doğrula' })
+      .getByRole('button', { name: 'E-posta adresini doğrula' })
       .click()
     await expect(
       operatorPage.getByText('E-posta adresiniz doğrulandı.'),
