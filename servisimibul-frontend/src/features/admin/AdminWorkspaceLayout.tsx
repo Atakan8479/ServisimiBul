@@ -69,7 +69,7 @@ export function AdminWorkspaceLayout() {
               Tarifeler
             </NavLink>
             <NavLink to="/admin/moderation" viewTransition>
-              İçerik inceleme
+              Moderasyon
             </NavLink>
             <NotificationNavLink to="/admin/notifications" />
           </>

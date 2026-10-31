@@ -130,8 +130,12 @@ export function listModerationCases(filters: {
   reportedFrom?: string
   reportedTo?: string
   page: number
+  size?: number
 }) {
-  const query = new URLSearchParams({ page: String(filters.page), size: '20' })
+  const query = new URLSearchParams({
+    page: String(filters.page),
+    size: String(filters.size ?? 20),
+  })
   if (filters.status) query.set('status', filters.status)
   if (filters.targetType) query.set('targetType', filters.targetType)
   if (filters.reason) query.set('reason', filters.reason)
