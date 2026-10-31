@@ -563,7 +563,7 @@ describe('operator authentication screens', () => {
   })
 
   it('submits an opaque generated token from the verification link unchanged', async () => {
-    const opaqueToken = 'Zm9v-YmFy_YmF6LXF1eF9jb3JnZS1ncmF1bHQtZ2FycGx5'
+    const opaqueToken = `${'a'.repeat(21)}-_${'b'.repeat(20)}`
     let body: unknown
     server.use(
       csrfHandler(),
