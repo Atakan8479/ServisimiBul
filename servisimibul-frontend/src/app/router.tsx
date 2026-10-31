@@ -234,7 +234,7 @@ const applicationRoutes: RouteObject[] = [
       },
       {
         path: 'moderation',
-        handle: { pageTitle: 'İçerik bildirimleri' },
+        handle: { pageTitle: 'Moderasyon' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminModerationPage'))
             .AdminModerationPage,

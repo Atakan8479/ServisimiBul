@@ -1001,7 +1001,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         adminPage,
         '/admin/moderation',
         { width: 1440, height: 900 },
-        adminPage.getByRole('button', { name: 'Filtrele' }),
+        adminPage.getByRole('button', { name: 'Filtreyi sıfırla' }),
       )
     })
 
@@ -1359,21 +1359,53 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
 
       await adminPage.goto('/admin/moderation')
       await expect(
-        adminPage.getByRole('heading', { name: 'İçerik bildirimleri' }),
+        adminPage.getByRole('heading', { name: 'Raporlama ve moderasyon' }),
       ).toBeVisible()
       await adminPage
-        .getByRole('button', { name: /J03 Gerçek Servis service declaration/ })
+        .getByRole('button', {
+          name: /İncele: J03 Gerçek Servis service declaration/,
+        })
         .click()
-      await adminPage
+      const review = adminPage.getByRole('dialog', {
+        name: 'Bildirim ayrıntısı',
+      })
+      await expect(
+        review.getByText('Gerçek tam yığın yönetim incelemesi.'),
+      ).toBeVisible()
+      await review
         .getByLabel('Yönetici gerekçesi')
         .fill('Yanıltıcı hizmet bildirimi yönetici incelemesi.')
+      await review.getByLabel('Karar').selectOption('WITHDRAW_SERVICE_RESPONSE')
+      await review.getByRole('button', { name: 'Kararı kaydet' }).click()
       await adminPage
+        .getByRole('dialog', {
+          name: 'Servis bildirimini geri çek işlemi onaylansın mı?',
+        })
         .getByRole('button', { name: 'Servis bildirimini geri çek' })
         .click()
       await expect(
         adminPage.getByText('Servis bildirimini geri çek işlemi kaydedildi.'),
       ).toBeVisible()
 
+      await adminPage.reload()
+      await adminPage.getByRole('button', { name: /^Sonuçlandı/ }).click()
+      await adminPage
+        .getByRole('button', {
+          name: /İncele: J03 Gerçek Servis service declaration/,
+        })
+        .click()
+      await expect(
+        review.getByRole('heading', { name: 'Kayıtlı karar gerekçesi' }),
+      ).toBeVisible()
+      await expect(
+        review
+          .locator('.moderation-audit')
+          .getByText('Yanıltıcı hizmet bildirimi yönetici incelemesi.'),
+      ).toBeVisible()
+      await review
+        .getByRole('button', { name: 'Vazgeç' })
+        .or(review.getByRole('button', { name: 'Kapat' }))
+        .click()
       const adminCsrf = await csrf(adminPage)
       const duplicateWithdrawal = await adminPage.request.post(
         `/api/v1/admin/moderation/cases/${serviceReport.caseId}/actions`,

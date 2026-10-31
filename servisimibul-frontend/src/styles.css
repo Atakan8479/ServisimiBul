@@ -2777,15 +2777,6 @@ button:disabled {
   font-weight: 800;
 }
 
-.moderation-workbench {
-  display: grid;
-  grid-template-columns: minmax(19rem, 0.8fr) minmax(25rem, 1.2fr);
-  gap: 1.5rem;
-  align-items: start;
-  margin-top: 1.5rem;
-}
-
-.moderation-case-list,
 .moderation-report-list,
 .moderation-audit ol {
   display: grid;
@@ -2795,69 +2786,9 @@ button:disabled {
   list-style: none;
 }
 
-.moderation-case-list button {
-  display: flex;
-  width: 100%;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-small);
-  background: var(--color-surface);
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.moderation-case-list button:hover,
-.moderation-case-list button[aria-current='true'] {
-  border-color: var(--color-primary);
-  background: var(--color-surface-soft);
-}
-
-.moderation-case-list strong,
-.moderation-case-list small,
-.moderation-case-meta {
-  display: block;
-}
-
-.moderation-case-list small,
-.moderation-case-meta {
-  margin-top: 0.3rem;
-  color: var(--color-muted);
-}
-
-.moderation-case-meta {
-  flex: 0 0 auto;
-  text-align: right;
-}
-
-.moderation-detail {
-  min-height: 22rem;
-  padding: clamp(1.25rem, 3vw, 2rem);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-medium);
-  background: var(--color-surface);
-}
-
-.moderation-detail > h2,
-.moderation-detail-content h3 {
-  margin-top: 0;
-}
-
 .moderation-detail-content {
   display: grid;
   gap: 1.5rem;
-}
-
-.moderation-detail-content > div:first-child h3 {
-  margin: 0.75rem 0 0.35rem;
-}
-
-.moderation-detail-content > div:first-child p {
-  max-width: 70ch;
 }
 
 .moderation-snapshot {
@@ -2904,18 +2835,13 @@ button:disabled {
 .moderation-report-list span,
 .moderation-report-list time,
 .moderation-audit span,
-.moderation-audit time,
-.moderation-detail-placeholder {
+.moderation-audit time {
   color: var(--color-muted);
 }
 
 .moderation-report-list time,
 .moderation-audit time {
   font-size: 0.8rem;
-}
-
-.moderation-actions {
-  align-items: stretch;
 }
 
 .moderation-open,
@@ -2941,10 +2867,6 @@ button:disabled {
 }
 
 @media (max-width: 58rem) {
-  .moderation-workbench {
-    grid-template-columns: 1fr;
-  }
-
   .moderation-filters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -2955,14 +2877,9 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .moderation-case-list button,
   .demand-service-response-actions {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .moderation-case-meta {
-    text-align: left;
   }
 }
 
