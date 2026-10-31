@@ -119,7 +119,7 @@ for (const viewport of viewports) {
 
     await page.goto('/admin/tariffs')
     await expect(
-      page.getByRole('heading', { name: 'Resmî tarifeler' }),
+      page.getByRole('heading', { name: 'UKOME tarife yönetimi' }),
     ).toBeVisible()
     await audit(page, 'admin tariffs')
     expect(consoleProblems).toEqual([])

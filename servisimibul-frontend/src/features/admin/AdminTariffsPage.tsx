@@ -3,10 +3,13 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
+import { StatePanel, StatusBadge } from '../../components/design-system'
+import { AdminConfirmDialog } from './AdminConfirmDialog'
 import {
   getTariff,
   replaceTariff,
@@ -19,72 +22,75 @@ const PROVINCE_CODE = '34'
 
 export function AdminTariffsPage() {
   const navigate = useNavigate()
-  const [expectedVersion, setExpectedVersion] = useState<string | null>(null)
+  // A response applies only while its request is still the latest load.
+  const loadRequest = useRef(0)
+  const focusEditorAfterLoad = useRef(false)
+  const editorRef = useRef<HTMLTextAreaElement>(null)
+  const [published, setPublished] = useState<Tariff>()
+  const [loadedValue, setLoadedValue] = useState('')
   const [editorValue, setEditorValue] = useState('')
+  const [ready, setReady] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string>()
   const [error, setError] = useState<string>()
   const [conflict, setConflict] = useState(false)
+  const [confirmingReload, setConfirmingReload] = useState(false)
   const preview = useMemo(() => parseTariffDraft(editorValue), [editorValue])
+  const previewable = preview.tariff?.provinceCode === PROVINCE_CODE
+  const expectedVersion = published?.version ?? null
+
+  const showLoaded = useCallback((tariff: Tariff | undefined) => {
+    const value = pretty(tariff ?? emptyIstanbulTariff())
+    setPublished(tariff)
+    setLoadedValue(value)
+    setEditorValue(value)
+    setReady(true)
+  }, [])
 
   const load = useCallback(async () => {
+    const request = ++loadRequest.current
     setLoading(true)
     setError(undefined)
     setNotice(undefined)
     setConflict(false)
     try {
       const tariff = await getTariff(PROVINCE_CODE)
-      setExpectedVersion(tariff.version)
-      setEditorValue(pretty(tariff))
+      if (request !== loadRequest.current) return
+      showLoaded(tariff)
     } catch (reason) {
+      if (request !== loadRequest.current) return
       if (
         reason instanceof ApiError &&
         reason.problem.code === 'tariff_not_found'
       ) {
-        setExpectedVersion(null)
-        setEditorValue(pretty(emptyIstanbulTariff()))
+        showLoaded(undefined)
         setNotice(
           'İstanbul için kayıtlı tarife yok. İlk sürümü oluşturabilirsiniz.',
         )
       } else {
         handleSession(reason, navigate, setError)
       }
-    } finally {
-      setLoading(false)
     }
-  }, [navigate])
+    setLoading(false)
+  }, [navigate, showLoaded])
 
   useEffect(() => {
-    let active = true
-    void getTariff(PROVINCE_CODE)
-      .then((tariff) => {
-        if (!active) return
-        setExpectedVersion(tariff.version)
-        setEditorValue(pretty(tariff))
-      })
-      .catch((reason: unknown) => {
-        if (!active) return
-        if (
-          reason instanceof ApiError &&
-          reason.problem.code === 'tariff_not_found'
-        ) {
-          setExpectedVersion(null)
-          setEditorValue(pretty(emptyIstanbulTariff()))
-          setNotice(
-            'İstanbul için kayıtlı tarife yok. İlk sürümü oluşturabilirsiniz.',
-          )
-        } else {
-          handleSession(reason, navigate, setError)
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [navigate])
+    const timer = window.setTimeout(() => void load(), 0)
+    return () => window.clearTimeout(timer)
+  }, [load])
+
+  useEffect(() => {
+    if (loading || !focusEditorAfterLoad.current) return
+    focusEditorAfterLoad.current = false
+    editorRef.current?.focus()
+  }, [loading])
+
+  function reload() {
+    setConfirmingReload(false)
+    focusEditorAfterLoad.current = true
+    void load()
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault()
@@ -96,7 +102,7 @@ export function AdminTariffsPage() {
       setError(preview.error)
       return
     }
-    if (preview.tariff.provinceCode !== PROVINCE_CODE) {
+    if (!previewable) {
       setError('Bu ekranda yalnızca İstanbul (34) tarifesi düzenlenebilir.')
       return
     }
@@ -108,8 +114,7 @@ export function AdminTariffsPage() {
         expectedVersion,
         preview.tariff,
       )
-      setExpectedVersion(saved.version)
-      setEditorValue(pretty(saved))
+      showLoaded(saved)
       setNotice(`Tarife ${saved.version} sürümüyle kaydedildi.`)
     } catch (reason) {
       if (
@@ -129,73 +134,107 @@ export function AdminTariffsPage() {
   }
 
   return (
-    <section className="workspace-page tariff-admin-page">
-      <h1>Resmî tarifeler</h1>
+    <section className="workspace-page admin-page tariff-admin-page">
+      <header className="admin-page-header admin-operator-header admin-detail-header">
+        <div>
+          <p className="admin-eyebrow">Yönetim paneli</p>
+          <h1>UKOME tarife yönetimi</h1>
+          <p>Tarife verisini inceleyin, JSON'u doğrulayın ve önizleyin.</p>
+        </div>
+        {published && (
+          <span className="tariff-version-chip">
+            {published.academicYear} · {published.version}
+          </span>
+        )}
+      </header>
+      <p className="tariff-admin-note">
+        Her kayıt, önceki sürümleri değiştirmeden yeni bir sürüm oluşturur.
+        Tutarları kaydetmeden önce resmî kaynakla karşılaştırın.
+      </p>
 
       {loading ? (
-        <div className="inline-loading" role="status">
-          <span className="loading-dot" aria-hidden="true" />
-          Tarife yükleniyor…
-        </div>
-      ) : (
-        <form className="form-card tariff-editor" onSubmit={save} noValidate>
-          <div className="section-heading">
-            <div>
-              <h2>İstanbul · 34</h2>
-              <p>
-                {expectedVersion
-                  ? `Yüklü sürüm: ${expectedVersion}`
-                  : 'Henüz yayımlanmış sürüm yok.'}
-              </p>
-            </div>
+        <StatePanel
+          detail="Güncel resmî tarife getiriliyor."
+          title="Tarife yükleniyor"
+          tone="loading"
+        />
+      ) : !ready ? (
+        <StatePanel
+          action={
             <button
               className="secondary-button"
               onClick={() => void load()}
               type="button"
             >
-              Güncel sürümü yükle
+              Tekrar dene
             </button>
-          </div>
+          }
+          detail={error ?? 'Tarife işlemi tamamlanamadı.'}
+          title="Tarife yüklenemedi"
+          tone="error"
+        />
+      ) : (
+        <div className="tariff-admin-grid">
+          <form className="tariff-editor-card" onSubmit={save} noValidate>
+            <div className="tariff-editor-heading">
+              <div>
+                <h2>Tarife JSON</h2>
+                <p>
+                  {published
+                    ? `Kaynak: ${published.sourceTitle} · Yüklü sürüm: ${published.version}`
+                    : 'Henüz yayımlanmış sürüm yok.'}
+                </p>
+              </div>
+              <button
+                className="secondary-button"
+                disabled={saving}
+                onClick={() =>
+                  editorValue === loadedValue
+                    ? reload()
+                    : setConfirmingReload(true)
+                }
+                type="button"
+              >
+                Güncel sürümü yükle
+              </button>
+            </div>
 
-          <div className="tariff-admin-grid">
-            <div className="tariff-editor-column">
-              <label className="form-field">
-                Tarife JSON içeriği
-                <textarea
-                  aria-describedby="tariff-editor-help"
-                  onChange={(event) => setEditorValue(event.target.value)}
-                  rows={24}
-                  spellCheck={false}
-                  value={editorValue}
-                />
-              </label>
-              <p className="tariff-editor-help" id="tariff-editor-help">
-                Yeni bir sürüm kaydederken <code>version</code> değerini
-                değiştirin. Aylık ve yıllık tutarlar kuruş cinsinden tam sayı
-                olmalıdır. Ek kilometre kuralı varsa eşiği son sabit aralığın
-                üst sınırıyla aynı olmalıdır.
-              </p>
+            <label className="form-field">
+              Tarife JSON içeriği
+              <textarea
+                aria-describedby="tariff-editor-help"
+                aria-invalid={!previewable}
+                onChange={(event) => setEditorValue(event.target.value)}
+                readOnly={saving}
+                ref={editorRef}
+                rows={20}
+                spellCheck={false}
+                value={editorValue}
+              />
+            </label>
 
-              {error && (
-                <div className="form-error" role="alert">
-                  {error}
-                </div>
-              )}
-              {notice && (
-                <div className="status-banner success" role="status">
-                  {notice}
-                </div>
-              )}
-              {conflict && (
-                <button
-                  className="secondary-button"
-                  onClick={() => void load()}
-                  type="button"
-                >
-                  Taslağı bırakıp güncel sürümü yükle
-                </button>
-              )}
+            {error && (
+              <div className="form-error" role="alert">
+                {error}
+              </div>
+            )}
+            {notice && (
+              <div className="status-banner success" role="status">
+                {notice}
+              </div>
+            )}
+            {conflict && (
+              <button
+                className="secondary-button"
+                onClick={reload}
+                type="button"
+              >
+                Taslağı bırakıp güncel sürümü yükle
+              </button>
+            )}
 
+            <div className="tariff-editor-footer">
+              <span>JSON · {editorValue.split('\n').length} satır</span>
               <button
                 className="primary-button"
                 disabled={saving}
@@ -204,19 +243,31 @@ export function AdminTariffsPage() {
                 {saving ? 'Tarife kaydediliyor…' : 'Tarifeyi kaydet'}
               </button>
             </div>
+            <p className="tariff-editor-help" id="tariff-editor-help">
+              Yeni bir sürüm kaydederken <code>version</code> değerini
+              değiştirin. Aylık ve yıllık tutarlar kuruş cinsinden tam sayı
+              olmalıdır. Ek kilometre kuralı varsa eşiği son sabit aralığın üst
+              sınırıyla aynı olmalıdır.
+            </p>
+          </form>
 
+          <div className="tariff-admin-side">
             <aside
               aria-labelledby="tariff-preview-heading"
               className="tariff-admin-preview"
             >
-              <div>
-                <h2 id="tariff-preview-heading">Yayımlanacak görünüm</h2>
-                <p>
-                  Kaydetmeden önce kaynak, sürüm, koşullar ve ücret bantlarını
-                  doğrulayın.
-                </p>
+              <div className="tariff-preview-heading">
+                <div>
+                  <p className="admin-eyebrow">Önizleme</p>
+                  <h2 id="tariff-preview-heading">
+                    Uygulanacak ücret tarifesi
+                  </h2>
+                </div>
+                <StatusBadge tone={previewable ? 'success' : 'warning'}>
+                  {previewable ? 'Biçim geçerli' : 'Geçersiz'}
+                </StatusBadge>
               </div>
-              {preview.tariff?.provinceCode === PROVINCE_CODE ? (
+              {previewable && preview.tariff ? (
                 <TariffDetails tariff={preview.tariff} />
               ) : (
                 <div className="state-panel">
@@ -231,11 +282,48 @@ export function AdminTariffsPage() {
                 </div>
               )}
             </aside>
+
+            {published && (
+              <section
+                aria-labelledby="tariff-current-heading"
+                className="tariff-current-version"
+              >
+                <h2 id="tariff-current-heading">
+                  Mevcut sürüm · {published.version}
+                </h2>
+                <p>{published.academicYear}</p>
+                <p>Yürürlük: {formatEffectivePeriod(published)}</p>
+                <p>{published.sourceTitle}</p>
+              </section>
+            )}
           </div>
-        </form>
+        </div>
+      )}
+
+      {confirmingReload && (
+        <AdminConfirmDialog
+          confirmLabel="Taslağı bırak"
+          danger
+          onCancel={() => setConfirmingReload(false)}
+          onConfirm={reload}
+          pending={false}
+          title="Kaydedilmemiş taslak bırakılsın mı?"
+        >
+          <p>
+            Güncel sürüm yüklendiğinde bu taslaktaki değişiklikler kaybolur.
+          </p>
+        </AdminConfirmDialog>
       )}
     </section>
   )
+}
+
+function formatEffectivePeriod(tariff: Tariff) {
+  const format = (value: string) =>
+    new Intl.DateTimeFormat('tr-TR').format(new Date(`${value}T00:00:00`))
+  return tariff.effectiveTo === null
+    ? `${format(tariff.effectiveFrom)} tarihinden itibaren`
+    : `${format(tariff.effectiveFrom)}–${format(tariff.effectiveTo)}`
 }
 
 function emptyIstanbulTariff(): Tariff {
