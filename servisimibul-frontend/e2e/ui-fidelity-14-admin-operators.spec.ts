@@ -58,15 +58,23 @@ test('M02 suspension uses an accessible modal with real consequences', async ({
   await assertAccessibleAndContained(page)
   await capture(page, 'state-M02-suspend-confirmation', 'desktop')
 
+  await dialog.getByRole('button', { name: 'Askıya al', exact: true }).click()
+  await expect(
+    dialog.getByText('Askıya alma gerekçesi zorunludur.'),
+  ).toBeVisible()
+  expect(state.active).toBe(true)
+
   await page.keyboard.press('Escape')
   await expect(dialog).toHaveCount(0)
   await expect(trigger).toBeFocused()
   expect(state.active).toBe(true)
 
   await trigger.click()
+  await dialog.getByLabel('Askıya alma gerekçesi').fill('Şikayet incelemesi')
   await dialog.getByRole('button', { name: 'Askıya al', exact: true }).click()
   await expect(page.getByText('İşletmeci askıya alındı.')).toBeVisible()
   expect(state.active).toBe(false)
+  await expect(page.getByText('Şikayet incelemesi')).toBeVisible()
   await expect(trigger).toHaveCount(0)
   await assertAccessibleAndContained(page)
 })

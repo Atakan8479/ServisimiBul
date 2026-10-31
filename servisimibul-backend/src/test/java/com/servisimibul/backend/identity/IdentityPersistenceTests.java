@@ -129,4 +129,26 @@ class IdentityPersistenceTests {
                 )
         )).isInstanceOf(DataIntegrityViolationException.class);
     }
+
+    @Test
+    void blankSuspensionReasonIsRejectedByTheSchema() {
+        AppUser operator = userRepository.saveAndFlush(
+                AppUser.newOperator("suspension-reviewed@example.com", passwordEncoder.encode("a secure password"))
+        );
+        AppUser admin = userRepository.saveAndFlush(
+                AppUser.newAdmin("suspension-admin@example.com", passwordEncoder.encode("another secure password"))
+        );
+        OperatorProfile profile = profileRepository.saveAndFlush(
+                new OperatorProfile(operator, "Reviewed Transport", "+905551112244")
+        );
+
+        assertThatThrownBy(() -> reviewRepository.saveAndFlush(
+                new OperatorApplicationReview(
+                        profile,
+                        admin,
+                        ReviewDecision.SUSPENDED,
+                        " "
+                )
+        )).isInstanceOf(DataIntegrityViolationException.class);
+    }
 }

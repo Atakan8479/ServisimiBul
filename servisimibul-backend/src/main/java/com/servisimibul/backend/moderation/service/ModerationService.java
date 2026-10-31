@@ -37,6 +37,7 @@ import com.servisimibul.backend.moderation.dto.ModerationDtos.TargetContext;
 import com.servisimibul.backend.moderation.exception.ModerationApiException;
 import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
 import com.servisimibul.backend.ratelimit.RateLimitRule;
+import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.SuspensionRequest;
 import com.servisimibul.backend.operatorapplication.service.OperatorApplicationService;
 import com.servisimibul.backend.notification.NotificationDeliveryService;
 import jakarta.persistence.criteria.Predicate;
@@ -234,7 +235,10 @@ public class ModerationService {
                 DemandServiceResponse response = responseRepository
                         .findForUpdateById(moderationCase.getTargetId())
                         .orElseThrow(() -> targetNotFound("service response"));
-                operatorApplicationService.suspend(response.getOperator().getId());
+                operatorApplicationService.suspend(
+                        response.getOperator().getId(),
+                        new SuspensionRequest(reason)
+                );
                 moderationCase.resolve(administrator, reason, now);
             }
             case CLOSE_DEMAND -> {

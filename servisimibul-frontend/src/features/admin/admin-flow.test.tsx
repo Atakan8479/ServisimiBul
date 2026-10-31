@@ -129,7 +129,7 @@ describe('admin workspace flows', () => {
 
   it('confirms approval and suspension actions', async () => {
     let approved = false
-    let suspended = false
+    let suspensionBody: unknown
     server.use(
       authHandler('ADMIN'),
       csrfHandler(),
@@ -140,8 +140,8 @@ describe('admin workspace flows', () => {
         approved = true
         return HttpResponse.json(applicationDetail('APPROVED'))
       }),
-      http.post('/api/v1/admin/operators/:id/suspend', () => {
-        suspended = true
+      http.post('/api/v1/admin/operators/:id/suspend', async ({ request }) => {
+        suspensionBody = await request.json()
         return HttpResponse.json(applicationDetail('APPROVED', false))
       }),
     )
@@ -163,16 +163,26 @@ describe('admin workspace flows', () => {
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Vazgeç' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(suspended).toBe(false)
+    expect(suspensionBody).toBeUndefined()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'İşletmeciyi askıya al' }),
     )
     fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
     expect(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+    ).toHaveAccessibleDescription('Askıya alma gerekçesi zorunludur.')
+    expect(suspensionBody).toBeUndefined()
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+      { target: { value: '  Şikayet incelemesi  ' } },
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
+    expect(
       await screen.findByText('İşletmeci askıya alındı.'),
     ).toBeInTheDocument()
-    expect(suspended).toBe(true)
+    expect(suspensionBody).toEqual({ reason: 'Şikayet incelemesi' })
     expect(
       screen.queryByRole('button', { name: 'İşletmeciyi askıya al' }),
     ).not.toBeInTheDocument()
@@ -200,6 +210,10 @@ describe('admin workspace flows', () => {
     renderRoute('/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20')
     fireEvent.click(
       await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
+    )
+    fireEvent.change(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+      { target: { value: 'Şikayet incelemesi' } },
     )
     fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
 

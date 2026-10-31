@@ -29,7 +29,7 @@ export interface MockApiState {
   reviewHistory: Array<{
     id: string
     reviewedById: string
-    decision: 'APPROVED' | 'CHANGES_REQUESTED'
+    decision: 'APPROVED' | 'CHANGES_REQUESTED' | 'SUSPENDED'
     reason: string | null
     reviewedAt: string
   }>
@@ -269,8 +269,16 @@ export async function installMockApi(page: Page, state: MockApiState) {
       path === `/admin/operators/${operatorId}/suspend` &&
       method === 'POST'
     ) {
-      return requireRole(route, role, 'ADMIN', () => {
+      return requireRole(route, role, 'ADMIN', async () => {
+        const body = await request.postDataJSON()
         state.active = false
+        state.reviewHistory.push({
+          id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          reviewedById: adminUserId,
+          decision: 'SUSPENDED',
+          reason: body.reason,
+          reviewedAt: createdAt,
+        })
         return json(route, applicationDetail(state))
       })
     }

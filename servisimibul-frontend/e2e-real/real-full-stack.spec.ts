@@ -1632,11 +1632,15 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'İşletmeciyi askıya al' })
         .click()
       await adminPage
+        .getByLabel('Askıya alma gerekçesi')
+        .fill('Pilot sözleşme ihlali.')
+      await adminPage
         .getByRole('button', { name: 'Askıya al', exact: true })
         .click()
       await expect(
         adminPage.getByText('İşletmeci askıya alındı.'),
       ).toBeVisible()
+      await expect(adminPage.getByText('Pilot sözleşme ihlali.')).toBeVisible()
 
       await operatorPage.goto('/operator/profile')
       await expect(operatorPage).toHaveURL(

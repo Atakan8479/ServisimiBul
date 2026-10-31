@@ -8,7 +8,7 @@ import {
 const reviewSchema = z.object({
   id: z.string().uuid(),
   reviewedById: z.string().uuid(),
-  decision: z.enum(['APPROVED', 'CHANGES_REQUESTED']),
+  decision: z.enum(['APPROVED', 'CHANGES_REQUESTED', 'SUSPENDED']),
   reason: z.string().nullable(),
   reviewedAt: z.string(),
 })
@@ -123,11 +123,19 @@ export function requestApplicationRevision(
   })
 }
 
-export function suspendOperator(id: string): Promise<ApplicationDetail> {
-  return applicationAction(id, 'suspend')
+export function suspendOperator(
+  id: string,
+  reason: string,
+): Promise<ApplicationDetail> {
+  return apiRequest(`/admin/operators/${id}/suspend`, {
+    method: 'POST',
+    json: { reason },
+    requiresSession: true,
+    schema: applicationDetailSchema,
+  })
 }
 
-function applicationAction(id: string, action: 'approve' | 'suspend') {
+function applicationAction(id: string, action: 'approve') {
   return apiRequest(`/admin/operators/${id}/${action}`, {
     method: 'POST',
     requiresSession: true,

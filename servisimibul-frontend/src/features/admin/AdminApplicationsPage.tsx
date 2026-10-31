@@ -43,6 +43,15 @@ const statusTones: Record<
   APPROVED: 'success',
 }
 
+const reviewDecisionLabels: Record<
+  ApplicationDetail['reviewHistory'][number]['decision'],
+  string
+> = {
+  APPROVED: 'Onaylandı',
+  CHANGES_REQUESTED: 'Düzeltme istendi',
+  SUSPENDED: 'Askıya alındı',
+}
+
 const statusFilters: Array<{
   label: string
   value: ApplicationStatus | undefined
@@ -270,6 +279,8 @@ export function AdminApplicationDetailPage() {
   const [attempt, setAttempt] = useState(0)
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string>()
+  const [suspensionReason, setSuspensionReason] = useState('')
+  const [suspensionReasonError, setSuspensionReasonError] = useState<string>()
   const [confirmation, setConfirmation] = useState<
     'approve' | 'revision' | 'suspend'
   >()
@@ -320,8 +331,13 @@ export function AdminApplicationDetailPage() {
       )
       if (sent) setReason('')
     } else if (confirmation === 'suspend') {
+      const trimmedReason = suspensionReason.trim()
+      if (!trimmedReason) {
+        setSuspensionReasonError('Askıya alma gerekçesi zorunludur.')
+        return
+      }
       await runAction(
-        () => suspendOperator(applicationId),
+        () => suspendOperator(applicationId, trimmedReason),
         'İşletmeci askıya alındı.',
       )
     }
@@ -483,11 +499,7 @@ export function AdminApplicationDetailPage() {
                       {review.decision === 'APPROVED' ? '✓' : '!'}
                     </span>
                     <div>
-                      <strong>
-                        {review.decision === 'APPROVED'
-                          ? 'Onaylandı'
-                          : 'Düzeltme istendi'}
-                      </strong>
+                      <strong>{reviewDecisionLabels[review.decision]}</strong>
                       {review.reason && <p>{review.reason}</p>}
                       <small>{formatDate(review.reviewedAt)}</small>
                     </div>
@@ -609,6 +621,21 @@ export function AdminApplicationDetailPage() {
             Hesap girişe kapanır, açık oturumları sonlandırılır ve profil
             aramalardan kalkar. Bu işlem bu panelden geri alınamaz.
           </p>
+          <FormField
+            error={suspensionReasonError}
+            htmlFor="suspension-reason"
+            label="Askıya alma gerekçesi"
+          >
+            <textarea
+              disabled={pending}
+              onChange={(event) => {
+                setSuspensionReason(event.target.value)
+                setSuspensionReasonError(undefined)
+              }}
+              rows={4}
+              value={suspensionReason}
+            />
+          </FormField>
         </AdminConfirmDialog>
       )}
     </section>
