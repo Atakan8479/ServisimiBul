@@ -58,14 +58,25 @@ for (const viewport of viewports) {
         await expect(
           page.getByLabel('Yeni şifre', { exact: true }),
         ).toHaveAttribute('type', 'password')
-        await expect(
-          page.getByRole('link', { name: 'Yeni bağlantı iste' }),
-        ).toHaveAttribute('href', '/forgot-password')
+        await expect(page.locator('a[href^="/forgot-password"]')).toHaveCount(0)
       }
 
       await assertAccessibleAndContained(page)
       await capture(page, `${route.id}-${viewport.name}`, viewport.name)
     }
+  })
+}
+
+for (const role of ['parent', 'operator'] as const) {
+  test(`A07 returns a ${role} to the login that opened recovery`, async ({
+    page,
+  }) => {
+    await page.goto(`/${role}/login`)
+    await page.getByRole('link', { name: 'Şifremi unuttum' }).click()
+    await expect(page).toHaveURL(`/forgot-password?from=${role}`)
+
+    await page.getByRole('link', { name: 'Giriş sayfasına dön' }).click()
+    await expect(page).toHaveURL(`/${role}/login`)
   })
 }
 

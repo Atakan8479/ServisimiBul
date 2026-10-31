@@ -393,9 +393,21 @@ describe('parent account onboarding', () => {
     expect(screen.getByLabelText('Şifre yenileme kodu')).toHaveValue(
       'expired-token',
     )
+  })
+
+  it('offers no role-guessing recovery link when the reset link carries only a token', async () => {
+    renderRoute('/reset-password?token=reset-token')
+
+    expect(await screen.findByLabelText('Şifre yenileme kodu')).toHaveValue(
+      'reset-token',
+    )
     expect(
-      screen.getByRole('link', { name: 'Yeni bağlantı iste' }),
-    ).toHaveAttribute('href', '/forgot-password')
+      screen
+        .getAllByRole('link')
+        .filter((link) =>
+          link.getAttribute('href')?.startsWith('/forgot-password'),
+        ),
+    ).toEqual([])
   })
 
   it('returns a parent to notifications but rejects an external URL', async () => {

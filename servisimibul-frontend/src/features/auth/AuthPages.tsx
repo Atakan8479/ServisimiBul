@@ -583,57 +583,45 @@ export function ResetPasswordPage() {
           </div>
         </div>
       ) : (
-        <>
-          <form
-            className="form-stack"
-            onSubmit={handleSubmit(submit)}
-            noValidate
+        <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
+          <FormField
+            label="Şifre yenileme kodu"
+            hint="E-postadaki bağlantı bu alanı otomatik doldurur."
+            error={errors.token?.message}
+            input={
+              <input autoComplete="one-time-code" {...register('token')} />
+            }
+          />
+          <FormField
+            label="Yeni şifre"
+            hint="12–64 karakter; boşluk kullanabilirsiniz."
+            error={errors.newPassword?.message}
+            endAction={
+              <PasswordVisibilityButton
+                visible={showPassword}
+                onToggle={() => setShowPassword((visible) => !visible)}
+              />
+            }
+            input={
+              <input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="new-password"
+                {...register('newPassword')}
+              />
+            }
+          />
+          <FormError message={formError} />
+          <button
+            className="primary-button auth-submit"
+            disabled={isSubmitting}
+            type="submit"
           >
-            <FormField
-              label="Şifre yenileme kodu"
-              hint="E-postadaki bağlantı bu alanı otomatik doldurur."
-              error={errors.token?.message}
-              input={
-                <input autoComplete="one-time-code" {...register('token')} />
-              }
-            />
-            <FormField
-              label="Yeni şifre"
-              hint="12–64 karakter; boşluk kullanabilirsiniz."
-              error={errors.newPassword?.message}
-              endAction={
-                <PasswordVisibilityButton
-                  visible={showPassword}
-                  onToggle={() => setShowPassword((visible) => !visible)}
-                />
-              }
-              input={
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="new-password"
-                  {...register('newPassword')}
-                />
-              }
-            />
-            <FormError message={formError} />
-            <button
-              className="primary-button auth-submit"
-              disabled={isSubmitting}
-              type="submit"
-            >
-              <span>{isSubmitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}</span>
-              {!isSubmitting && (
-                <span className="auth-arrow" aria-hidden="true" />
-              )}
-            </button>
-          </form>
-          <p className="auth-back-link">
-            <Link to="/forgot-password" viewTransition>
-              <span className="auth-arrow back" aria-hidden="true" />
-              Yeni bağlantı iste
-            </Link>
-          </p>
-        </>
+            <span>{isSubmitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}</span>
+            {!isSubmitting && (
+              <span className="auth-arrow" aria-hidden="true" />
+            )}
+          </button>
+        </form>
       )}
     </AuthFrame>
   )
