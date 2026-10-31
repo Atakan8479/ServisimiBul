@@ -89,7 +89,7 @@ export function DemandBoardPage() {
       } catch {
         if (request === demandRequest.current) {
           setDemands(undefined)
-          setDemandError('Talepleri yükleyemedik. Tekrar deneyin.')
+          setDemandError('Bağlantıyı kontrol edip tekrar deneyin.')
         }
       } finally {
         if (request === demandRequest.current) setLoadingDemands(false)
@@ -325,23 +325,55 @@ export function DemandBoardPage() {
 
   return (
     <section className="demand-page">
+      <nav className="demand-breadcrumb" aria-label="Sayfa yolu">
+        <Link to="/" viewTransition>
+          Ana sayfa
+        </Link>
+        <span aria-hidden="true">/</span>
+        <span>Talep panosu</span>
+      </nav>
+
       <header className="demand-intro">
         <div>
           <h1>Servis talep panosu</h1>
           <p>
-            Okul ve servis alınacak mahalle için oluşan gerçek ihtiyacı görün;
-            adres veya öğrenci bilgisi paylaşmadan mevcut talebe katılın.
+            Okul ve servis alınacak mahalledeki gerçek ihtiyacı görün veya yeni
+            bir talep oluşturun.
           </p>
         </div>
-        <ul aria-label="Talep panosu özellikleri">
-          <li>Hesapsız inceleme</li>
-          <li>Okul ve mahalle bazında</li>
-          <li>Veli kimliği gizli</li>
-        </ul>
+        <a
+          className="button-link demand-create-shortcut"
+          href="#demand-filters"
+        >
+          Yeni talep oluştur
+        </a>
       </header>
+
+      <aside className="demand-board-notice" aria-label="Talep panosu bilgisi">
+        <span className="demand-notice-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3" />
+            <path d="M3.5 19v-1.4c0-2.5 2.1-4.6 4.6-4.6h1.8c2.5 0 4.6 2.1 4.6 4.6V19M16 6.5a2.7 2.7 0 0 1 0 5.2M16.8 14c2.1.4 3.7 2.2 3.7 4.4V19" />
+          </svg>
+        </span>
+        <div>
+          <strong>Talep oluşturmak rezervasyon değildir.</strong>
+          <p>
+            Bu pano benzer servis ihtiyaçlarını görünür kılar. Hizmet kapsamını
+            işletmeciyle ayrıca teyit edin.
+          </p>
+        </div>
+        {demands && (
+          <p className="demand-board-total">
+            <strong>{demands.totalElements}</strong>
+            <span>açık talep</span>
+          </p>
+        )}
+      </aside>
 
       <section
         className="demand-filter-panel"
+        id="demand-filters"
         aria-labelledby="demand-filter-title"
       >
         <div className="section-heading">
@@ -406,79 +438,118 @@ export function DemandBoardPage() {
         </div>
       )}
 
-      <section className="demand-board-results" aria-live="polite">
-        <div className="section-heading">
-          <div>
-            <h2>Açık servis talepleri</h2>
-            <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
+      <div className="demand-board-layout">
+        <section className="demand-board-results" aria-live="polite">
+          <div className="section-heading">
+            <div>
+              <h2>Açık servis talepleri</h2>
+              <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
+            </div>
+            {demands && (
+              <span className="count-badge">{demands.totalElements} talep</span>
+            )}
           </div>
-          {demands && (
-            <span className="count-badge">{demands.totalElements} talep</span>
-          )}
-        </div>
 
-        {loadingDemands && <DemandListSkeleton />}
-        {demandError && (
-          <div className="demand-load-error" role="alert">
-            <p>{demandError}</p>
-            <button
-              className="secondary-button"
-              type="button"
-              onClick={() =>
-                void loadDemands(
-                  appliedSelection,
-                  academicYear.trim(),
-                  sort,
-                  demands?.page ?? 0,
-                )
-              }
-            >
-              Tekrar dene
-            </button>
-          </div>
-        )}
-        {!loadingDemands && demands?.content.length === 0 && (
-          <div className="empty-state demand-empty-state">
-            <h3>Bu seçim için açık talep yok</h3>
-            <p>
-              Yeni talebe geçmeden önce mevcut servis işletmecilerini kontrol
-              edebilirsiniz.
-            </p>
-          </div>
-        )}
-        {!loadingDemands && demands && demands.content.length > 0 && (
-          <div className="demand-summary-list">
-            {demands.content.map((demand) => (
-              <DemandSummaryCard demand={demand} key={demand.id} />
-            ))}
-          </div>
-        )}
-        {demands && demands.totalPages > 1 && (
-          <div className="pagination">
-            <button
-              className="secondary-button"
-              disabled={demands.page === 0 || loadingDemands}
-              type="button"
-              onClick={() => void changeDemandPage(demands.page - 1)}
-            >
-              Önceki sayfa
-            </button>
-            <span>
-              Sayfa {demands.page + 1} / {demands.totalPages}
+          {loadingDemands && <DemandListSkeleton />}
+          {demandError && (
+            <div className="demand-load-error" role="alert">
+              <div>
+                <strong>Talepler yüklenemedi</strong>
+                <p>{demandError}</p>
+              </div>
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() =>
+                  void loadDemands(
+                    appliedSelection,
+                    academicYear.trim(),
+                    sort,
+                    demands?.page ?? 0,
+                  )
+                }
+              >
+                Tekrar dene
+              </button>
+            </div>
+          )}
+          {!loadingDemands && demands?.content.length === 0 && (
+            <div className="empty-state demand-empty-state">
+              <h3>Bu seçim için açık talep yok</h3>
+              <p>
+                Yeni talebe geçmeden önce mevcut servis işletmecilerini kontrol
+                edebilirsiniz.
+              </p>
+              <a className="button-link" href="#demand-filters">
+                Seçimi güncelle
+              </a>
+            </div>
+          )}
+          {!loadingDemands && demands && demands.content.length > 0 && (
+            <div className="demand-summary-list">
+              {demands.content.map((demand) => (
+                <DemandSummaryCard demand={demand} key={demand.id} />
+              ))}
+            </div>
+          )}
+          {demands && demands.totalPages > 1 && (
+            <div className="pagination">
+              <button
+                className="secondary-button"
+                disabled={demands.page === 0 || loadingDemands}
+                type="button"
+                onClick={() => void changeDemandPage(demands.page - 1)}
+              >
+                Önceki sayfa
+              </button>
+              <span>
+                Sayfa {demands.page + 1} / {demands.totalPages}
+              </span>
+              <button
+                className="secondary-button"
+                disabled={
+                  demands.page + 1 >= demands.totalPages || loadingDemands
+                }
+                type="button"
+                onClick={() => void changeDemandPage(demands.page + 1)}
+              >
+                Sonraki sayfa
+              </button>
+            </div>
+          )}
+        </section>
+
+        <aside
+          className="demand-board-guidance"
+          aria-label="Talep panosu rehberi"
+        >
+          <section>
+            <span className="demand-guidance-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 3 5.5 5.8v5.6c0 4.4 2.7 7.9 6.5 9.6 3.8-1.7 6.5-5.2 6.5-9.6V5.8L12 3Z" />
+                <path d="m9.2 12 1.8 1.8 3.9-4" />
+              </svg>
             </span>
-            <button
-              className="secondary-button"
-              disabled={
-                demands.page + 1 >= demands.totalPages || loadingDemands
-              }
-              type="button"
-              onClick={() => void changeDemandPage(demands.page + 1)}
-            >
-              Sonraki sayfa
-            </button>
-          </div>
-        )}
-      </section>
+            <h3>Güvenli ve açık iletişim</h3>
+            <p>
+              Öğrenci adı, ev adresi, telefon veya sağlık bilgisi paylaşmayın.
+            </p>
+          </section>
+          <section className="demand-guidance-time">
+            <span className="demand-guidance-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <rect x="4" y="5.5" width="16" height="14" rx="2" />
+                <path d="M8 3v5M16 3v5M4 10h16M8 14h2M14 14h2" />
+              </svg>
+            </span>
+            <h3>Hizmet saatini belirtin</h3>
+            <p>
+              Talep oluştururken sabah gidiş veya öğleden sonra dönüş
+              ihtiyacınızı seçin.
+            </p>
+          </section>
+        </aside>
+      </div>
 
       {appliedSelection && !loadingDemands && !demandError && (
         <section

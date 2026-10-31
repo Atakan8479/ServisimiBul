@@ -9,35 +9,29 @@ export function DemandSummaryCard({ demand }: { demand: Demand }) {
 
   return (
     <article className="demand-summary-card">
-      <div className="demand-summary-meta">
-        <StatusBadge tone={open ? 'success' : 'neutral'}>
-          {demandStateLabel(demand)}
-        </StatusBadge>
-        <StatusBadge>{demand.academicYear}</StatusBadge>
-      </div>
       <div className="demand-summary-heading">
         <div>
+          <div className="demand-summary-meta">
+            <StatusBadge tone={open ? 'success' : 'neutral'}>
+              {demandStateLabel(demand)}
+            </StatusBadge>
+            <time dateTime={demand.updatedAt}>
+              {formatDemandDate(demand.updatedAt)} güncellendi
+            </time>
+          </div>
           <h2>{demand.school.name}</h2>
           <p>
             {demand.neighborhood.name}, {demand.neighborhood.districtName}
           </p>
         </div>
-      </div>
-      <div className="demand-summary-participation">
-        <p>
+        <p className="demand-supporter-count">
           <strong>{demand.supporterCount}</strong>
-          <span>veli bu ihtiyacı destekliyor</span>
+          <span>destek</span>
         </p>
-        <dl className="demand-direction-counts" aria-label="İhtiyaç yönleri">
-          <div>
-            <dt>Sabah</dt>
-            <dd>{demand.morningCount}</dd>
-          </div>
-          <div>
-            <dt>Öğleden sonra</dt>
-            <dd>{demand.afternoonCount}</dd>
-          </div>
-        </dl>
+      </div>
+      <div className="demand-summary-context">
+        <span>{demand.academicYear}</span>
+        <span>{demand.neighborhood.districtName}</span>
       </div>
       {activeReasons.length > 0 && (
         <div className="demand-reason-summary">
@@ -56,9 +50,16 @@ export function DemandSummaryCard({ demand }: { demand: Demand }) {
         </div>
       )}
       <footer className="demand-summary-footer">
-        <time dateTime={demand.updatedAt}>
-          {formatDemandDate(demand.updatedAt)} güncellendi
-        </time>
+        <dl className="demand-direction-counts" aria-label="İhtiyaç yönleri">
+          <div>
+            <dt>Sabah</dt>
+            <dd>{demand.morningCount}</dd>
+          </div>
+          <div>
+            <dt>Öğleden sonra</dt>
+            <dd>{demand.afternoonCount}</dd>
+          </div>
+        </dl>
         <Link
           className="button-link"
           to={`/demands/${demand.id}`}

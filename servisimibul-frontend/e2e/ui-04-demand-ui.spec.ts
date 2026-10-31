@@ -60,9 +60,11 @@ for (const viewport of viewports) {
     ).toBeVisible()
 
     if (process.env.UI04_CAPTURE !== 'before') {
-      await expect(page.getByText('Hesapsız inceleme')).toBeVisible()
+      await expect(
+        page.getByText('Talep oluşturmak rezervasyon değildir.'),
+      ).toBeVisible()
       await expect(page.getByText('Katılıma açık').first()).toBeVisible()
-      await expect(page.getByText(/veli bu ihtiyacı destekliyor/)).toBeVisible()
+      await expect(page.getByText('Güvenli ve açık iletişim')).toBeVisible()
     }
 
     await assertAccessibleAndContained(page)
