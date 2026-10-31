@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -269,39 +270,287 @@ describe('reporting and moderation flows', () => {
   })
 
   it('discards a slower response from a previous status', async () => {
-    let releaseOpen: () => void = () => undefined
-    const openGate = new Promise<void>((resolve) => {
-      releaseOpen = resolve
-    })
-    const titled = (title: string) => ({
-      ...casePage(),
-      content: [
-        {
-          ...caseSummary(),
-          target: { ...caseSummary().target, title },
-        },
-      ],
-    })
+    const bodies = trackBodyReads()
+    const openGate = deferred()
+    let openStarted = false
     server.use(
       authHandler('ADMIN'),
       http.get('/api/v1/admin/moderation/cases', async ({ request }) => {
         const query = new URL(request.url).searchParams
         if (query.get('size') === '1') return HttpResponse.json(casePage())
         if (query.get('status') === 'OPEN') {
-          await openGate
-          return HttpResponse.json(titled('Eski açık kayıt'))
+          openStarted = true
+          await openGate.promise
+          return HttpResponse.json(titledPage('Eski açık kayıt'))
         }
-        return HttpResponse.json(titled('Güncel inceleme kaydı'))
+        return HttpResponse.json(titledPage('Güncel inceleme kaydı'))
+      }),
+    )
+    renderModeration()
+    await waitFor(() => expect(openStarted).toBe(true))
+
+    fireEvent.click(screen.getByRole('button', { name: /^İnceleniyor/ }))
+    expect(await screen.findByText('Güncel inceleme kaydı')).toBeInTheDocument()
+    await bodies.settle(openGate.resolve, 1)
+    expect(screen.getByText('Güncel inceleme kaydı')).toBeInTheDocument()
+    expect(screen.queryByText('Eski açık kayıt')).not.toBeInTheDocument()
+  })
+
+  it('shows the queue while its totals are still pending', async () => {
+    const countsGate = deferred()
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('size') === '1') {
+          await countsGate.promise
+          return HttpResponse.json({ ...casePage(), totalElements: 2 })
+        }
+        return HttpResponse.json(casePage())
       }),
     )
     renderModeration()
 
-    fireEvent.click(await screen.findByRole('button', { name: /^İnceleniyor/ }))
-    expect(await screen.findByText('Güncel inceleme kaydı')).toBeInTheDocument()
-    releaseOpen()
-    await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(screen.getByText('Güncel inceleme kaydı')).toBeInTheDocument()
-    expect(screen.queryByText('Eski açık kayıt')).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: /İncele: Örnek Okulu/ }),
+    ).toBeEnabled()
+    expect(pendingTotal()).toHaveTextContent('—')
+
+    countsGate.resolve()
+    expect(
+      await screen.findByRole('button', { name: 'Tüm bildirimler 8' }),
+    ).toBeInTheDocument()
+    expect(pendingTotal()).toHaveTextContent('4')
+  })
+
+  it('keeps totals of the latest filters when older totals arrive late', async () => {
+    const bodies = trackBodyReads()
+    const oldCounts = deferred()
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', async ({ request }) => {
+        const query = new URL(request.url).searchParams
+        if (query.get('size') !== '1') return HttpResponse.json(casePage())
+        if (query.get('targetType') === 'COMMENT') {
+          return HttpResponse.json({ ...casePage(), totalElements: 7 })
+        }
+        await oldCounts.promise
+        return HttpResponse.json({ ...casePage(), totalElements: 99 })
+      }),
+    )
+    renderModeration()
+    await screen.findByRole('button', { name: /İncele: Örnek Okulu/ })
+
+    fireEvent.change(screen.getByLabelText('İçerik türü'), {
+      target: { value: 'COMMENT' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Filtrele' }))
+    expect(
+      await screen.findByRole('button', { name: 'Tüm bildirimler 28' }),
+    ).toBeInTheDocument()
+
+    await bodies.settle(oldCounts.resolve, 4)
+    expect(pendingTotal()).toHaveTextContent('14')
+    expect(
+      screen.getByRole('button', { name: 'Tüm bildirimler 28' }),
+    ).toBeInTheDocument()
+  })
+
+  it('does not show older totals while the new filters load', async () => {
+    const newCounts = deferred()
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', async ({ request }) => {
+        const query = new URL(request.url).searchParams
+        if (query.get('size') !== '1') return HttpResponse.json(casePage())
+        if (query.get('targetType') === 'COMMENT') await newCounts.promise
+        return HttpResponse.json({ ...casePage(), totalElements: 3 })
+      }),
+    )
+    renderModeration()
+    await screen.findByRole('button', { name: 'Tüm bildirimler 12' })
+
+    fireEvent.change(screen.getByLabelText('İçerik türü'), {
+      target: { value: 'COMMENT' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Filtrele' }))
+
+    await waitFor(() => expect(pendingTotal()).toHaveTextContent('—'))
+    newCounts.resolve()
+    expect(
+      await screen.findByRole('button', { name: 'Tüm bildirimler 12' }),
+    ).toBeInTheDocument()
+  })
+
+  it('requests totals once per filter set, not per tab or page', async () => {
+    let countRequests = 0
+    const pages: (string | null)[] = []
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', ({ request }) => {
+        const query = new URL(request.url).searchParams
+        if (query.get('size') === '1') {
+          countRequests += 1
+          return HttpResponse.json({ ...casePage(), totalElements: 21 })
+        }
+        pages.push(query.get('page'))
+        return HttpResponse.json({
+          ...casePage(),
+          page: Number(query.get('page')),
+          totalElements: 21,
+          totalPages: 2,
+        })
+      }),
+    )
+    renderModeration()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sonraki' }))
+    await waitFor(() => expect(pages).toEqual(['0', '1']))
+    fireEvent.click(await screen.findByRole('button', { name: /^Reddedildi/ }))
+    await waitFor(() => expect(pages).toEqual(['0', '1', '0']))
+    await screen.findByRole('button', { name: 'Sonraki' })
+
+    expect(countRequests).toBe(4)
+  })
+
+  it('refreshes the list and totals after a decision and keeps the filter', async () => {
+    let decided = false
+    const queueStatuses: (string | null)[] = []
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/admin/moderation/cases', ({ request }) => {
+        const query = new URL(request.url).searchParams
+        const status = query.get('status')
+        if (query.get('size') === '1') {
+          const reviewing = decided ? 0 : 1
+          const totals: Record<string, number> = {
+            OPEN: 0,
+            IN_REVIEW: reviewing,
+            RESOLVED: 1 - reviewing,
+            DISMISSED: 0,
+          }
+          return HttpResponse.json({
+            ...casePage(),
+            totalElements: totals[status ?? ''],
+          })
+        }
+        queueStatuses.push(status)
+        return HttpResponse.json(
+          status === 'IN_REVIEW' && decided
+            ? { ...casePage(), content: [], totalElements: 0, totalPages: 0 }
+            : casePage(),
+        )
+      }),
+      http.get('/api/v1/admin/moderation/cases/:id', () =>
+        HttpResponse.json(caseDetail()),
+      ),
+      http.post('/api/v1/admin/moderation/cases/:id/actions', () => {
+        decided = true
+        return HttpResponse.json(caseDetail())
+      }),
+    )
+    renderModeration()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'İnceleniyor 1' }),
+    )
+    await waitFor(() => expect(queueStatuses).toEqual(['OPEN', 'IN_REVIEW']))
+    fireEvent.click(
+      await screen.findByRole('button', { name: /İncele: Örnek Okulu/ }),
+    )
+    fireEvent.change(await screen.findByLabelText('Yönetici gerekçesi'), {
+      target: { value: 'Kural ihlali yok.' },
+    })
+    fireEvent.change(screen.getByLabelText('Karar'), {
+      target: { value: 'RESOLVE_NO_ACTION' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Kararı kaydet' }))
+
+    expect(
+      await screen.findByText('Bu görünümde bildirim yok'),
+    ).toBeInTheDocument()
+    expect(queueStatuses.at(-1)).toBe('IN_REVIEW')
+    expect(
+      await screen.findByRole('button', { name: 'Sonuçlandı 1' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'İnceleniyor 0' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(pendingTotal()).toHaveTextContent('0')
+  })
+
+  it('retries a failed queue while its totals stay unavailable', async () => {
+    let queueAttempts = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', ({ request }) => {
+        if (new URL(request.url).searchParams.get('size') === '1') {
+          return HttpResponse.json(problem(500), { status: 500 })
+        }
+        queueAttempts += 1
+        return queueAttempts === 1
+          ? HttpResponse.json(problem(500), { status: 500 })
+          : HttpResponse.json(casePage())
+      }),
+    )
+    renderModeration()
+
+    expect(
+      await screen.findByText('Bildirimler yüklenemedi'),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
+
+    expect(
+      await screen.findByRole('button', { name: /İncele: Örnek Okulu/ }),
+    ).toBeEnabled()
+    expect(queueAttempts).toBe(2)
+    expect(pendingTotal()).toHaveTextContent('—')
+  })
+
+  it('does not report a queue error when only totals fail', async () => {
+    const bodies = trackBodyReads()
+    const countsGate = deferred()
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('size') === '1') {
+          await countsGate.promise
+          return HttpResponse.json(problem(500), { status: 500 })
+        }
+        return HttpResponse.json(casePage())
+      }),
+    )
+    renderModeration()
+    await screen.findByRole('button', { name: /İncele: Örnek Okulu/ })
+
+    await bodies.settle(countsGate.resolve, 1)
+    expect(
+      screen.queryByText('Bildirimler yüklenemedi'),
+    ).not.toBeInTheDocument()
+    expect(pendingTotal()).toHaveTextContent('—')
+    expect(
+      screen.getByRole('button', { name: /İncele: Örnek Okulu/ }),
+    ).toBeEnabled()
+  })
+
+  it('leaves the page when the session expires during a totals request', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/moderation/cases', ({ request }) =>
+        new URL(request.url).searchParams.get('size') === '1'
+          ? HttpResponse.json(problem(401), { status: 401 })
+          : HttpResponse.json(casePage()),
+      ),
+    )
+    const router = createMemoryRouter(routes, {
+      initialEntries: ['/admin/moderation'],
+    })
+    render(<RouterProvider router={router} />)
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/operator/login'),
+    )
+    expect(router.state.location.search).toBe('?reason=session')
   })
 
   it('requires a decision and a reason before contacting the backend', async () => {
@@ -476,6 +725,49 @@ describe('reporting and moderation flows', () => {
     ).not.toBeInTheDocument()
   })
 })
+
+function pendingTotal() {
+  return screen.getByText('Bekleyen bildirim').parentElement as HTMLElement
+}
+
+function titledPage(title: string) {
+  return {
+    ...casePage(),
+    content: [{ ...caseSummary(), target: { ...caseSummary().target, title } }],
+  }
+}
+
+function deferred() {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+// Lets a test wait until late responses reached the page instead of sleeping.
+function trackBodyReads() {
+  const reads: Promise<unknown>[] = []
+  const read = Response.prototype.text
+  vi.spyOn(Response.prototype, 'text').mockImplementation(function (
+    this: Response,
+  ) {
+    const result = read.call(this)
+    reads.push(result)
+    return result
+  })
+  return {
+    async settle(release: () => void, responses: number) {
+      const expected = reads.length + responses
+      release()
+      await waitFor(() => expect(reads.length).toBeGreaterThanOrEqual(expected))
+      await act(async () => {
+        await Promise.all(reads)
+        await new Promise((resolve) => setTimeout(resolve, 0))
+      })
+    },
+  }
+}
 
 function renderModeration(search = '') {
   render(

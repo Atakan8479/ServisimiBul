@@ -87,6 +87,7 @@ export function AdminModerationPage() {
   const feedbackRef = useRef<HTMLDivElement>(null)
   // Responses apply only while their request is still the latest of its kind.
   const queueRequest = useRef(0)
+  const countsRequest = useRef(0)
   const detailRequest = useRef(0)
   const [filters, setFilters] = useState({ ...defaultFilters })
   const [submitted, setSubmitted] = useState(filters)
@@ -168,19 +169,18 @@ export function AdminModerationPage() {
     setLoading(true)
     setLoadError(undefined)
     try {
-      const [response, nextCounts] = await Promise.all([
-        listModerationCases({ ...queueQuery(submitted), page }),
-        // Totals are supplementary: the queue stays usable when they fail.
-        loadStatusCounts(submitted).catch(() => undefined),
-      ])
+      const response = await listModerationCases({
+        ...queueQuery(submitted),
+        page,
+      })
       if (request !== queueRequest.current) return
-      if (response.content.length === 0 && page > 0) {
+      const lastPage = Math.max(response.totalPages - 1, 0)
+      if (response.content.length === 0 && page > lastPage) {
         // A decision can empty the last page of a filtered view.
-        setPage(Math.max(response.totalPages - 1, 0))
+        setPage(lastPage)
         return
       }
       setResult(response)
-      setCounts(nextCounts)
       setLoading(false)
     } catch (failure) {
       if (request !== queueRequest.current) return
@@ -194,10 +194,35 @@ export function AdminModerationPage() {
     }
   }, [failureMessage, page, submitted])
 
+  // Totals are supplementary and never block the queue. They ignore the status
+  // tab and the page, so only the other filters or a decision refresh them.
+  const { targetType, reason, reportedFrom, reportedTo } = submitted
+  const loadCounts = useCallback(async () => {
+    const request = ++countsRequest.current
+    setCounts(undefined)
+    try {
+      const nextCounts = await loadStatusCounts({
+        targetType,
+        reason,
+        reportedFrom,
+        reportedTo,
+      })
+      if (request === countsRequest.current) setCounts(nextCounts)
+    } catch (failure) {
+      // Only an expired session matters here: failed totals stay unavailable.
+      if (request === countsRequest.current) failureMessage(failure, '')
+    }
+  }, [failureMessage, reason, reportedFrom, reportedTo, targetType])
+
   useEffect(() => {
     const timer = window.setTimeout(() => void loadQueue(), 0)
     return () => window.clearTimeout(timer)
   }, [loadQueue])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void loadCounts(), 0)
+    return () => window.clearTimeout(timer)
+  }, [loadCounts])
 
   useEffect(() => {
     if (notice) feedbackRef.current?.focus()
@@ -266,6 +291,7 @@ export function AdminModerationPage() {
       await moderateCase(selected.summary.id, action, decisionReason.trim())
       closeReview()
       setNotice(`${actionLabels[action]} işlemi kaydedildi.`)
+      void loadCounts()
       await loadQueue()
     } catch (failure) {
       setConfirming(false)
@@ -280,6 +306,7 @@ export function AdminModerationPage() {
         setDecisionAction('')
         void loadCase(selected.summary.id)
         void loadQueue()
+        void loadCounts()
       }
     } finally {
       setSaving(false)
@@ -454,7 +481,10 @@ export function AdminModerationPage() {
           action={
             <button
               className="secondary-button"
-              onClick={() => void loadQueue()}
+              onClick={() => {
+                void loadQueue()
+                void loadCounts()
+              }}
               type="button"
             >
               Tekrar dene
@@ -905,12 +935,13 @@ function queueQuery(filters: Filters) {
   }
 }
 
-async function loadStatusCounts(filters: Filters): Promise<StatusCounts> {
+async function loadStatusCounts(
+  filters: Omit<Filters, 'status'>,
+): Promise<StatusCounts> {
   const [OPEN, IN_REVIEW, RESOLVED, DISMISSED] = await Promise.all(
     moderationCaseStatuses.map((status) =>
       listModerationCases({
-        ...queueQuery(filters),
-        status,
+        ...queueQuery({ ...filters, status }),
         page: 0,
         size: 1,
       }).then((response) => response.totalElements),
