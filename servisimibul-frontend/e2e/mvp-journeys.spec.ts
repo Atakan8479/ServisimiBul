@@ -87,6 +87,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .getByLabel('Düzeltme nedeni')
       .fill('Telefon bilgisini doğrulayın.')
     await adminPage.getByRole('button', { name: 'Düzeltme iste' }).click()
+    await adminPage.getByRole('button', { name: 'Talebi gönder' }).click()
     await expect(
       adminPage.getByText('Düzeltme talebi gönderildi.'),
     ).toBeVisible()
@@ -110,6 +111,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       '/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20',
     )
     await adminPage.getByRole('button', { name: 'Başvuruyu onayla' }).click()
+    await adminPage.getByRole('button', { name: 'Evet, onayla' }).click()
     await expect(adminPage.getByText('Başvuru onaylandı.')).toBeVisible()
   })
 
@@ -268,6 +270,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     )
     await adminPage
       .getByRole('button', { name: 'İşletmeciyi askıya al' })
+      .click()
+    await adminPage
+      .getByRole('button', { name: 'Askıya al', exact: true })
       .click()
     await expect(adminPage.getByText('İşletmeci askıya alındı.')).toBeVisible()
 

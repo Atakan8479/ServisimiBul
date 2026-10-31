@@ -16,6 +16,7 @@ const parentUserId = 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd'
 const createdAt = '2026-10-18T10:00:00Z'
 
 export interface MockApiState {
+  operatorApprovalRequired?: boolean
   registered: boolean
   parentRegistered: boolean
   verified: boolean
@@ -657,7 +658,7 @@ function authUser(role: Role, state: MockApiState) {
           ? 'parent@example.com'
           : 'operator@example.com',
     role,
-    operatorApprovalRequired: true,
+    operatorApprovalRequired: state.operatorApprovalRequired ?? true,
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
   }
 }

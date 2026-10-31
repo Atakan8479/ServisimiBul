@@ -37,6 +37,68 @@ for (const viewport of viewports) {
   })
 }
 
+test('M02 suspension uses an accessible modal with real consequences', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  const state = createMockApiState()
+  state.approvalStatus = 'APPROVED'
+  state.businessName = 'Mavi Rota Taşımacılık'
+  await installMockApi(page, state)
+  await signIn(page)
+  await page.goto(detailPath)
+
+  const trigger = page.getByRole('button', { name: 'İşletmeciyi askıya al' })
+  await trigger.click()
+  const dialog = page.getByRole('dialog', {
+    name: 'İşletmeci askıya alınsın mı?',
+  })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeFocused()
+  await assertAccessibleAndContained(page)
+  await capture(page, 'state-M02-suspend-confirmation', 'desktop')
+
+  await page.keyboard.press('Escape')
+  await expect(dialog).toHaveCount(0)
+  await expect(trigger).toBeFocused()
+  expect(state.active).toBe(true)
+
+  await trigger.click()
+  await dialog.getByRole('button', { name: 'Askıya al', exact: true }).click()
+  await expect(page.getByText('İşletmeci askıya alındı.')).toBeVisible()
+  expect(state.active).toBe(false)
+  await expect(trigger).toHaveCount(0)
+  await assertAccessibleAndContained(page)
+})
+
+test('M01-M02 pilot mode hides approval controls and stays usable', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const state = createMockApiState()
+  state.businessName = 'Mavi Rota Taşımacılık'
+  state.operatorApprovalRequired = false
+  await installMockApi(page, state)
+  await signIn(page)
+
+  await expect(
+    page.getByRole('heading', { name: 'İşletmeciler' }),
+  ).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Başvuru durumu' })).toHaveCount(
+    0,
+  )
+  await assertAccessibleAndContained(page)
+  await page.getByRole('link', { name: 'Profili incele' }).click()
+  await expect(
+    page.getByRole('button', { name: 'İşletmeciyi askıya al' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Başvuruyu onayla' }),
+  ).toHaveCount(0)
+  await expect(page.getByLabel('Düzeltme nedeni')).toHaveCount(0)
+  await assertAccessibleAndContained(page)
+})
+
 async function signIn(page: Page) {
   await page.goto('/operator/login')
   await page.getByLabel('E-posta').fill('admin@example.com')

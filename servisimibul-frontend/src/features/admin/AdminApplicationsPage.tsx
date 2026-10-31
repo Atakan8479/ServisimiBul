@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import {
   Link,
   useNavigate,
@@ -6,8 +6,13 @@ import {
   useRouteLoaderData,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { StatePanel, StatusBadge } from '../../components/design-system'
+import {
+  FormField,
+  StatePanel,
+  StatusBadge,
+} from '../../components/design-system'
 import type { AuthUser } from '../auth/auth-api'
+import { AdminConfirmDialog } from './AdminConfirmDialog'
 import {
   approveApplication,
   getApplication,
@@ -18,6 +23,8 @@ import {
   type ApplicationPage,
   type ApplicationStatus,
 } from './admin-api'
+
+type OperatorProfile = ApplicationDetail['profile']
 
 const statusLabels: Record<ApplicationStatus, string> = {
   DRAFT: 'Taslak',
@@ -36,11 +43,23 @@ const statusTones: Record<
   APPROVED: 'success',
 }
 
+const statusFilters: Array<{
+  label: string
+  value: ApplicationStatus | undefined
+}> = [
+  { label: 'Tümü', value: undefined },
+  { label: statusLabels.PENDING, value: 'PENDING' },
+  { label: statusLabels.CHANGES_REQUESTED, value: 'CHANGES_REQUESTED' },
+  { label: statusLabels.APPROVED, value: 'APPROVED' },
+  { label: statusLabels.DRAFT, value: 'DRAFT' },
+]
+
 export function AdminApplicationsPage() {
   const navigate = useNavigate()
   const user = useRouteLoaderData('admin') as AuthUser
+  const approvalRequired = user.operatorApprovalRequired
   const [status, setStatus] = useState<ApplicationStatus | undefined>(
-    user.operatorApprovalRequired ? 'PENDING' : undefined,
+    approvalRequired ? 'PENDING' : undefined,
   )
   const [page, setPage] = useState(0)
   const [result, setResult] = useState<ApplicationPage>()
@@ -79,39 +98,45 @@ export function AdminApplicationsPage() {
 
   return (
     <section className="workspace-page admin-page admin-applications-page">
-      <header className="admin-page-header">
-        <h1>
-          {user.operatorApprovalRequired
-            ? 'İşletmeci başvuruları'
-            : 'İşletmeciler'}
-        </h1>
+      <header className="admin-page-header admin-operator-header">
+        <p className="admin-eyebrow">Yönetim paneli</p>
+        <h1>{approvalRequired ? 'İşletmeci başvuruları' : 'İşletmeciler'}</h1>
         <p>
-          {user.operatorApprovalRequired
+          {approvalRequired
             ? 'Başvuruları inceleyin ve gerekli düzeltmeleri açıkça iletin.'
             : 'İşletmeci profillerini inceleyin ve hesap durumlarını yönetin.'}
         </p>
       </header>
 
-      {user.operatorApprovalRequired && (
-        <label className="form-field application-filter">
-          <span>Başvuru durumu</span>
-          <select
-            onChange={(event) => {
-              setLoading(true)
-              setError(undefined)
-              setStatus(event.target.value as ApplicationStatus)
-              setPage(0)
-            }}
-            value={status}
+      <div className="admin-operator-toolbar">
+        {approvalRequired && (
+          <div
+            aria-label="Başvuru durumu"
+            className="admin-status-filter"
+            role="group"
           >
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
+            {statusFilters.map((filter) => (
+              <button
+                aria-pressed={status === filter.value}
+                key={filter.label}
+                onClick={() => {
+                  if (status === filter.value) return
+                  setLoading(true)
+                  setError(undefined)
+                  setStatus(filter.value)
+                  setPage(0)
+                }}
+                type="button"
+              >
+                {filter.label}
+              </button>
             ))}
-          </select>
-        </label>
-      )}
+          </div>
+        )}
+        {result && !loading && !error && (
+          <p className="admin-operator-count">{result.totalElements} kayıt</p>
+        )}
+      </div>
 
       {error ? (
         <StatePanel
@@ -131,46 +156,80 @@ export function AdminApplicationsPage() {
           tone="loading"
         />
       ) : result?.content.length ? (
-        <div className="school-list admin-application-list">
-          {result.content.map((profile) => (
-            <article
-              className="school-card admin-application-card"
-              key={profile.id}
-            >
-              <div className="school-title-row">
-                <div>
-                  <h2>{profile.businessName || 'İsimsiz işletme'}</h2>
-                  <p>{profile.contactPhone}</p>
+        <div
+          className={`admin-operator-table${
+            approvalRequired ? ' admin-operator-table-review' : ''
+          }`}
+        >
+          <div aria-hidden="true" className="admin-operator-columns">
+            <span>İşletmeci</span>
+            {approvalRequired && <span>Başvuru</span>}
+            <span>Görünürlük</span>
+            <span>Hesap</span>
+            <span>Kayıt</span>
+            <span>İşlem</span>
+          </div>
+          <ul>
+            {result.content.map((profile) => (
+              <li className="admin-operator-row" key={profile.id}>
+                <div className="admin-operator-identity">
+                  <OperatorInitials name={profile.businessName} />
+                  <div>
+                    <h2 id={`operator-${profile.id}`}>
+                      {profile.businessName || 'İsimsiz işletme'}
+                    </h2>
+                    <p>{profile.contactPhone}</p>
+                  </div>
                 </div>
-                {user.operatorApprovalRequired && (
-                  <StatusBadge tone={statusTones[profile.approvalStatus]}>
-                    {statusLabels[profile.approvalStatus]}
-                  </StatusBadge>
-                )}
-              </div>
-              <Link to={`/admin/applications/${profile.id}`} viewTransition>
-                {user.operatorApprovalRequired
-                  ? 'Başvuruyu incele'
-                  : 'Profili incele'}
-              </Link>
-            </article>
-          ))}
+                <dl>
+                  {approvalRequired && (
+                    <div>
+                      <dt>Başvuru</dt>
+                      <dd>
+                        <StatusBadge tone={statusTones[profile.approvalStatus]}>
+                          {statusLabels[profile.approvalStatus]}
+                        </StatusBadge>
+                      </dd>
+                    </div>
+                  )}
+                  <div>
+                    <dt>Görünürlük</dt>
+                    <dd>{visibilityLabel(profile)}</dd>
+                  </div>
+                  <div>
+                    <dt>Hesap</dt>
+                    <dd>
+                      <AccountBadge active={profile.active} />
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Kayıt</dt>
+                    <dd>{formatDay(profile.createdAt)}</dd>
+                  </div>
+                </dl>
+                <Link
+                  aria-describedby={`operator-${profile.id}`}
+                  className="admin-operator-link"
+                  to={`/admin/applications/${profile.id}`}
+                  viewTransition
+                >
+                  {approvalRequired ? 'Başvuruyu incele' : 'Profili incele'}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       ) : (
         <div className="empty-state">
-          <h2>
-            {user.operatorApprovalRequired
-              ? 'Bu durumda başvuru yok'
-              : 'Henüz işletmeci yok'}
-          </h2>
-          {user.operatorApprovalRequired && (
+          <h2>{status ? 'Bu durumda başvuru yok' : 'Henüz işletmeci yok'}</h2>
+          {status && (
             <p>Başka bir durum seçerek listeyi değiştirebilirsiniz.</p>
           )}
         </div>
       )}
 
       {result && result.totalPages > 1 && (
-        <div className="button-row pagination" aria-label="Sayfalama">
+        <nav className="button-row pagination" aria-label="Sayfalama">
           <button
             className="secondary-button"
             disabled={page === 0}
@@ -196,7 +255,7 @@ export function AdminApplicationsPage() {
           >
             Sonraki
           </button>
-        </div>
+        </nav>
       )}
     </section>
   )
@@ -206,11 +265,18 @@ export function AdminApplicationDetailPage() {
   const { applicationId } = useParams()
   const navigate = useNavigate()
   const user = useRouteLoaderData('admin') as AuthUser
+  const approvalRequired = user.operatorApprovalRequired
   const [detail, setDetail] = useState<ApplicationDetail>()
+  const [attempt, setAttempt] = useState(0)
   const [reason, setReason] = useState('')
+  const [reasonError, setReasonError] = useState<string>()
+  const [confirmation, setConfirmation] = useState<
+    'approve' | 'revision' | 'suspend'
+  >()
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const feedbackRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!applicationId) return
@@ -225,47 +291,40 @@ export function AdminApplicationDetailPage() {
     return () => {
       active = false
     }
-  }, [applicationId, navigate])
+  }, [applicationId, attempt, navigate])
 
-  async function approve() {
-    if (
-      !applicationId ||
-      !window.confirm('Bu işletmeci başvurusu onaylansın mı?')
-    ) {
-      return
-    }
-    await runAction(
-      () => approveApplication(applicationId),
-      'Başvuru onaylandı.',
-    )
-  }
+  useEffect(() => {
+    if (notice || error) feedbackRef.current?.focus()
+  }, [error, notice])
 
-  async function requestRevision(event: FormEvent) {
+  function openRevision(event: FormEvent) {
     event.preventDefault()
-    const trimmedReason = reason.trim()
-    if (!applicationId || !trimmedReason) {
-      setError('Düzeltme nedeni zorunludur.')
+    if (!reason.trim()) {
+      setReasonError('Düzeltme nedeni zorunludur.')
       return
     }
-    if (!window.confirm('Düzeltme talebi işletmeciye gönderilsin mi?')) return
-    await runAction(
-      () => requestApplicationRevision(applicationId, trimmedReason),
-      'Düzeltme talebi gönderildi.',
-    )
-    setReason('')
+    setConfirmation('revision')
   }
 
-  async function suspend() {
-    if (
-      !applicationId ||
-      !window.confirm('Bu işletmecinin hesabı askıya alınsın mı?')
-    ) {
-      return
+  async function confirmAction() {
+    if (!applicationId) return
+    if (confirmation === 'approve') {
+      await runAction(
+        () => approveApplication(applicationId),
+        'Başvuru onaylandı.',
+      )
+    } else if (confirmation === 'revision') {
+      const sent = await runAction(
+        () => requestApplicationRevision(applicationId, reason.trim()),
+        'Düzeltme talebi gönderildi.',
+      )
+      if (sent) setReason('')
+    } else if (confirmation === 'suspend') {
+      await runAction(
+        () => suspendOperator(applicationId),
+        'İşletmeci askıya alındı.',
+      )
     }
-    await runAction(
-      () => suspendOperator(applicationId),
-      'İşletmeci askıya alındı.',
-    )
   }
 
   async function runAction(
@@ -278,12 +337,17 @@ export function AdminApplicationDetailPage() {
     try {
       setDetail(await action())
       setNotice(successMessage)
+      return true
     } catch (failure) {
       handleSession(failure, navigate, setError)
+      return false
     } finally {
       setPending(false)
+      setConfirmation(undefined)
     }
   }
+
+  const backLabel = approvalRequired ? 'Başvurulara dön' : 'İşletmecilere dön'
 
   if (!detail && !error) {
     return (
@@ -295,131 +359,286 @@ export function AdminApplicationDetailPage() {
     )
   }
 
-  const profile = detail?.profile
+  if (!detail) {
+    return (
+      <section className="workspace-page admin-page admin-application-detail-page">
+        <Link
+          className="admin-back-link"
+          to="/admin/applications"
+          viewTransition
+        >
+          ← {backLabel}
+        </Link>
+        <StatePanel
+          action={
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setError(undefined)
+                setAttempt((current) => current + 1)
+              }}
+              type="button"
+            >
+              Tekrar dene
+            </button>
+          }
+          detail={error ?? ''}
+          title="Başvuru yüklenemedi"
+          tone="error"
+        />
+      </section>
+    )
+  }
+
+  const { profile, reviewHistory } = detail
+  const reviewable = approvalRequired && profile.approvalStatus === 'PENDING'
+
   return (
     <section className="workspace-page admin-page admin-application-detail-page">
       <Link className="admin-back-link" to="/admin/applications" viewTransition>
-        ←{' '}
-        {user.operatorApprovalRequired
-          ? 'Başvurulara dön'
-          : 'İşletmecilere dön'}
+        ← {backLabel}
       </Link>
-      <header className="admin-page-header">
-        <h1>{profile?.businessName || 'İsimsiz işletme'}</h1>
-        <p>
-          Profil bilgilerini, başvuru durumunu ve inceleme geçmişini yönetin.
-        </p>
+      <header className="admin-page-header admin-operator-header admin-detail-header">
+        <div>
+          <p className="admin-eyebrow">İşletmeci ayrıntısı</p>
+          <h1>{profile.businessName || 'İsimsiz işletme'}</h1>
+          <p>
+            Profil bilgilerini, başvuru durumunu ve inceleme geçmişini yönetin.
+          </p>
+        </div>
+        <div className="admin-detail-badges">
+          {approvalRequired && (
+            <StatusBadge tone={statusTones[profile.approvalStatus]}>
+              {statusLabels[profile.approvalStatus]}
+            </StatusBadge>
+          )}
+          <AccountBadge active={profile.active} />
+        </div>
       </header>
 
-      {error && (
-        <div className="form-error" role="alert">
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div className="status-banner success" role="status">
-          {notice}
+      {(error || notice) && (
+        <div ref={feedbackRef} tabIndex={-1}>
+          {error && (
+            <div className="form-error" role="alert">
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div className="status-banner success" role="status">
+              {notice}
+            </div>
+          )}
         </div>
       )}
 
-      {profile && (
-        <>
-          <article className="form-card compact-card application-detail">
-            <div className="school-title-row">
-              <h2>Profil bilgileri</h2>
-              {user.operatorApprovalRequired && (
-                <StatusBadge tone={statusTones[profile.approvalStatus]}>
-                  {statusLabels[profile.approvalStatus]}
-                </StatusBadge>
-              )}
+      <div className="admin-detail-layout">
+        <div className="admin-detail-main">
+          <article className="admin-detail-card">
+            <div className="admin-detail-card-title">
+              <OperatorInitials name={profile.businessName} />
+              <div>
+                <h2>Profil bilgileri</h2>
+                <p>İşletmecinin kaydettiği bilgiler</p>
+              </div>
             </div>
-            <dl className="detail-list">
+            <dl className="admin-detail-facts">
               <div>
                 <dt>Telefon</dt>
                 <dd>{profile.contactPhone}</dd>
-              </div>
-              <div>
-                <dt>Açıklama</dt>
-                <dd>{profile.description || 'Belirtilmedi'}</dd>
               </div>
               <div>
                 <dt>Herkese açık</dt>
                 <dd>{profile.publiclyVisible ? 'Evet' : 'Hayır'}</dd>
               </div>
               <div>
-                <dt>Hesap</dt>
-                <dd>{profile.active ? 'Aktif' : 'Askıda'}</dd>
+                <dt>Oluşturulma</dt>
+                <dd>{formatDay(profile.createdAt)}</dd>
+              </div>
+              <div>
+                <dt>Son güncelleme</dt>
+                <dd>{formatDay(profile.updatedAt)}</dd>
+              </div>
+              <div className="admin-detail-fact-wide">
+                <dt>Açıklama</dt>
+                <dd>{profile.description || 'Belirtilmedi'}</dd>
               </div>
             </dl>
           </article>
 
-          {user.operatorApprovalRequired &&
-            profile.approvalStatus === 'PENDING' && (
-              <section className="form-card compact-card form-stack">
-                <h2>Başvuruyu sonuçlandır</h2>
-                <button
-                  className="primary-button"
-                  disabled={pending}
-                  onClick={approve}
-                  type="button"
-                >
-                  Başvuruyu onayla
-                </button>
-                <form className="form-stack" onSubmit={requestRevision}>
-                  <label className="form-field">
-                    <span>Düzeltme nedeni</span>
-                    <textarea
-                      onChange={(event) => setReason(event.target.value)}
-                      rows={4}
-                      value={reason}
-                    />
-                  </label>
-                  <button
-                    className="secondary-button"
-                    disabled={pending}
-                    type="submit"
-                  >
-                    Düzeltme iste
-                  </button>
-                </form>
-              </section>
-            )}
-
-          {profile.active && (
-            <button
-              className="danger-button admin-danger-action"
-              disabled={pending}
-              onClick={suspend}
-              type="button"
-            >
-              İşletmeciyi askıya al
-            </button>
-          )}
-
-          <section className="form-card compact-card">
+          <section className="admin-detail-card">
+            <p className="admin-eyebrow">Hesap geçmişi</p>
             <h2>İnceleme geçmişi</h2>
-            {detail.reviewHistory.length ? (
-              <ol className="review-list">
-                {detail.reviewHistory.map((review) => (
+            {reviewHistory.length ? (
+              <ol className="admin-review-timeline">
+                {reviewHistory.map((review) => (
                   <li key={review.id}>
-                    <strong>
-                      {review.decision === 'APPROVED'
-                        ? 'Onaylandı'
-                        : 'Düzeltme istendi'}
-                    </strong>
-                    {review.reason && <p>{review.reason}</p>}
-                    <small>{formatDate(review.reviewedAt)}</small>
+                    <span
+                      aria-hidden="true"
+                      className={`admin-review-mark${
+                        review.decision === 'APPROVED'
+                          ? ' admin-review-mark-approved'
+                          : ''
+                      }`}
+                    >
+                      {review.decision === 'APPROVED' ? '✓' : '!'}
+                    </span>
+                    <div>
+                      <strong>
+                        {review.decision === 'APPROVED'
+                          ? 'Onaylandı'
+                          : 'Düzeltme istendi'}
+                      </strong>
+                      {review.reason && <p>{review.reason}</p>}
+                      <small>{formatDate(review.reviewedAt)}</small>
+                    </div>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p>Henüz bir inceleme kaydı yok.</p>
+              <p className="admin-detail-muted">
+                Henüz bir inceleme kaydı yok.
+              </p>
             )}
           </section>
-        </>
+        </div>
+
+        <aside
+          aria-labelledby="admin-actions-title"
+          className="admin-detail-card admin-detail-actions"
+        >
+          <p className="admin-eyebrow">Yönetim aksiyonları</p>
+          <h2 id="admin-actions-title">Hesap durumunu yönetin</h2>
+
+          {reviewable && (
+            <div className="admin-review-actions">
+              <h3>Başvuruyu sonuçlandır</h3>
+              <button
+                className="primary-button"
+                disabled={pending}
+                onClick={() => setConfirmation('approve')}
+                type="button"
+              >
+                Başvuruyu onayla
+              </button>
+              <form className="form-stack" onSubmit={openRevision}>
+                <FormField
+                  error={reasonError}
+                  htmlFor="revision-reason"
+                  label="Düzeltme nedeni"
+                >
+                  <textarea
+                    onChange={(event) => {
+                      setReason(event.target.value)
+                      setReasonError(undefined)
+                    }}
+                    rows={4}
+                    value={reason}
+                  />
+                </FormField>
+                <button
+                  className="secondary-button"
+                  disabled={pending}
+                  type="submit"
+                >
+                  Düzeltme iste
+                </button>
+              </form>
+            </div>
+          )}
+
+          {profile.active ? (
+            <button
+              className="admin-danger-solid"
+              disabled={pending}
+              onClick={() => setConfirmation('suspend')}
+              type="button"
+            >
+              İşletmeciyi askıya al
+            </button>
+          ) : (
+            <p className="admin-detail-muted">
+              Bu hesap askıda. Hesap girişe kapalı ve profil aramalarda
+              görünmüyor.
+            </p>
+          )}
+
+          {!approvalRequired && (
+            <p className="admin-detail-note">
+              Bu ortamda profilin yayımlanması için yönetici onayı zorunlu
+              değildir.
+            </p>
+          )}
+        </aside>
+      </div>
+
+      {confirmation === 'approve' && (
+        <AdminConfirmDialog
+          confirmLabel="Evet, onayla"
+          onCancel={() => setConfirmation(undefined)}
+          onConfirm={() => void confirmAction()}
+          pending={pending}
+          title="Başvuru onaylansın mı?"
+        >
+          <p>
+            Yayın koşulları sağlandığında profil aramalarda görünmeye başlar.
+          </p>
+        </AdminConfirmDialog>
+      )}
+      {confirmation === 'revision' && (
+        <AdminConfirmDialog
+          confirmLabel="Talebi gönder"
+          onCancel={() => setConfirmation(undefined)}
+          onConfirm={() => void confirmAction()}
+          pending={pending}
+          title="Düzeltme talebi gönderilsin mi?"
+        >
+          <p>Bu gerekçe işletmeciye iletilir ve inceleme geçmişine eklenir:</p>
+          <blockquote>{reason.trim()}</blockquote>
+        </AdminConfirmDialog>
+      )}
+      {confirmation === 'suspend' && (
+        <AdminConfirmDialog
+          confirmLabel="Askıya al"
+          danger
+          onCancel={() => setConfirmation(undefined)}
+          onConfirm={() => void confirmAction()}
+          pending={pending}
+          title="İşletmeci askıya alınsın mı?"
+        >
+          <p>
+            Hesap girişe kapanır, açık oturumları sonlandırılır ve profil
+            aramalardan kalkar. Bu işlem bu panelden geri alınamaz.
+          </p>
+        </AdminConfirmDialog>
       )}
     </section>
   )
+}
+
+function OperatorInitials({ name }: { name: string | null }) {
+  const initials = (name ?? '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word.charAt(0).toLocaleUpperCase('tr-TR'))
+    .join('')
+  return (
+    <span aria-hidden="true" className="admin-operator-initials">
+      {initials || '–'}
+    </span>
+  )
+}
+
+function AccountBadge({ active }: { active: boolean }) {
+  return active ? (
+    <StatusBadge tone="success">Aktif</StatusBadge>
+  ) : (
+    <StatusBadge tone="danger">Askıda</StatusBadge>
+  )
+}
+
+function visibilityLabel(profile: OperatorProfile) {
+  return profile.publiclyVisible ? 'Herkese açık' : 'Gizli'
 }
 
 function handleSession(
@@ -443,4 +662,10 @@ function formatDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function formatDay(value: string) {
+  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' }).format(
+    new Date(value),
+  )
 }

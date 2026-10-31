@@ -883,6 +883,16 @@ Never mark tasks done because code was generated: verification and review requir
 - Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The auth Vitest file passed 30/30 and the complete serial Vitest suite passed 139/139, including the demand-feedback test that is known to be unstable. The new Playwright spec passed 11/11 at 1440, 768, 390, and 320 pixels including WCAG 2.2 AA, overflow, keyboard order, and parent/operator login return, and the complete mocked Chromium suite passed 63/63.
 - No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
 
+## Verified UI-FIDELITY-14 M01–M02 admin operator evidence — 2026-10-31
+
+- Branch: `feat/issue-152-admin-operators`; PR #176; GitHub issues #152 and #123. `/admin/applications` and `/admin/applications/:applicationId` now follow the approved Manus composition: status filter bar, operator rows with initials, a two-column detail layout with an actions card, and modal confirmations in place of `window.confirm`.
+- Every value comes from the existing admin API. The Manus statistics, readiness percentages, e-mail, school coverage, search box, report button, edit button, and the Yayında/Askıya alındı filters are omitted because the API has no such fields or query parameters. `publiclyVisible` is labelled as the profile toggle, never as derived publication.
+- Open decision: issue #152 and the Manus state image ask for a suspension reason, but `POST /admin/operators/{id}/suspend` accepts no body and stores no reason. The modal therefore collects none rather than discarding typed text; capturing one needs an approved backend change. Correction requests keep their required, stored reason.
+- Added a `Tümü` filter using the API's existing unfiltered query, and a retry on detail load failure. A failed correction request now keeps the typed reason. Pilot mode still hides approval status, filters, and review actions.
+- Before/after desktop and mobile captures and the suspension state are under `docs/screenshots/ui-fidelity-14/`; API responses in them are mocked.
+- Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The complete serial Vitest suite passed 142/142, and the complete mocked Chromium suite passed 69/69, including WCAG 2.2 AA and overflow checks at 1440, 768, 390, and 320 pixels. The mocked and real full-stack journeys were updated for the modal confirmations and the filter buttons.
+- No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
 ## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
 
 - Branch: `fix/issue-170-reopen-inactive-demand`; GitHub issue #170; owner-approved decision D055. A parent without a support row may now reopen a `CLOSED(INACTIVE)` demand of the current academic year and an active school by joining the same row. `CLOSED(FULFILLED)`, `CLOSED(ADMIN)`, and `ARCHIVED` stay closed, and duplicate creation still adds no support. No migration, notification, or authorization rule changed.
