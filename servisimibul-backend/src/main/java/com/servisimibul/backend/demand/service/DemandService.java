@@ -192,7 +192,8 @@ public class DemandService {
         DemandSupport support = supportRepository.findOwnedForUpdate(demandId, parentId).orElse(null);
         if (support == null) {
             if (!demand.isOpen()) {
-                throw DemandApiException.conflict("demand_not_open", "Demand is not open for support");
+                requireReopenableByNewParent(demand);
+                feedbackService.reopenInactive(demand);
             }
             supportRepository.saveAndFlush(new DemandSupport(
                     demand,
@@ -241,6 +242,21 @@ public class DemandService {
             support.withdraw();
             supportRepository.saveAndFlush(support);
             feedbackService.supportWithdrawn(support);
+        }
+    }
+
+    private void requireReopenableByNewParent(Demand demand) {
+        if (!demand.isClosedInactive()) {
+            throw DemandApiException.conflict("demand_not_open", "Demand is not open for support");
+        }
+        if (!properties.academicYear().equals(demand.getAcademicYear())) {
+            throw DemandApiException.conflict(
+                    "demand_not_reopenable",
+                    "Only a demand from the current academic year can be reopened"
+            );
+        }
+        if (!demand.getSchool().isActive()) {
+            throw DemandApiException.conflict("school_inactive", "School is not active");
         }
     }
 

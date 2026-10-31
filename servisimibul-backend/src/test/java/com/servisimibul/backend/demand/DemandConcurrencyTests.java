@@ -2,6 +2,8 @@ package com.servisimibul.backend.demand;
 
 import com.servisimibul.backend.demand.dto.DemandDtos.CreateRequest;
 import com.servisimibul.backend.demand.dto.DemandDtos.CreateResponse;
+import com.servisimibul.backend.demand.dto.DemandDtos.DemandResponse;
+import com.servisimibul.backend.demand.dto.DemandDtos.SupportRequest;
 import com.servisimibul.backend.demand.service.DemandService;
 import com.servisimibul.backend.geography.District;
 import com.servisimibul.backend.geography.DistrictRepository;
@@ -59,8 +61,12 @@ class DemandConcurrencyTests {
     @Autowired
     private DemandSupportRepository supportRepository;
 
+    @Autowired
+    private DemandLifecycleEventRepository lifecycleEventRepository;
+
     private UUID firstParentId;
     private UUID secondParentId;
+    private UUID creatorParentId;
     private UUID schoolId;
     private Long schoolNeighborhoodId;
     private Long pickupNeighborhoodId;
@@ -92,7 +98,7 @@ class DemandConcurrencyTests {
                 provinceRepository.deleteById(provinceId);
                 provinceRepository.flush();
             }
-            for (UUID id : new UUID[]{firstParentId, secondParentId}) {
+            for (UUID id : new UUID[]{firstParentId, secondParentId, creatorParentId}) {
                 if (id != null) {
                     userRepository.deleteById(id);
                 }
@@ -138,10 +144,77 @@ class DemandConcurrencyTests {
         assertThat(supportRepository.count()).isOne();
     }
 
+    @Test
+    void simultaneousNewParentsReopenAnInactiveDemandOnce() throws Exception {
+        createCommittedFixture();
+        UUID demandId = createThenCloseInactive();
+        SupportRequest request = new SupportRequest(
+                true,
+                false,
+                List.of(SupportReason.NO_SUITABLE_SERVICE)
+        );
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<DemandResponse> first = executor.submit(
+                    () -> supportWhenReleased(ready, start, demandId, request, firstParentId)
+            );
+            Future<DemandResponse> second = executor.submit(
+                    () -> supportWhenReleased(ready, start, demandId, request, secondParentId)
+            );
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            first.get(20, TimeUnit.SECONDS);
+            second.get(20, TimeUnit.SECONDS);
+        }
+
+        assertThat(demandRepository.count()).isOne();
+        assertThat(demandRepository.findById(demandId).orElseThrow().isOpen()).isTrue();
+        assertThat(lifecycleEventRepository.countByDemandIdAndEventType(
+                demandId,
+                DemandLifecycleEventType.REOPENED
+        )).isOne();
+        assertThat(demandService.get(demandId, null).supporterCount()).isEqualTo(2);
+    }
+
+    private UUID createThenCloseInactive() {
+        UUID demandId = demandService.create(new CreateRequest(
+                schoolId,
+                pickupNeighborhoodId,
+                true,
+                false,
+                List.of(SupportReason.NO_SUITABLE_SERVICE)
+        ), creatorParentId).demand().id();
+        demandService.withdrawSupport(demandId, creatorParentId);
+        return demandId;
+    }
+
+    private DemandResponse supportWhenReleased(
+            CountDownLatch ready,
+            CountDownLatch start,
+            UUID demandId,
+            SupportRequest request,
+            UUID parentId
+    ) {
+        try {
+            ready.countDown();
+            if (!start.await(10, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("Concurrent support did not start in time");
+            }
+            return demandService.support(demandId, request, parentId);
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException(exception);
+        }
+    }
+
     private void createCommittedFixture() {
         transactionTemplate.executeWithoutResult(status -> {
             AppUser first = verifiedParent("concurrent-demand-one@example.com");
             AppUser second = verifiedParent("concurrent-demand-two@example.com");
+            AppUser creator = verifiedParent("concurrent-demand-creator@example.com");
             Province province = provinceRepository.save(new Province("34", "Istanbul"));
             District district = districtRepository.save(new District(province, "Kadikoy"));
             Neighborhood schoolNeighborhood = neighborhoodRepository.save(
@@ -156,6 +229,7 @@ class DemandConcurrencyTests {
 
             firstParentId = first.getId();
             secondParentId = second.getId();
+            creatorParentId = creator.getId();
             schoolId = school.getId();
             schoolNeighborhoodId = schoolNeighborhood.getId();
             pickupNeighborhoodId = pickupNeighborhood.getId();
