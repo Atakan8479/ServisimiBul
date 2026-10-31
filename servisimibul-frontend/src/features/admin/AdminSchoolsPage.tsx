@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { StatusBadge } from '../../components/design-system'
+import { StatePanel, StatusBadge } from '../../components/design-system'
+import { OperatorInitials } from './AdminApplicationsPage'
+import { AdminConfirmDialog } from './AdminConfirmDialog'
 import {
   createSchool,
   getAdminSchools,
@@ -31,19 +40,26 @@ const emptyForm = {
 
 export function AdminSchoolsPage() {
   const navigate = useNavigate()
-  const editorHeadingRef = useRef<HTMLHeadingElement>(null)
+  const feedbackRef = useRef<HTMLDivElement>(null)
+  // Geography responses apply only while their request is still the latest editor action.
+  const editorRequest = useRef(0)
   const [result, setResult] = useState<SchoolPage>()
   const [provinces, setProvinces] = useState<Province[]>([])
   const [districts, setDistricts] = useState<District[]>([])
   const [neighborhoods, setNeighborhoods] = useState<Neighborhood[]>([])
   const [form, setForm] = useState(emptyForm)
+  const [editorOpen, setEditorOpen] = useState(false)
   const [editing, setEditing] = useState<School>()
+  const [statusTarget, setStatusTarget] = useState<School>()
+  const [attempt, setAttempt] = useState(0)
   const [query, setQuery] = useState('')
   const [submittedQuery, setSubmittedQuery] = useState('')
   const [page, setPage] = useState(0)
   const [pending, setPending] = useState<string>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>()
+  const [loadError, setLoadError] = useState<string>()
+  const [formError, setFormError] = useState<string>()
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState<string>()
 
@@ -68,7 +84,7 @@ export function AdminSchoolsPage() {
         if (active) setResult(response)
       })
       .catch((failure: unknown) => {
-        if (active) handleSession(failure, navigate, setError)
+        if (active) handleSession(failure, navigate, setLoadError)
       })
       .finally(() => {
         if (active) setLoading(false)
@@ -76,7 +92,18 @@ export function AdminSchoolsPage() {
     return () => {
       active = false
     }
-  }, [navigate, page, submittedQuery])
+  }, [attempt, navigate, page, submittedQuery])
+
+  useEffect(() => {
+    if (notice || error) feedbackRef.current?.focus()
+  }, [error, notice])
+
+  useEffect(
+    () => () => {
+      editorRequest.current += 1
+    },
+    [],
+  )
 
   function chooseProvince(provinceId: string) {
     setForm((current) => ({
@@ -86,13 +113,20 @@ export function AdminSchoolsPage() {
       neighborhoodId: '',
     }))
     setNeighborhoods([])
+    const request = ++editorRequest.current
     if (!provinceId) {
       setDistricts([])
       return
     }
     void getDistricts(Number(provinceId))
-      .then(setDistricts)
-      .catch((failure: unknown) => handleSession(failure, navigate, setError))
+      .then((items) => {
+        if (request === editorRequest.current) setDistricts(items)
+      })
+      .catch((failure: unknown) => {
+        if (request === editorRequest.current) {
+          handleSession(failure, navigate, setFormError)
+        }
+      })
   }
 
   function chooseDistrict(districtId: string) {
@@ -101,24 +135,40 @@ export function AdminSchoolsPage() {
       districtId,
       neighborhoodId: '',
     }))
+    const request = ++editorRequest.current
     if (!districtId) {
       setNeighborhoods([])
       return
     }
     void getNeighborhoods(Number(districtId))
-      .then(setNeighborhoods)
-      .catch((failure: unknown) => handleSession(failure, navigate, setError))
+      .then((items) => {
+        if (request === editorRequest.current) setNeighborhoods(items)
+      })
+      .catch((failure: unknown) => {
+        if (request === editorRequest.current) {
+          handleSession(failure, navigate, setFormError)
+        }
+      })
+  }
+
+  function addSchool() {
+    resetForm()
+    setError(undefined)
+    setNotice(undefined)
+    setEditorOpen(true)
   }
 
   async function editSchool(school: School) {
-    setEditing(school)
+    resetForm()
+    const request = editorRequest.current
     setError(undefined)
-    setFieldErrors({})
+    setNotice(undefined)
     try {
       const [nextDistricts, nextNeighborhoods] = await Promise.all([
         getDistricts(school.provinceId),
         getNeighborhoods(school.districtId),
       ])
+      if (request !== editorRequest.current) return
       setDistricts(nextDistricts)
       setNeighborhoods(nextNeighborhoods)
       setForm({
@@ -131,17 +181,18 @@ export function AdminSchoolsPage() {
         sourceCode: school.sourceCode ?? '',
         active: school.active,
       })
-      window.requestAnimationFrame(() => editorHeadingRef.current?.focus())
+      setEditing(school)
+      setEditorOpen(true)
     } catch (failure) {
-      setEditing(undefined)
-      handleSession(failure, navigate, setError)
+      if (request === editorRequest.current) {
+        handleSession(failure, navigate, setError)
+      }
     }
   }
 
   async function save(event: FormEvent) {
     event.preventDefault()
-    setError(undefined)
-    setNotice(undefined)
+    setFormError(undefined)
     setFieldErrors({})
     const requiredErrors: Record<string, string> = {}
     if (!form.name.trim()) requiredErrors.name = 'Okul adı zorunludur.'
@@ -150,7 +201,7 @@ export function AdminSchoolsPage() {
     }
     if (Object.keys(requiredErrors).length > 0) {
       setFieldErrors(requiredErrors)
-      setError('Okul adı ve mahalle zorunludur.')
+      setFormError('Okul adı ve mahalle zorunludur.')
       return
     }
 
@@ -188,28 +239,24 @@ export function AdminSchoolsPage() {
             }
           : current,
       )
-      resetForm()
+      closeEditor()
       setNotice(editing ? 'Okul güncellendi.' : 'Okul eklendi.')
     } catch (failure) {
       if (failure instanceof ApiError) {
         setFieldErrors(failure.problem.fieldErrors ?? {})
       }
-      handleSession(failure, navigate, setError)
+      handleSession(failure, navigate, setFormError)
     } finally {
       setPending(undefined)
     }
   }
 
-  async function toggleActive(school: School) {
-    if (
-      !window.confirm(
-        `${school.name} ${school.active ? 'pasife alınsın' : 'etkinleştirilsin'} mi?`,
-      )
-    ) {
-      return
-    }
+  async function toggleActive() {
+    const school = statusTarget
+    if (!school) return
     setPending(school.id)
     setError(undefined)
+    setNotice(undefined)
     try {
       const updated = await setSchoolActive(school.id, !school.active)
       setResult((current) =>
@@ -223,218 +270,72 @@ export function AdminSchoolsPage() {
           : current,
       )
       setNotice(
-        updated.active ? 'Okul etkinleştirildi.' : 'Okul pasife alındı.',
+        updated.active ? 'Okul etkinleştirildi.' : 'Okul devre dışı bırakıldı.',
       )
     } catch (failure) {
       handleSession(failure, navigate, setError)
     } finally {
       setPending(undefined)
+      setStatusTarget(undefined)
     }
   }
 
   function resetForm() {
+    editorRequest.current += 1
     setEditing(undefined)
     setForm(emptyForm)
     setDistricts([])
     setNeighborhoods([])
     setFieldErrors({})
+    setFormError(undefined)
+  }
+
+  function closeEditor() {
+    setEditorOpen(false)
+    resetForm()
   }
 
   return (
     <section className="workspace-page admin-page admin-schools-page">
-      <header className="admin-page-header">
-        <h1>Okulları yönetin</h1>
-        <p>
-          Test ettiğiniz okulları ekleyin ve katalogdaki durumlarını yönetin.
-        </p>
+      <header className="admin-page-header admin-operator-header admin-detail-header">
+        <div>
+          <p className="admin-eyebrow">Yönetim paneli</p>
+          <h1>Okul kataloğu</h1>
+          <p>Okul kayıtlarını ve katalogdaki durumlarını yönetin.</p>
+        </div>
+        <button
+          className="primary-button admin-school-add"
+          onClick={addSchool}
+          type="button"
+        >
+          <span aria-hidden="true">+</span> Okul ekle
+        </button>
       </header>
 
-      {error && (
-        <div className="form-error" role="alert">
-          {error}
-        </div>
-      )}
-      {notice && (
-        <div className="status-banner success" role="status">
-          {notice}
+      {(error || notice) && (
+        <div className="admin-feedback" ref={feedbackRef} tabIndex={-1}>
+          {error && (
+            <div className="form-error" role="alert">
+              {error}
+            </div>
+          )}
+          {notice && (
+            <div className="status-banner success" role="status">
+              {notice}
+            </div>
+          )}
         </div>
       )}
 
-      <form
-        className="form-card compact-card form-stack admin-school-editor"
-        onSubmit={save}
-      >
-        <div className="section-heading">
-          <h2 ref={editorHeadingRef} tabIndex={-1}>
-            {editing ? `${editing.name} okulunu düzenle` : 'Yeni okul ekle'}
-          </h2>
-          {editing && (
-            <button className="text-button" onClick={resetForm} type="button">
-              İptal
-            </button>
-          )}
-        </div>
-        <label className="form-field">
-          <span>Okul adı</span>
-          <input
-            aria-describedby={
-              fieldErrors.name ? 'admin-school-name-error' : undefined
-            }
-            aria-invalid={Boolean(fieldErrors.name)}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, name: event.target.value }))
-            }
-            value={form.name}
-          />
-          {fieldErrors.name && (
-            <small className="field-error" id="admin-school-name-error">
-              {fieldErrors.name}
-            </small>
-          )}
-        </label>
-        <div className="location-grid">
-          <label className="form-field">
-            <span>İl</span>
-            <select
-              onChange={(event) => chooseProvince(event.target.value)}
-              value={form.provinceId}
-            >
-              <option value="">İl seçin</option>
-              {provinces.map((province) => (
-                <option key={province.id} value={province.id}>
-                  {province.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>İlçe</span>
-            <select
-              disabled={!form.provinceId}
-              onChange={(event) => chooseDistrict(event.target.value)}
-              value={form.districtId}
-            >
-              <option value="">İlçe seçin</option>
-              {districts.map((district) => (
-                <option key={district.id} value={district.id}>
-                  {district.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="form-field">
-            <span>Mahalle</span>
-            <select
-              aria-describedby={
-                fieldErrors.neighborhoodId
-                  ? 'admin-school-neighborhood-error'
-                  : undefined
-              }
-              aria-invalid={Boolean(fieldErrors.neighborhoodId)}
-              disabled={!form.districtId}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  neighborhoodId: event.target.value,
-                }))
-              }
-              value={form.neighborhoodId}
-            >
-              <option value="">Mahalle seçin</option>
-              {neighborhoods.map((neighborhood) => (
-                <option key={neighborhood.id} value={neighborhood.id}>
-                  {neighborhood.name}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.neighborhoodId && (
-              <small
-                className="field-error"
-                id="admin-school-neighborhood-error"
-              >
-                {fieldErrors.neighborhoodId}
-              </small>
-            )}
-          </label>
-        </div>
-        <label className="form-field">
-          <span>Adres (isteğe bağlı)</span>
-          <textarea
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                address: event.target.value,
-              }))
-            }
-            rows={3}
-            value={form.address}
-          />
-        </label>
-        <div className="location-grid">
-          <label className="form-field">
-            <span>Kaynak adı (isteğe bağlı)</span>
-            <input
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  sourceName: event.target.value,
-                }))
-              }
-              value={form.sourceName}
-            />
-          </label>
-          <label className="form-field">
-            <span>Kaynak kodu (isteğe bağlı)</span>
-            <input
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  sourceCode: event.target.value,
-                }))
-              }
-              value={form.sourceCode}
-            />
-          </label>
-        </div>
-        {!editing && (
-          <label className="checkbox-row">
-            <input
-              checked={form.active}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  active: event.target.checked,
-                }))
-              }
-              type="checkbox"
-            />
-            <span>Okulu aktif olarak ekle</span>
-          </label>
-        )}
-        <button className="primary-button" disabled={pending === 'save'}>
-          {pending === 'save'
-            ? 'Kaydediliyor…'
-            : editing
-              ? 'Değişiklikleri kaydet'
-              : 'Okulu ekle'}
-        </button>
-      </form>
-
-      <section
-        className="catalog-section admin-school-catalog"
-        aria-labelledby="school-list-title"
-      >
-        <div className="section-heading">
-          <h2 id="school-list-title">Okullar</h2>
-          <span className="count-badge">{result?.totalElements ?? 0} okul</span>
-        </div>
+      <div className="admin-school-toolbar">
         <form
-          className="search-row"
+          className="admin-school-search"
           onSubmit={(event) => {
             event.preventDefault()
             const nextQuery = query.trim()
             if (page !== 0 || nextQuery !== submittedQuery) {
               setLoading(true)
+              setLoadError(undefined)
               setPage(0)
               setSubmittedQuery(nextQuery)
             }
@@ -450,84 +351,330 @@ export function AdminSchoolsPage() {
           </label>
           <button className="secondary-button">Ara</button>
         </form>
+        {result && !loading && !loadError && (
+          <p className="admin-operator-count">{result.totalElements} toplam</p>
+        )}
+      </div>
 
-        {loading ? (
-          <InlineLoading label="Okullar yükleniyor" />
-        ) : result?.content.length ? (
-          <div className="school-list">
+      {loadError ? (
+        <StatePanel
+          action={
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setLoading(true)
+                setLoadError(undefined)
+                setAttempt((current) => current + 1)
+              }}
+              type="button"
+            >
+              Tekrar dene
+            </button>
+          }
+          detail={loadError}
+          title="Okullar yüklenemedi"
+          tone="error"
+        />
+      ) : loading ? (
+        <StatePanel
+          detail="Güncel okul kayıtları getiriliyor."
+          title="Okullar yükleniyor"
+          tone="loading"
+        />
+      ) : result?.content.length ? (
+        <div className="admin-operator-table admin-school-table">
+          <div aria-hidden="true" className="admin-operator-columns">
+            <span>Okul</span>
+            <span>İlçe / Mahalle</span>
+            <span>Durum</span>
+            <span>İşlem</span>
+          </div>
+          <ul>
             {result.content.map((school) => (
-              <article className="school-card" key={school.id}>
-                <div className="school-title-row">
+              <li className="admin-operator-row" key={school.id}>
+                <div className="admin-operator-identity">
+                  <OperatorInitials name={school.name} />
                   <div>
-                    <h3>{school.name}</h3>
-                    <p>
-                      {school.neighborhoodName} · {school.districtName} ·{' '}
-                      {school.provinceName}
-                    </p>
+                    <h2 id={`school-${school.id}`}>{school.name}</h2>
+                    {school.address && <p>{school.address}</p>}
                   </div>
-                  <StatusBadge tone={school.active ? 'success' : 'neutral'}>
-                    {school.active ? 'Aktif' : 'Pasif'}
-                  </StatusBadge>
                 </div>
-                <div className="button-row">
+                <dl>
+                  <div>
+                    <dt>İlçe / Mahalle</dt>
+                    <dd>
+                      {school.districtName} · {school.provinceName}
+                      <small>{school.neighborhoodName}</small>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Durum</dt>
+                    <dd>
+                      <StatusBadge tone={school.active ? 'success' : 'neutral'}>
+                        {school.active ? 'Aktif' : 'Devre dışı'}
+                      </StatusBadge>
+                    </dd>
+                  </div>
+                </dl>
+                <div className="admin-school-actions">
                   <button
-                    className="secondary-button"
+                    aria-describedby={`school-${school.id}`}
+                    className="text-button"
                     onClick={() => void editSchool(school)}
                     type="button"
                   >
                     Düzenle
                   </button>
                   <button
-                    className={
-                      school.active ? 'danger-button' : 'primary-button'
-                    }
+                    aria-describedby={`school-${school.id}`}
+                    className="text-button"
                     disabled={pending === school.id}
-                    onClick={() => void toggleActive(school)}
+                    onClick={() => {
+                      editorRequest.current += 1
+                      setStatusTarget(school)
+                    }}
                     type="button"
                   >
-                    {school.active ? 'Pasife al' : 'Etkinleştir'}
+                    {school.active ? 'Devre dışı bırak' : 'Etkinleştir'}
                   </button>
                 </div>
-              </article>
+              </li>
             ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <h3>Okul bulunamadı</h3>
-            <p>Aramanızı değiştirin veya ilk okulu ekleyin.</p>
-          </div>
-        )}
+          </ul>
+        </div>
+      ) : (
+        <div className="empty-state">
+          <h2>Okul bulunamadı</h2>
+          <p>Aramanızı değiştirin veya ilk okulu ekleyin.</p>
+        </div>
+      )}
 
-        {result && result.totalPages > 1 && (
-          <div className="button-row pagination" aria-label="Sayfalama">
-            <button
-              className="secondary-button"
-              disabled={page === 0}
-              onClick={() => {
-                setLoading(true)
-                setPage((current) => current - 1)
-              }}
-              type="button"
-            >
-              Önceki
-            </button>
-            <span>
-              Sayfa {page + 1} / {result.totalPages}
-            </span>
-            <button
-              className="secondary-button"
-              disabled={page + 1 >= result.totalPages}
-              onClick={() => {
-                setLoading(true)
-                setPage((current) => current + 1)
-              }}
-              type="button"
-            >
-              Sonraki
-            </button>
-          </div>
-        )}
-      </section>
+      {result && result.totalPages > 1 && (
+        <nav className="button-row pagination" aria-label="Sayfalama">
+          <button
+            className="secondary-button"
+            disabled={page === 0}
+            onClick={() => {
+              setLoading(true)
+              setPage((current) => current - 1)
+            }}
+            type="button"
+          >
+            Önceki
+          </button>
+          <span>
+            Sayfa {page + 1} / {result.totalPages}
+          </span>
+          <button
+            className="secondary-button"
+            disabled={page + 1 >= result.totalPages}
+            onClick={() => {
+              setLoading(true)
+              setPage((current) => current + 1)
+            }}
+            type="button"
+          >
+            Sonraki
+          </button>
+        </nav>
+      )}
+
+      {editorOpen && (
+        <SchoolEditorDialog
+          onCancel={closeEditor}
+          pending={pending === 'save'}
+          title={editing ? 'Okul kaydını düzenle' : 'Okul ekle'}
+        >
+          <form className="form-stack" noValidate onSubmit={save}>
+            {formError && (
+              <div className="form-error" role="alert">
+                {formError}
+              </div>
+            )}
+            <label className="form-field">
+              <span>Okul adı</span>
+              <input
+                aria-describedby={
+                  fieldErrors.name ? 'admin-school-name-error' : undefined
+                }
+                aria-invalid={Boolean(fieldErrors.name)}
+                data-autofocus
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                value={form.name}
+              />
+              {fieldErrors.name && (
+                <small className="field-error" id="admin-school-name-error">
+                  {fieldErrors.name}
+                </small>
+              )}
+            </label>
+            <div className="location-grid">
+              <label className="form-field">
+                <span>İl</span>
+                <select
+                  onChange={(event) => chooseProvince(event.target.value)}
+                  value={form.provinceId}
+                >
+                  <option value="">İl seçin</option>
+                  {provinces.map((province) => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>İlçe</span>
+                <select
+                  disabled={!form.provinceId}
+                  onChange={(event) => chooseDistrict(event.target.value)}
+                  value={form.districtId}
+                >
+                  <option value="">İlçe seçin</option>
+                  {districts.map((district) => (
+                    <option key={district.id} value={district.id}>
+                      {district.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                <span>Mahalle</span>
+                <select
+                  aria-describedby={
+                    fieldErrors.neighborhoodId
+                      ? 'admin-school-neighborhood-error'
+                      : undefined
+                  }
+                  aria-invalid={Boolean(fieldErrors.neighborhoodId)}
+                  disabled={!form.districtId}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      neighborhoodId: event.target.value,
+                    }))
+                  }
+                  value={form.neighborhoodId}
+                >
+                  <option value="">Mahalle seçin</option>
+                  {neighborhoods.map((neighborhood) => (
+                    <option key={neighborhood.id} value={neighborhood.id}>
+                      {neighborhood.name}
+                    </option>
+                  ))}
+                </select>
+                {fieldErrors.neighborhoodId && (
+                  <small
+                    className="field-error"
+                    id="admin-school-neighborhood-error"
+                  >
+                    {fieldErrors.neighborhoodId}
+                  </small>
+                )}
+              </label>
+            </div>
+            <label className="form-field">
+              <span>Adres (isteğe bağlı)</span>
+              <textarea
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    address: event.target.value,
+                  }))
+                }
+                rows={3}
+                value={form.address}
+              />
+            </label>
+            <div className="location-grid">
+              <label className="form-field">
+                <span>Kaynak adı (isteğe bağlı)</span>
+                <input
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      sourceName: event.target.value,
+                    }))
+                  }
+                  value={form.sourceName}
+                />
+              </label>
+              <label className="form-field">
+                <span>Kaynak kodu (isteğe bağlı)</span>
+                <input
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      sourceCode: event.target.value,
+                    }))
+                  }
+                  value={form.sourceCode}
+                />
+              </label>
+            </div>
+            {!editing && (
+              <label className="checkbox-row">
+                <input
+                  checked={form.active}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      active: event.target.checked,
+                    }))
+                  }
+                  type="checkbox"
+                />
+                <span>Okulu aktif olarak ekle</span>
+              </label>
+            )}
+            <div className="admin-confirm-actions">
+              <button
+                className="secondary-button"
+                disabled={pending === 'save'}
+                onClick={closeEditor}
+                type="button"
+              >
+                Vazgeç
+              </button>
+              <button className="primary-button" disabled={pending === 'save'}>
+                {pending === 'save'
+                  ? 'Kaydediliyor…'
+                  : editing
+                    ? 'Değişiklikleri kaydet'
+                    : 'Okulu ekle'}
+              </button>
+            </div>
+          </form>
+        </SchoolEditorDialog>
+      )}
+
+      {statusTarget && (
+        <AdminConfirmDialog
+          confirmLabel={
+            statusTarget.active ? 'Devre dışı bırak' : 'Etkinleştir'
+          }
+          danger={statusTarget.active}
+          onCancel={() => setStatusTarget(undefined)}
+          onConfirm={() => void toggleActive()}
+          pending={pending === statusTarget.id}
+          title={`${statusTarget.name} ${
+            statusTarget.active
+              ? 'devre dışı bırakılsın mı?'
+              : 'etkinleştirilsin mi?'
+          }`}
+        >
+          <p>
+            {statusTarget.active
+              ? 'Okul bu katalogda kalır, ancak veli aramalarında ve işletmeci yayınlarında kullanılamaz.'
+              : 'Okul yeniden veli aramalarında ve işletmeci kapsamlarında kullanılabilir.'}
+          </p>
+        </AdminConfirmDialog>
+      )}
     </section>
   )
 }
@@ -548,11 +695,50 @@ function handleSession(
   )
 }
 
-function InlineLoading({ label }: { label: string }) {
+function SchoolEditorDialog({
+  children,
+  onCancel,
+  pending,
+  title,
+}: {
+  children: ReactNode
+  onCancel: () => void
+  pending: boolean
+  title: string
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    dialog?.showModal()
+    dialog?.querySelector<HTMLElement>('[data-autofocus]')?.focus()
+    return () => {
+      dialog?.close()
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [])
+
   return (
-    <div className="inline-loading" aria-busy="true" aria-live="polite">
-      <span className="loading-dot" aria-hidden="true" />
-      {label}
-    </div>
+    <dialog
+      aria-labelledby={titleId}
+      className="admin-confirm-dialog admin-school-dialog"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onCancel()
+      }}
+      onClose={(event) => {
+        // Repeated Escape can close a native dialog without a cancel event.
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
+      }}
+      ref={dialogRef}
+    >
+      <h2 id={titleId}>{title}</h2>
+      {children}
+    </dialog>
   )
 }

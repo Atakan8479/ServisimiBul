@@ -57,48 +57,6 @@
   align-content: center;
 }
 
-.admin-workspace .admin-schools-page {
-  display: grid;
-  grid-template-columns: minmax(19rem, 0.75fr) minmax(25rem, 1.25fr);
-  align-items: start;
-  gap: 1.5rem;
-}
-
-.admin-workspace .admin-schools-page > .admin-page-header,
-.admin-workspace .admin-schools-page > .form-error,
-.admin-workspace .admin-schools-page > .status-banner {
-  grid-column: 1 / -1;
-}
-
-.admin-workspace .admin-school-editor {
-  position: sticky;
-  top: 1.5rem;
-  margin-top: 0;
-  border: 0;
-  border-radius: var(--radius-large);
-  box-shadow: 0 0.9rem 2.4rem rgba(10, 28, 48, 0.08);
-}
-
-.admin-workspace .admin-school-editor h2:focus-visible {
-  border-radius: var(--radius-small);
-  outline: 3px solid var(--color-focus);
-  outline-offset: 4px;
-}
-
-.admin-workspace .admin-school-catalog {
-  min-width: 0;
-  margin-top: 0;
-  padding: 1.5rem;
-  border-radius: var(--radius-large);
-  background: var(--neutral-0);
-  box-shadow: 0 0.9rem 2.4rem rgba(10, 28, 48, 0.08);
-}
-
-.admin-workspace .admin-school-catalog .school-card {
-  border-radius: var(--radius-medium);
-  box-shadow: none;
-}
-
 .admin-workspace .moderation-page {
   max-width: 82rem;
 }
@@ -185,13 +143,8 @@
 }
 
 @media (max-width: 72rem) {
-  .admin-workspace .admin-schools-page,
   .admin-workspace .moderation-workbench {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .admin-workspace .admin-school-editor {
-    position: static;
   }
 
   .admin-workspace .moderation-filters {
@@ -212,10 +165,6 @@
     font-size: clamp(2rem, 11vw, 2.75rem);
   }
 
-  .admin-workspace .admin-school-catalog {
-    padding: 1rem;
-  }
-
   .admin-workspace .moderation-filters {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -227,16 +176,11 @@
   }
 
   .admin-workspace .moderation-filters > button,
-  .admin-workspace .admin-school-editor > button,
-  .admin-workspace .admin-school-catalog .search-row > button,
-  .admin-workspace .admin-school-catalog .button-row > button,
   .admin-workspace .moderation-actions > button {
     width: 100%;
   }
 
-  .admin-workspace .moderation-actions,
-  .admin-workspace .admin-school-catalog .button-row,
-  .admin-workspace .admin-school-catalog .search-row {
+  .admin-workspace .moderation-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -743,5 +687,106 @@
 
   .admin-confirm-actions > button {
     flex: 1 1 8rem;
+  }
+}
+
+.admin-workspace .admin-school-add {
+  min-height: 3rem;
+  white-space: nowrap;
+}
+
+.admin-workspace .admin-feedback:focus-visible {
+  border-radius: var(--radius-small);
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.admin-workspace .admin-school-toolbar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+}
+
+.admin-workspace .admin-school-search {
+  display: flex;
+  align-items: flex-end;
+  flex: 1 1 18rem;
+  gap: 0.5rem;
+  max-width: 30rem;
+}
+
+.admin-workspace .admin-school-search .form-field {
+  min-width: 0;
+}
+
+.admin-workspace .admin-school-search > button {
+  flex: none;
+  min-height: 3rem;
+}
+
+.admin-workspace .admin-school-table {
+  --admin-operator-grid: minmax(0, 2.4fr) minmax(0, 1.4fr) minmax(0, 0.8fr)
+    15rem;
+}
+
+.admin-workspace .admin-school-table .admin-operator-initials {
+  background: var(--teal-100);
+  color: var(--teal-700);
+}
+
+.admin-workspace .admin-school-table dd small {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--color-muted);
+}
+
+.admin-workspace .admin-school-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+}
+
+.admin-workspace .admin-school-actions .text-button {
+  padding-inline: 0.25rem;
+  color: var(--teal-700);
+  font-size: 0.88rem;
+}
+
+.admin-school-dialog {
+  width: min(40rem, calc(100vw - 2rem));
+}
+
+.admin-school-dialog > form {
+  margin-top: 1rem;
+}
+
+.admin-school-dialog .admin-confirm-actions {
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 72rem) {
+  .admin-workspace .admin-school-actions {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 44rem) {
+  .admin-workspace .admin-school-add {
+    width: 100%;
+  }
+
+  .admin-workspace .admin-detail-header > div:first-child {
+    width: 100%;
+  }
+
+  .admin-workspace .admin-school-search {
+    max-width: none;
+  }
+
+  .admin-workspace .admin-school-toolbar .admin-operator-count {
+    width: 100%;
+    text-align: right;
   }
 }

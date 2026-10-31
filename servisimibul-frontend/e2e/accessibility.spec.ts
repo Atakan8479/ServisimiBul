@@ -113,7 +113,7 @@ for (const viewport of viewports) {
 
     await page.goto('/admin/schools')
     await expect(
-      page.getByRole('heading', { name: 'Okulları yönetin' }),
+      page.getByRole('heading', { name: 'Okul kataloğu' }),
     ).toBeVisible()
     await audit(page, 'admin schools')
 
