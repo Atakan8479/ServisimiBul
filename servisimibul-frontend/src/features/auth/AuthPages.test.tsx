@@ -307,6 +307,109 @@ describe('parent account onboarding', () => {
     ).toBe(true)
   })
 
+  it('presents recovery in the shared auth frame and returns to the originating login', async () => {
+    renderRoute('/forgot-password?from=operator')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Şifrenizi yenileyin' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('complementary', { name: 'ServisimiBul tanıtımı' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Giriş sayfasına dön' }),
+    ).toHaveAttribute('href', '/operator/login')
+  })
+
+  it('shows a recovery backend failure without claiming the link was sent', async () => {
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/forgot-password', () =>
+        HttpResponse.json(
+          {
+            title: 'Too Many Requests',
+            status: 429,
+            detail: 'Çok fazla deneme yapıldı.',
+            code: 'RATE_LIMITED',
+          },
+          { status: 429 },
+        ),
+      ),
+    )
+
+    renderRoute('/forgot-password')
+    fireEvent.change(await screen.findByLabelText('E-posta'), {
+      target: { value: 'parent@example.test' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Yenileme bağlantısı gönder' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Çok fazla deneme yapıldı.',
+    )
+    expect(
+      screen.queryByText(/Hesap uygunsa şifre yenileme bağlantısı/),
+    ).not.toBeInTheDocument()
+    expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
+  })
+
+  it('keeps the reset password policy and form when the token is rejected', async () => {
+    let requests = 0
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/reset-password', () => {
+        requests += 1
+        return HttpResponse.json(
+          {
+            title: 'Bad Request',
+            status: 400,
+            detail: 'Bağlantı geçersiz veya süresi dolmuş.',
+            code: 'INVALID_TOKEN',
+          },
+          { status: 400 },
+        )
+      }),
+    )
+
+    renderRoute('/reset-password?token=expired-token')
+    const password = await screen.findByLabelText('Yeni şifre')
+    fireEvent.change(password, { target: { value: 'kisa' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Şifreyi yenile' }))
+    expect(
+      await screen.findByText('Şifre en az 12 karakter olmalıdır.'),
+    ).toBeInTheDocument()
+    expect(requests).toBe(0)
+
+    fireEvent.change(password, { target: { value: 'new secure password' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Parolayı göster' }))
+    expect(password).toHaveAttribute('type', 'text')
+    fireEvent.click(screen.getByRole('button', { name: 'Şifreyi yenile' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Bağlantı geçersiz veya süresi dolmuş.',
+    )
+    expect(screen.queryByText(/Şifreniz yenilendi/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Şifre yenileme kodu')).toHaveValue(
+      'expired-token',
+    )
+  })
+
+  it('offers no role-guessing recovery link when the reset link carries only a token', async () => {
+    renderRoute('/reset-password?token=reset-token')
+
+    expect(await screen.findByLabelText('Şifre yenileme kodu')).toHaveValue(
+      'reset-token',
+    )
+    expect(
+      screen
+        .getAllByRole('link')
+        .filter((link) =>
+          link.getAttribute('href')?.startsWith('/forgot-password'),
+        ),
+    ).toEqual([])
+  })
+
   it('returns a parent to notifications but rejects an external URL', async () => {
     server.use(
       csrfHandler(),

@@ -874,6 +874,15 @@ Never mark tasks done because code was generated: verification and review requir
 - The default parallel Vitest command reproduced the repository's existing timing/MSW instability. A serialized run passed 130/131 tests; only the pre-existing demand-feedback assertion failed after the known unhandled notification-count request. The tariff-focused tests all pass.
 - No backend source, API contract, tariff data, ADMIN persistence behavior, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
 
+## Verified UI-FIDELITY-10 A07–A08 password recovery evidence — 2026-10-31
+
+- Branch: `feat/issue-148-password-recovery-ui`; PR #174; GitHub issues #148 and #123. `/forgot-password` and `/reset-password` now use the shared `AuthFrame` composition of A01–A06, with the approved image panel on desktop, the single-column form on smaller widths, full-width arrow submit actions, and a back link under the form.
+- Request paths, the non-enumerating confirmation text, token prefill, validation, password policy, CSRF, session revocation copy, and backend error display are unchanged. The Manus demo copy, 8-character hint, and confirm-password field are prototype-only and were not copied; the visible reset-code field stays because the production flow reads and validates it.
+- One addition uses an existing production capability: the shared password visibility button on the new-password field, now vertically centered, which also corrects it on A02–A05. The Manus `Yeni bağlantı iste` link was removed after review: backend reset links carry only `token`, so A08 has no trustworthy origin, and A07 without `from` returns to the operator login, which would misdirect parents.
+- Before/after desktop and mobile captures plus A07 validation/success and A08 rejected-token/success states are under `docs/screenshots/ui-fidelity-10/`. API responses in those states are mocked, so they prove the UI handling, not email delivery; delivery remains disabled and unverified.
+- Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The auth Vitest file passed 30/30 and the complete serial Vitest suite passed 139/139, including the demand-feedback test that is known to be unstable. The new Playwright spec passed 11/11 at 1440, 768, 390, and 320 pixels including WCAG 2.2 AA, overflow, keyboard order, and parent/operator login return, and the complete mocked Chromium suite passed 63/63.
+- No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
 ## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
 
 - Branch: `fix/issue-170-reopen-inactive-demand`; GitHub issue #170; owner-approved decision D055. A parent without a support row may now reopen a `CLOSED(INACTIVE)` demand of the current academic year and an active school by joining the same row. `CLOSED(FULFILLED)`, `CLOSED(ADMIN)`, and `ARCHIVED` stay closed, and duplicate creation still adds no support. No migration, notification, or authorization rule changed.

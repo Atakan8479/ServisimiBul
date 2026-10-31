@@ -7,7 +7,7 @@ export function AuthFrame({
   children,
 }: {
   title: string
-  subtitle: string
+  subtitle?: string
   children: ReactNode
 }) {
   const titleId = useId()
@@ -33,7 +33,7 @@ export function AuthFrame({
         <div className="auth-experience-panel">
           <header className="auth-experience-heading">
             <h1 id={titleId}>{title}</h1>
-            <span>{subtitle}</span>
+            {subtitle && <span>{subtitle}</span>}
           </header>
           {children}
           <footer className="auth-experience-footer">
