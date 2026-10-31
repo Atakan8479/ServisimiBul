@@ -469,7 +469,14 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthCard title="Şifrenizi yenileyin">
+    <AuthFrame
+      title="Şifrenizi yenileyin"
+      subtitle={
+        complete
+          ? undefined
+          : 'Hesabınızda kullandığınız e-posta adresini girin.'
+      }
+    >
       {complete ? (
         <div className="auth-completion" role="status">
           <p>
@@ -480,35 +487,46 @@ export function ForgotPasswordPage() {
           </Link>
         </div>
       ) : (
-        <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
-          <p className="auth-form-intro">
-            Hesabınızda kullandığınız e-posta adresini girin.
-          </p>
-          <FormField
-            label="E-posta"
-            error={errors.email?.message}
-            input={
-              <input type="email" autoComplete="email" {...register('email')} />
-            }
-          />
-          <FormError message={formError} />
-          <button
-            className="primary-button"
-            disabled={isSubmitting}
-            type="submit"
+        <>
+          <form
+            className="form-stack"
+            onSubmit={handleSubmit(submit)}
+            noValidate
           >
-            {isSubmitting ? 'Gönderiliyor…' : 'Yenileme bağlantısı gönder'}
-          </button>
-        </form>
+            <FormField
+              label="E-posta"
+              error={errors.email?.message}
+              input={
+                <input
+                  type="email"
+                  autoComplete="email"
+                  {...register('email')}
+                />
+              }
+            />
+            <FormError message={formError} />
+            <button
+              className="primary-button auth-submit"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              <span>
+                {isSubmitting ? 'Gönderiliyor…' : 'Yenileme bağlantısı gönder'}
+              </span>
+              {!isSubmitting && (
+                <span className="auth-arrow" aria-hidden="true" />
+              )}
+            </button>
+          </form>
+          <p className="auth-back-link">
+            <Link to={loginPath} viewTransition>
+              <span className="auth-arrow back" aria-hidden="true" />
+              Giriş sayfasına dön
+            </Link>
+          </p>
+        </>
       )}
-      {!complete && (
-        <p className="auth-switch">
-          <Link to={loginPath} viewTransition>
-            Giriş sayfasına dön
-          </Link>
-        </p>
-      )}
-    </AuthCard>
+    </AuthFrame>
   )
 }
 
@@ -516,6 +534,7 @@ export function ResetPasswordPage() {
   const [searchParams] = useSearchParams()
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
+  const [showPassword, setShowPassword] = useState(false)
   const {
     register,
     handleSubmit,
@@ -537,7 +556,14 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <AuthCard title="Yeni şifrenizi belirleyin">
+    <AuthFrame
+      title="Yeni şifrenizi belirleyin"
+      subtitle={
+        complete
+          ? undefined
+          : 'Yeni şifreniz kaydedildiğinde açık oturumlarınız güvenli biçimde kapatılır.'
+      }
+    >
       {complete ? (
         <div className="auth-completion" role="status">
           <p>
@@ -557,38 +583,59 @@ export function ResetPasswordPage() {
           </div>
         </div>
       ) : (
-        <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
-          <FormField
-            label="Şifre yenileme kodu"
-            hint="E-postadaki bağlantı bu alanı otomatik doldurur."
-            error={errors.token?.message}
-            input={
-              <input autoComplete="one-time-code" {...register('token')} />
-            }
-          />
-          <FormField
-            label="Yeni şifre"
-            hint="12–64 karakter; boşluk kullanabilirsiniz."
-            error={errors.newPassword?.message}
-            input={
-              <input
-                type="password"
-                autoComplete="new-password"
-                {...register('newPassword')}
-              />
-            }
-          />
-          <FormError message={formError} />
-          <button
-            className="primary-button"
-            disabled={isSubmitting}
-            type="submit"
+        <>
+          <form
+            className="form-stack"
+            onSubmit={handleSubmit(submit)}
+            noValidate
           >
-            {isSubmitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}
-          </button>
-        </form>
+            <FormField
+              label="Şifre yenileme kodu"
+              hint="E-postadaki bağlantı bu alanı otomatik doldurur."
+              error={errors.token?.message}
+              input={
+                <input autoComplete="one-time-code" {...register('token')} />
+              }
+            />
+            <FormField
+              label="Yeni şifre"
+              hint="12–64 karakter; boşluk kullanabilirsiniz."
+              error={errors.newPassword?.message}
+              endAction={
+                <PasswordVisibilityButton
+                  visible={showPassword}
+                  onToggle={() => setShowPassword((visible) => !visible)}
+                />
+              }
+              input={
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  {...register('newPassword')}
+                />
+              }
+            />
+            <FormError message={formError} />
+            <button
+              className="primary-button auth-submit"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              <span>{isSubmitting ? 'Kaydediliyor…' : 'Şifreyi yenile'}</span>
+              {!isSubmitting && (
+                <span className="auth-arrow" aria-hidden="true" />
+              )}
+            </button>
+          </form>
+          <p className="auth-back-link">
+            <Link to="/forgot-password" viewTransition>
+              <span className="auth-arrow back" aria-hidden="true" />
+              Yeni bağlantı iste
+            </Link>
+          </p>
+        </>
       )}
-    </AuthCard>
+    </AuthFrame>
   )
 }
 
@@ -858,17 +905,6 @@ function applyFieldErrors<T extends FieldValues>(
     }
   }
   return error.problem.detail
-}
-
-function AuthCard({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="auth-card auth-ui-card">
-      <header className="auth-ui-heading">
-        <h1>{title}</h1>
-      </header>
-      {children}
-    </section>
-  )
 }
 
 function FormField({
