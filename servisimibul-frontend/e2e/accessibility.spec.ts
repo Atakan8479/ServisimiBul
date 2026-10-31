@@ -126,7 +126,7 @@ for (const viewport of viewports) {
   })
 }
 
-test('compact tariff table and source conditions remain keyboard reachable', async ({
+test('responsive tariff periods and source conditions remain keyboard reachable', async ({
   page,
 }) => {
   const state = createMockApiState()
@@ -136,19 +136,25 @@ test('compact tariff table and source conditions remain keyboard reachable', asy
   await selectSchoolForTariff(page)
 
   const tableRegion = page.getByRole('region', {
-    name: 'Mesafeye göre aylık ve yıllık resmî ücretler',
+    name: 'Mesafeye göre aylık resmî ücretler',
   })
   await tableRegion.focus()
   await expect(tableRegion).toBeFocused()
   expect(
     await tableRegion.evaluate(
-      (element) => element.scrollWidth > element.clientWidth,
+      (element) => element.scrollWidth <= element.clientWidth,
     ),
   ).toBe(true)
-  await page.keyboard.press('ArrowRight')
-  await expect
-    .poll(() => tableRegion.evaluate((element) => element.scrollLeft))
-    .toBeGreaterThan(0)
+
+  const annualPeriod = page.getByRole('button', { name: 'Yıllık' })
+  await annualPeriod.focus()
+  await page.keyboard.press('Enter')
+  await expect(annualPeriod).toHaveAttribute('aria-pressed', 'true')
+  await expect(
+    page.getByRole('region', {
+      name: 'Mesafeye göre yıllık resmî ücretler',
+    }),
+  ).toContainText('₺39.970,00')
 
   const conditions = page.getByText('Kaynaktaki tüm koşulları göster (3)')
   await conditions.focus()

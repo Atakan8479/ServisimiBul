@@ -118,10 +118,13 @@ describe('public operator discovery', () => {
     ).toHaveAttribute('href', '#resmi-tarife')
     expect(screen.getByText('2026-2027-ibb-813')).toBeInTheDocument()
     expect(screen.getByText('₺4.456,00')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Yıllık' }))
     expect(screen.getByText('₺39.970,00')).toBeInTheDocument()
-    expect(screen.getByText('+₺87,99')).toBeInTheDocument()
     expect(
-      screen.getByText('Kesin ücret için işletmeciyle görüşün.'),
+      screen.getByText(/ek kilometre ücreti kaynakta yalnızca aylık/i),
+    ).toHaveTextContent('+₺87,99 / km')
+    expect(
+      screen.getByText(/Kesin ücret ve hizmet koşulları için/),
     ).toBeInTheDocument()
     expect(screen.getAllByText(/ikinci çocuk için %10/)).not.toHaveLength(0)
 
