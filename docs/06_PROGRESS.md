@@ -887,11 +887,19 @@ Never mark tasks done because code was generated: verification and review requir
 
 - Branch: `feat/issue-152-admin-operators`; PR #176; GitHub issues #152 and #123. `/admin/applications` and `/admin/applications/:applicationId` now follow the approved Manus composition: status filter bar, operator rows with initials, a two-column detail layout with an actions card, and modal confirmations in place of `window.confirm`.
 - Every value comes from the existing admin API. The Manus statistics, readiness percentages, e-mail, school coverage, search box, report button, edit button, and the Yayında/Askıya alındı filters are omitted because the API has no such fields or query parameters. `publiclyVisible` is labelled as the profile toggle, never as derived publication.
-- Open decision: issue #152 and the Manus state image ask for a suspension reason, but `POST /admin/operators/{id}/suspend` accepts no body and stores no reason. The modal therefore collects none rather than discarding typed text; capturing one needs an approved backend change. Correction requests keep their required, stored reason.
+- Suspension now requires a stored reason under D056; the evidence is in the next entry.
 - Added a `Tümü` filter using the API's existing unfiltered query, and a retry on detail load failure. A failed correction request now keeps the typed reason. Pilot mode still hides approval status, filters, and review actions.
 - Before/after desktop and mobile captures and the suspension state are under `docs/screenshots/ui-fidelity-14/`; API responses in them are mocked.
 - Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The complete serial Vitest suite passed 142/142, and the complete mocked Chromium suite passed 69/69, including WCAG 2.2 AA and overflow checks at 1440, 768, 390, and 320 pixels. The mocked and real full-stack journeys were updated for the modal confirmations and the filter buttons.
-- No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+- Apart from D056, no backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
+## Verified D056 operator suspension reason evidence — 2026-10-31
+
+- Branch: `feat/issue-152-admin-operators`; PR #176; GitHub issue #152; owner-approved decision D056. `POST /api/v1/admin/operators/{id}/suspend` now requires a non-blank `reason`, stored with the administrator and time as a `SUSPENDED` row in `operator_application_review`. The M02 modal requires the reason and the admin review history shows it. Moderation-driven suspensions record the moderation action reason the same way.
+- Flyway V17 only widens the decision and reason check constraints; it rewrites no rows and needs no backfill. Earlier suspensions stay without a recorded reason. The API change is breaking for any caller that posts no body; the only caller is the admin frontend.
+- The complete backend suite passed 292/292 on disposable PostgreSQL 17 with JDK 21 after Flyway V1–V17 and Hibernate validation. Blank and missing reasons leave the account active and its sessions intact, and the schema rejects a blank `SUSPENDED` reason directly.
+- Frontend ESLint, strict TypeScript, the build, and Prettier passed. Serial Vitest passed 142/142 and the complete mocked Chromium suite passed 69/69.
+- Shared Supabase was not touched and V17 has not been applied to it. It must be applied through the approved migration process before this frontend and backend are deployed there.
 
 ## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
 

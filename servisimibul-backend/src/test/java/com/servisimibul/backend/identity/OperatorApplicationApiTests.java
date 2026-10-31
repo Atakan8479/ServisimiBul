@@ -278,11 +278,27 @@ class OperatorApplicationApiTests {
 
         assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).hasSize(1);
 
+        for (String body : new String[] {"{}", "{\"reason\":\"   \"}"}) {
+            mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                            .with(asUser(admin))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
+        assertThat(profileRepository.findById(profile.getId()).orElseThrow().isActive()).isTrue();
+        assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).hasSize(1);
+
         mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
                         .with(asUser(admin))
-                        .with(csrf()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"  Şikayet incelemesi  \"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.profile.active").value(false));
+                .andExpect(jsonPath("$.profile.active").value(false))
+                .andExpect(jsonPath("$.reviewHistory[0].decision").value("SUSPENDED"))
+                .andExpect(jsonPath("$.reviewHistory[0].reason").value("Şikayet incelemesi"))
+                .andExpect(jsonPath("$.reviewHistory[0].reviewedById").value(admin.getId().toString()));
 
         assertThat(profileRepository.findById(profile.getId()).orElseThrow().isActive()).isFalse();
         assertThat(userRepository.findById(operator.getId()).orElseThrow().isEnabled()).isFalse();

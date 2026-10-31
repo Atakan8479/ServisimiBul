@@ -272,6 +272,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .getByRole('button', { name: 'İşletmeciyi askıya al' })
       .click()
     await adminPage
+      .getByLabel('Askıya alma gerekçesi')
+      .fill('Pilot sözleşme ihlali.')
+    await adminPage
       .getByRole('button', { name: 'Askıya al', exact: true })
       .click()
     await expect(adminPage.getByText('İşletmeci askıya alındı.')).toBeVisible()

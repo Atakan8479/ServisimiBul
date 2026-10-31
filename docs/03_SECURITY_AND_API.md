@@ -142,7 +142,7 @@ Notifications never change demand, response, feedback, report, moderation, or ac
 - `GET /api/v1/admin/operators?status=PENDING`
 - `POST /api/v1/admin/operators/{id}/approve`
 - `POST /api/v1/admin/operators/{id}/request-revision`
-- `POST /api/v1/admin/operators/{id}/suspend`
+- `POST /api/v1/admin/operators/{id}/suspend` (requires a non-blank `{reason}`; D056)
 - `GET /api/v1/admin/schools` (paginated active and inactive pilot catalog)
 - `POST /api/v1/admin/schools`
 - `PATCH /api/v1/admin/schools/{id}`
