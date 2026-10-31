@@ -74,8 +74,9 @@ class SmtpAuthEmailSender implements AuthEmailSender {
     public void sendVerification(String email, String rawToken) {
         safelySend(
                 email,
-                "Verify your ServisimiBul email",
-                "Verify your email: " + link("verify-email", rawToken)
+                "ServisimiBul e-posta adresinizi doğrulayın",
+                "E-posta adresinizi doğrulamak için bağlantıyı açın: "
+                        + link("operator/verify-email", rawToken)
         );
     }
 
@@ -84,8 +85,8 @@ class SmtpAuthEmailSender implements AuthEmailSender {
     public void sendPasswordReset(String email, String rawToken) {
         safelySend(
                 email,
-                "Reset your ServisimiBul password",
-                "Reset your password: " + link("reset-password", rawToken)
+                "ServisimiBul şifrenizi yenileyin",
+                "Şifrenizi yenilemek için bağlantıyı açın: " + link("reset-password", rawToken)
         );
     }
 
