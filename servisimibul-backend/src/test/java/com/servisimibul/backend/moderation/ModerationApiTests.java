@@ -18,6 +18,14 @@ import com.servisimibul.backend.geography.School;
 import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
+import com.servisimibul.backend.identity.OperatorApplicationReviewRepository;
+import com.servisimibul.backend.identity.OperatorProfile;
+import com.servisimibul.backend.identity.OperatorProfileRepository;
+import com.servisimibul.backend.identity.ReviewDecision;
+import com.servisimibul.backend.demand.DemandServiceResponse;
+import com.servisimibul.backend.demand.DemandServiceResponseRepository;
+import com.servisimibul.backend.operatorschool.OperatorSchool;
+import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import com.servisimibul.backend.notification.InAppNotificationRepository;
 import com.servisimibul.backend.notification.NotificationType;
@@ -75,6 +83,10 @@ class ModerationApiTests {
     @Autowired private ContentReportRepository reportRepository;
     @Autowired private ModerationAuditEventRepository auditRepository;
     @Autowired private InAppNotificationRepository notificationRepository;
+    @Autowired private OperatorProfileRepository profileRepository;
+    @Autowired private OperatorSchoolRepository operatorSchoolRepository;
+    @Autowired private DemandServiceResponseRepository responseRepository;
+    @Autowired private OperatorApplicationReviewRepository reviewRepository;
 
     @AfterAll
     void removeBootstrapAdmins() {
@@ -260,6 +272,52 @@ class ModerationApiTests {
             body.put("explanation", explanation);
         }
         return objectMapper.writeValueAsString(body);
+    }
+
+    @Test
+    void operatorSuspensionFromModerationStoresTheActionReason() throws Exception {
+        Fixture fixture = fixture("suspension");
+        AppUser author = parent("suspension-author@example.com");
+        AppUser reporter = parent("suspension-reporter@example.com");
+        AppUser admin = userRepository.findByEmail("moderation-admin-one@example.com").orElseThrow();
+        AppUser operator = operator("suspension-operator@example.com");
+        OperatorProfile profile = profileRepository.saveAndFlush(
+                new OperatorProfile(operator, "Moderated Transport", "+905551112266")
+        );
+        OperatorSchool operatorSchool = operatorSchoolRepository.saveAndFlush(
+                new OperatorSchool(profile, fixture.school(), true)
+        );
+        DemandServiceResponse response = responseRepository.saveAndFlush(new DemandServiceResponse(
+                demand(fixture, author), profile, operatorSchool, true, false, OffsetDateTime.now()
+        ));
+        MvcResult report = report(
+                reporter, "SERVICE_RESPONSE", response.getId(), "SPAM_ADVERTISING", "Repeated advertising"
+        ).andExpect(status().isCreated()).andReturn();
+        UUID caseId = UUID.fromString(json(report).path("caseId").asText());
+
+        mockMvc.perform(post("/api/v1/admin/moderation/cases/{id}/actions", caseId)
+                        .with(as(admin))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(actionBody("SUSPEND_OPERATOR", "   ")))
+                .andExpect(status().isBadRequest());
+        assertThat(profile.isActive()).isTrue();
+        assertThat(reviewRepository.findAllByOperatorIdOrderByReviewedAtAscIdAsc(profile.getId())).isEmpty();
+
+        mockMvc.perform(post("/api/v1/admin/moderation/cases/{id}/actions", caseId)
+                        .with(as(admin))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(actionBody("SUSPEND_OPERATOR", "Repeated policy violation")))
+                .andExpect(status().isOk());
+
+        assertThat(profile.isActive()).isFalse();
+        assertThat(operator.isEnabled()).isFalse();
+        var history = reviewRepository.findAllByOperatorIdOrderByReviewedAtAscIdAsc(profile.getId());
+        assertThat(history).hasSize(1);
+        assertThat(history.getFirst().getDecision()).isEqualTo(ReviewDecision.SUSPENDED);
+        assertThat(history.getFirst().getReason()).isEqualTo("Repeated policy violation");
+        assertThat(history.getFirst().getReviewedById()).isEqualTo(admin.getId());
     }
 
     private String actionBody(String action, String reason) throws Exception {

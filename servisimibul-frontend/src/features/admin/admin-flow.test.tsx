@@ -56,11 +56,17 @@ describe('admin workspace flows', () => {
       name: 'Profili incele',
     })
     expect(requestedStatus).toBeNull()
+    expect(screen.getAllByText('Profil görünürlük tercihi')).not.toHaveLength(0)
+    expect(screen.getByText('Açık')).toBeInTheDocument()
+    expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Başvuru durumu')).not.toBeInTheDocument()
     fireEvent.click(profileLink)
     expect(
       await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Profil görünürlük tercihi')).toBeInTheDocument()
+    expect(screen.getByText('Açık')).toBeInTheDocument()
+    expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Başvuruyu onayla' }),
     ).not.toBeInTheDocument()

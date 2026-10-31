@@ -118,6 +118,7 @@ test('D01 keeps the real operator check before parent demand creation', async ({
     .getByRole('textbox', { name: 'Şifre', exact: true })
     .fill('password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
+  await expect(page).toHaveURL(/\/demands$/)
   await page.goto('/demands')
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')
   await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()

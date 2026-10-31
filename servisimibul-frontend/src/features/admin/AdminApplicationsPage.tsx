@@ -173,7 +173,7 @@ export function AdminApplicationsPage() {
           <div aria-hidden="true" className="admin-operator-columns">
             <span>İşletmeci</span>
             {approvalRequired && <span>Başvuru</span>}
-            <span>Görünürlük</span>
+            <span>Profil görünürlük tercihi</span>
             <span>Hesap</span>
             <span>Kayıt</span>
             <span>İşlem</span>
@@ -202,8 +202,8 @@ export function AdminApplicationsPage() {
                     </div>
                   )}
                   <div>
-                    <dt>Görünürlük</dt>
-                    <dd>{visibilityLabel(profile)}</dd>
+                    <dt>Profil görünürlük tercihi</dt>
+                    <dd>{visibilityPreferenceLabel(profile)}</dd>
                   </div>
                   <div>
                     <dt>Hesap</dt>
@@ -463,8 +463,8 @@ export function AdminApplicationDetailPage() {
                 <dd>{profile.contactPhone}</dd>
               </div>
               <div>
-                <dt>Herkese açık</dt>
-                <dd>{profile.publiclyVisible ? 'Evet' : 'Hayır'}</dd>
+                <dt>Profil görünürlük tercihi</dt>
+                <dd>{visibilityPreferenceLabel(profile)}</dd>
               </div>
               <div>
                 <dt>Oluşturulma</dt>
@@ -664,8 +664,8 @@ function AccountBadge({ active }: { active: boolean }) {
   )
 }
 
-function visibilityLabel(profile: OperatorProfile) {
-  return profile.publiclyVisible ? 'Herkese açık' : 'Gizli'
+function visibilityPreferenceLabel(profile: OperatorProfile) {
+  return profile.publiclyVisible ? 'Açık' : 'Kapalı'
 }
 
 function handleSession(
