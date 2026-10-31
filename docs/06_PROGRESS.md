@@ -857,6 +857,13 @@ Never mark tasks done because code was generated: verification and review requir
 - Impeccable's confirmation scan found no remaining contrast defect. Its remaining heuristic notices are the approved Manus eyebrow composition and the established Inter body font, both intentionally preserved rather than changing the approved visual system.
 - No backend source, shared navigation implementation, authentication page, operator/admin page, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
 
+## Verified AUDIT-F1 verification email link evidence — 2026-10-31
+
+- Branch: `fix/issue-163-verification-email-link`; GitHub issue #163. The SMTP sender generated `/verify-email?token=…`, while the SPA serves that page only at `/operator/verify-email`, so a delivered link would reach the not-found route. The sender now uses the existing route. No frontend route, authentication flow, verification policy, session, CSRF, or authorization rule changed.
+- Regression tests assert the complete verification and reset URLs, trailing-slash base handling, reserved-character token encoding, an unchanged real `TokenGenerator` value, and the Turkish subject and body text. A frontend test proves that an opaque URL-safe token is prefilled on the real route and posted unchanged.
+- The complete backend suite passed 285/285 on disposable PostgreSQL 17 after Flyway and Hibernate validation. The auth Vitest file passed 26/26, and ESLint and strict TypeScript passed.
+- Email delivery was not exercised and remains disabled: no SMTP setting, credential, provider, shared Supabase state, migration, or production configuration changed. Real delivery and Turkish character rendering stay unverified until delivery is deliberately enabled.
+
 ## Verified UI-FIDELITY-05 P03 tariff-reference evidence — 2026-10-31
 
 - Branch: `codex/issue-143-p03-manus-tariff`; GitHub issues #143 and #123. The public UKOME reference now extends the approved Manus P01 composition with a clearer official-source hierarchy, monthly/annual period controls, responsive amount rows, compact metadata, and expandable backend-provided conditions while preserving the existing ServisimiBul tokens and road backdrop.

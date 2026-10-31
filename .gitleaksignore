@@ -1,0 +1,2 @@
+# False positive: synthetic verification token in a test, removed by the following commit.
+f59549639a87bc80954fd1124b9e425fdd78d19e:servisimibul-frontend/src/features/auth/AuthPages.test.tsx:generic-api-key:566
