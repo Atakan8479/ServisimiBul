@@ -3597,7 +3597,7 @@ button:disabled {
     width: 50%;
   }
 
-  .tariff-additional-rule td {
+  .tariff-table tbody .tariff-additional-rule td {
     white-space: normal;
   }
 }
