@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -28,6 +34,15 @@ describe('public demand board', () => {
       await screen.findByRole('heading', { name: school.name }),
     ).toBeInTheDocument()
     expect(screen.getByText('1 talep')).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Talep panosu bilgisi')).getByText(
+        'Talep oluşturmak rezervasyon değildir.',
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('1', { selector: '.demand-supporter-count strong' }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Sabah').closest('div')).toHaveTextContent('Sabah1')
     expect(
       screen.getByRole('link', { name: 'Talebi görüntüle' }),
     ).toHaveAttribute('href', `/demands/${demandId}`)
@@ -156,6 +171,51 @@ describe('public demand board', () => {
 })
 
 describe('demand board regression cases', () => {
+  it('validates the academic year and keeps sorting and pagination server-backed', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/demands', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(new URLSearchParams(parameters))
+        const page = Number(parameters.get('page'))
+        return HttpResponse.json({
+          ...demandPage([demand()]),
+          page,
+          totalElements: 11,
+          totalPages: 2,
+        })
+      }),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: school.name })
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2028' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    expect(
+      screen.getByText(/Eğitim yılını 2026-2027 biçiminde/),
+    ).toBeInTheDocument()
+    expect(requests).toHaveLength(1)
+
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2027' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await waitFor(() => expect(requests).toHaveLength(2))
+    expect(requests.at(-1)?.get('academicYear')).toBe('2026-2027')
+
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'most-supported' },
+    })
+    await waitFor(() =>
+      expect(requests.at(-1)?.get('sort')).toBe('most-supported'),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    await waitFor(() => expect(requests.at(-1)?.get('page')).toBe('1'))
+  })
+
   it('unblocks the list after an invalid shared location link', async () => {
     server.use(
       http.get('/api/v1/provinces', () =>
@@ -201,6 +261,32 @@ describe('demand board regression cases', () => {
     expect(
       screen.queryByRole('button', { name: 'Benim de ihtiyacım var' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('redirects a parent whose session expires while creating a demand', async () => {
+    server.use(
+      ...locationHandlers(),
+      emptyDemandHandler(),
+      emptyOperatorHandler(),
+      parentHandler(),
+      csrfHandler(),
+      http.post('/api/v1/demands', () =>
+        HttpResponse.json(problem(401, 'Session expired'), { status: 401 }),
+      ),
+    )
+
+    renderRoute(filteredBoardPath)
+    await openCreateForm()
+    fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+    )
+
+    expect(
+      await screen.findByText(
+        'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+      ),
+    ).toBeInTheDocument()
   })
 })
 
