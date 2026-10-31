@@ -61,19 +61,25 @@ export function PublicTariffReference({
       <div className="section-heading">
         <div>
           <h2>Okul servisi ücret tarifesi</h2>
-          <p>Kesin ücret için işletmeciyle görüşün.</p>
+          <p>
+            Mesafe kademelerine göre azami tutarları inceleyin. Kesin ücret ve
+            hizmet koşulları için işletmeciyle görüşün.
+          </p>
         </div>
       </div>
 
       {visibleState === 'loading' && (
-        <div className="inline-loading" role="status">
-          <span className="loading-dot" aria-hidden="true" />
-          Tarife yükleniyor…
+        <div className="tariff-state-card tariff-loading-state" role="status">
+          <strong>Resmî tarife bilgisi yükleniyor…</strong>
+          <span className="tariff-skeleton-line tariff-skeleton-wide" />
+          <span className="tariff-skeleton-line" />
+          <span className="tariff-skeleton-line tariff-skeleton-short" />
         </div>
       )}
       {visibleState === 'missing' && (
-        <div className="empty-state">
+        <div className="tariff-state-card tariff-missing-state" role="status">
           <h3>Bu il için henüz ücret tarifesi yok.</h3>
+          <p>Resmî bir tarife kaydı olmadığında ücret tutarı göstermiyoruz.</p>
           <button
             className="secondary-button"
             onClick={retryTariff}
@@ -84,8 +90,9 @@ export function PublicTariffReference({
         </div>
       )}
       {visibleState === 'error' && (
-        <div className="state-panel tariff-load-error" role="alert">
+        <div className="tariff-state-card tariff-load-error" role="alert">
           <div>
+            <h3>Tarife bilgisi şu anda yüklenemedi</h3>
             <p>
               Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar
               deneyin.
@@ -100,114 +107,199 @@ export function PublicTariffReference({
           </button>
         </div>
       )}
-      {visibleTariff && <TariffDetails tariff={visibleTariff} />}
+      {visibleTariff && <TariffDetails tariff={visibleTariff} periodSwitcher />}
     </section>
   )
 }
 
-export function TariffDetails({ tariff }: { tariff: Tariff }) {
+export function TariffDetails({
+  tariff,
+  periodSwitcher = false,
+}: {
+  tariff: Tariff
+  periodSwitcher?: boolean
+}) {
+  const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
   const featuredNotes = selectFeaturedNotes(tariff.notes ?? [])
+  const hasAnnualAmounts = tariff.bands.every(
+    (band) => band.annualAmountKurus != null,
+  )
+  const visiblePeriod =
+    period === 'annual' && hasAnnualAmounts ? period : 'monthly'
 
   return (
     <div className="tariff-card">
       <div className="tariff-card-header">
         <div>
-          <strong>
-            {tariff.provinceName} · {tariff.academicYear}
-          </strong>
+          <strong>UKOME azami servis tarifesi</strong>
+          <span>
+            {tariff.academicYear} · {tariff.provinceName}
+          </span>
           <span>{tariff.authority}</span>
         </div>
-        <a href={tariff.officialSourceUrl} rel="noreferrer" target="_blank">
-          Resmî belgeyi aç
-          <span className="sr-only"> (yeni sekmede)</span>
-        </a>
+        {periodSwitcher && (
+          <div
+            aria-label="Tarife dönemi"
+            className="tariff-period-switch"
+            role="group"
+          >
+            <button
+              aria-pressed={visiblePeriod === 'monthly'}
+              onClick={() => setPeriod('monthly')}
+              type="button"
+            >
+              Aylık
+            </button>
+            <button
+              aria-describedby={
+                hasAnnualAmounts ? undefined : 'annual-unavailable'
+              }
+              aria-pressed={visiblePeriod === 'annual'}
+              disabled={!hasAnnualAmounts}
+              onClick={() => setPeriod('annual')}
+              type="button"
+            >
+              Yıllık
+            </button>
+            {!hasAnnualAmounts && (
+              <span className="tariff-visually-hidden" id="annual-unavailable">
+                Yıllık tutarlar resmî kaynakta belirtilmemiş
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
-      <dl className="tariff-meta">
-        <div>
-          <dt>Yürürlük</dt>
-          <dd>
-            {tariff.effectiveTo === null
-              ? `${formatDate(tariff.effectiveFrom)} tarihinden itibaren`
-              : `${formatDate(tariff.effectiveFrom)}–${formatDate(tariff.effectiveTo)}`}
-          </dd>
-        </div>
-        <div>
-          <dt>Sürüm</dt>
-          <dd>{tariff.version}</dd>
-        </div>
-        <div>
-          <dt>Kaynak</dt>
-          <dd>{tariff.sourceTitle}</dd>
-        </div>
-      </dl>
-
       <div
-        aria-label="Mesafeye göre aylık ve yıllık resmî ücretler"
+        aria-label={
+          periodSwitcher
+            ? `Mesafeye göre ${visiblePeriod === 'monthly' ? 'aylık' : 'yıllık'} resmî ücretler`
+            : 'Mesafeye göre aylık ve yıllık resmî ücretler'
+        }
         className="tariff-table-scroll"
         role="region"
         tabIndex={0}
       >
         <table className="tariff-table">
-          <caption>Mesafe bantlarına göre azami ücretler</caption>
+          <caption className="tariff-visually-hidden">
+            Mesafe bantlarına göre azami ücretler
+          </caption>
           <thead>
             <tr>
-              <th scope="col">Mesafe</th>
-              <th scope="col">Aylık</th>
-              <th scope="col">Yıllık</th>
+              <th scope="col">Tek yön mesafe</th>
+              <th scope="col">
+                {periodSwitcher && visiblePeriod === 'annual'
+                  ? 'Yıllık azami'
+                  : 'Aylık azami'}
+              </th>
+              {!periodSwitcher && <th scope="col">Yıllık azami</th>}
             </tr>
           </thead>
           <tbody>
-            {tariff.bands.map((band) => (
+            {tariff.bands.map((band, index) => (
               <tr key={`${band.minDistanceKm}-${band.maxDistanceKm ?? 'plus'}`}>
                 <th scope="row">
+                  <span
+                    className={
+                      index === 0 ? 'tariff-row-dot featured' : 'tariff-row-dot'
+                    }
+                    aria-hidden="true"
+                  />
                   {formatDistance(band.minDistanceKm, band.maxDistanceKm)}
                 </th>
-                <td>{formatKurus(band.amountKurus)}</td>
                 <td>
-                  {band.annualAmountKurus == null ? (
-                    <>
-                      <span aria-hidden="true">—</span>
-                      <span className="sr-only">
-                        Yıllık tutar kaynakta belirtilmemiş
-                      </span>
-                    </>
-                  ) : (
-                    formatKurus(band.annualAmountKurus)
+                  {formatKurus(
+                    !periodSwitcher || visiblePeriod === 'monthly'
+                      ? band.amountKurus
+                      : band.annualAmountKurus!,
                   )}
                 </td>
+                {!periodSwitcher && (
+                  <td>
+                    {band.annualAmountKurus == null ? (
+                      <>
+                        <span aria-hidden="true">—</span>
+                        <span className="tariff-visually-hidden">
+                          Yıllık tutar kaynakta belirtilmemiş
+                        </span>
+                      </>
+                    ) : (
+                      formatKurus(band.annualAmountKurus)
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
-            {tariff.additionalKilometerRule && (
+            {tariff.additionalKilometerRule && visiblePeriod === 'monthly' && (
               <tr className="tariff-additional-rule">
                 <th scope="row">
                   {tariff.additionalKilometerRule.startsAfterDistanceKm} km
-                  üzerindeki her ek km
+                  üzeri
                 </th>
                 <td>
-                  +
+                  Her km için +
                   {formatKurus(
                     tariff.additionalKilometerRule
                       .monthlyAmountPerKilometerKurus,
                   )}
                 </td>
-                <td>
-                  <span aria-hidden="true">—</span>
-                  <span className="sr-only">
-                    Yıllık tutar kaynakta belirtilmemiş
-                  </span>
-                </td>
+                {!periodSwitcher && (
+                  <td>
+                    <span aria-hidden="true">—</span>
+                    <span className="tariff-visually-hidden">
+                      Yıllık tutar kaynakta belirtilmemiş
+                    </span>
+                  </td>
+                )}
               </tr>
             )}
           </tbody>
         </table>
       </div>
 
+      {tariff.additionalKilometerRule &&
+        periodSwitcher &&
+        visiblePeriod === 'annual' && (
+          <p className="tariff-additional-note">
+            {tariff.additionalKilometerRule.startsAfterDistanceKm} km üzerindeki
+            ek kilometre ücreti kaynakta yalnızca aylık olarak belirtilmiştir: +
+            {formatKurus(
+              tariff.additionalKilometerRule.monthlyAmountPerKilometerKurus,
+            )}{' '}
+            / km.
+          </p>
+        )}
+
       <div className="tariff-guidance">
         <p>
-          Ücret, servis mesafesine ve geçerli tarifeye göre belirlenir. Tutarlar
-          resmî azami referanstır; mahalle seçimi mesafeyi belirlemez.
+          Tutarlar resmî azami referanstır; kişisel güzergâh için kesin fiyat
+          değildir. Mesafe ve hizmet ayrıntılarını işletmeciyle doğrulayın.
         </p>
+      </div>
+
+      <div className="tariff-source-row">
+        <dl className="tariff-meta">
+          <div>
+            <dt>Yürürlük</dt>
+            <dd>
+              {tariff.effectiveTo === null
+                ? `${formatDate(tariff.effectiveFrom)} tarihinden itibaren`
+                : `${formatDate(tariff.effectiveFrom)}–${formatDate(tariff.effectiveTo)}`}
+            </dd>
+          </div>
+          <div>
+            <dt>Sürüm</dt>
+            <dd>{tariff.version}</dd>
+          </div>
+          <div>
+            <dt>Kaynak</dt>
+            <dd>{tariff.sourceTitle}</dd>
+          </div>
+        </dl>
+        <a href={tariff.officialSourceUrl} rel="noreferrer" target="_blank">
+          Resmî belgeyi aç
+          <span className="tariff-visually-hidden"> (yeni sekmede)</span>
+        </a>
       </div>
 
       {featuredNotes.length > 0 && (

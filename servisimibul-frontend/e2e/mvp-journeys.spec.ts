@@ -254,10 +254,12 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       }),
     ).toBeVisible()
     await expect(
-      publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),
+      publicPage.getByText(/Kesin ücret ve hizmet koşulları için/),
     ).toBeVisible()
+    await publicPage.getByRole('button', { name: 'Yıllık' }).click()
     await expect(publicPage.getByText('₺39.970,00')).toBeVisible()
-    await expect(publicPage.getByText('+₺87,99')).toBeVisible()
+    await publicPage.getByRole('button', { name: 'Aylık' }).click()
+    await expect(publicPage.getByText(/Her km için \+₺87,99/)).toBeVisible()
   })
 
   await test.step('13. Suspend the operator and verify visibility and session removal', async () => {
