@@ -1,10 +1,25 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
+
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute('open')
+  }
+})
 
 afterEach(() => {
   resetCsrfToken()
@@ -41,11 +56,17 @@ describe('admin workspace flows', () => {
       name: 'Profili incele',
     })
     expect(requestedStatus).toBeNull()
+    expect(screen.getAllByText('Profil görünürlük tercihi')).not.toHaveLength(0)
+    expect(screen.getByText('Açık')).toBeInTheDocument()
+    expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Başvuru durumu')).not.toBeInTheDocument()
     fireEvent.click(profileLink)
     expect(
       await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
     ).toBeInTheDocument()
+    expect(screen.getByText('Profil görünürlük tercihi')).toBeInTheDocument()
+    expect(screen.getByText('Açık')).toBeInTheDocument()
+    expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Başvuruyu onayla' }),
     ).not.toBeInTheDocument()
@@ -66,7 +87,6 @@ describe('admin workspace flows', () => {
 
   it('reviews an application and sends a required correction reason', async () => {
     let revisionBody: unknown
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     server.use(
       authHandler('ADMIN'),
       csrfHandler(),
@@ -96,18 +116,26 @@ describe('admin workspace flows', () => {
       target: { value: 'Telefon bilgisini doğrulayın.' },
     })
     fireEvent.click(screen.getByRole('button', { name: 'Düzeltme iste' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Düzeltme talebi gönderilsin mi?',
+    })
+    expect(
+      within(dialog).getByText('Telefon bilgisini doğrulayın.'),
+    ).toBeInTheDocument()
+    expect(revisionBody).toBeUndefined()
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Talebi gönder' }),
+    )
 
     expect(
       await screen.findByText('Düzeltme talebi gönderildi.'),
     ).toBeInTheDocument()
     expect(revisionBody).toEqual({ reason: 'Telefon bilgisini doğrulayın.' })
-    expect(window.confirm).toHaveBeenCalledOnce()
   })
 
   it('confirms approval and suspension actions', async () => {
     let approved = false
-    let suspended = false
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    let suspensionBody: unknown
     server.use(
       authHandler('ADMIN'),
       csrfHandler(),
@@ -118,8 +146,8 @@ describe('admin workspace flows', () => {
         approved = true
         return HttpResponse.json(applicationDetail('APPROVED'))
       }),
-      http.post('/api/v1/admin/operators/:id/suspend', () => {
-        suspended = true
+      http.post('/api/v1/admin/operators/:id/suspend', async ({ request }) => {
+        suspensionBody = await request.json()
         return HttpResponse.json(applicationDetail('APPROVED', false))
       }),
     )
@@ -128,17 +156,143 @@ describe('admin workspace flows', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Başvuruyu onayla' }),
     )
+    expect(approved).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Evet, onayla' }))
     expect(await screen.findByText('Başvuru onaylandı.')).toBeInTheDocument()
     expect(approved).toBe(true)
 
     fireEvent.click(
       screen.getByRole('button', { name: 'İşletmeciyi askıya al' }),
     )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'İşletmeci askıya alınsın mı?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Vazgeç' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(suspensionBody).toBeUndefined()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'İşletmeciyi askıya al' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
+    expect(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+    ).toHaveAccessibleDescription('Askıya alma gerekçesi zorunludur.')
+    expect(suspensionBody).toBeUndefined()
+
+    fireEvent.change(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+      { target: { value: '  Şikayet incelemesi  ' } },
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
     expect(
       await screen.findByText('İşletmeci askıya alındı.'),
     ).toBeInTheDocument()
-    expect(suspended).toBe(true)
-    expect(window.confirm).toHaveBeenCalledTimes(2)
+    expect(suspensionBody).toEqual({ reason: 'Şikayet incelemesi' })
+    expect(
+      screen.queryByRole('button', { name: 'İşletmeciyi askıya al' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByText('Askıda').length).toBeGreaterThan(0)
+  })
+
+  it('reports a failed suspension and keeps the operator active', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/admin/operators/:id', () =>
+        HttpResponse.json(applicationDetail('APPROVED')),
+      ),
+      http.post('/api/v1/admin/operators/:id/suspend', () =>
+        HttpResponse.json(
+          { title: 'Conflict', status: 409, detail: 'Hesap zaten askıda.' },
+          {
+            status: 409,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+
+    renderRoute('/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20')
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
+    )
+    fireEvent.change(
+      screen.getByRole('textbox', { name: /Askıya alma gerekçesi/ }),
+      { target: { value: 'Şikayet incelemesi' } },
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Hesap zaten askıda.',
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'İşletmeciyi askıya al' }),
+    ).toBeInTheDocument()
+  })
+
+  it('retries a failed detail load', async () => {
+    let calls = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/operators/:id', () => {
+        calls += 1
+        return calls === 1
+          ? HttpResponse.json(
+              { title: 'Error', status: 500, detail: 'Sunucu hatası.' },
+              {
+                status: 500,
+                headers: { 'Content-Type': 'application/problem+json' },
+              },
+            )
+          : HttpResponse.json(applicationDetail('APPROVED'))
+      }),
+    )
+
+    renderRoute('/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20')
+    fireEvent.click(await screen.findByRole('button', { name: 'Tekrar dene' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Örnek Servis' }),
+    ).toBeInTheDocument()
+  })
+
+  it('filters by the status the API supports and pages through results', async () => {
+    const requests: Array<{ status: string | null; page: string | null }> = []
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/operators', ({ request }) => {
+        const params = new URL(request.url).searchParams
+        requests.push({
+          status: params.get('status'),
+          page: params.get('page'),
+        })
+        return HttpResponse.json({
+          content: [applicationDetail('APPROVED').profile],
+          page: Number(params.get('page')),
+          size: 20,
+          totalElements: 21,
+          totalPages: 2,
+        })
+      }),
+    )
+
+    renderRoute('/admin/applications')
+    const group = await screen.findByRole('group', { name: 'Başvuru durumu' })
+    expect(
+      within(group).getByRole('button', { name: 'İncelemede' }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByText('21 kayıt')).toBeInTheDocument()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Sonraki' }))
+    expect(await screen.findByText('Sayfa 2 / 2')).toBeInTheDocument()
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Tümü' }))
+    await waitFor(() => expect(requests.at(-1)?.status).toBeNull())
+    expect(requests.at(-1)?.page).toBe('0')
+    expect(requests[0]?.status).toBe('PENDING')
+    expect(requests.some((entry) => entry.page === '1')).toBe(true)
   })
 
   it('adds a school and keeps it listed after deactivation', async () => {

@@ -16,6 +16,7 @@ import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfilePatchRequest;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfileResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ReviewResponse;
+import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.SuspensionRequest;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.RevisionRequest;
 import com.servisimibul.backend.operatorapplication.exception.OperatorApplicationApiException;
 import com.servisimibul.backend.operatorapproval.OperatorApprovalPolicy;
@@ -185,9 +186,9 @@ public class OperatorApplicationService {
     }
 
     @Transactional
-    public ApplicationDetailResponse suspend(UUID id) {
+    public ApplicationDetailResponse suspend(UUID id, SuspensionRequest request) {
         OperatorProfile profile = detailedProfileForUpdate(id);
-        reviewerFor(profile);
+        AppUser reviewer = reviewerFor(profile);
         if (!profile.isActive()) {
             throw OperatorApplicationApiException.conflict(
                     "operator_already_suspended",
@@ -197,6 +198,12 @@ public class OperatorApplicationService {
 
         profile.suspend();
         profile.getUser().disable();
+        reviewRepository.saveAndFlush(new OperatorApplicationReview(
+                profile,
+                reviewer,
+                ReviewDecision.SUSPENDED,
+                request.reason().strip()
+        ));
         profileRepository.flush();
         userRepository.flush();
         sessionRevoker.revokeAll(profile.getUser().getId());

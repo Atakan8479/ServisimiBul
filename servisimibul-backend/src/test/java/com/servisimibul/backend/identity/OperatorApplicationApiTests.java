@@ -262,6 +262,20 @@ class OperatorApplicationApiTests {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.fieldErrors.reason").exists());
 
+        String suspension = "{\"reason\":\"Boundary check\"}";
+        mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                        .with(asUser(operator))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(suspension))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                        .with(asUser(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(suspension))
+                .andExpect(status().isForbidden());
+        assertThat(profileRepository.findById(profile.getId()).orElseThrow().isActive()).isTrue();
+
         mockMvc.perform(post("/api/v1/admin/operators/{id}/approve", profile.getId())
                         .with(asRole(operator, UserRole.ADMIN))
                         .with(csrf()))
@@ -278,11 +292,39 @@ class OperatorApplicationApiTests {
 
         assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).hasSize(1);
 
+        for (String body : new String[] {"{}", "{\"reason\":\"   \"}"}) {
+            mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                            .with(asUser(admin))
+                            .with(csrf())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(body))
+                    .andExpect(status().isBadRequest());
+        }
         mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
                         .with(asUser(admin))
                         .with(csrf()))
+                .andExpect(status().isBadRequest());
+        assertThat(profileRepository.findById(profile.getId()).orElseThrow().isActive()).isTrue();
+        assertThat(userRepository.findById(operator.getId()).orElseThrow().isEnabled()).isTrue();
+        assertThat(sessionRepository.findByPrincipalName(operator.getEmail())).hasSize(1);
+
+        mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                        .with(asUser(admin))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"  Şikayet incelemesi  \"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.profile.active").value(false));
+                .andExpect(jsonPath("$.profile.active").value(false))
+                .andExpect(jsonPath("$.reviewHistory[0].decision").value("SUSPENDED"))
+                .andExpect(jsonPath("$.reviewHistory[0].reason").value("Şikayet incelemesi"))
+                .andExpect(jsonPath("$.reviewHistory[0].reviewedById").value(admin.getId().toString()));
+        mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
+                        .with(asUser(admin))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Repeated\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("operator_already_suspended"));
 
         assertThat(profileRepository.findById(profile.getId()).orElseThrow().isActive()).isFalse();
         assertThat(userRepository.findById(operator.getId()).orElseThrow().isEnabled()).isFalse();

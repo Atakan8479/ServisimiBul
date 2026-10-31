@@ -92,6 +92,9 @@ public final class OperatorApplicationDtos {
     public record RevisionRequest(@NotBlank String reason) {
     }
 
+    public record SuspensionRequest(@NotBlank String reason) {
+    }
+
     public record ProfileResponse(
             UUID id,
             String businessName,

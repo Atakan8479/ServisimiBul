@@ -134,7 +134,9 @@ class OperatorApprovalDisabledApiTests {
                 .andExpect(jsonPath("$.code").value("approval_workflow_disabled"));
         mockMvc.perform(post("/api/v1/admin/operators/{id}/suspend", profile.getId())
                         .with(asUser(admin))
-                        .with(csrf()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Pilot suspension\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.profile.active").value(false))
                 .andExpect(jsonPath("$.profile.approvalStatus").value("DRAFT"));

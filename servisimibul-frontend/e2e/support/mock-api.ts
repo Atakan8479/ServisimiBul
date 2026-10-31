@@ -16,6 +16,7 @@ const parentUserId = 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd'
 const createdAt = '2026-10-18T10:00:00Z'
 
 export interface MockApiState {
+  operatorApprovalRequired?: boolean
   registered: boolean
   parentRegistered: boolean
   verified: boolean
@@ -28,7 +29,7 @@ export interface MockApiState {
   reviewHistory: Array<{
     id: string
     reviewedById: string
-    decision: 'APPROVED' | 'CHANGES_REQUESTED'
+    decision: 'APPROVED' | 'CHANGES_REQUESTED' | 'SUSPENDED'
     reason: string | null
     reviewedAt: string
   }>
@@ -268,8 +269,16 @@ export async function installMockApi(page: Page, state: MockApiState) {
       path === `/admin/operators/${operatorId}/suspend` &&
       method === 'POST'
     ) {
-      return requireRole(route, role, 'ADMIN', () => {
+      return requireRole(route, role, 'ADMIN', async () => {
+        const body = await request.postDataJSON()
         state.active = false
+        state.reviewHistory.push({
+          id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          reviewedById: adminUserId,
+          decision: 'SUSPENDED',
+          reason: body.reason,
+          reviewedAt: createdAt,
+        })
         return json(route, applicationDetail(state))
       })
     }
@@ -657,7 +666,7 @@ function authUser(role: Role, state: MockApiState) {
           ? 'parent@example.com'
           : 'operator@example.com',
     role,
-    operatorApprovalRequired: true,
+    operatorApprovalRequired: state.operatorApprovalRequired ?? true,
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
   }
 }

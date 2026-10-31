@@ -261,6 +261,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByLabel('Düzeltme nedeni')
         .fill('J03 düzeltme ve yeniden gönderim kontrolü.')
       await adminPage.getByRole('button', { name: 'Düzeltme iste' }).click()
+      await adminPage.getByRole('button', { name: 'Talebi gönder' }).click()
       await expect(
         adminPage.getByText('Düzeltme talebi gönderildi.'),
       ).toBeVisible()
@@ -1620,16 +1621,26 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
 
     await test.step('suspend the operator, revoke the session, and remove discovery', async () => {
       await adminPage.goto('/admin/applications')
-      await adminPage.getByLabel('Başvuru durumu').selectOption('APPROVED')
+      await adminPage
+        .getByRole('group', { name: 'Başvuru durumu' })
+        .getByRole('button', { name: 'Onaylandı' })
+        .click()
       await adminPage
         .locator(`a[href="/admin/applications/${operatorProfileId}"]`)
         .click()
       await adminPage
         .getByRole('button', { name: 'İşletmeciyi askıya al' })
         .click()
+      await adminPage
+        .getByLabel('Askıya alma gerekçesi')
+        .fill('Pilot sözleşme ihlali.')
+      await adminPage
+        .getByRole('button', { name: 'Askıya al', exact: true })
+        .click()
       await expect(
         adminPage.getByText('İşletmeci askıya alındı.'),
       ).toBeVisible()
+      await expect(adminPage.getByText('Pilot sözleşme ihlali.')).toBeVisible()
 
       await operatorPage.goto('/operator/profile')
       await expect(operatorPage).toHaveURL(

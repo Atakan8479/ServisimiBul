@@ -5,6 +5,7 @@ import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.PageResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfileResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.RevisionRequest;
+import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.SuspensionRequest;
 import com.servisimibul.backend.operatorapplication.service.OperatorApplicationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -53,7 +54,10 @@ public class AdminOperatorApplicationController {
     }
 
     @PostMapping("/{id}/suspend")
-    public ApplicationDetailResponse suspend(@PathVariable UUID id) {
-        return operatorApplicationService.suspend(id);
+    public ApplicationDetailResponse suspend(
+            @PathVariable UUID id,
+            @Valid @RequestBody SuspensionRequest request
+    ) {
+        return operatorApplicationService.suspend(id, request);
     }
 }
