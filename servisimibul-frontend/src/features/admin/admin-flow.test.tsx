@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -648,6 +649,273 @@ describe('admin workspace flows', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'bands.1.annualAmountKurus',
     )
+  })
+})
+
+function deferred() {
+  let resolve: () => void = () => undefined
+  const promise = new Promise<void>((done) => {
+    resolve = done
+  })
+  return { promise, resolve }
+}
+
+describe('school editor asynchronous ordering', () => {
+  const second = {
+    ...school(true),
+    id: '6de54e65-6e04-4168-a1cb-967a98d7ec99',
+    name: 'İkinci Okul',
+    districtId: 20,
+    districtName: 'Üsküdar',
+    neighborhoodId: 200,
+    neighborhoodName: 'Altunizade',
+  }
+
+  function geography(gate?: Promise<void>, failOnce = false) {
+    let served = 0
+    let failed = false
+    const handlers = [
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }]),
+      ),
+      http.get('/api/v1/districts', () =>
+        HttpResponse.json([
+          { id: 10, provinceId: 34, name: 'Kadıköy' },
+          { id: 20, provinceId: 34, name: 'Üsküdar' },
+        ]),
+      ),
+      http.get('/api/v1/neighborhoods', async ({ request }) => {
+        const districtId = new URL(request.url).searchParams.get('districtId')
+        if (districtId === '20') {
+          return HttpResponse.json([
+            { id: 200, districtId: 20, name: 'Altunizade' },
+          ])
+        }
+        if (gate) await gate
+        served += 1
+        if (failOnce && !failed) {
+          failed = true
+          return HttpResponse.json(
+            { title: 'Error', status: 500, detail: 'Coğrafya yüklenemedi.' },
+            {
+              status: 500,
+              headers: { 'Content-Type': 'application/problem+json' },
+            },
+          )
+        }
+        return HttpResponse.json([{ id: 100, districtId: 10, name: 'Moda' }])
+      }),
+      http.get('/api/v1/admin/schools', () =>
+        HttpResponse.json(schoolPage([school(true), second])),
+      ),
+    ]
+    return { handlers, served: () => served }
+  }
+
+  function editButton(name: string) {
+    const row = screen.getByRole('heading', { name }).closest('li')
+    return within(row!).getByRole('button', { name: 'Düzenle' })
+  }
+
+  // Waits for the delayed response, then lets its promise chain finish.
+  async function settle(served: () => number, count = 1) {
+    await waitFor(() => expect(served()).toBeGreaterThanOrEqual(count))
+    await act(async () => {
+      await fetch('/api/v1/provinces')
+    })
+  }
+
+  it('prefills the geography of the school that was opened', async () => {
+    server.use(...geography().handlers)
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'İkinci Okul' })
+
+    fireEvent.click(editButton('İkinci Okul'))
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Okul kaydını düzenle',
+    })
+    expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('İkinci Okul')
+    expect(within(dialog).getByLabelText('İlçe')).toHaveValue('20')
+    expect(within(dialog).getByLabelText('Mahalle')).toHaveValue('200')
+  })
+
+  it('keeps a new creation editor when an older edit response arrives', async () => {
+    const gate = deferred()
+    const { handlers, served } = geography(gate.promise)
+    server.use(...handlers)
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Okul ekle' })
+    fireEvent.change(within(dialog).getByLabelText('Okul adı'), {
+      target: { value: 'Yeni Okul' },
+    })
+
+    gate.resolve()
+    await settle(served)
+
+    expect(
+      screen.getByRole('dialog', { name: 'Okul ekle' }),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('Yeni Okul')
+    expect(within(dialog).getByLabelText('İl')).toHaveValue('')
+    expect(
+      within(dialog).getByRole('button', { name: 'Okulu ekle' }),
+    ).toBeVisible()
+  })
+
+  it('does not show an error from an edit the user has moved on from', async () => {
+    const gate = deferred()
+    const { handlers, served } = geography(gate.promise, true)
+    server.use(...handlers)
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
+    await screen.findByRole('dialog', { name: 'Okul ekle' })
+
+    gate.resolve()
+    await settle(served)
+
+    expect(screen.queryByText('Coğrafya yüklenemedi.')).not.toBeInTheDocument()
+  })
+
+  it('shows the latest school when edits overlap', async () => {
+    const gate = deferred()
+    const { handlers, served } = geography(gate.promise)
+    server.use(...handlers)
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    fireEvent.click(editButton('İkinci Okul'))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Okul kaydını düzenle',
+    })
+    expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('İkinci Okul')
+
+    gate.resolve()
+    await settle(served)
+
+    expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('İkinci Okul')
+    expect(within(dialog).getByLabelText('Mahalle')).toHaveValue('200')
+  })
+
+  it('does not open the editor over a status confirmation', async () => {
+    const gate = deferred()
+    const { handlers, served } = geography(gate.promise)
+    server.use(...handlers)
+    renderRoute('/admin/schools')
+    const heading = await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    fireEvent.click(
+      within(heading.closest('li')!).getByRole('button', {
+        name: 'Devre dışı bırak',
+      }),
+    )
+    await screen.findByRole('dialog', {
+      name: 'Örnek Okulu devre dışı bırakılsın mı?',
+    })
+
+    gate.resolve()
+    await settle(served)
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1)
+  })
+
+  it('does not restore stale values after closing and reopening', async () => {
+    const gate = deferred()
+    let servedDistricts = 0
+    server.use(
+      http.get('/api/v1/districts', async () => {
+        await gate.promise
+        servedDistricts += 1
+        return HttpResponse.json([{ id: 10, provinceId: 34, name: 'Kadıköy' }])
+      }),
+      ...geography().handlers,
+    )
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
+    const first = await screen.findByRole('dialog', { name: 'Okul ekle' })
+    await within(first).findByRole('option', { name: 'İstanbul' })
+    fireEvent.change(within(first).getByLabelText('Okul adı'), {
+      target: { value: 'Yarım Kayıt' },
+    })
+    fireEvent.change(within(first).getByLabelText('İl'), {
+      target: { value: '34' },
+    })
+    fireEvent.click(within(first).getByRole('button', { name: 'Vazgeç' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
+    const reopened = await screen.findByRole('dialog', { name: 'Okul ekle' })
+    gate.resolve()
+    await settle(() => servedDistricts)
+
+    expect(within(reopened).getByLabelText('Okul adı')).toHaveValue('')
+    expect(within(reopened).getByLabelText('İl')).toHaveValue('')
+    expect(
+      within(reopened).queryByRole('option', { name: 'Kadıköy' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('stays usable after a failed edit and can still create a school', async () => {
+    let createBody: unknown
+    server.use(
+      ...geography(undefined, true).handlers,
+      http.post('/api/v1/admin/schools', async ({ request }) => {
+        createBody = await request.json()
+        return HttpResponse.json(
+          { ...school(true), id: '6de54e65-6e04-4168-a1cb-967a98d7ec77' },
+          { status: 201 },
+        )
+      }),
+    )
+    renderRoute('/admin/schools')
+    await screen.findByRole('heading', { name: 'Örnek Okulu' })
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Coğrafya yüklenemedi.',
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    fireEvent.click(editButton('Örnek Okulu'))
+    const retried = await screen.findByRole('dialog', {
+      name: 'Okul kaydını düzenle',
+    })
+    fireEvent.click(within(retried).getByRole('button', { name: 'Vazgeç' }))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Okul ekle' })
+    fireEvent.change(within(dialog).getByLabelText('Okul adı'), {
+      target: { value: 'Yeni Okul' },
+    })
+    await within(dialog).findByRole('option', { name: 'İstanbul' })
+    fireEvent.change(within(dialog).getByLabelText('İl'), {
+      target: { value: '34' },
+    })
+    await within(dialog).findByRole('option', { name: 'Kadıköy' })
+    fireEvent.change(within(dialog).getByLabelText('İlçe'), {
+      target: { value: '10' },
+    })
+    await within(dialog).findByRole('option', { name: 'Moda' })
+    fireEvent.change(within(dialog).getByLabelText('Mahalle'), {
+      target: { value: '100' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Okulu ekle' }))
+
+    expect(await screen.findByText('Okul eklendi.')).toBeInTheDocument()
+    expect(createBody).toMatchObject({ name: 'Yeni Okul', neighborhoodId: 100 })
   })
 })
 

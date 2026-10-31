@@ -41,6 +41,8 @@ const emptyForm = {
 export function AdminSchoolsPage() {
   const navigate = useNavigate()
   const feedbackRef = useRef<HTMLDivElement>(null)
+  // Geography responses apply only while their request is still the latest editor action.
+  const editorRequest = useRef(0)
   const [result, setResult] = useState<SchoolPage>()
   const [provinces, setProvinces] = useState<Province[]>([])
   const [districts, setDistricts] = useState<District[]>([])
@@ -96,6 +98,13 @@ export function AdminSchoolsPage() {
     if (notice || error) feedbackRef.current?.focus()
   }, [error, notice])
 
+  useEffect(
+    () => () => {
+      editorRequest.current += 1
+    },
+    [],
+  )
+
   function chooseProvince(provinceId: string) {
     setForm((current) => ({
       ...current,
@@ -104,15 +113,20 @@ export function AdminSchoolsPage() {
       neighborhoodId: '',
     }))
     setNeighborhoods([])
+    const request = ++editorRequest.current
     if (!provinceId) {
       setDistricts([])
       return
     }
     void getDistricts(Number(provinceId))
-      .then(setDistricts)
-      .catch((failure: unknown) =>
-        handleSession(failure, navigate, setFormError),
-      )
+      .then((items) => {
+        if (request === editorRequest.current) setDistricts(items)
+      })
+      .catch((failure: unknown) => {
+        if (request === editorRequest.current) {
+          handleSession(failure, navigate, setFormError)
+        }
+      })
   }
 
   function chooseDistrict(districtId: string) {
@@ -121,15 +135,20 @@ export function AdminSchoolsPage() {
       districtId,
       neighborhoodId: '',
     }))
+    const request = ++editorRequest.current
     if (!districtId) {
       setNeighborhoods([])
       return
     }
     void getNeighborhoods(Number(districtId))
-      .then(setNeighborhoods)
-      .catch((failure: unknown) =>
-        handleSession(failure, navigate, setFormError),
-      )
+      .then((items) => {
+        if (request === editorRequest.current) setNeighborhoods(items)
+      })
+      .catch((failure: unknown) => {
+        if (request === editorRequest.current) {
+          handleSession(failure, navigate, setFormError)
+        }
+      })
   }
 
   function addSchool() {
@@ -140,9 +159,8 @@ export function AdminSchoolsPage() {
   }
 
   async function editSchool(school: School) {
-    if (pending) return
     resetForm()
-    setPending(`edit-${school.id}`)
+    const request = editorRequest.current
     setError(undefined)
     setNotice(undefined)
     try {
@@ -150,6 +168,7 @@ export function AdminSchoolsPage() {
         getDistricts(school.provinceId),
         getNeighborhoods(school.districtId),
       ])
+      if (request !== editorRequest.current) return
       setDistricts(nextDistricts)
       setNeighborhoods(nextNeighborhoods)
       setForm({
@@ -165,9 +184,9 @@ export function AdminSchoolsPage() {
       setEditing(school)
       setEditorOpen(true)
     } catch (failure) {
-      handleSession(failure, navigate, setError)
-    } finally {
-      setPending(undefined)
+      if (request === editorRequest.current) {
+        handleSession(failure, navigate, setError)
+      }
     }
   }
 
@@ -262,6 +281,7 @@ export function AdminSchoolsPage() {
   }
 
   function resetForm() {
+    editorRequest.current += 1
     setEditing(undefined)
     setForm(emptyForm)
     setDistricts([])
@@ -409,7 +429,10 @@ export function AdminSchoolsPage() {
                     aria-describedby={`school-${school.id}`}
                     className="text-button"
                     disabled={pending === school.id}
-                    onClick={() => setStatusTarget(school)}
+                    onClick={() => {
+                      editorRequest.current += 1
+                      setStatusTarget(school)
+                    }}
                     type="button"
                   >
                     {school.active ? 'Devre dışı bırak' : 'Etkinleştir'}
@@ -704,6 +727,13 @@ function SchoolEditorDialog({
       onCancel={(event) => {
         event.preventDefault()
         if (!pending) onCancel()
+      }}
+      onClose={(event) => {
+        // Repeated Escape can close a native dialog without a cancel event.
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
       }}
       ref={dialogRef}
     >

@@ -79,6 +79,151 @@ test('M03 confirms a status change through the real endpoint', async ({
   await assertAccessibleAndContained(page)
 })
 
+const dialogViewports = [
+  ...viewports,
+  // A layout viewport shrunk the way an on-screen keyboard can shrink it.
+  { name: 'keyboard', width: 390, height: 420 },
+] as const
+
+for (const viewport of dialogViewports) {
+  test(`M03 editor stays usable on ${viewport.name}`, async ({ page }) => {
+    await page.setViewportSize(viewport)
+    await prepare(page)
+    await page.goto('/admin/schools')
+    const opener = page
+      .locator('li', { hasText: 'Örnek Okulu' })
+      .getByRole('button', { name: 'Düzenle' })
+    await opener.click()
+    const dialog = page.getByRole('dialog', { name: 'Okul kaydını düzenle' })
+    await expect(dialog.getByLabel('Okul adı')).toBeFocused()
+
+    const box = await dialog.boundingBox()
+    expect(box).not.toBeNull()
+    expect(box!.x).toBeGreaterThanOrEqual(0)
+    expect(box!.y).toBeGreaterThanOrEqual(0)
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport.width)
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height)
+    expect(
+      await dialog.evaluate((node) => node.scrollWidth - node.clientWidth),
+    ).toBeLessThanOrEqual(0)
+
+    for (const name of ['Vazgeç', 'Değişiklikleri kaydet']) {
+      const button = dialog.getByRole('button', { name })
+      await button.scrollIntoViewIfNeeded()
+      await expect(button).toBeInViewport({ ratio: 1 })
+    }
+
+    const stayedInside: boolean[] = []
+    for (let step = 0; step < 16; step += 1) {
+      await page.keyboard.press('Tab')
+      stayedInside.push(
+        await page.evaluate(() => {
+          const active = document.activeElement
+          return (
+            active === document.body || Boolean(active?.closest('dialog[open]'))
+          )
+        }),
+      )
+    }
+    expect(stayedInside).not.toContain(false)
+    await assertAccessibleAndContained(page)
+
+    await dialog.getByRole('button', { name: 'Vazgeç' }).click()
+    await expect(dialog).toHaveCount(0)
+    await expect(opener).toBeFocused()
+  })
+}
+
+test('M03 status confirmation survives Escape while the request runs', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await prepare(page)
+  let release: () => void = () => undefined
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/admin/schools/*/activate', async (route) => {
+    await gate
+    await route.fulfill({ json: { ...schools[2], active: true } })
+  })
+  await page.goto('/admin/schools')
+  await page
+    .locator('li', { hasText: 'Moda Ortaokulu' })
+    .getByRole('button', { name: 'Etkinleştir' })
+    .click()
+  const dialog = page.getByRole('dialog', {
+    name: 'Moda Ortaokulu etkinleştirilsin mi?',
+  })
+  await dialog.getByRole('button', { name: 'Etkinleştir' }).click()
+  await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeDisabled()
+
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeVisible()
+
+  release()
+  await expect(page.getByText('Okul etkinleştirildi.')).toBeVisible()
+  await expect(dialog).toHaveCount(0)
+})
+
+test('M03 editor keeps errors linked and survives Escape while saving', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await prepare(page)
+  let release: () => void = () => undefined
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  await page.route('**/api/v1/admin/schools', async (route) => {
+    if (route.request().method() !== 'POST') return route.fallback()
+    await gate
+    await route.fulfill({ status: 201, json: schools[0] })
+  })
+  await page.goto('/admin/schools')
+  await page.getByRole('button', { name: 'Okul ekle' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Okul ekle' })
+
+  await dialog.getByRole('button', { name: 'Okulu ekle' }).click()
+  const name = dialog.getByRole('textbox', { name: 'Okul adı' })
+  await expect(name).toHaveAttribute('aria-invalid', 'true')
+  await expect(name).toHaveAccessibleDescription('Okul adı zorunludur.')
+  await expect(
+    dialog.getByRole('combobox', { name: 'Mahalle' }),
+  ).toHaveAccessibleDescription('Mahalle zorunludur.')
+  await assertAccessibleAndContained(page)
+
+  await name.fill('Yeni Okul')
+  await dialog
+    .getByRole('combobox', { name: 'İl', exact: true })
+    .selectOption('34')
+  await dialog
+    .getByRole('combobox', { name: 'İlçe', exact: true })
+    .selectOption('10')
+  const neighborhood = dialog.getByRole('combobox', { name: 'Mahalle' })
+  await expect(neighborhood.locator('option')).not.toHaveCount(1)
+  await neighborhood.selectOption({ index: 1 })
+  await dialog.getByRole('button', { name: 'Okulu ekle' }).click()
+  await expect(
+    dialog.getByRole('button', { name: 'Kaydediliyor…' }),
+  ).toBeDisabled()
+  await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeDisabled()
+
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Okul ekle', level: 2 }),
+  ).toBeVisible()
+
+  release()
+  await expect(page.getByText('Okul eklendi.')).toBeVisible()
+  await expect(dialog).toHaveCount(0)
+})
+
 async function prepare(page: Page) {
   await installMockApi(page, createMockApiState())
   await page.route('**/api/v1/admin/schools?*', (route) =>

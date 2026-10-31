@@ -40,6 +40,13 @@ export function AdminConfirmDialog({
         event.preventDefault()
         if (!pending) onCancel()
       }}
+      onClose={(event) => {
+        // Repeated Escape can close a native dialog without a cancel event.
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
+      }}
       ref={dialogRef}
     >
       <h2 id={titleId}>{title}</h2>
