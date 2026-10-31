@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
 
 const viewports = [
@@ -124,6 +124,77 @@ test('M04 offers a retry when the tariff cannot load', async ({ page }) => {
   await expect(page.getByLabel('Tarife JSON içeriği')).toBeVisible()
 })
 
+for (const viewport of [
+  { name: 'mobile', width: 390, height: 844 },
+  { name: 'compact', width: 320, height: 800 },
+] as const) {
+  test(`M04 stays usable after validation and conflict on ${viewport.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport)
+    await prepare(page)
+    await page.goto('/admin/tariffs')
+    const editor = page.getByLabel('Tarife JSON içeriği')
+    await expect(editor).toBeVisible()
+    const loaded = await editor.inputValue()
+    const skipLink = page.getByRole('link', { name: 'İçeriğe geç' })
+    const save = page.getByRole('button', { name: 'Tarifeyi kaydet' })
+
+    await page.keyboard.press('Tab')
+    await expect(skipLink).toBeFocused()
+    await expect(skipLink).toBeInViewport({ ratio: 1 })
+    await editor.click()
+    await expect(skipLink).not.toBeInViewport()
+
+    await expect(editor).toHaveJSProperty('scrollTop', 0)
+    await editor.evaluate((node) => {
+      node.scrollTop = 200
+    })
+    await expect(editor).not.toHaveJSProperty('scrollTop', 0)
+
+    await editor.fill('{ geçersiz')
+    await save.click()
+    const alert = page.getByRole('alert')
+    await expect(alert).toContainText('JSON biçimi geçersiz')
+    await expect(skipLink).not.toBeInViewport()
+    await assertReachable(page, alert)
+    await assertReachable(page, save)
+    await assertReachable(
+      page,
+      page.getByRole('button', { name: 'Güncel sürümü yükle' }),
+    )
+    await assertAccessibleAndContained(page)
+
+    await page.route('**/api/v1/admin/tariffs/34', (route) =>
+      route.fulfill({
+        status: 409,
+        json: {
+          title: 'Conflict',
+          status: 409,
+          detail: 'Version conflict',
+          code: 'tariff_version_conflict',
+        },
+      }),
+    )
+    await editor.fill(loaded)
+    await save.click()
+    await expect(alert).toContainText('Taslağınız korunuyor')
+    await expect(skipLink).not.toBeInViewport()
+    await assertReachable(page, alert)
+    const discard = page.getByRole('button', {
+      name: 'Taslağı bırakıp güncel sürümü yükle',
+    })
+    await assertReachable(page, discard)
+    await assertReachable(page, save)
+    await assertAccessibleAndContained(page)
+
+    await discard.focus()
+    await page.keyboard.press('Enter')
+    await expect(editor).toBeFocused()
+    await expect(alert).toHaveCount(0)
+  })
+}
+
 async function prepare(page: Page) {
   await installMockApi(page, createMockApiState())
   await page.goto('/operator/login')
@@ -131,6 +202,25 @@ async function prepare(page: Page) {
   await page.getByLabel('Şifre', { exact: true }).fill('Password123!')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   await expect(page).toHaveURL(/\/admin\/applications$/)
+}
+
+// The element must not sit under the sticky bar once it is scrolled to.
+async function assertReachable(page: Page, target: Locator) {
+  await target.scrollIntoViewIfNeeded()
+  await expect(target).toBeInViewport({ ratio: 1 })
+  expect(
+    await target.evaluate((node) => {
+      const box = node.getBoundingClientRect()
+      const top = document.elementFromPoint(
+        box.left + box.width / 2,
+        box.top + box.height / 2,
+      )
+      return top === node || node.contains(top)
+    }),
+  ).toBe(true)
+  await expect(
+    page.locator('.workspace-mobile-bar').filter({ has: target }),
+  ).toHaveCount(0)
 }
 
 async function assertAccessibleAndContained(page: Page) {
@@ -156,7 +246,9 @@ async function capture(page: Page, name: string, viewport: string) {
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur()
     }
-    window.scrollTo(0, 0)
+    // The app scrolls smoothly: a capture during that animation misplaces the
+    // sticky bar and the off-screen skip link in the full-page image.
+    window.scrollTo({ top: 0, behavior: 'instant' })
   })
   await page.screenshot({
     fullPage: true,
