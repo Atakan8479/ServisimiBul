@@ -905,6 +905,15 @@ Never mark tasks done because code was generated: verification and review requir
 - A read-only query of shared Supabase on 2026-10-31 showed V16 as the latest Flyway version, so V17 is not applied there. `application-prod.properties` disables Flyway at startup, so the backend cannot apply it.
 - Deployment order: merge, obtain separate database authorization, apply V17 through the controlled process, run `docs/10_MIGRATION_VERIFICATION.sql`, then deploy backend and frontend together. On V16 the new backend starts but every suspension fails and rolls back. The old frontend gets 400 from the new backend, and the new frontend on the old backend would suspend without storing the reason. After `SUSPENDED` rows exist, rolling back to the old backend breaks reading those operators' review history.
 
+## Verified UI-FIDELITY-15 M03 admin school catalog evidence — 2026-10-31
+
+- Branch: `feat/issue-153-admin-schools`; PR #178; GitHub issues #153 and #123. `/admin/schools` now follows the approved Manus composition: catalog header with an add action, name search, responsive school rows, and modal add/edit and status confirmations in place of the side editor and `window.confirm`.
+- School CRUD, geography selection, activation endpoints, pagination, and server validation are unchanged. A server rejection now stays inside the open editor with the typed values, and a failed list load offers a retry instead of claiming no school exists.
+- The Manus school type column, active count, and district/neighborhood search are omitted because the API has no type field or active total and admin search does not cover those columns. Province and address stay visible, and rows stack on narrow screens instead of the Manus horizontal scroll.
+- Before/after desktop and mobile captures and the edit state are under `docs/screenshots/ui-fidelity-15/`; API responses in them are mocked.
+- Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The complete serial Vitest suite passed 147/147, and the complete mocked Chromium suite passed 80/80 without retries, including WCAG 2.2 AA and overflow checks at 1440, 768, 390, and 320 pixels.
+- No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
 ## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
 
 - Branch: `fix/issue-170-reopen-inactive-demand`; GitHub issue #170; owner-approved decision D055. A parent without a support row may now reopen a `CLOSED(INACTIVE)` demand of the current academic year and an active school by joining the same row. `CLOSED(FULFILLED)`, `CLOSED(ADMIN)`, and `ARCHIVED` stay closed, and duplicate creation still adds no support. No migration, notification, or authorization rule changed.

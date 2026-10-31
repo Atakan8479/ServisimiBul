@@ -27,8 +27,57 @@ for (const viewport of viewports) {
     await expect(page.getByText('Moda Ortaokulu')).toBeVisible()
     await assertAccessibleAndContained(page)
     await capture(page, `M03-${viewport.name}`, viewport.name)
+
+    await page
+      .locator('li', { hasText: 'Örnek Okulu' })
+      .getByRole('button', { name: 'Düzenle' })
+      .click()
+    const dialog = page.getByRole('dialog', { name: 'Okul kaydını düzenle' })
+    await expect(dialog.getByLabel('Okul adı')).toHaveValue('Örnek Okulu')
+    await expect(dialog.getByLabel('Okul adı')).toBeFocused()
+    await assertAccessibleAndContained(page)
+    await capture(page, `state-M03-edit-${viewport.name}`, viewport.name)
+
+    await page.keyboard.press('Escape')
+    await expect(dialog).toHaveCount(0)
+    await expect(
+      page
+        .locator('li', { hasText: 'Örnek Okulu' })
+        .getByRole('button', { name: 'Düzenle' }),
+    ).toBeFocused()
   })
 }
+
+test('M03 confirms a status change through the real endpoint', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await prepare(page)
+  const requests: string[] = []
+  await page.route('**/api/v1/admin/schools/*/activate', async (route) => {
+    requests.push(route.request().url())
+    await route.fulfill({
+      json: { ...schools[2], active: true },
+    })
+  })
+  await page.goto('/admin/schools')
+
+  const row = page.locator('li', { hasText: 'Moda Ortaokulu' })
+  await row.getByRole('button', { name: 'Etkinleştir' }).click()
+  const dialog = page.getByRole('dialog', {
+    name: 'Moda Ortaokulu etkinleştirilsin mi?',
+  })
+  await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeFocused()
+  await dialog.getByRole('button', { name: 'Vazgeç' }).click()
+  expect(requests).toHaveLength(0)
+
+  await row.getByRole('button', { name: 'Etkinleştir' }).click()
+  await dialog.getByRole('button', { name: 'Etkinleştir' }).click()
+  await expect(page.getByText('Okul etkinleştirildi.')).toBeVisible()
+  expect(requests).toHaveLength(1)
+  await expect(row.getByText('Aktif')).toBeVisible()
+  await assertAccessibleAndContained(page)
+})
 
 async function prepare(page: Page) {
   await installMockApi(page, createMockApiState())

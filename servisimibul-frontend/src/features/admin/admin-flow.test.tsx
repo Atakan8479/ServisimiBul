@@ -297,7 +297,6 @@ describe('admin workspace flows', () => {
 
   it('adds a school and keeps it listed after deactivation', async () => {
     let createBody: unknown
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     server.use(
       authHandler('ADMIN'),
       csrfHandler(),
@@ -324,9 +323,10 @@ describe('admin workspace flows', () => {
 
     renderRoute('/admin/schools')
     expect(
-      await screen.findByRole('heading', { name: 'Okulları yönetin' }),
+      await screen.findByRole('heading', { name: 'Okul kataloğu' }),
     ).toBeInTheDocument()
 
+    fireEvent.click(screen.getByRole('button', { name: 'Okul ekle' }))
     fireEvent.change(screen.getByLabelText('Okul adı'), {
       target: { value: 'Örnek Okulu' },
     })
@@ -353,12 +353,142 @@ describe('admin workspace flows', () => {
 
     const card = screen
       .getByRole('heading', { name: 'Örnek Okulu' })
-      .closest('article')
+      .closest('li')
     expect(card).not.toBeNull()
-    fireEvent.click(within(card!).getByRole('button', { name: 'Pasife al' }))
+    fireEvent.click(
+      within(card!).getByRole('button', { name: 'Devre dışı bırak' }),
+    )
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Örnek Okulu devre dışı bırakılsın mı?',
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Devre dışı bırak' }),
+    )
 
-    expect(await screen.findByText('Okul pasife alındı.')).toBeInTheDocument()
-    expect(within(card!).getByText('Pasif')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Okul devre dışı bırakıldı.'),
+    ).toBeInTheDocument()
+    expect(within(card!).getByText('Devre dışı')).toBeInTheDocument()
+  })
+
+  it('prefills the school editor and sends only the real patch fields', async () => {
+    let patchBody: unknown
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/provinces', () =>
+        HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }]),
+      ),
+      http.get('/api/v1/districts', () =>
+        HttpResponse.json([{ id: 10, provinceId: 34, name: 'Kadıköy' }]),
+      ),
+      http.get('/api/v1/neighborhoods', () =>
+        HttpResponse.json([{ id: 100, districtId: 10, name: 'Moda' }]),
+      ),
+      http.get('/api/v1/admin/schools', () =>
+        HttpResponse.json(schoolPage([school(true)])),
+      ),
+      http.patch('/api/v1/admin/schools/:id', async ({ request }) => {
+        patchBody = await request.json()
+        return HttpResponse.json({ ...school(true), name: 'Yeni Ad' })
+      }),
+    )
+
+    renderRoute('/admin/schools')
+    fireEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Okul kaydını düzenle',
+    })
+    const name = within(dialog).getByLabelText('Okul adı')
+    expect(name).toHaveValue('Örnek Okulu')
+    await within(dialog).findByRole('option', { name: 'Moda' })
+    expect(within(dialog).getByLabelText('İlçe')).toHaveValue('10')
+    expect(within(dialog).getByLabelText('Mahalle')).toHaveValue('100')
+    expect(
+      within(dialog).queryByLabelText('Okulu aktif olarak ekle'),
+    ).not.toBeInTheDocument()
+
+    fireEvent.change(name, { target: { value: 'Yeni Ad' } })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Değişiklikleri kaydet' }),
+    )
+
+    expect(await screen.findByText('Okul güncellendi.')).toBeInTheDocument()
+    expect(patchBody).toEqual({
+      neighborhoodId: 100,
+      name: 'Yeni Ad',
+      address: null,
+      sourceName: null,
+      sourceCode: null,
+    })
+    expect(screen.getByRole('heading', { name: 'Yeni Ad' })).toBeInTheDocument()
+  })
+
+  it('keeps the editor open and shows a server rejection inside it', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/districts', () => HttpResponse.json([])),
+      http.get('/api/v1/neighborhoods', () =>
+        HttpResponse.json([{ id: 100, districtId: 10, name: 'Moda' }]),
+      ),
+      http.get('/api/v1/admin/schools', () =>
+        HttpResponse.json(schoolPage([school(true)])),
+      ),
+      http.patch('/api/v1/admin/schools/:id', () =>
+        HttpResponse.json(
+          { title: 'Conflict', status: 409, detail: 'Bu okul zaten kayıtlı.' },
+          {
+            status: 409,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+
+    renderRoute('/admin/schools')
+    fireEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Okul kaydını düzenle',
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Değişiklikleri kaydet' }),
+    )
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Bu okul zaten kayıtlı.',
+    )
+    expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('Örnek Okulu')
+  })
+
+  it('retries a failed school list instead of claiming it is empty', async () => {
+    let calls = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/admin/schools', () => {
+        calls += 1
+        return calls === 1
+          ? HttpResponse.json(
+              { title: 'Error', status: 500, detail: 'Sunucu hatası.' },
+              {
+                status: 500,
+                headers: { 'Content-Type': 'application/problem+json' },
+              },
+            )
+          : HttpResponse.json(schoolPage([school(true)]))
+      }),
+    )
+
+    renderRoute('/admin/schools')
+    fireEvent.click(await screen.findByRole('button', { name: 'Tekrar dene' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Örnek Okulu' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Okul bulunamadı')).not.toBeInTheDocument()
   })
 
   it('associates required school errors with their fields', async () => {
@@ -371,7 +501,8 @@ describe('admin workspace flows', () => {
     )
 
     renderRoute('/admin/schools')
-    fireEvent.click(await screen.findByRole('button', { name: 'Okulu ekle' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Okul ekle' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Okulu ekle' }))
 
     const name = screen.getByRole('textbox', { name: /Okul adı/ })
     const neighborhood = screen.getByRole('combobox', { name: /Mahalle/ })

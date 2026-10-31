@@ -642,7 +642,7 @@ export function AdminApplicationDetailPage() {
   )
 }
 
-function OperatorInitials({ name }: { name: string | null }) {
+export function OperatorInitials({ name }: { name: string | null }) {
   const initials = (name ?? '')
     .trim()
     .split(/\s+/)
