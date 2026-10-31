@@ -95,7 +95,7 @@ export function DemandFeedbackPanel({
           )}
           <ul className="demand-feedback-list">
             {data.feedback.map((item) => (
-              <li key={item.publicationEventId}>
+              <li data-status={item.status} key={item.publicationEventId}>
                 <div className="demand-feedback-copy">
                   <strong>
                     {item.operatorBusinessName ?? 'İsimsiz işletmeci'}
