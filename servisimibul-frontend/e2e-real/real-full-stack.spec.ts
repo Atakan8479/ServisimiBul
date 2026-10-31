@@ -438,11 +438,14 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
-        publicPage.getByText('Kesin ücret için işletmeciyle görüşün.'),
+        publicPage.getByText(
+          'Mesafe kademelerine göre azami tutarları inceleyin. Kesin ücret ve hizmet koşulları için işletmeciyle görüşün.',
+        ),
       ).toBeVisible()
       await expect(publicPage.getByText('₺12.000,00')).toBeVisible()
+      await expect(publicPage.getByText('Her km için +₺87,99')).toBeVisible()
+      await publicPage.getByRole('button', { name: 'Yıllık' }).click()
       await expect(publicPage.getByText('₺108.000,00')).toBeVisible()
-      await expect(publicPage.getByText('+₺87,99')).toBeVisible()
     })
 
     await test.step('invalidate and restore publication through profile and coverage state', async () => {
