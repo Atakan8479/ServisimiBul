@@ -562,6 +562,29 @@ describe('operator authentication screens', () => {
     expect(token).toEqual({ token: 'email-token' })
   })
 
+  it('submits an opaque generated token from the verification link unchanged', async () => {
+    const opaqueToken = 'Zm9v-YmFy_YmF6LXF1eF9jb3JnZS1ncmF1bHQtZ2FycGx5'
+    let body: unknown
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/verify-email', async ({ request }) => {
+        body = await request.json()
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    renderRoute(`/operator/verify-email?token=${opaqueToken}`)
+    expect(await screen.findByLabelText('Doğrulama kodu')).toHaveValue(
+      opaqueToken,
+    )
+    fireEvent.click(
+      screen.getByRole('button', { name: 'E-posta adresini doğrula' }),
+    )
+
+    await screen.findByText(/E-posta adresiniz doğrulandı/)
+    expect(body).toEqual({ token: opaqueToken })
+  })
+
   it('logs in with remember me and enters the operator workspace', async () => {
     let loginBody: unknown
     server.use(
