@@ -112,13 +112,18 @@ public class DemandFeedbackService {
                 .forEach(DemandServiceFeedback::supersede);
         feedbackRepository.flush();
         if (!demand.isOpen()) {
-            demand.reopen();
-            lifecycleEventRepository.save(new DemandLifecycleEvent(
-                    demand,
-                    DemandLifecycleEventType.REOPENED,
-                    now()
-            ));
+            reopenInactive(demand);
         }
+    }
+
+    /** Called inside a demand-locked support transaction. */
+    public void reopenInactive(Demand demand) {
+        demand.reopen();
+        lifecycleEventRepository.save(new DemandLifecycleEvent(
+                demand,
+                DemandLifecycleEventType.REOPENED,
+                now()
+        ));
     }
 
     @Transactional(readOnly = true)

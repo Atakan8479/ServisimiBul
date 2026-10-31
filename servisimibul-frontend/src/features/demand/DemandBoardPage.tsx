@@ -288,9 +288,11 @@ export function DemandBoardPage() {
         state: {
           notice: response.created
             ? 'Talebiniz oluşturuldu.'
-            : response.demand.status !== 'OPEN'
-              ? 'Bu okul ve mahalle için talep var ancak yeni katılıma kapalı.'
-              : 'Bu okul ve mahalle için zaten bir talep var. Katılmak için “Benim de ihtiyacım var” seçeneğini kullanın.',
+            : response.demand.closureReason === 'INACTIVE'
+              ? 'Bu okul ve mahalle için talep hareketsizlik nedeniyle kapanmış. Talebe katılarak yeniden açabilirsiniz.'
+              : response.demand.status !== 'OPEN'
+                ? 'Bu okul ve mahalle için talep var ancak yeni katılıma kapalı.'
+                : 'Bu okul ve mahalle için zaten bir talep var. Katılmak için “Benim de ihtiyacım var” seçeneğini kullanın.',
         },
         viewTransition: typeof document.startViewTransition === 'function',
       })

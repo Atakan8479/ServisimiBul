@@ -85,6 +85,10 @@ public class Demand {
         return status == DemandStatus.OPEN;
     }
 
+    public boolean isClosedInactive() {
+        return status == DemandStatus.CLOSED && closureReason == DemandClosureReason.INACTIVE;
+    }
+
     public void close(DemandClosureReason reason, OffsetDateTime at) {
         if (!isOpen()) {
             return;
@@ -95,7 +99,7 @@ public class Demand {
     }
 
     public void reopen() {
-        if (status != DemandStatus.CLOSED || closureReason != DemandClosureReason.INACTIVE) {
+        if (!isClosedInactive()) {
             throw new IllegalStateException("Only an inactive demand can be reopened");
         }
         status = DemandStatus.OPEN;

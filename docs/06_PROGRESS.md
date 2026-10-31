@@ -866,3 +866,9 @@ Never mark tasks done because code was generated: verification and review requir
 - Frontend ESLint, strict TypeScript, the Vite production build, scoped Prettier, `git diff --check`, and all 35 focused tariff/discovery/ADMIN Vitest assertions passed. The complete mocked Chromium suite passed all 52 tests, covering 1440, 768, 390, and 320 pixels, WCAG 2.2 AA, keyboard operation, reduced motion, and horizontal overflow.
 - The default parallel Vitest command reproduced the repository's existing timing/MSW instability. A serialized run passed 130/131 tests; only the pre-existing demand-feedback assertion failed after the known unhandled notification-count request. The tariff-focused tests all pass.
 - No backend source, API contract, tariff data, ADMIN persistence behavior, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
+## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
+
+- Branch: `fix/issue-170-reopen-inactive-demand`; GitHub issue #170; owner-approved decision D055. A parent without a support row may now reopen a `CLOSED(INACTIVE)` demand of the current academic year and an active school by joining the same row. `CLOSED(FULFILLED)`, `CLOSED(ADMIN)`, and `ARCHIVED` stay closed, and duplicate creation still adds no support. No migration, notification, or authorization rule changed.
+- The complete backend suite passed 288/288 on disposable PostgreSQL 17, including the same-row reopening, all rejected closure states, another academic year, an inactive school, and two simultaneous new parents producing one `REOPENED` event and two supporters. The demand Vitest file passed 25/25, and ESLint and strict TypeScript passed.
+- The existing earlier-supporter reopening path was deliberately left unchanged and has no academic-year or active-school check. Shared Supabase and production settings were not touched.

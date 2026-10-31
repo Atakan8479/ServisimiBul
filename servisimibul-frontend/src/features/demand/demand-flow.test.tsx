@@ -205,6 +205,68 @@ describe('demand board regression cases', () => {
 })
 
 describe('demand support management', () => {
+  it('lets a new parent reopen an inactive demand by joining it', async () => {
+    let current = demand({
+      status: 'CLOSED',
+      closureReason: 'INACTIVE',
+      closedAt: '2026-10-29T09:00:00Z',
+      supporterCount: 0,
+    })
+    let joinBody: unknown
+    server.use(
+      parentHandler(),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
+      http.post(`/api/v1/demands/${demandId}/support`, async ({ request }) => {
+        joinBody = await request.json()
+        current = demand({ currentUserSupport: activeSupport })
+        return HttpResponse.json(current)
+      }),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(
+      await screen.findByText(/Talebe katılarak yeniden açabilirsiniz/),
+    ).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Benim de ihtiyacım var' }),
+    )
+    fireEvent.click(await screen.findByLabelText('Uygun servis bulamıyorum'))
+    fireEvent.click(screen.getByRole('button', { name: 'Talebe katıl' }))
+
+    expect(
+      await screen.findByRole('button', { name: 'Desteğimi düzenle' }),
+    ).toBeInTheDocument()
+    expect(joinBody).toMatchObject({ reasons: ['NO_SUITABLE_SERVICE'] })
+  })
+
+  it.each(['FULFILLED', 'ADMIN'])(
+    'keeps a %s closed demand closed to a new parent',
+    async (closureReason) => {
+      server.use(
+        emptyServiceResponsesHandler(),
+        http.get(`/api/v1/demands/${demandId}`, () =>
+          HttpResponse.json(
+            demand({
+              status: 'CLOSED',
+              closureReason,
+              closedAt: '2026-10-29T09:00:00Z',
+            }),
+          ),
+        ),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      expect(
+        (await screen.findAllByText(/kapatıldı|kapalıdır/)).length,
+      ).toBeGreaterThan(0)
+      expect(
+        screen.queryByRole('button', { name: 'Benim de ihtiyacım var' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   it('edits, withdraws and reactivates the current parent support', async () => {
     let current = demand({ currentUserSupport: activeSupport })
     const methods: string[] = []

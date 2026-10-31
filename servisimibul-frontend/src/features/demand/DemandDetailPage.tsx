@@ -381,7 +381,9 @@ export function DemandDetailPage() {
     demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const open = demand.status === 'OPEN'
   const canManageSupport =
-    open || (withdrawnSupport && demand.closureReason === 'INACTIVE')
+    open ||
+    ((withdrawnSupport || !demand.currentUserSupport) &&
+      demand.closureReason === 'INACTIVE')
   const initialValues = demand.currentUserSupport
     ? {
         needsMorning: demand.currentUserSupport.needsMorning,
@@ -764,9 +766,12 @@ export function DemandDetailPage() {
           <div className="status-banner neutral">
             {demand.closureReason === 'INACTIVE' && withdrawnSupport
               ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
-              : demand.closureReason === 'FULFILLED'
-                ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
-                : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
+              : demand.closureReason === 'INACTIVE' &&
+                  !demand.currentUserSupport
+                ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
+                : demand.closureReason === 'FULFILLED'
+                  ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
+                  : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
           </div>
         )}
 

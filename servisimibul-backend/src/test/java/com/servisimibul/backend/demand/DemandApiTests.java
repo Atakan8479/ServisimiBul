@@ -11,17 +11,22 @@ import com.servisimibul.backend.geography.SchoolRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import tools.jackson.databind.JsonNode;
@@ -68,6 +73,15 @@ class DemandApiTests {
 
     @Autowired
     private DemandSupportRepository supportRepository;
+
+    @Autowired
+    private DemandLifecycleEventRepository lifecycleEventRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Test
     void createUsesServerYearAndDuplicateNeverAutoSupportsSecondParent() throws Exception {
@@ -212,6 +226,98 @@ class DemandApiTests {
     }
 
     @Test
+    void newParentReopensInactiveDemandOnTheSameRowWithoutDuplicateCreation() throws Exception {
+        AppUser creator = createParent("reopen-creator@example.com");
+        AppUser newParent = createParent("reopen-new-parent@example.com");
+        GeographyFixture geography = createGeography();
+        UUID demandId = createDemand(creator, geography);
+        withdraw(creator, demandId);
+        assertThat(demandRepository.findById(demandId).orElseThrow().isClosedInactive()).isTrue();
+
+        mockMvc.perform(post("/api/v1/demands")
+                        .with(as(newParent))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createBody(geography.school().getId(), geography.pickup().getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.created").value(false))
+                .andExpect(jsonPath("$.demand.id").value(demandId.toString()))
+                .andExpect(jsonPath("$.demand.status").value("CLOSED"))
+                .andExpect(jsonPath("$.demand.currentUserSupport").doesNotExist());
+
+        support(newParent, demandId)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andExpect(jsonPath("$.closureReason").doesNotExist())
+                .andExpect(jsonPath("$.closedAt").doesNotExist())
+                .andExpect(jsonPath("$.supporterCount").value(1))
+                .andExpect(jsonPath("$.currentUserSupport.status").value("ACTIVE"));
+
+        assertThat(demandRepository.count()).isOne();
+        assertThat(reopenedEvents(demandId)).isOne();
+        assertThat(supportRepository.findOwned(demandId, creator.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandSupportStatus.WITHDRAWN);
+        assertThat(demandRepository.findById(demandId).orElseThrow().getCreatedBy().getId())
+                .isEqualTo(creator.getId());
+    }
+
+    @Test
+    void newParentCannotReopenFulfilledOrAdministrativelyClosedDemands() throws Exception {
+        AppUser newParent = createParent("not-reopenable@example.com");
+        for (DemandClosureReason reason : List.of(DemandClosureReason.FULFILLED, DemandClosureReason.ADMIN)) {
+            Demand demand = closedDemand(reason, "2026-2027", reason.name());
+
+            support(newParent, demand.getId())
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("demand_not_open"));
+
+            assertRemainsClosedWithoutSupport(demand.getId(), newParent);
+        }
+    }
+
+    @Test
+    void newParentCannotReopenArchivedDemand() throws Exception {
+        AppUser newParent = createParent("archived-reopen@example.com");
+        Demand demand = closedDemand(DemandClosureReason.INACTIVE, "2026-2027", "ARCHIVED");
+        jdbcTemplate.update("update demand set status = 'ARCHIVED' where id = ?", demand.getId());
+        entityManager.clear();
+
+        support(newParent, demand.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("demand_not_open"));
+
+        assertThat(demandRepository.findById(demand.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandStatus.ARCHIVED);
+        assertThat(reopenedEvents(demand.getId())).isZero();
+    }
+
+    @Test
+    void newParentCannotReopenInactiveDemandFromAnotherAcademicYear() throws Exception {
+        AppUser newParent = createParent("old-year-reopen@example.com");
+        Demand demand = closedDemand(DemandClosureReason.INACTIVE, "2025-2026", "OLD-YEAR");
+
+        support(newParent, demand.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("demand_not_reopenable"));
+
+        assertRemainsClosedWithoutSupport(demand.getId(), newParent);
+    }
+
+    @Test
+    void newParentCannotReopenInactiveDemandOfInactiveSchool() throws Exception {
+        AppUser newParent = createParent("inactive-school-reopen@example.com");
+        Demand demand = closedDemand(DemandClosureReason.INACTIVE, "2026-2027", "INACTIVE-SCHOOL");
+        demand.getSchool().deactivate();
+        schoolRepository.flush();
+
+        support(newParent, demand.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("school_inactive"));
+
+        assertRemainsClosedWithoutSupport(demand.getId(), newParent);
+    }
+
+    @Test
     void creationValidatesDirectionsReasonsActiveSchoolAndProvince() throws Exception {
         AppUser parent = createParent("validation-parent@example.com");
         GeographyFixture geography = createGeography();
@@ -343,6 +449,52 @@ class DemandApiTests {
                 .andExpect(status().isCreated())
                 .andReturn();
         return demandId(result);
+    }
+
+    private ResultActions support(AppUser parent, UUID demandId) throws Exception {
+        return mockMvc.perform(post("/api/v1/demands/{id}/support", demandId)
+                .with(as(parent))
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(supportBody(true, false, "NO_SUITABLE_SERVICE")));
+    }
+
+    private void withdraw(AppUser parent, UUID demandId) throws Exception {
+        mockMvc.perform(delete("/api/v1/demands/{id}/support", demandId)
+                        .with(as(parent))
+                        .with(csrf()))
+                .andExpect(status().is2xxSuccessful());
+    }
+
+    private Demand closedDemand(DemandClosureReason reason, String academicYear, String label) {
+        AppUser creator = createParent("closed-" + label.toLowerCase() + "@example.com");
+        Province province = provinceRepository.save(new Province(
+                "%02d".formatted(provinceRepository.count() + 1),
+                "Province " + label
+        ));
+        District district = districtRepository.save(new District(province, "District"));
+        Neighborhood neighborhood = neighborhoodRepository.saveAndFlush(
+                new Neighborhood(district, "Neighborhood")
+        );
+        School school = schoolRepository.saveAndFlush(
+                new School(neighborhood, "School " + label, null, null, null)
+        );
+        Demand demand = new Demand(school, neighborhood, academicYear, creator);
+        demand.close(reason, OffsetDateTime.now());
+        return demandRepository.saveAndFlush(demand);
+    }
+
+    private void assertRemainsClosedWithoutSupport(UUID demandId, AppUser parent) {
+        assertThat(demandRepository.findById(demandId).orElseThrow().isOpen()).isFalse();
+        assertThat(supportRepository.findOwned(demandId, parent.getId())).isEmpty();
+        assertThat(reopenedEvents(demandId)).isZero();
+    }
+
+    private long reopenedEvents(UUID demandId) {
+        return lifecycleEventRepository.countByDemandIdAndEventType(
+                demandId,
+                DemandLifecycleEventType.REOPENED
+        );
     }
 
     private UUID demandId(MvcResult result) throws Exception {
