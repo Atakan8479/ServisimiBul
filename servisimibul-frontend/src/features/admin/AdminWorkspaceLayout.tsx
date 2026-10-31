@@ -66,7 +66,7 @@ export function AdminWorkspaceLayout() {
               Okullar
             </NavLink>
             <NavLink to="/admin/tariffs" viewTransition>
-              Tarifeler
+              UKOME tarifesi
             </NavLink>
             <NavLink to="/admin/moderation" viewTransition>
               Moderasyon

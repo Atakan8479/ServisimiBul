@@ -528,7 +528,7 @@ describe('admin workspace flows', () => {
     renderRoute('/admin/tariffs')
     const editor = await screen.findByLabelText('Tarife JSON içeriği')
     expect(
-      screen.getByRole('heading', { name: 'Yayımlanacak görünüm' }),
+      screen.getByRole('heading', { name: 'Uygulanacak ücret tarifesi' }),
     ).toBeInTheDocument()
     expect(screen.getByText('₺4.456,00')).toBeInTheDocument()
     expect(screen.getByText('₺39.970,00')).toBeInTheDocument()
@@ -577,6 +577,178 @@ describe('admin workspace flows', () => {
         name: 'Taslağı bırakıp güncel sürümü yükle',
       }),
     ).toBeInTheDocument()
+  })
+
+  it('sends the newer version after the admin reloads past a conflict', async () => {
+    const bodies: unknown[] = []
+    let current = 'v1'
+    server.use(
+      authHandler('ADMIN'),
+      csrfHandler(),
+      http.get('/api/v1/tariffs', () => HttpResponse.json(tariff(current))),
+      http.put('/api/v1/admin/tariffs/34', async ({ request }) => {
+        const body = await request.json()
+        bodies.push(body)
+        if (bodies.length === 1) {
+          current = 'other'
+          return HttpResponse.json(
+            {
+              title: 'Conflict',
+              status: 409,
+              detail: 'Version conflict',
+              code: 'tariff_version_conflict',
+            },
+            { status: 409 },
+          )
+        }
+        return HttpResponse.json(tariff('mine-2'))
+      }),
+    )
+
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    fireEvent.change(editor, {
+      target: { value: JSON.stringify(tariff('mine')) },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tarifeyi kaydet' }))
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Taslağı bırakıp güncel sürümü yükle',
+      }),
+    )
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveFocus(),
+    )
+    const reloaded = screen.getByLabelText('Tarife JSON içeriği')
+    expect(reloaded).toHaveValue(JSON.stringify(tariff('other'), null, 2))
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
+    fireEvent.change(reloaded, {
+      target: { value: JSON.stringify(tariff('mine-2')) },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tarifeyi kaydet' }))
+    expect(
+      await screen.findByText('Tarife mine-2 sürümüyle kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(bodies[1]).toEqual({
+      expectedVersion: 'other',
+      tariff: tariff('mine-2'),
+    })
+  })
+
+  it('asks before a reload discards an edited draft', async () => {
+    let reads = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/tariffs', () => {
+        reads += 1
+        return HttpResponse.json(tariff('v1'))
+      }),
+    )
+
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    fireEvent.change(editor, { target: { value: 'taslak' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Kaydedilmemiş taslak bırakılsın mı?',
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Vazgeç' }))
+    expect(editor).toHaveValue('taslak')
+    expect(reads).toBe(1)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', {
+          name: 'Kaydedilmemiş taslak bırakılsın mı?',
+        }),
+      ).getByRole('button', { name: 'Taslağı bırak' }),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue(
+        JSON.stringify(tariff('v1'), null, 2),
+      ),
+    )
+    expect(reads).toBe(2)
+  })
+
+  it('offers a retry instead of an editor when the tariff cannot load', async () => {
+    let reads = 0
+    let puts = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/tariffs', () => {
+        reads += 1
+        return reads === 1
+          ? HttpResponse.json(
+              {
+                title: 'Error',
+                status: 500,
+                detail: 'Tarife okunamadı.',
+                code: 'failed',
+              },
+              { status: 500 },
+            )
+          : HttpResponse.json(tariff('v1'))
+      }),
+      http.put('/api/v1/admin/tariffs/34', () => {
+        puts += 1
+        return HttpResponse.json(tariff('v1'))
+      }),
+    )
+
+    renderRoute('/admin/tariffs')
+    expect(await screen.findByText('Tarife yüklenemedi')).toBeInTheDocument()
+    expect(screen.getByText('Tarife okunamadı.')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Tarife JSON içeriği')).toBeNull()
+    expect(screen.queryByText('Henüz yayımlanmış sürüm yok.')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
+    expect(await screen.findByLabelText('Tarife JSON içeriği')).toHaveValue(
+      JSON.stringify(tariff('v1'), null, 2),
+    )
+    expect(puts).toBe(0)
+  })
+
+  it('keeps the draft when a reload fails', async () => {
+    let reads = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/tariffs', () => {
+        reads += 1
+        return reads === 1
+          ? HttpResponse.json(tariff('v1'))
+          : HttpResponse.json(
+              {
+                title: 'Error',
+                status: 500,
+                detail: 'Tarife okunamadı.',
+                code: 'failed',
+              },
+              { status: 500 },
+            )
+      }),
+    )
+
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    fireEvent.change(editor, { target: { value: 'taslak' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', {
+          name: 'Kaydedilmemiş taslak bırakılsın mı?',
+        }),
+      ).getByRole('button', { name: 'Taslağı bırak' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Tarife okunamadı.',
+    )
+    expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue('taslak')
   })
 
   it('creates the first version with a null expected version', async () => {
@@ -659,6 +831,168 @@ function deferred() {
   })
   return { promise, resolve }
 }
+
+describe('overlapping tariff loads', () => {
+  function plannedLoads(
+    ...plan: ((gate: Promise<void>) => Promise<Response>)[]
+  ) {
+    const gates = plan.map(() => deferred())
+    const started = { count: 0 }
+    const handler = http.get('/api/v1/tariffs', async () => {
+      const index = started.count
+      started.count += 1
+      return plan[index](gates[index].promise)
+    })
+    return { gates, handler, started }
+  }
+
+  const success =
+    (version: string) =>
+    async (gate: Promise<void>): Promise<Response> => {
+      await gate
+      return HttpResponse.json(tariff(version))
+    }
+  const failure = async (gate: Promise<void>): Promise<Response> => {
+    await gate
+    return HttpResponse.json(
+      {
+        title: 'Error',
+        status: 500,
+        detail: 'Eski veya yeni yükleme hatası.',
+        code: 'failed',
+      },
+      { status: 500 },
+    )
+  }
+
+  // Both activations land before React re-renders, so two loads overlap.
+  function activateTwice(button: HTMLElement) {
+    act(() => {
+      button.click()
+      button.click()
+    })
+  }
+
+  async function settleLateResponse(release: () => void) {
+    const reads: Promise<unknown>[] = []
+    const read = Response.prototype.text
+    vi.spyOn(Response.prototype, 'text').mockImplementation(function (
+      this: Response,
+    ) {
+      const result = read.call(this)
+      reads.push(result)
+      return result
+    })
+    release()
+    await waitFor(() => expect(reads.length).toBeGreaterThan(0))
+    await act(async () => {
+      await Promise.all(reads)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    vi.mocked(Response.prototype.text).mockRestore()
+  }
+
+  async function expectSaveAgainst(expectedVersion: string, next: string) {
+    fireEvent.change(screen.getByLabelText('Tarife JSON içeriği'), {
+      target: { value: JSON.stringify(tariff(next)) },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Tarifeyi kaydet' }))
+    expect(
+      await screen.findByText(`Tarife ${next} sürümüyle kaydedildi.`),
+    ).toBeInTheDocument()
+    expect(savedBody).toEqual({ expectedVersion, tariff: tariff(next) })
+  }
+
+  let savedBody: unknown
+  const saveHandler = http.put(
+    '/api/v1/admin/tariffs/34',
+    async ({ request }) => {
+      savedBody = await request.json()
+      return HttpResponse.json(
+        tariff((savedBody as { tariff: { version: string } }).tariff.version),
+      )
+    },
+  )
+
+  it('keeps the newer tariff when an older success arrives last', async () => {
+    const loads = plannedLoads(success('v0'), success('v1'), success('v2'))
+    loads.gates[0].resolve()
+    server.use(authHandler('ADMIN'), csrfHandler(), loads.handler, saveHandler)
+    renderRoute('/admin/tariffs')
+    await screen.findByLabelText('Tarife JSON içeriği')
+
+    activateTwice(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+    await waitFor(() => expect(loads.started.count).toBe(3))
+    loads.gates[2].resolve()
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    expect(editor).toHaveValue(JSON.stringify(tariff('v2'), null, 2))
+
+    await settleLateResponse(loads.gates[1].resolve)
+
+    expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue(
+      JSON.stringify(tariff('v2'), null, 2),
+    )
+    expect(screen.getByText(/Yüklü sürüm: v2/)).toBeInTheDocument()
+    expect(
+      screen.getByRole('heading', { name: 'Mevcut sürüm · v2' }),
+    ).toBeInTheDocument()
+    await expectSaveAgainst('v2', 'v3')
+  })
+
+  it('shows no error when an older failure arrives last', async () => {
+    const loads = plannedLoads(success('v0'), failure, success('v2'))
+    loads.gates[0].resolve()
+    server.use(authHandler('ADMIN'), csrfHandler(), loads.handler, saveHandler)
+    renderRoute('/admin/tariffs')
+    await screen.findByLabelText('Tarife JSON içeriği')
+
+    activateTwice(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+    await waitFor(() => expect(loads.started.count).toBe(3))
+    loads.gates[2].resolve()
+    await screen.findByLabelText('Tarife JSON içeriği')
+
+    await settleLateResponse(loads.gates[1].resolve)
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const editor = screen.getByLabelText('Tarife JSON içeriği')
+    expect(editor).toHaveValue(JSON.stringify(tariff('v2'), null, 2))
+    expect(editor).toHaveProperty('readOnly', false)
+    expect(screen.getByText(/Yüklü sürüm: v2/)).toBeInTheDocument()
+    await expectSaveAgainst('v2', 'v3')
+  })
+
+  it('keeps the latest failure and the draft when an older success arrives last', async () => {
+    const loads = plannedLoads(success('v1'), success('v-old'), failure)
+    loads.gates[0].resolve()
+    server.use(authHandler('ADMIN'), csrfHandler(), loads.handler, saveHandler)
+    renderRoute('/admin/tariffs')
+    const editor = await screen.findByLabelText('Tarife JSON içeriği')
+    const draft = JSON.stringify(tariff('my-draft'))
+    fireEvent.change(editor, { target: { value: draft } })
+    fireEvent.click(screen.getByRole('button', { name: 'Güncel sürümü yükle' }))
+    activateTwice(
+      within(
+        await screen.findByRole('dialog', {
+          name: 'Kaydedilmemiş taslak bırakılsın mı?',
+        }),
+      ).getByRole('button', { name: 'Taslağı bırak' }),
+    )
+    await waitFor(() => expect(loads.started.count).toBe(3))
+    loads.gates[2].resolve()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Eski veya yeni yükleme hatası.',
+    )
+
+    await settleLateResponse(loads.gates[1].resolve)
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Eski veya yeni yükleme hatası.',
+    )
+    expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue(draft)
+    expect(screen.getByText(/Yüklü sürüm: v1/)).toBeInTheDocument()
+    await expectSaveAgainst('v1', 'my-draft')
+  })
+})
 
 describe('school editor asynchronous ordering', () => {
   const second = {

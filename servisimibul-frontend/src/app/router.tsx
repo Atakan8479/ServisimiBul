@@ -226,7 +226,7 @@ const applicationRoutes: RouteObject[] = [
       },
       {
         path: 'tariffs',
-        handle: { pageTitle: 'Resmî tarifeler' },
+        handle: { pageTitle: 'UKOME tarifesi' },
         lazy: async () => ({
           Component: (await import('../features/admin/AdminTariffsPage'))
             .AdminTariffsPage,
