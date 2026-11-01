@@ -433,7 +433,7 @@ export function OperatorOfferingsPage() {
             setNotice('Araç eklendi.')
             setVehicleCreateOpen(false)
           }}
-          onError={(reason) => handleSession(reason, navigate, setError)}
+          onError={(reason) => dialogErrorFor(reason, navigate)}
         />
       </ModalDialog>
 
@@ -444,7 +444,7 @@ export function OperatorOfferingsPage() {
           title="Araç bilgilerini düzenle"
         >
           <VehicleEditor
-            onError={(reason) => handleSession(reason, navigate, setError)}
+            onError={(reason) => dialogErrorFor(reason, navigate)}
             onUpdated={(updated) => {
               updateVehicleState(updated)
               setNotice('Araç bilgileri kaydedildi.')
@@ -466,7 +466,7 @@ export function OperatorOfferingsPage() {
             setNotice('Servis taslağı oluşturuldu.')
             setOfferingCreateOpen(false)
           }}
-          onError={(reason) => handleSession(reason, navigate, setError)}
+          onError={(reason) => dialogErrorFor(reason, navigate)}
           schools={activeSchools}
           vehicles={activeVehicles}
         />
@@ -481,7 +481,7 @@ export function OperatorOfferingsPage() {
         >
           <OfferingEditor
             offering={offeringToEdit}
-            onError={(reason) => handleSession(reason, navigate, setError)}
+            onError={(reason) => dialogErrorFor(reason, navigate)}
             onUpdated={(updated, message) => {
               updateOfferingState(updated)
               setOfferingToEdit(updated)
@@ -501,12 +501,13 @@ function VehicleCreateForm({
   onError,
 }: {
   onCreated: (vehicle: Vehicle) => void
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
 }) {
   const [plate, setPlate] = useState('')
   const [capacity, setCapacity] = useState('')
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -521,6 +522,7 @@ function VehicleCreateForm({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onCreated(
         await createVehicle({ plate: plate.trim(), capacity: parsedCapacity }),
@@ -528,7 +530,7 @@ function VehicleCreateForm({
       setPlate('')
       setCapacity('')
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
@@ -558,6 +560,11 @@ function VehicleCreateForm({
         </label>
       </div>
       {validation && <p className="field-error">{validation}</p>}
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
       <div className="operator-dialog-actions">
         <button className="primary-button" disabled={pending} type="submit">
           {pending ? 'Ekleniyor…' : 'Aracı ekle'}
@@ -572,7 +579,7 @@ function VehicleEditor({
   onUpdated,
   vehicle,
 }: {
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   onUpdated: (vehicle: Vehicle) => void
   vehicle: Vehicle
 }) {
@@ -580,6 +587,7 @@ function VehicleEditor({
   const [capacity, setCapacity] = useState(String(vehicle.capacity))
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -594,6 +602,7 @@ function VehicleEditor({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onUpdated(
         await updateVehicle(vehicle.id, {
@@ -602,7 +611,7 @@ function VehicleEditor({
         }),
       )
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
@@ -632,6 +641,11 @@ function VehicleEditor({
         </label>
       </div>
       {validation && <p className="field-error">{validation}</p>}
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
       <div className="operator-dialog-actions">
         <button className="primary-button" disabled={pending} type="submit">
           {pending ? 'Kaydediliyor…' : 'Aracı kaydet'}
@@ -648,7 +662,7 @@ function OfferingCreateForm({
   vehicles,
 }: {
   onCreated: (offering: ServiceOffering) => void
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   schools: OperatorSchool[]
   vehicles: Vehicle[]
 }) {
@@ -658,6 +672,7 @@ function OfferingCreateForm({
   const [description, setDescription] = useState('')
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -676,6 +691,7 @@ function OfferingCreateForm({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onCreated(
         await createOffering({
@@ -688,7 +704,7 @@ function OfferingCreateForm({
       setAvailableSeats('')
       setDescription('')
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
@@ -747,6 +763,11 @@ function OfferingCreateForm({
         </label>
       </div>
       {validation && <p className="field-error">{validation}</p>}
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
       {(schools.length === 0 || vehicles.length === 0) && (
         <p className="empty-note">
           Taslak oluşturmak için etkin okul bağlantısı ve etkin araç gerekir.
@@ -773,7 +794,7 @@ function OfferingEditor({
   vehicles,
 }: {
   offering: ServiceOffering
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   onUpdated: (offering: ServiceOffering, message: string) => void
   schools: OperatorSchool[]
   vehicles: Vehicle[]
@@ -799,6 +820,8 @@ function OfferingEditor({
   )
   const [pending, setPending] = useState<string>()
   const [validation, setValidation] = useState<string>()
+  const [detailsError, setDetailsError] = useState<string>()
+  const [coverageError, setCoverageError] = useState<string>()
 
   const parentSchool = schools.find(
     (school) => school.id === offering.operatorSchoolId,
@@ -833,6 +856,7 @@ function OfferingEditor({
     }
     setPending('details')
     setValidation(undefined)
+    setDetailsError(undefined)
     try {
       const updated = await updateOffering(offering.id, {
         operatorSchoolId,
@@ -845,7 +869,7 @@ function OfferingEditor({
       }
       onUpdated(updated, 'Servis ayrıntıları kaydedildi.')
     } catch (reason) {
-      onError(reason)
+      setDetailsError(onError(reason))
     } finally {
       setPending(undefined)
     }
@@ -855,6 +879,7 @@ function OfferingEditor({
     event.preventDefault()
     setPending('coverage')
     setValidation(undefined)
+    setCoverageError(undefined)
     try {
       const updated = await replaceOfferingCoverage(offering.id, [
         ...selectedCoverage,
@@ -864,7 +889,7 @@ function OfferingEditor({
       )
       onUpdated(updated, 'Servis kapsamı kaydedildi.')
     } catch (reason) {
-      onError(reason)
+      setCoverageError(onError(reason))
     } finally {
       setPending(undefined)
     }
@@ -922,6 +947,11 @@ function OfferingEditor({
           </label>
         </div>
         {validation && <p className="field-error">{validation}</p>}
+        {detailsError && (
+          <div className="form-error" role="alert">
+            {detailsError}
+          </div>
+        )}
         <div className="operator-dialog-actions">
           <button
             className="secondary-button"
@@ -964,6 +994,11 @@ function OfferingEditor({
               ))}
             </fieldset>
           ))
+        )}
+        {coverageError && (
+          <div className="form-error" role="alert">
+            {coverageError}
+          </div>
         )}
         <div className="operator-dialog-actions">
           <button
@@ -1103,6 +1138,17 @@ function handleSession(
     return
   }
   setError(messageFor(reason))
+}
+
+function dialogErrorFor(
+  reason: unknown,
+  navigate: ReturnType<typeof useNavigate>,
+): string | undefined {
+  if (reason instanceof ApiError && reason.sessionExpired) {
+    void navigate('/operator/login?reason=session', { replace: true })
+    return undefined
+  }
+  return messageFor(reason)
 }
 
 function messageFor(reason: unknown): string {

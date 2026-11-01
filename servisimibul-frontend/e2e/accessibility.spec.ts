@@ -94,7 +94,7 @@ for (const viewport of viewports) {
 
     await page.goto('/operator/offerings')
     await expect(
-      page.getByRole('heading', { name: 'Servis ayrıntılarınız' }),
+      page.getByRole('heading', { name: 'Araçlar ve servis teklifleri' }),
     ).toBeVisible()
     await audit(page, 'operator offerings')
 

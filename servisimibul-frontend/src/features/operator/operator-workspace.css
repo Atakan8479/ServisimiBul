@@ -1640,7 +1640,7 @@
   border-top: 1px solid var(--color-border);
 }
 
-.operator-offering-coverage {
+.offering-coverage {
   display: grid;
   gap: 0.9rem;
 }

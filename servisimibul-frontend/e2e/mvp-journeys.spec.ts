@@ -179,43 +179,53 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
 
   await test.step('9. Add a vehicle', async () => {
     await operatorPage.goto('/operator/offerings')
-    await operatorPage.getByLabel('Plaka').first().fill('34 ABC 123')
-    await operatorPage.getByLabel('Kapasite').first().fill('16')
     await operatorPage.getByRole('button', { name: 'Araç ekle' }).click()
+    const vehicleDialog = operatorPage.getByRole('dialog', {
+      name: 'Araç ekle',
+    })
+    await vehicleDialog.getByLabel('Plaka').fill('34 ABC 123')
+    await vehicleDialog.getByLabel('Kapasite').fill('16')
+    await vehicleDialog.getByRole('button', { name: 'Aracı ekle' }).click()
     await expect(operatorPage.getByText('Araç eklendi.')).toBeVisible()
   })
 
   await test.step('10. Create and publish an offering', async () => {
-    await operatorPage
+    await operatorPage.getByRole('button', { name: 'Teklif oluştur' }).click()
+    const createDialog = operatorPage.getByRole('dialog', {
+      name: 'Servis teklifi oluştur',
+    })
+    await createDialog
       .getByLabel('Okul bağlantısı')
-      .first()
       .selectOption({ label: 'Örnek Okulu' })
-    await operatorPage
+    await createDialog
       .getByLabel('Etkin araç')
-      .first()
       .selectOption({ label: '34 ABC 123 — 16 kişi' })
-    await operatorPage
-      .getByLabel('Uygun koltuk (isteğe bağlı)')
-      .first()
-      .fill('4')
-    await operatorPage
+    await createDialog.getByLabel('Uygun koltuk (isteğe bağlı)').fill('4')
+    await createDialog
       .getByLabel('Açıklama (isteğe bağlı)')
-      .first()
       .fill('Sabah ve akşam servisi')
-    await operatorPage
-      .getByRole('button', { name: 'Servis taslağı oluştur' })
-      .click()
+    await createDialog.getByRole('button', { name: 'Taslağı oluştur' }).click()
     await expect(
       operatorPage.getByText('Servis taslağı oluşturuldu.'),
     ).toBeVisible()
 
-    await operatorPage.getByText('Servisi düzenle').click()
     await operatorPage
+      .getByRole('button', { name: 'Düzenle', exact: true })
+      .click()
+    const editDialog = operatorPage.getByRole('dialog', {
+      name: 'Servis teklifini düzenle',
+    })
+    await editDialog
       .getByRole('group', { name: 'Kadıköy' })
       .getByRole('checkbox', { name: 'Moda' })
       .check()
-    await operatorPage
+    await editDialog
       .getByRole('button', { name: 'Servis kapsamını kaydet' })
+      .click()
+    await editDialog
+      .getByRole('button', {
+        name: 'Servis teklifini düzenle penceresini kapat',
+      })
       .click()
     await operatorPage.getByRole('button', { name: 'Yayımla' }).click()
     await expect(operatorPage.getByText('Servis yayımlandı.')).toBeVisible()
