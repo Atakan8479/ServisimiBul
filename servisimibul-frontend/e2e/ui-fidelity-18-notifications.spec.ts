@@ -50,6 +50,41 @@ for (const role of roles) {
   }
 }
 
+test('N01 marks every unread item through the real endpoint', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const notifications = feed()
+  await prepare(page, roles[0], notifications)
+  const marked: string[] = []
+  await page.route('**/api/v1/notifications/*/read', async (route) => {
+    const id = route.request().url().split('/').at(-2)!
+    marked.push(id)
+    const item = notifications.find((entry) => entry.id === id)!
+    item.readAt = '2026-10-25T09:30:00Z'
+    await route.fulfill({ json: item })
+  })
+  await page.goto('/notifications')
+
+  await expect(page.getByText('2 okunmamış bildirim').first()).toBeVisible()
+  const mark = page.getByRole('button', { name: 'Okundu olarak işaretle' })
+  await mark.first().click()
+  await expect(mark).toHaveCount(1)
+  await expect(
+    page
+      .getByRole('button', { name: 'İncele' })
+      .and(page.locator('#notification-' + notifications[0]!.id)),
+  ).toBeFocused()
+  await mark.first().click()
+  await expect(mark).toHaveCount(0)
+  expect(marked).toHaveLength(2)
+
+  await expect(page.getByText('Hepsi okundu')).toBeVisible()
+  await expect(page.getByText('0 okunmamış bildirim')).toBeVisible()
+  await assertAccessibleAndContained(page)
+  await capture(page, 'state-N01-all-read', 'mobile')
+})
+
 async function prepare(
   page: Page,
   role: (typeof roles)[number],

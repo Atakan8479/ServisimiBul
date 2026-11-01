@@ -61,7 +61,7 @@ describe('notification center', () => {
 
     expect(await screen.findByText('Yeni servis talebi')).toBeInTheDocument()
     expect(screen.getByText('Yeni')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: /Ayrıntıyı aç/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'İncele' }))
 
     expect(
       await screen.findByRole('heading', { name: 'Talep ayrıntısı' }),
@@ -69,6 +69,173 @@ describe('notification center', () => {
     await waitFor(() =>
       expect(markedId).toBe('7bd12425-ea60-45e5-b937-ddf75db2eb45'),
     )
+  })
+
+  it('marks a notification read in place and refreshes the backend count', async () => {
+    let unread = 1
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(notificationPage()),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/:id/read', () => {
+        unread = 0
+        return HttpResponse.json({
+          ...notificationPage().content[0],
+          readAt: '2026-10-25T09:10:00Z',
+        })
+      }),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <NotificationNavLink to="/notifications" />
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByLabelText('1 okunmamış bildirim'),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('1 okunmamış bildirim')).toBeInTheDocument()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Okundu olarak işaretle' }),
+    )
+
+    expect(
+      await screen.findByText('Bildirim okundu olarak işaretlendi.'),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('Hepsi okundu')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText('1 okunmamış bildirim'),
+      ).not.toBeInTheDocument(),
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Okundu olarak işaretle' }),
+    ).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus()
+  })
+
+  it('keeps a notification unread and explains when marking fails', async () => {
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(notificationPage()),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.put('/api/v1/notifications/:id/read', () =>
+        HttpResponse.json(
+          { title: 'Not found', status: 404, detail: 'Bildirim bulunamadı.' },
+          {
+            status: 404,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Okundu olarak işaretle' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Bildirim bulunamadı.',
+    )
+    expect(screen.getByText('Yeni')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Okundu olarak işaretle' }),
+    ).toBeEnabled()
+  })
+
+  it.each([
+    ['/notifications', 'Bildirimler', 'Veli hesabı', 'veli hesabı'],
+    [
+      '/operator/notifications',
+      'Bildirimler',
+      'İşletmeci paneli',
+      'işletmeci hesabı',
+    ],
+    [
+      '/admin/notifications',
+      'Yönetim bildirimleri',
+      'Yönetim paneli',
+      'yönetici hesabı',
+    ],
+  ])('shows the %s role copy', async (path, title, eyebrow, account) => {
+    server.use(
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 0 }),
+      ),
+    )
+    render(
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path={path} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: title }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(eyebrow)).toBeInTheDocument()
+    expect(
+      await screen.findByText(`0 toplam bildirim · ${account}`),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Henüz bildiriminiz yok')).toBeInTheDocument()
+    expect(screen.queryByText('Hepsi okundu')).not.toBeInTheDocument()
+  })
+
+  it('does not claim the list is empty when loading fails', async () => {
+    server.use(
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(
+          { title: 'Error', status: 503, detail: 'Servis kullanılamıyor.' },
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 0 }),
+      ),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Servis kullanılamıyor.',
+    )
+    expect(screen.queryByText('Henüz bildiriminiz yok')).not.toBeInTheDocument()
   })
 
   it('provides an actionable retry state', async () => {
