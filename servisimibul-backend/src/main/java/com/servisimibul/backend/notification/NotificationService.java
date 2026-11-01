@@ -67,6 +67,12 @@ public class NotificationService {
         return response(notification);
     }
 
+    @Transactional
+    public UnreadCountResponse markAllRead(UUID recipientId) {
+        repository.markAllRead(recipientId, OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC));
+        return unreadCount(recipientId);
+    }
+
     private NotificationResponse response(InAppNotification notification) {
         NotificationCopy copy = copy(notification.getType());
         return new NotificationResponse(

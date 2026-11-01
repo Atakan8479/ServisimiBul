@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatePanel, StatusBadge } from '../../components/design-system'
 import {
   listNotifications,
+  markAllNotificationsRead,
   markNotificationRead,
   unreadCountChangedEvent,
   unreadNotificationCount,
@@ -93,7 +94,9 @@ export function NotificationCenterPage() {
   const [unreadCount, setUnreadCount] = useState<number>()
   const [openingId, setOpeningId] = useState<string>()
   const [markingId, setMarkingId] = useState<string>()
+  const [markingAll, setMarkingAll] = useState(false)
   const [focusId, setFocusId] = useState<string>()
+  const noticeRef = useRef<HTMLDivElement>(null)
   const [notice, setNotice] = useState<string>()
   const [error, setError] = useState<string>()
   const copy = roleFromPath(location.pathname)
@@ -147,6 +150,10 @@ export function NotificationCenterPage() {
     if (focusId) document.getElementById(`notification-${focusId}`)?.focus()
   }, [focusId])
 
+  useEffect(() => {
+    if (notice && !focusId) noticeRef.current?.focus()
+  }, [focusId, notice])
+
   async function refreshUnreadCount(signal?: AbortSignal) {
     try {
       const response = await unreadNotificationCount(signal)
@@ -158,8 +165,30 @@ export function NotificationCenterPage() {
     }
   }
 
+  async function markAllRead() {
+    setMarkingAll(true)
+    setError(undefined)
+    setNotice(undefined)
+    try {
+      const response = await markAllNotificationsRead()
+      setUnreadCount(response.unreadCount)
+      window.dispatchEvent(new Event(unreadCountChangedEvent))
+      await load()
+      setNotice('Tüm bildirimler okundu olarak işaretlendi.')
+    } catch (failure) {
+      setError(
+        failure instanceof ApiError
+          ? failure.problem.detail
+          : 'Bildirimler işaretlenemedi. Lütfen tekrar deneyin.',
+      )
+    } finally {
+      setMarkingAll(false)
+    }
+  }
+
   async function markRead(notification: NotificationItem) {
     setMarkingId(notification.id)
+    setFocusId(undefined)
     setError(undefined)
     setNotice(undefined)
     try {
@@ -216,10 +245,25 @@ export function NotificationCenterPage() {
         {unreadCount === 0 && !!result?.totalElements && (
           <StatusBadge tone="success">Hepsi okundu</StatusBadge>
         )}
+        {!!unreadCount && (
+          <button
+            className="secondary-button notification-mark-all"
+            disabled={markingAll}
+            onClick={() => void markAllRead()}
+            type="button"
+          >
+            {markingAll ? 'İşaretleniyor…' : 'Tümünü okundu işaretle'}
+          </button>
+        )}
       </div>
 
       {notice && (
-        <div className="status-banner success" role="status">
+        <div
+          className="status-banner success"
+          ref={noticeRef}
+          role="status"
+          tabIndex={-1}
+        >
           {notice}
         </div>
       )}
@@ -314,7 +358,7 @@ export function NotificationCenterPage() {
                         aria-describedby={titleId}
                         aria-label="Okundu olarak işaretle"
                         className="notification-mark"
-                        disabled={markingId === notification.id}
+                        disabled={markingAll || markingId === notification.id}
                         onClick={() => void markRead(notification)}
                         title="Okundu olarak işaretle"
                         type="button"

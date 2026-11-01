@@ -85,6 +85,36 @@ test('N01 marks every unread item through the real endpoint', async ({
   await capture(page, 'state-N01-all-read', 'mobile')
 })
 
+test('N01 marks all notifications read through the real endpoint', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  const notifications = feed()
+  await prepare(page, roles[0], notifications)
+  let calls = 0
+  await page.route('**/api/v1/notifications/read-all', async (route) => {
+    expect(route.request().method()).toBe('PUT')
+    calls += 1
+    notifications.forEach((item) => {
+      item.readAt ??= '2026-10-25T09:30:00Z'
+    })
+    await route.fulfill({ json: { unreadCount: 0 } })
+  })
+  await page.goto('/notifications')
+
+  await page.getByRole('button', { name: 'Tümünü okundu işaretle' }).click()
+
+  const notice = page.getByText('Tüm bildirimler okundu olarak işaretlendi.')
+  await expect(notice).toBeFocused()
+  expect(calls).toBe(1)
+  await expect(page.getByText('Hepsi okundu')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Okundu olarak işaretle' }),
+  ).toHaveCount(0)
+  await expect(page.getByLabel(/okunmamış bildirim/)).toHaveCount(0)
+  await assertAccessibleAndContained(page)
+})
+
 async function prepare(
   page: Page,
   role: (typeof roles)[number],

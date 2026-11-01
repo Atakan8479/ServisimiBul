@@ -37,4 +37,19 @@ public interface InAppNotificationRepository extends JpaRepository<InAppNotifica
             @Param("recipientUserId") UUID recipientUserId,
             @Param("readAt") OffsetDateTime readAt
     );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            update InAppNotification notification
+            set notification.readAt = case
+                when notification.createdAt > :readAt then notification.createdAt
+                else :readAt
+            end
+            where notification.recipientUserId = :recipientUserId
+              and notification.readAt is null
+            """)
+    int markAllRead(
+            @Param("recipientUserId") UUID recipientUserId,
+            @Param("readAt") OffsetDateTime readAt
+    );
 }

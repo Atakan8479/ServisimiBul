@@ -101,6 +101,7 @@ Creating a report never changes target visibility or lifecycle. Only an explicit
 
 - `GET /api/v1/notifications` and `GET /api/v1/notifications/unread-count` require an authenticated PARENT, OPERATOR, or ADMIN and return only rows whose `recipient_user_id` is the current principal. Pagination is bounded and newest-first.
 - `PUT /api/v1/notifications/{notificationId}/read` requires the same authenticated ownership plus CSRF. A notification owned by another account is exposed as not found.
+- `PUT /api/v1/notifications/read-all` requires the same authentication plus CSRF, marks every unread notification of the current principal, and returns the resulting `{unreadCount}` (D057).
 - Delivery is part of the originating business transaction and uses a unique deterministic event key with conflict-safe insertion. Repeated demand, publication, lifecycle, or report handling therefore cannot create duplicate recipient/event rows.
 - Notification links are backend-generated local application paths. The frontend validates that every link begins with `/`, polls the unread count only while visible at a bounded interval, and cancels obsolete requests during navigation or unmount.
 

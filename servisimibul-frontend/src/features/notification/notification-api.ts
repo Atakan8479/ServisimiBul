@@ -59,6 +59,14 @@ export function unreadNotificationCount(signal?: AbortSignal) {
   })
 }
 
+export function markAllNotificationsRead() {
+  return apiRequest('/notifications/read-all', {
+    method: 'PUT',
+    requiresSession: true,
+    schema: unreadCountSchema,
+  })
+}
+
 export function markNotificationRead(id: string) {
   return apiRequest(`/notifications/${id}/read`, {
     method: 'PUT',

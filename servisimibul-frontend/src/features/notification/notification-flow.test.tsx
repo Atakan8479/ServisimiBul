@@ -121,6 +121,105 @@ describe('notification center', () => {
     expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus()
   })
 
+  it('marks every notification read through the backend', async () => {
+    let unread = 1
+    let calls = 0
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(
+          unread
+            ? notificationPage()
+            : {
+                ...notificationPage(),
+                content: [
+                  {
+                    ...notificationPage().content[0],
+                    readAt: '2026-10-25T09:10:00Z',
+                  },
+                ],
+              },
+        ),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        calls += 1
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <NotificationNavLink to="/notifications" />
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+
+    const notice = await screen.findByText(
+      'Tüm bildirimler okundu olarak işaretlendi.',
+    )
+    expect(notice).toHaveFocus()
+    expect(calls).toBe(1)
+    expect(screen.getByText('Hepsi okundu')).toBeInTheDocument()
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Tümünü okundu işaretle' }),
+    ).not.toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        screen.queryByLabelText('1 okunmamış bildirim'),
+      ).not.toBeInTheDocument(),
+    )
+  })
+
+  it('keeps unread state and explains when read-all fails', async () => {
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(notificationPage()),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.put('/api/v1/notifications/read-all', () =>
+        HttpResponse.json(
+          { title: 'Error', status: 503, detail: 'Şu anda işaretlenemiyor.' },
+          {
+            status: 503,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Şu anda işaretlenemiyor.',
+    )
+    expect(screen.getByText('Yeni')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Tümünü okundu işaretle' }),
+    ).toBeEnabled()
+  })
+
   it('keeps a notification unread and explains when marking fails', async () => {
     server.use(
       csrfHandler(),

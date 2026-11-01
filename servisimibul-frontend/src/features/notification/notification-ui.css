@@ -235,6 +235,10 @@
     gap: 1rem;
   }
 
+  .notification-page .notification-mark-all {
+    width: 100%;
+  }
+
   .notification-page .notification-heading {
     align-items: flex-start;
   }

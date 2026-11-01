@@ -939,10 +939,10 @@ Never mark tasks done because code was generated: verification and review requir
 
 - Branch: `feat/issue-156-notifications`; PR #182; GitHub issues #156 and #123. The shared notification center now follows the approved Manus composition in the parent, operator, and administrator shells: role heading, unread summary, typed notification cards, `İncele`, and per-item mark-as-read.
 - Recipients, ordering, paging, deep links, and polling are unchanged. Marking one notification read uses the existing `PUT /api/v1/notifications/{id}/read` and refreshes the backend unread count in the summary and navigation badge. A failed list load no longer also claims the list is empty.
-- `Tümünü okundu işaretle` and the `Okunmamış`/`Okunmuş` filters are omitted: the API has no read-all endpoint and no read-state filter, and acting on one page would misreport the rest. Issue #156 lists read-all as behavior to preserve, but it does not exist. Adding it needs a separately approved backend change. Parent pages keep the existing public shell instead of the Manus standalone layout.
+- D057 adds `PUT /api/v1/notifications/read-all`, scoped to the current principal with CSRF and no schema change; `Tümünü okundu işaretle` uses it. The `Okunmamış`/`Okunmuş` filters stay omitted because the API has no read-state filter and filtering one page would misreport the rest. Parent pages keep the existing public shell instead of the Manus standalone layout.
 - Before/after desktop and mobile captures for each role and the all-read state are under `docs/screenshots/ui-fidelity-18/`; API responses in them are mocked.
-- Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The complete serial Vitest suite passed 183/183, and the complete mocked Chromium suite passed 127/127 without retries, including WCAG 2.2 AA and overflow checks for all three roles at 1440, 768, 390, and 320 pixels.
-- No backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+- Frontend ESLint, strict TypeScript, the Vite production build, Prettier, and `git diff --check` passed. The complete backend suite passed 295/295 on disposable PostgreSQL 17 with JDK 21. The complete serial Vitest suite passed 185/185, and the complete mocked Chromium suite passed 128/128 without retries, including WCAG 2.2 AA and overflow checks for all three roles at 1440, 768, 390, and 320 pixels.
+- Apart from D057, no backend source, API contract, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
 
 ## Verified AUDIT-F8 inactive demand reopening evidence — 2026-10-31
 
