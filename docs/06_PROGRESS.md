@@ -1,8 +1,30 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-11 operator profile ready for CI review
+## Current stage: UI-FIDELITY-12 operator schools ready for CI review
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #180 are present on `main`. UI-FIDELITY-11 is implemented on `codex/ui-fidelity-11-operator-profile` and has completed focused unit, build, accessibility, responsive, and mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-FIDELITY-12 O03 operator schools — 2026-11-01
+
+- `/operator/schools` now follows O03: header action, coverage note, linked-school table with cards below 72rem, a client-side filter over linked schools, a real active-school count, and native dialogs for adding, coverage editing, and removal. No backend, migration, route, or dependency changed.
+- Preserved behavior: catalog search and pagination, lazy neighborhood loading, per-school coverage, cross-district same-province selection, activation, and session redirects. Added a retry state when linked schools fail to load, so a failure no longer looks like an empty list. Coverage-save session expiry now redirects to login.
+- Axe found a name mismatch on the district toggles because the count sat inside the labelled button; the count now sits beside it and still describes it.
+- Review fixes: row mutations are serialized and every row now shows the lock through `aria-disabled`, which keeps keyboard focus. The district column no longer uses the province name; it falls back to matching coverage and then to `İlçe bilgisi alınamadı`. Closing the add dialog now aborts its search, and each opening starts from the default catalog; on the earlier code a closed search stayed pending and reappeared on reopening.
+- Impeccable 4.6.0 critique ran as two isolated assessments with one confirmation pass. It scored 26/40 before the fixes. The fixes cover focus ring contrast, locked-action contrast, the selected-names summary, nested scrolling, warning color, district chevrons, the short-screen footer, chips during filtering, the empty state, the destructive action color, and the loading frame. Browser overlay injection was skipped because the page renders only behind mocked routes.
+- 320, 390, 768, and 1440 were inspected by eye for the page, all three dialogs, loading, and error. Metrics showed no page overflow, dialogs inside the viewport, a blocked background, and restored focus. A 1px editor overflow at 320 was fixed.
+- Results: Prettier, ESLint, typecheck, and build passed; serial Vitest 212/212; mocked Chromium 153/153 without retries; real full-stack E2E 1/1 locally, now including activation, readiness, removal, and relinking through the real backend. An earlier complete Chromium run had three 30-second timeouts (one O03 at 320, two in `ui-06`) while total machine CPU was at 100% from other applications, and it took 19.5 minutes against 5.8 on the clean rerun. No test or timeout was changed for this, and the cause is not proven.
+- Differences from Manus: mobile uses cards so status and actions stay reachable instead of scrolling off screen; the coverage dialog keeps multi-district selection; demo notices are omitted; screenshots use mocked API data. Backend was not run locally because no backend file changed.
+
+## UI-FIDELITY-12 O03 before vs Manus gap list — 2026-11-01
+
+Baseline: `docs/screenshots/ui-fidelity-12/before/` from the mocked real page at 1440 and 390.
+
+- The page leads with an always-open catalog form; Manus leads with `Okullar ve hizmet kapsamı`, an eyebrow, and an `Okul ekle` action that opens a dialog.
+- Linked schools are large cards; Manus uses a table with school, district, neighborhood chips, status, and actions.
+- There is no coverage guidance note, no filter over linked schools, and no active-school count.
+- Coverage opens inline inside a card; Manus edits it in a dialog.
+- Removal uses `window.confirm`; Manus uses a styled confirmation dialog.
+- Backend-driven adaptations: `OperatorSchoolResponse` has `schoolDistrictId` but no district name, so the name comes from the existing districts endpoint. The real coverage editor keeps multi-district, lazily loaded selection instead of the prototype's single text field. Demo notices and demo wording are not reproduced.
 
 ## Verified UI-FIDELITY-11 O02 operator profile — 2026-11-01
 

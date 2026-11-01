@@ -1,14 +1,15 @@
 import {
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
   type FormEvent,
-  type RefObject,
+  type ReactNode,
 } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { StatusBadge } from '../../components/design-system'
+import { StatePanel, StatusBadge } from '../../components/design-system'
 import {
   addOperatorSchool,
   getDiscoveryReadiness,
@@ -26,23 +27,38 @@ import {
   type School,
   type SchoolPage,
 } from './operator-api'
+import { schoolInitials } from './school-initials'
+
+const visibleCoverageChips = 6
 
 export function OperatorSchoolsPage() {
   const navigate = useNavigate()
-  const coverageHeadingRef = useRef<HTMLHeadingElement>(null)
+  const addButtonRef = useRef<HTMLButtonElement>(null)
+  const filterRef = useRef<HTMLInputElement>(null)
   const schoolRequest = useRef<AbortController | undefined>(undefined)
+  // State updates only after the event, so two clicks in one tick need a sync lock.
+  const rowLock = useRef(false)
+  const focusAddAfterRemoval = useRef(false)
   const [relationships, setRelationships] = useState<OperatorSchool[]>([])
   const [readiness, setReadiness] = useState<DiscoveryReadiness>()
+  const [districtNames, setDistrictNames] = useState<Record<number, string>>({})
+  const [settledProvinceKey, setSettledProvinceKey] = useState<string>()
   const [schoolPage, setSchoolPage] = useState<SchoolPage>()
   const [schoolRequestParameters, setSchoolRequestParameters] = useState({
     query: '',
     page: 0,
   })
   const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState('')
   const [selectedSchool, setSelectedSchool] = useState<School>()
+  const [addOpen, setAddOpen] = useState(false)
+  const [addError, setAddError] = useState<string>()
   const [editingCoverageId, setEditingCoverageId] = useState<string>()
-  const [pendingFocusId, setPendingFocusId] = useState<string>()
+  const [removeTarget, setRemoveTarget] = useState<OperatorSchool>()
+  const [removeError, setRemoveError] = useState<string>()
+  const [attempt, setAttempt] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string>()
   const [schoolLoading, setSchoolLoading] = useState(true)
   const [schoolError, setSchoolError] = useState<string>()
   const [pending, setPending] = useState<string>()
@@ -54,34 +70,23 @@ export function OperatorSchoolsPage() {
 
   useEffect(() => {
     let active = true
-    const controller = new AbortController()
-    schoolRequest.current = controller
     void getOperatorSchools()
       .then((owned) => {
         if (active) setRelationships(owned)
       })
       .catch((reason: unknown) => {
-        if (!active) return
-        handleSession(reason, navigate, setError)
+        if (active) handleSession(reason, navigate, setLoadError)
       })
       .finally(() => {
         if (active) setLoading(false)
       })
-    void searchSchools({ query: '', page: 0, signal: controller.signal })
-      .then((result) => {
-        if (active && !controller.signal.aborted) setSchoolPage(result)
-      })
-      .catch((reason: unknown) => {
-        if (active && !controller.signal.aborted) {
-          setSchoolError(messageFor(reason))
-        }
-      })
-      .finally(() => {
-        if (active && !controller.signal.aborted) setSchoolLoading(false)
-        if (schoolRequest.current === controller) {
-          schoolRequest.current = undefined
-        }
-      })
+    return () => {
+      active = false
+    }
+  }, [attempt, navigate])
+
+  useEffect(() => {
+    let active = true
     void getDiscoveryReadiness()
       .then((discoveryReadiness) => {
         if (active) setReadiness(discoveryReadiness)
@@ -94,27 +99,45 @@ export function OperatorSchoolsPage() {
       })
     return () => {
       active = false
-      controller.abort()
       schoolRequest.current?.abort()
     }
   }, [navigate])
 
+  // The school response carries only a district id, so names come from the catalog.
+  const provinceKey = [
+    ...new Set(relationships.map((item) => item.schoolProvinceId)),
+  ]
+    .sort((left, right) => left - right)
+    .join(',')
+
   useEffect(() => {
-    if (!pendingFocusId || editingCoverageId !== pendingFocusId) return
-    const heading = coverageHeadingRef.current
-    if (!heading) return
-    heading.focus()
-    if (typeof heading.scrollIntoView === 'function') {
-      const reducedMotion = window.matchMedia?.(
-        '(prefers-reduced-motion: reduce)',
-      ).matches
-      heading.scrollIntoView({
-        behavior: reducedMotion ? 'auto' : 'smooth',
-        block: 'start',
-      })
-    }
-    setPendingFocusId(undefined)
-  }, [editingCoverageId, pendingFocusId, relationships])
+    if (!provinceKey) return
+    const controller = new AbortController()
+    void Promise.allSettled(
+      provinceKey.split(',').map((provinceId) =>
+        getDistricts(Number(provinceId), controller.signal).then(
+          (districts) => {
+            if (controller.signal.aborted) return
+            setDistrictNames((current) => ({
+              ...current,
+              ...Object.fromEntries(
+                districts.map((item) => [item.id, item.name]),
+              ),
+            }))
+          },
+        ),
+      ),
+    ).then(() => {
+      if (!controller.signal.aborted) setSettledProvinceKey(provinceKey)
+    })
+    return () => controller.abort()
+  }, [provinceKey])
+
+  useEffect(() => {
+    if (removeTarget || !focusAddAfterRemoval.current) return
+    focusAddAfterRemoval.current = false
+    addButtonRef.current?.focus()
+  }, [removeTarget])
 
   async function findSchools(event: FormEvent) {
     event.preventDefault()
@@ -146,34 +169,50 @@ export function OperatorSchoolsPage() {
     }
   }
 
+  // Each dialog session starts from the default catalog, so a closed search cannot return.
+  function openAddDialog() {
+    setQuery('')
+    setAddOpen(true)
+    void loadSchoolPage(0, '')
+  }
+
+  function closeAddDialog() {
+    schoolRequest.current?.abort()
+    schoolRequest.current = undefined
+    setAddOpen(false)
+    setAddError(undefined)
+    setSelectedSchool(undefined)
+  }
+
   async function addSchool(event: FormEvent) {
     event.preventDefault()
     if (!selectedSchool) {
-      setError('Eklemek için bir okul seçin.')
+      setAddError('Eklemek için bir okul seçin.')
       return
     }
     setPending('add')
-    setError(undefined)
+    setAddError(undefined)
     setNotice(undefined)
     try {
       const created = await addOperatorSchool(selectedSchool.id)
       setRelationships((current) => [...current, created])
-      setSelectedSchool(undefined)
+      closeAddDialog()
       setEditingCoverageId(created.id)
-      setPendingFocusId(created.id)
       setNotice({
         message:
           'Okul eklendi. Şimdi bu okul için hizmet mahallelerini seçip kapsamı kaydedin.',
         tone: 'success',
       })
     } catch (reason) {
-      handleSession(reason, navigate, setError)
+      handleSession(reason, navigate, setAddError)
     } finally {
       setPending(undefined)
     }
   }
 
   async function toggleActive(relationship: OperatorSchool) {
+    if (rowLock.current) return
+    rowLock.current = true
     setPending(relationship.id)
     setError(undefined)
     try {
@@ -191,31 +230,31 @@ export function OperatorSchoolsPage() {
     } catch (reason) {
       handleSession(reason, navigate, setError)
     } finally {
+      rowLock.current = false
       setPending(undefined)
     }
   }
 
   async function remove(relationship: OperatorSchool) {
-    const confirmed = window.confirm(
-      `${relationship.schoolName} bağlantısı ve kapsamı kaldırılsın mı?`,
-    )
-    if (!confirmed) return
-
+    if (rowLock.current) return
+    rowLock.current = true
     setPending(relationship.id)
-    setError(undefined)
+    setRemoveError(undefined)
     try {
       await removeOperatorSchool(relationship.id)
       setRelationships((current) =>
         current.filter((item) => item.id !== relationship.id),
       )
-      setEditingCoverageId(undefined)
+      focusAddAfterRemoval.current = true
+      setRemoveTarget(undefined)
       setNotice({
         message: 'Okul bağlantısı ve okula özel kapsam kaldırıldı.',
         tone: 'warning',
       })
     } catch (reason) {
-      handleSession(reason, navigate, setError)
+      handleSession(reason, navigate, setRemoveError)
     } finally {
+      rowLock.current = false
       setPending(undefined)
     }
   }
@@ -223,6 +262,15 @@ export function OperatorSchoolsPage() {
   function updateRelationship(updated: OperatorSchool) {
     setRelationships((current) =>
       current.map((item) => (item.id === updated.id ? updated : item)),
+    )
+  }
+
+  function districtNameFor(relationship: OperatorSchool) {
+    return (
+      districtNames[relationship.schoolDistrictId] ??
+      relationship.coverage.find(
+        (item) => item.districtId === relationship.schoolDistrictId,
+      )?.districtName
     )
   }
 
@@ -244,16 +292,43 @@ export function OperatorSchoolsPage() {
   const editingRelationship = relationships.find(
     (relationship) => relationship.id === editingCoverageId,
   )
-
-  if (loading) {
-    return <InlineLoading label="Okullar yükleniyor" />
-  }
+  // Row mutations run one at a time, so every row shows the shared lock.
+  const rowMutating = pending !== undefined
+  const activeCount = relationships.filter(
+    (relationship) => relationship.active && relationship.schoolActive,
+  ).length
+  const normalizedFilter = filter.trim().toLocaleLowerCase('tr-TR')
+  const visibleRelationships = relationships.filter((relationship) =>
+    [
+      relationship.schoolName,
+      districtNameFor(relationship) ?? '',
+      ...relationship.coverage.flatMap((item) => [
+        item.neighborhoodName,
+        item.districtName,
+      ]),
+    ]
+      .join(' ')
+      .toLocaleLowerCase('tr-TR')
+      .includes(normalizedFilter),
+  )
 
   return (
     <section className="workspace-page operator-workspace-page operator-schools-page">
-      <header className="operator-page-header">
-        <h1>Hizmet ağınız</h1>
-        <p>Hizmet verdiğiniz okulları ve mahalleleri ekleyin.</p>
+      <header className="operator-page-header operator-overview-header">
+        <div>
+          <p className="operator-eyebrow">İşletmeci paneli</p>
+          <h1>Okullar ve hizmet kapsamı</h1>
+          <p>Hangi okullara ve mahallelere hizmet verdiğinizi yönetin.</p>
+        </div>
+        <button
+          className="primary-button operator-school-add"
+          disabled={loading || Boolean(loadError) || rowMutating}
+          onClick={openAddDialog}
+          ref={addButtonRef}
+          type="button"
+        >
+          <span aria-hidden="true">+</span> Okul ekle
+        </button>
       </header>
 
       {error && (
@@ -287,271 +362,571 @@ export function OperatorSchoolsPage() {
         </div>
       )}
 
-      <section
-        className="form-card compact-card operator-add-school"
-        aria-labelledby="add-school-title"
-      >
-        <div className="section-heading">
-          <div>
-            <h2 id="add-school-title">Okul ekle</h2>
-            <p>Okulu arayın, seçin ve ardından hizmet mahallelerini ekleyin.</p>
-          </div>
-          <span className="count-badge">{relationships.length} okul</span>
+      <aside className="operator-coverage-note">
+        <span className="operator-coverage-note-icon" aria-hidden="true" />
+        <div>
+          <strong>Kapsamı okul bazında belirtin</strong>
+          <p>
+            Mahalle eşleşmesi, belirli bir ev adresinden alım sözü anlamına
+            gelmez. Aileler güzergâhı doğrudan teyit eder.
+          </p>
         </div>
-        <form className="search-row" onSubmit={findSchools}>
-          <label className="form-field grow">
-            <span>Okul ara</span>
-            <input
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Okul adı"
-              id="school-search-input"
-              value={query}
-            />
-          </label>
-          <button
-            className="secondary-button"
-            disabled={schoolLoading}
-            type="submit"
-          >
-            {schoolLoading ? 'Aranıyor…' : 'Ara'}
-          </button>
-        </form>
-        <section
-          className="school-results"
-          aria-busy={schoolLoading}
-          aria-live="polite"
-        >
-          {schoolLoading && <InlineLoading label="Okullar aranıyor" />}
-          {!schoolLoading && schoolError && (
-            <div className="school-result-error" role="alert">
-              <span>{schoolError}</span>
-              <button
-                className="text-button"
-                onClick={() =>
-                  void loadSchoolPage(
-                    schoolRequestParameters.page,
-                    schoolRequestParameters.query,
-                  )
-                }
-                type="button"
-              >
-                Tekrar dene
-              </button>
-            </div>
-          )}
-          {!schoolLoading && !schoolError && schoolPage && (
-            <>
-              <div className="school-result-summary">
-                <strong>{schoolPage.totalElements} aktif okul</strong>
-                {schoolPage.totalElements > 0 && (
-                  <span>
-                    Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
-                  </span>
-                )}
-              </div>
-              {schoolPage.totalPages > 1 && (
-                <nav
-                  className="pagination"
-                  aria-label="Okul kataloğu sayfaları"
-                >
-                  <button
-                    className="secondary-button"
-                    disabled={schoolPage.page === 0}
-                    onClick={() =>
-                      void loadSchoolPage(
-                        schoolPage.page - 1,
-                        schoolRequestParameters.query,
-                      )
-                    }
-                    type="button"
-                  >
-                    Önceki sayfa
-                  </button>
-                  <span>
-                    Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
-                  </span>
-                  <button
-                    className="secondary-button"
-                    disabled={schoolPage.page + 1 >= schoolPage.totalPages}
-                    onClick={() =>
-                      void loadSchoolPage(
-                        schoolPage.page + 1,
-                        schoolRequestParameters.query,
-                      )
-                    }
-                    type="button"
-                  >
-                    Sonraki sayfa
-                  </button>
-                </nav>
-              )}
-            </>
-          )}
-        </section>
-        <form className="search-row" onSubmit={addSchool}>
-          <label className="form-field grow">
-            <span>Aktif okul</span>
-            <select
-              disabled={schoolLoading && schoolOptions.length === 0}
-              onChange={(event) =>
-                setSelectedSchool(
-                  schoolOptions.find(
-                    (school) => school.id === event.target.value,
-                  ),
-                )
-              }
-              value={selectedSchool?.id ?? ''}
+      </aside>
+
+      {loading ? (
+        <InlineLoading label="Okullar yükleniyor" />
+      ) : loadError ? (
+        <StatePanel
+          action={
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setLoading(true)
+                setLoadError(undefined)
+                setAttempt((current) => current + 1)
+              }}
+              type="button"
             >
-              <option value="">Okul seçin</option>
-              {schoolOptions.map((school) => (
-                <option key={school.id} value={school.id}>
-                  {school.name} — {school.districtName}
-                </option>
-              ))}
-            </select>
-          </label>
+              Tekrar dene
+            </button>
+          }
+          detail={loadError}
+          title="Okullar yüklenemedi"
+          tone="error"
+        />
+      ) : relationships.length === 0 ? (
+        <div className="empty-state">
+          <h2>Henüz okul eklenmedi</h2>
+          <p>
+            Hizmet verdiğiniz okulları ekleyin; her okul için mahalleleri ayrı
+            seçersiniz.
+          </p>
           <button
             className="primary-button"
-            disabled={pending === 'add' || !selectedSchool}
-            type="submit"
+            onClick={openAddDialog}
+            type="button"
           >
-            {pending === 'add' ? 'Ekleniyor…' : 'Okulu ekle'}
+            İlk okulunuzu ekleyin
           </button>
-        </form>
-        {!schoolLoading && !schoolError && schoolPage && (
-          <SchoolCatalogGuidance
-            availableCount={availableSchools.length}
-            page={schoolPage}
-            query={schoolRequestParameters.query}
-          />
-        )}
-      </section>
-
-      <div className="school-list">
-        {relationships.length === 0 ? (
-          <div className="empty-state">
-            <h2>Henüz okul eklenmedi</h2>
-
-            <a className="text-button" href="#school-search-input">
-              Okul aramasına git
-            </a>
+        </div>
+      ) : (
+        <>
+          <div className="operator-school-toolbar">
+            <input
+              aria-label="Okul veya mahalle ara"
+              className="operator-school-filter"
+              onChange={(event) => setFilter(event.target.value)}
+              placeholder="Okul veya mahalle ara"
+              ref={filterRef}
+              type="search"
+              value={filter}
+            />
+            <div>
+              <span className="count-badge">{activeCount} aktif okul</span>
+              <button
+                aria-disabled={!filter}
+                className="secondary-button"
+                onClick={() => {
+                  setFilter('')
+                  filterRef.current?.focus()
+                }}
+                type="button"
+              >
+                Filtreleri temizle
+              </button>
+            </div>
           </div>
-        ) : (
-          relationships.map((relationship) => (
-            <article className="school-card" key={relationship.id}>
-              <div className="school-card-copy">
-                <div className="school-title-row">
-                  <h2>{relationship.schoolName}</h2>
-                  <StatusBadge
-                    tone={
-                      relationship.active && relationship.schoolActive
-                        ? 'success'
-                        : 'neutral'
+          <div className="operator-school-table">
+            <div aria-hidden="true" className="operator-school-columns">
+              <span>Okul</span>
+              <span>İlçe</span>
+              <span>Hizmet mahalleleri</span>
+              <span>Durum</span>
+              <span>İşlem</span>
+            </div>
+            {visibleRelationships.length === 0 ? (
+              <p className="operator-school-no-match" role="status">
+                Eşleşen okul yok. Arama terimini değiştirin veya yeni okul
+                ekleyin.
+              </p>
+            ) : (
+              <ul>
+                {visibleRelationships.map((relationship) => (
+                  <SchoolRow
+                    districtName={
+                      districtNameFor(relationship) ??
+                      (settledProvinceKey === provinceKey
+                        ? 'İlçe bilgisi alınamadı'
+                        : '—')
                     }
-                  >
-                    {!relationship.schoolActive
-                      ? 'Okul pasif'
-                      : relationship.active
-                        ? 'Aktif'
-                        : 'Bağlantı pasif'}
-                  </StatusBadge>
-                </div>
-                <p>
-                  {relationship.schoolProvinceName} ·{' '}
-                  {relationship.coverage.length} hizmet mahallesi
-                </p>
-                {!relationship.schoolActive && (
-                  <p className="school-warning">
-                    Bu okul yönetici tarafından pasife alındı ve aramalara katkı
-                    sağlamaz.
-                  </p>
-                )}
-                {relationship.schoolActive && !relationship.active && (
-                  <p className="school-warning">
-                    Bu bağlantıyı etkinleştirene kadar okul aramalara katkı
-                    sağlamaz.
-                  </p>
-                )}
-                {relationship.schoolActive &&
-                  relationship.active &&
-                  relationship.coverage.length === 0 && (
-                    <p className="school-warning">
-                      Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin.
-                    </p>
-                  )}
-              </div>
-              <div className="button-row">
+                    key={relationship.id}
+                    onEdit={() => setEditingCoverageId(relationship.id)}
+                    onRemove={() => {
+                      setRemoveError(undefined)
+                      setRemoveTarget(relationship)
+                    }}
+                    onToggle={() => void toggleActive(relationship)}
+                    locked={rowMutating}
+                    showAllCoverage={Boolean(normalizedFilter)}
+                    pending={pending === relationship.id}
+                    relationship={relationship}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
+
+      {addOpen && (
+        <SchoolDialog
+          description="Okulu arayın, seçin ve ardından hizmet mahallelerini ekleyin."
+          onCancel={closeAddDialog}
+          pending={pending === 'add'}
+          title="Hizmet kapsamına okul ekle"
+        >
+          <form className="search-row" onSubmit={findSchools}>
+            <label className="form-field grow">
+              <span>Okul ara</span>
+              <input
+                data-autofocus
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Okul adı"
+                value={query}
+              />
+            </label>
+            <button
+              className="secondary-button"
+              disabled={schoolLoading}
+              type="submit"
+            >
+              {schoolLoading ? 'Aranıyor…' : 'Ara'}
+            </button>
+          </form>
+          <section
+            className="school-results"
+            aria-busy={schoolLoading}
+            aria-live="polite"
+          >
+            {schoolLoading && <InlineLoading label="Okullar aranıyor" />}
+            {!schoolLoading && schoolError && (
+              <div className="school-result-error" role="alert">
+                <span>{schoolError}</span>
                 <button
-                  className="primary-button"
-                  onClick={() => {
-                    const opening = editingCoverageId !== relationship.id
-                    setEditingCoverageId(opening ? relationship.id : undefined)
-                    setPendingFocusId(opening ? relationship.id : undefined)
-                  }}
-                  type="button"
-                >
-                  {editingCoverageId === relationship.id
-                    ? 'Kapsamı kapat'
-                    : 'Kapsamı düzenle'}
-                </button>
-                <button
-                  className="secondary-button"
-                  disabled={
-                    pending === relationship.id || !relationship.schoolActive
-                  }
-                  onClick={() => toggleActive(relationship)}
-                  type="button"
-                >
-                  {relationship.active ? 'Pasife al' : 'Etkinleştir'}
-                </button>
-                <button
-                  className="danger-button"
-                  disabled={pending === relationship.id}
-                  onClick={() => remove(relationship)}
-                  type="button"
-                >
-                  Kaldır
-                </button>
-              </div>
-              {editingRelationship?.id === relationship.id && (
-                <CoverageEditor
-                  onSaved={(updated) => {
-                    updateRelationship(updated)
-                    setNotice(
-                      updated.coverage.length > 0
-                        ? {
-                            message:
-                              'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
-                            tone: 'success',
-                          }
-                        : {
-                            message:
-                              'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
-                            tone: 'warning',
-                          },
+                  className="text-button"
+                  onClick={() =>
+                    void loadSchoolPage(
+                      schoolRequestParameters.page,
+                      schoolRequestParameters.query,
                     )
-                  }}
-                  headingRef={coverageHeadingRef}
-                  relationship={editingRelationship}
-                />
-              )}
-            </article>
-          ))
-        )}
-      </div>
+                  }
+                  type="button"
+                >
+                  Tekrar dene
+                </button>
+              </div>
+            )}
+            {!schoolLoading && !schoolError && schoolPage && (
+              <>
+                <div className="school-result-summary">
+                  <strong>{schoolPage.totalElements} aktif okul</strong>
+                  {schoolPage.totalElements > 0 && (
+                    <span>
+                      Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
+                    </span>
+                  )}
+                </div>
+                {schoolPage.totalPages > 1 && (
+                  <nav
+                    className="pagination"
+                    aria-label="Okul kataloğu sayfaları"
+                  >
+                    <button
+                      className="secondary-button"
+                      disabled={schoolPage.page === 0}
+                      onClick={() =>
+                        void loadSchoolPage(
+                          schoolPage.page - 1,
+                          schoolRequestParameters.query,
+                        )
+                      }
+                      type="button"
+                    >
+                      Önceki sayfa
+                    </button>
+                    <span>
+                      Sayfa {schoolPage.page + 1} / {schoolPage.totalPages}
+                    </span>
+                    <button
+                      className="secondary-button"
+                      disabled={schoolPage.page + 1 >= schoolPage.totalPages}
+                      onClick={() =>
+                        void loadSchoolPage(
+                          schoolPage.page + 1,
+                          schoolRequestParameters.query,
+                        )
+                      }
+                      type="button"
+                    >
+                      Sonraki sayfa
+                    </button>
+                  </nav>
+                )}
+              </>
+            )}
+          </section>
+          <form className="operator-add-school-form" onSubmit={addSchool}>
+            <label className="form-field">
+              <span>Aktif okul</span>
+              <select
+                disabled={schoolLoading && schoolOptions.length === 0}
+                onChange={(event) =>
+                  setSelectedSchool(
+                    schoolOptions.find(
+                      (school) => school.id === event.target.value,
+                    ),
+                  )
+                }
+                value={selectedSchool?.id ?? ''}
+              >
+                <option value="">Okul seçin</option>
+                {schoolOptions.map((school) => (
+                  <option key={school.id} value={school.id}>
+                    {school.name} — {school.districtName}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {!schoolLoading && !schoolError && schoolPage && (
+              <SchoolCatalogGuidance
+                availableCount={availableSchools.length}
+                page={schoolPage}
+                query={schoolRequestParameters.query}
+              />
+            )}
+            {addError && (
+              <div className="form-error" role="alert">
+                {addError}
+              </div>
+            )}
+            <div className="operator-dialog-actions">
+              <button
+                className="secondary-button"
+                disabled={pending === 'add'}
+                onClick={closeAddDialog}
+                type="button"
+              >
+                Vazgeç
+              </button>
+              <button
+                className="primary-button"
+                disabled={pending === 'add' || !selectedSchool}
+                type="submit"
+              >
+                {pending === 'add' ? 'Ekleniyor…' : 'Okulu ekle'}
+              </button>
+            </div>
+          </form>
+        </SchoolDialog>
+      )}
+
+      {editingRelationship && (
+        <CoverageEditor
+          key={editingRelationship.id}
+          onClose={() => setEditingCoverageId(undefined)}
+          onSaved={(updated) => {
+            updateRelationship(updated)
+            setEditingCoverageId(undefined)
+            setNotice(
+              updated.coverage.length > 0
+                ? {
+                    message:
+                      'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
+                    tone: 'success',
+                  }
+                : {
+                    message:
+                      'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
+                    tone: 'warning',
+                  },
+            )
+          }}
+          relationship={editingRelationship}
+        />
+      )}
+
+      {removeTarget && (
+        <SchoolDialog
+          description={`${removeTarget.schoolName} bağlantısı ve okula özel kapsamı kaldırılacak.`}
+          onCancel={() => setRemoveTarget(undefined)}
+          pending={pending === removeTarget.id}
+          title="Okul kapsamı kaldırılsın mı?"
+        >
+          {removeError && (
+            <div className="form-error" role="alert">
+              {removeError}
+            </div>
+          )}
+          <div className="operator-dialog-actions">
+            <button
+              className="secondary-button"
+              data-autofocus
+              disabled={pending === removeTarget.id}
+              onClick={() => setRemoveTarget(undefined)}
+              type="button"
+            >
+              Vazgeç
+            </button>
+            <button
+              className="danger-button"
+              disabled={pending === removeTarget.id}
+              onClick={() => void remove(removeTarget)}
+              type="button"
+            >
+              {pending === removeTarget.id ? 'Kaldırılıyor…' : 'Kaldır'}
+            </button>
+          </div>
+        </SchoolDialog>
+      )}
     </section>
   )
 }
 
-function CoverageEditor({
-  headingRef,
+function SchoolRow({
+  districtName,
+  locked,
+  onEdit,
+  onRemove,
+  onToggle,
+  pending,
   relationship,
+  showAllCoverage,
+}: {
+  districtName: string
+  locked: boolean
+  onEdit: () => void
+  onRemove: () => void
+  onToggle: () => void
+  pending: boolean
+  relationship: OperatorSchool
+  showAllCoverage: boolean
+}) {
+  const nameId = `operator-school-${relationship.id}`
+  // A filter can match any neighborhood, so the match must stay visible.
+  const chipLimit = showAllCoverage
+    ? relationship.coverage.length
+    : visibleCoverageChips
+  const hiddenChips = relationship.coverage.length - chipLimit
+  return (
+    <li>
+      <article aria-busy={pending} className="operator-school-row">
+        <div className="operator-school-identity">
+          <span className="operator-school-mark" aria-hidden="true">
+            {schoolInitials(relationship.schoolName)}
+          </span>
+          <div>
+            <h2 id={nameId}>{relationship.schoolName}</h2>
+            <p>
+              {relationship.schoolProvinceName} · {relationship.coverage.length}{' '}
+              hizmet mahallesi
+            </p>
+          </div>
+        </div>
+        <dl>
+          <div>
+            <dt>İlçe</dt>
+            <dd>{districtName}</dd>
+          </div>
+          <div className="operator-school-coverage">
+            <dt>Hizmet mahalleleri</dt>
+            <dd>
+              {relationship.coverage.length > 0 && (
+                <ul className="operator-coverage-chips">
+                  {relationship.coverage.slice(0, chipLimit).map((item) => (
+                    <li key={item.neighborhoodId}>
+                      {item.neighborhoodName}
+                      {item.districtId !== relationship.schoolDistrictId &&
+                        ` · ${item.districtName}`}
+                    </li>
+                  ))}
+                  {hiddenChips > 0 && <li>+{hiddenChips} mahalle</li>}
+                </ul>
+              )}
+              <button
+                aria-describedby={nameId}
+                aria-disabled={pending}
+                className="text-button"
+                onClick={() => {
+                  if (!pending) onEdit()
+                }}
+                type="button"
+              >
+                + Mahalle düzenle
+              </button>
+            </dd>
+          </div>
+          <div>
+            <dt>Durum</dt>
+            <dd>
+              <StatusBadge
+                tone={
+                  relationship.active && relationship.schoolActive
+                    ? 'success'
+                    : 'neutral'
+                }
+              >
+                {!relationship.schoolActive
+                  ? 'Okul pasif'
+                  : relationship.active
+                    ? 'Aktif'
+                    : 'Bağlantı pasif'}
+              </StatusBadge>
+            </dd>
+          </div>
+        </dl>
+        <div className="operator-school-actions">
+          <button
+            aria-describedby={nameId}
+            aria-disabled={pending}
+            className="text-button"
+            onClick={() => {
+              if (!pending) onEdit()
+            }}
+            type="button"
+          >
+            Düzenle
+          </button>
+          {/* aria-disabled keeps keyboard focus on the button during the request. */}
+          <button
+            aria-describedby={nameId}
+            aria-disabled={locked}
+            className="text-button"
+            disabled={!relationship.schoolActive}
+            onClick={() => {
+              if (!locked) onToggle()
+            }}
+            type="button"
+          >
+            {relationship.active ? 'Pasifleştir' : 'Etkinleştir'}
+          </button>
+          <button
+            aria-describedby={nameId}
+            aria-disabled={locked}
+            className="text-button danger-text"
+            onClick={() => {
+              if (!locked) onRemove()
+            }}
+            type="button"
+          >
+            Kaldır
+          </button>
+        </div>
+        {!relationship.schoolActive && (
+          <p className="school-warning">
+            Bu okul yönetici tarafından pasife alındı ve aramalara katkı
+            sağlamaz.
+          </p>
+        )}
+        {relationship.schoolActive && !relationship.active && (
+          <p className="school-warning">
+            Bu bağlantıyı etkinleştirene kadar okul aramalara katkı sağlamaz.
+          </p>
+        )}
+        {relationship.schoolActive &&
+          relationship.active &&
+          relationship.coverage.length === 0 && (
+            <p className="school-warning">
+              Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin.
+            </p>
+          )}
+      </article>
+    </li>
+  )
+}
+
+function SchoolDialog({
+  children,
+  description,
+  onCancel,
+  pending,
+  title,
+  wide = false,
+}: {
+  children: ReactNode
+  description: string
+  onCancel: () => void
+  pending: boolean
+  title: string
+  wide?: boolean
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const titleId = useId()
+  const descriptionId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    dialog?.showModal()
+    const target =
+      dialog?.querySelector<HTMLElement>('[data-autofocus]') ??
+      dialog?.querySelector<HTMLElement>('h2')
+    target?.focus()
+    return () => {
+      dialog?.close()
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [])
+
+  return (
+    <dialog
+      aria-describedby={descriptionId}
+      aria-labelledby={titleId}
+      className={`operator-dialog${wide ? ' operator-dialog-wide' : ''}`}
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onCancel()
+      }}
+      onClose={(event) => {
+        // Repeated Escape can close a native dialog without a cancel event.
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
+      }}
+      ref={dialogRef}
+    >
+      <header className="operator-dialog-header">
+        <div>
+          <h2 id={titleId} tabIndex={-1}>
+            {title}
+          </h2>
+          <p id={descriptionId}>{description}</p>
+        </div>
+        <button
+          aria-label="Kapat"
+          className="operator-dialog-close"
+          disabled={pending}
+          onClick={onCancel}
+          type="button"
+        >
+          <span aria-hidden="true">×</span>
+        </button>
+      </header>
+      <div className="operator-dialog-body">{children}</div>
+    </dialog>
+  )
+}
+
+function CoverageEditor({
+  relationship,
+  onClose,
   onSaved,
 }: {
-  headingRef: RefObject<HTMLHeadingElement | null>
   relationship: OperatorSchool
+  onClose: () => void
   onSaved: (updated: OperatorSchool) => void
 }) {
+  const navigate = useNavigate()
   const [districts, setDistricts] = useState<District[]>([])
   const [districtLoadState, setDistrictLoadState] = useState<
     'loading' | 'loaded' | 'error'
@@ -706,26 +1081,22 @@ function CoverageEditor({
         [...selected].sort((left, right) => left - right),
       )
       onSaved(updated)
-      setSelected(new Set(updated.coverage.map((item) => item.neighborhoodId)))
     } catch (reason) {
-      setError(messageFor(reason))
+      handleSession(reason, navigate, setError)
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <section
-      className="coverage-editor"
-      aria-label={`${relationship.schoolName} kapsamı`}
+    <SchoolDialog
+      description={`${relationship.schoolName} için hizmet mahalleleri. Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.`}
+      onCancel={onClose}
+      pending={saving}
+      title="Okul kapsamını düzenle"
+      wide
     >
-      <div className="section-heading">
-        <div>
-          <h3 ref={headingRef} tabIndex={-1}>
-            {relationship.schoolName} için hizmet mahalleleri
-          </h3>
-          <p>Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.</p>
-        </div>
+      <div className="operator-coverage-count">
         <span className="count-badge">{selectedCount} seçili</span>
       </div>
       {districtLoadState === 'loading' && (
@@ -762,21 +1133,20 @@ function CoverageEditor({
             const countId = `${panelId}-count`
             return (
               <fieldset aria-label={district.name} key={district.id}>
-                <legend>
+                <legend className="operator-district-legend">
                   <button
                     aria-controls={panelId}
                     aria-describedby={countId}
                     aria-expanded={expanded}
-                    aria-label={district.name}
                     className="district-toggle"
                     onClick={() => toggleDistrict(district.id)}
                     type="button"
                   >
-                    <span>{district.name}</span>
-                    <span id={countId}>{districtSelection.length} seçili</span>
+                    {district.name}
                   </button>
+                  <span id={countId}>{districtSelection.length} seçili</span>
                 </legend>
-                {districtSelection.length > 0 && (
+                {!expanded && districtSelection.length > 0 && (
                   <p className="district-selection-summary">
                     Seçili:{' '}
                     {districtSelection.map((item) => item.name).join(', ')}
@@ -872,15 +1242,25 @@ function CoverageEditor({
           {error}
         </div>
       )}
-      <button
-        className="primary-button"
-        disabled={saving || districtLoadState === 'loading'}
-        onClick={save}
-        type="button"
-      >
-        {saving ? 'Kaydediliyor…' : 'Kapsamı kaydet'}
-      </button>
-    </section>
+      <div className="operator-dialog-actions operator-dialog-sticky-actions">
+        <button
+          className="secondary-button"
+          disabled={saving}
+          onClick={onClose}
+          type="button"
+        >
+          Vazgeç
+        </button>
+        <button
+          className="primary-button"
+          disabled={saving || districtLoadState === 'loading'}
+          onClick={save}
+          type="button"
+        >
+          {saving ? 'Kaydediliyor…' : 'Kapsamı kaydet'}
+        </button>
+      </div>
+    </SchoolDialog>
   )
 }
 

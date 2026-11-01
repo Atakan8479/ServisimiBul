@@ -117,16 +117,15 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
 
   await test.step('7. Add school and general coverage', async () => {
     await operatorPage.goto('/operator/schools')
+    await operatorPage.getByRole('button', { name: 'Okul ekle' }).click()
     await operatorPage.getByLabel('Okul ara').fill('Örnek')
-    await operatorPage.getByRole('button', { name: 'Ara' }).click()
+    await operatorPage.getByRole('button', { name: 'Ara', exact: true }).click()
     await operatorPage
       .getByLabel('Aktif okul')
       .selectOption({ label: 'Örnek Okulu — Kadıköy' })
     await operatorPage.getByRole('button', { name: 'Okulu ekle' }).click()
     await expect(
-      operatorPage.getByRole('heading', {
-        name: 'Örnek Okulu için hizmet mahalleleri',
-      }),
+      operatorPage.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
     ).toBeFocused()
     await operatorPage
       .getByRole('group', { name: 'Kadıköy' })
@@ -391,6 +390,7 @@ test('operator reaches and selects a school beyond the first 50 results', async 
 
   await login(page, 'operator@example.com')
   await page.goto('/operator/schools')
+  await page.getByRole('button', { name: 'Okul ekle' }).click()
   await expect(page.getByText('51 aktif okul')).toBeVisible()
   for (let pageNumber = 1; pageNumber < 6; pageNumber += 1) {
     await page.getByRole('button', { name: 'Sonraki sayfa' }).click()

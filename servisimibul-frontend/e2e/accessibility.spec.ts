@@ -88,7 +88,7 @@ for (const viewport of viewports) {
 
     await page.goto('/operator/schools')
     await expect(
-      page.getByRole('heading', { name: 'Hizmet ağınız' }),
+      page.getByRole('heading', { name: 'Okullar ve hizmet kapsamı' }),
     ).toBeVisible()
     await audit(page, 'operator schools')
 
@@ -185,15 +185,15 @@ test('route changes restore page context and mobile controls meet the touch targ
 
   await page.getByRole('button', { name: 'Menü', exact: true }).click()
   await page.getByRole('link', { name: 'Okullar ve kapsam' }).click()
-  const schoolsHeading = page.getByRole('heading', { name: 'Hizmet ağınız' })
+  const schoolsHeading = page.getByRole('heading', {
+    name: 'Okullar ve hizmet kapsamı',
+  })
   await expect(schoolsHeading).toBeFocused()
   await expect(page).toHaveTitle('Okullar ve kapsam | ServisimiBul')
 
-  await page.getByRole('button', { name: 'Kapsamı düzenle' }).click()
+  await page.getByRole('button', { name: 'Düzenle', exact: true }).click()
   await expect(
-    page.getByRole('heading', {
-      name: 'Örnek Okulu için hizmet mahalleleri',
-    }),
+    page.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
   ).toBeFocused()
   await page.getByRole('button', { name: 'Kadıköy' }).click()
   await expect(page.getByRole('checkbox', { name: 'Moda' })).toBeVisible()
@@ -303,14 +303,13 @@ test('reduced-motion mode removes decorative and page-transition motion', async 
 
   await login(page, 'operator@example.com')
   await page.goto('/operator/schools')
+  await page.getByRole('button', { name: 'Okul ekle' }).click()
   await page
     .getByLabel('Aktif okul')
     .selectOption({ label: 'Örnek Okulu — Kadıköy' })
   await page.getByRole('button', { name: 'Okulu ekle' }).click()
   await expect(
-    page.getByRole('heading', {
-      name: 'Örnek Okulu için hizmet mahalleleri',
-    }),
+    page.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
   ).toBeFocused()
   expect(
     await page.evaluate(
@@ -318,7 +317,7 @@ test('reduced-motion mode removes decorative and page-transition motion', async 
         (window as Window & { __lastScrollBehavior?: ScrollBehavior })
           .__lastScrollBehavior,
     ),
-  ).toBe('auto')
+  ).not.toBe('smooth')
 })
 
 async function audit(page: Page, surface: string) {

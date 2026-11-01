@@ -366,8 +366,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     let operatorSchoolId = ''
     await test.step('attach a school and save cross-district same-province coverage', async () => {
       await operatorPage.goto('/operator/schools')
+      await operatorPage.getByRole('button', { name: 'Okul ekle' }).click()
       await operatorPage.getByLabel('Okul ara').fill('J03 Gerçek')
-      await operatorPage.getByRole('button', { name: 'Ara' }).click()
+      await operatorPage
+        .getByRole('button', { name: 'Ara', exact: true })
+        .click()
       await operatorPage
         .getByLabel('Aktif okul')
         .selectOption({ label: 'J03 Gerçek Okulu — Kadıköy' })
@@ -470,7 +473,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       await operatorPage.goto('/operator/schools')
       await operatorPage
-        .getByRole('button', { name: 'Kapsamı düzenle' })
+        .getByRole('button', { name: 'Düzenle', exact: true })
         .click()
       await operatorPage
         .getByRole('group', { name: 'Kadıköy' })
@@ -497,6 +500,77 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         },
       )
       expect(restored.ok()).toBe(true)
+      await search(publicPage, 'Üsküdar', 'Acıbadem')
+      await expect(
+        publicPage.getByRole('heading', { name: '1 işletmeci bulundu' }),
+      ).toBeVisible()
+    })
+
+    await test.step('activation and removal change readiness and discovery', async () => {
+      const contributes = async () => {
+        const readiness = await operatorPage.request.get(
+          '/api/v1/operator/discovery-readiness',
+        )
+        return ((await readiness.json()) as { discoveryEligible: boolean })
+          .discoveryEligible
+      }
+      await operatorPage.goto('/operator/schools')
+      expect(await contributes()).toBe(true)
+      await operatorPage.getByRole('button', { name: 'Pasifleştir' }).click()
+      await expect(operatorPage.getByText('Bağlantı pasif')).toBeVisible()
+      expect(await contributes()).toBe(false)
+      await search(publicPage, 'Üsküdar', 'Acıbadem')
+      await expect(
+        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+      ).toBeVisible()
+
+      await operatorPage.getByRole('button', { name: 'Etkinleştir' }).click()
+      await expect(
+        operatorPage.getByText('Okul bağlantısı etkinleştirildi.'),
+      ).toBeVisible()
+      expect(await contributes()).toBe(true)
+
+      await operatorPage.getByRole('button', { name: 'Kaldır' }).click()
+      await operatorPage
+        .getByRole('dialog', { name: 'Okul kapsamı kaldırılsın mı?' })
+        .getByRole('button', { name: 'Kaldır' })
+        .click()
+      await expect(
+        operatorPage.getByRole('heading', { name: 'Henüz okul eklenmedi' }),
+      ).toBeVisible()
+      expect(await contributes()).toBe(false)
+      await search(publicPage, 'Üsküdar', 'Acıbadem')
+      await expect(
+        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+      ).toBeVisible()
+
+      await operatorPage
+        .getByRole('button', { name: 'İlk okulunuzu ekleyin' })
+        .click()
+      await operatorPage
+        .getByLabel('Aktif okul')
+        .selectOption({ label: 'J03 Gerçek Okulu — Kadıköy' })
+      const created = operatorPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/operator/schools'),
+      )
+      await operatorPage.getByRole('button', { name: 'Okulu ekle' }).click()
+      operatorSchoolId = ((await (await created).json()) as { id: string }).id
+      await operatorPage
+        .getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+        .getByRole('button', { name: 'Vazgeç' })
+        .click()
+      const operatorCsrf = await csrf(operatorPage)
+      const relinked = await operatorPage.request.put(
+        `/api/v1/operator/schools/${operatorSchoolId}/coverage`,
+        {
+          headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+          data: { neighborhoodIds: [340101, 340201] },
+        },
+      )
+      expect(relinked.ok()).toBe(true)
+      expect(await contributes()).toBe(true)
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
         publicPage.getByRole('heading', { name: '1 işletmeci bulundu' }),
