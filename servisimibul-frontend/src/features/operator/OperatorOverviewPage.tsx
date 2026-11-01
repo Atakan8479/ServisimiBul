@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../../components/design-system'
 import { getDiscoveryReadiness, type DiscoveryReadiness } from './operator-api'
+import { schoolInitials } from './school-initials'
 
 export function OperatorOverviewPage() {
   const navigate = useNavigate()
@@ -451,16 +452,6 @@ function coverageCount(readiness: DiscoveryReadiness) {
     (total, school) => total + school.validCoverageCount,
     0,
   )
-}
-
-function schoolInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toLocaleUpperCase('tr-TR')
 }
 
 function InlineLoading({ label }: { label: string }) {

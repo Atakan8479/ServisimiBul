@@ -34,6 +34,7 @@ export interface MockApiState {
     reviewedAt: string
   }>
   operatorSchoolAdded: boolean
+  operatorSchoolActive?: boolean
   generalCoverage: number[]
   vehicles: Array<{
     id: string
@@ -341,6 +342,26 @@ export async function installMockApi(page: Page, state: MockApiState) {
       return requireRole(route, role, 'OPERATOR', () => {
         state.operatorSchoolAdded = true
         return json(route, operatorSchool(state), 201)
+      })
+    }
+    if (
+      path === `/operator/schools/${operatorSchoolId}` &&
+      method === 'PATCH'
+    ) {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const body = await request.postDataJSON()
+        state.operatorSchoolActive = body.active
+        return json(route, operatorSchool(state))
+      })
+    }
+    if (
+      path === `/operator/schools/${operatorSchoolId}` &&
+      method === 'DELETE'
+    ) {
+      return requireRole(route, role, 'OPERATOR', () => {
+        state.operatorSchoolAdded = false
+        state.generalCoverage = []
+        return route.fulfill({ status: 204 })
       })
     }
     if (
@@ -829,14 +850,16 @@ function operatorSchool(state: MockApiState) {
     schoolProvinceCode: '34',
     schoolProvinceName: 'İstanbul',
     schoolActive: true,
-    active: true,
+    active: state.operatorSchoolActive ?? true,
     coverage: state.generalCoverage.map(coverage),
   }
 }
 
 function discoveryReadiness(state: MockApiState) {
+  const relationshipActive =
+    state.operatorSchoolAdded && (state.operatorSchoolActive ?? true)
   const hasEligibleSchoolCoverage =
-    state.operatorSchoolAdded && state.generalCoverage.length > 0
+    relationshipActive && state.generalCoverage.length > 0
   const approvalSatisfied = state.approvalStatus === 'APPROVED'
   return {
     discoveryEligible:
@@ -851,7 +874,7 @@ function discoveryReadiness(state: MockApiState) {
     publiclyVisible: state.publiclyVisible,
     approvalRequired: true,
     approvalSatisfied,
-    hasActiveSchoolRelationship: state.operatorSchoolAdded,
+    hasActiveSchoolRelationship: relationshipActive,
     hasEligibleSchoolCoverage,
     schools: state.operatorSchoolAdded
       ? [
@@ -859,7 +882,7 @@ function discoveryReadiness(state: MockApiState) {
             operatorSchoolId,
             schoolId,
             schoolName: 'Örnek Okulu',
-            relationshipActive: true,
+            relationshipActive,
             schoolActive: true,
             validCoverageCount: state.generalCoverage.length,
             contributesToDiscovery: hasEligibleSchoolCoverage,

@@ -366,8 +366,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     let operatorSchoolId = ''
     await test.step('attach a school and save cross-district same-province coverage', async () => {
       await operatorPage.goto('/operator/schools')
+      await operatorPage.getByRole('button', { name: 'Okul ekle' }).click()
       await operatorPage.getByLabel('Okul ara').fill('J03 Gerçek')
-      await operatorPage.getByRole('button', { name: 'Ara' }).click()
+      await operatorPage
+        .getByRole('button', { name: 'Ara', exact: true })
+        .click()
       await operatorPage
         .getByLabel('Aktif okul')
         .selectOption({ label: 'J03 Gerçek Okulu — Kadıköy' })
@@ -470,7 +473,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       await operatorPage.goto('/operator/schools')
       await operatorPage
-        .getByRole('button', { name: 'Kapsamı düzenle' })
+        .getByRole('button', { name: 'Düzenle', exact: true })
         .click()
       await operatorPage
         .getByRole('group', { name: 'Kadıköy' })
