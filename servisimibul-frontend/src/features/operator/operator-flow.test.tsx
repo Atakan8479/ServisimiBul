@@ -1452,6 +1452,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/offerings')
 
     expect(await screen.findByText('34 OLD 123')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Teklif oluştur' }))
     const vehicleSelect = screen.getByLabelText('Etkin araç')
     expect(
       within(vehicleSelect).getByRole('option', {
@@ -1461,6 +1462,218 @@ describe('operator workspace flows', () => {
     expect(
       within(vehicleSelect).queryByRole('option', { name: /34 OLD 123/ }),
     ).not.toBeInTheDocument()
+  })
+
+  it('keeps create errors and entered values inside their open dialogs for retry', async () => {
+    let vehicleAttempts = 0
+    let offeringAttempts = 0
+    const createdVehicle = vehicle(
+      '11111111-1111-4111-8111-111111111111',
+      '34 ABC 123',
+      true,
+    )
+    server.use(
+      authHandler(),
+      csrfHandler(),
+      http.get('/api/v1/operator/vehicles', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+      http.post('/api/v1/operator/vehicles', () => {
+        vehicleAttempts += 1
+        return vehicleAttempts === 1
+          ? HttpResponse.json(
+              {
+                title: 'Conflict',
+                status: 409,
+                detail: 'Bu plaka zaten kayıtlı.',
+                code: 'vehicle_plate_conflict',
+              },
+              { status: 409 },
+            )
+          : HttpResponse.json(createdVehicle)
+      }),
+      http.post('/api/v1/operator/offerings', () => {
+        offeringAttempts += 1
+        return offeringAttempts === 1
+          ? HttpResponse.json(
+              {
+                title: 'Bad Request',
+                status: 400,
+                detail: 'Servis taslağı kaydedilemedi.',
+                code: 'offering_invalid',
+              },
+              { status: 400 },
+            )
+          : HttpResponse.json(offering(false, []))
+      }),
+    )
+
+    renderRoute('/operator/offerings')
+    fireEvent.click(await screen.findByRole('button', { name: 'Araç ekle' }))
+    let dialog = screen.getByRole('dialog', { name: 'Araç ekle' })
+    fireEvent.change(within(dialog).getByLabelText('Plaka'), {
+      target: { value: '34 ABC 123' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Kapasite'), {
+      target: { value: '16' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Bu plaka zaten kayıtlı.',
+    )
+    expect(within(dialog).getByLabelText('Plaka')).toHaveValue('34 ABC 123')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
+    expect(await screen.findByText('Araç eklendi.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Teklif oluştur' }))
+    dialog = screen.getByRole('dialog', { name: 'Servis teklifi oluştur' })
+    fireEvent.change(within(dialog).getByLabelText('Okul bağlantısı'), {
+      target: { value: '75ef6bb0-e313-43fb-a01c-c935774434b4' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Etkin araç'), {
+      target: { value: createdVehicle.id },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Açıklama (isteğe bağlı)'), {
+      target: { value: 'Deneme servisi' },
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Taslağı oluştur' }),
+    )
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Servis taslağı kaydedilemedi.',
+    )
+    expect(
+      within(dialog).getByLabelText('Açıklama (isteğe bağlı)'),
+    ).toHaveValue('Deneme servisi')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Taslağı oluştur' }),
+    )
+    expect(
+      await screen.findByText('Servis taslağı oluşturuldu.'),
+    ).toBeInTheDocument()
+    expect(vehicleAttempts).toBe(2)
+    expect(offeringAttempts).toBe(2)
+  })
+
+  it('redirects an expired dialog operation to operator login', async () => {
+    server.use(
+      authHandler(),
+      csrfHandler(),
+      http.get('/api/v1/operator/vehicles', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+      http.post('/api/v1/operator/vehicles', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Oturum sona erdi.',
+            code: 'session_expired',
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    renderRoute('/operator/offerings')
+    fireEvent.click(await screen.findByRole('button', { name: 'Araç ekle' }))
+    const dialog = screen.getByRole('dialog', { name: 'Araç ekle' })
+    fireEvent.change(within(dialog).getByLabelText('Plaka'), {
+      target: { value: '34 ABC 123' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Kapasite'), {
+      target: { value: '16' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'İşletmeci paneline giriş' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('keeps vehicle edit errors and entered values inside the dialog for retry', async () => {
+    let updateBody: unknown
+    let attempts = 0
+    const currentVehicle = vehicle(
+      '11111111-1111-4111-8111-111111111111',
+      '34 ABC 123',
+      true,
+    )
+    server.use(
+      authHandler(),
+      csrfHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        HttpResponse.json([currentVehicle]),
+      ),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+      http.patch('/api/v1/operator/vehicles/:id', async ({ request }) => {
+        updateBody = await request.json()
+        attempts += 1
+        if (attempts === 1) {
+          return HttpResponse.json(
+            {
+              title: 'Conflict',
+              status: 409,
+              detail: 'Plaka değişikliği kaydedilemedi.',
+              code: 'vehicle_update_conflict',
+            },
+            { status: 409 },
+          )
+        }
+        return HttpResponse.json({
+          ...currentVehicle,
+          plate: '34 XYZ 987',
+          capacity: 18,
+        })
+      }),
+    )
+
+    renderRoute('/operator/offerings')
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: '34 ABC 123 aracını düzenle',
+      }),
+    )
+    const dialog = screen.getByRole('dialog', {
+      name: 'Araç bilgilerini düzenle',
+    })
+    fireEvent.change(within(dialog).getByLabelText('Plaka'), {
+      target: { value: '34 XYZ 987' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Kapasite'), {
+      target: { value: '18' },
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Aracı kaydet' }),
+    )
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Plaka değişikliği kaydedilemedi.',
+    )
+    expect(within(dialog).getByLabelText('Plaka')).toHaveValue('34 XYZ 987')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Aracı kaydet' }),
+    )
+
+    expect(
+      await screen.findByText('Araç bilgileri kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('34 XYZ 987')).toBeInTheDocument()
+    expect(updateBody).toEqual({ plate: '34 XYZ 987', capacity: 18 })
+    expect(attempts).toBe(2)
   })
 
   it('retries a failed offerings load without showing misleading empty states', async () => {
@@ -1490,16 +1703,18 @@ describe('operator workspace flows', () => {
     expect(
       await screen.findByText('Servis bilgileri şu anda alınamıyor.'),
     ).toBeInTheDocument()
-    expect(screen.queryByText('Henüz araç eklenmedi.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Henüz araç eklenmedi')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Yeniden dene' }))
 
-    expect(await screen.findByText('Henüz araç eklenmedi.')).toBeInTheDocument()
+    expect(await screen.findByText('Henüz araç eklenmedi')).toBeInTheDocument()
     expect(attempts).toBe(2)
   })
 
-  it('saves only parent coverage neighborhoods and publishes the offering', async () => {
+  it('keeps offering edit and coverage errors inside the dialog for retry', async () => {
     let coverageBody: unknown
+    let detailAttempts = 0
+    let coverageAttempts = 0
     let published = false
     const activeVehicle = vehicle(
       '11111111-1111-4111-8111-111111111111',
@@ -1521,10 +1736,39 @@ describe('operator workspace flows', () => {
       http.get('/api/v1/operator/schools', () =>
         HttpResponse.json([schoolWithCoverage]),
       ),
+      http.patch('/api/v1/operator/offerings/:id', () => {
+        detailAttempts += 1
+        return detailAttempts === 1
+          ? HttpResponse.json(
+              {
+                title: 'Conflict',
+                status: 409,
+                detail: 'Servis ayrıntıları kaydedilemedi.',
+                code: 'offering_update_conflict',
+              },
+              { status: 409 },
+            )
+          : HttpResponse.json({
+              ...draft,
+              description: 'Yeni açıklama',
+            })
+      }),
       http.put(
         '/api/v1/operator/offerings/:id/coverage',
         async ({ request }) => {
           coverageBody = await request.json()
+          coverageAttempts += 1
+          if (coverageAttempts === 1) {
+            return HttpResponse.json(
+              {
+                title: 'Bad Request',
+                status: 400,
+                detail: 'Servis kapsamı kaydedilemedi.',
+                code: 'offering_coverage_invalid',
+              },
+              { status: 400 },
+            )
+          }
           return HttpResponse.json(
             offering(false, [
               coverage(101, 10, 'Moda', 'Kadıköy'),
@@ -1540,18 +1784,55 @@ describe('operator workspace flows', () => {
     )
 
     renderRoute('/operator/offerings')
-    fireEvent.click(await screen.findByText('Servisi düzenle'))
-    const uskudar = screen.getByRole('group', { name: 'Üsküdar' })
-    fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
+    const dialog = screen.getByRole('dialog', {
+      name: 'Servis teklifini düzenle',
+    })
+    fireEvent.change(within(dialog).getByLabelText('Açıklama (isteğe bağlı)'), {
+      target: { value: 'Yeni açıklama' },
+    })
     fireEvent.click(
-      screen.getByRole('button', { name: 'Servis kapsamını kaydet' }),
+      within(dialog).getByRole('button', { name: 'Ayrıntıları kaydet' }),
     )
 
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Servis bilgileri değişti. Sayfayı yenileyip tekrar deneyin.',
+    )
     expect(
-      await screen.findByText('Servis kapsamı kaydedildi.'),
+      within(dialog).getByLabelText('Açıklama (isteğe bağlı)'),
+    ).toHaveValue('Yeni açıklama')
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Ayrıntıları kaydet' }),
+    )
+    expect(
+      await screen.findByText('Servis ayrıntıları kaydedildi.'),
     ).toBeInTheDocument()
-    expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
 
+    const uskudar = within(dialog).getByRole('group', { name: 'Üsküdar' })
+    fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Servis kapsamını kaydet' }),
+    )
+
+    expect(await within(dialog).findByRole('alert')).toHaveTextContent(
+      'Servis kapsamı kaydedilemedi.',
+    )
+    expect(
+      within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }),
+    ).toBeChecked()
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Servis kapsamını kaydet' }),
+    )
+    expect(await screen.findByText('Servis kapsamı kaydedildi.')).toBeVisible()
+    expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
+    expect(detailAttempts).toBe(2)
+    expect(coverageAttempts).toBe(2)
+
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Servis teklifini düzenle penceresini kapat',
+      }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Yayımla' }))
     expect(await screen.findByText('Servis yayımlandı.')).toBeInTheDocument()
     expect(published).toBe(true)

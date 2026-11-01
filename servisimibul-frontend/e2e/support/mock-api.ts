@@ -395,6 +395,41 @@ export async function installMockApi(page: Page, state: MockApiState) {
         return json(route, vehicle, 201)
       })
     }
+    if (/^\/operator\/vehicles\/[0-9a-f-]+$/.test(path) && method === 'PATCH') {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const id = path.split('/').at(-1)
+        const vehicle = state.vehicles.find((item) => item.id === id)
+        if (!vehicle) return problem(route, 404, 'vehicle_not_found')
+        const body = await request.postDataJSON()
+        vehicle.plate = body.plate
+        vehicle.capacity = body.capacity
+        if (body.active !== undefined) vehicle.active = body.active
+        state.offerings
+          .filter((offering) => offering.vehicleId === id)
+          .forEach((offering) => {
+            offering.vehiclePlate = vehicle.plate
+            offering.vehicleCapacity = vehicle.capacity
+          })
+        return json(route, vehicle)
+      })
+    }
+    if (
+      /^\/operator\/vehicles\/[0-9a-f-]+\/deactivate$/.test(path) &&
+      method === 'POST'
+    ) {
+      return requireRole(route, role, 'OPERATOR', () => {
+        const id = path.split('/').at(-2)
+        const vehicle = state.vehicles.find((item) => item.id === id)
+        if (!vehicle) return problem(route, 404, 'vehicle_not_found')
+        vehicle.active = false
+        state.offerings
+          .filter((offering) => offering.vehicleId === id)
+          .forEach((offering) => {
+            offering.published = false
+          })
+        return json(route, vehicle)
+      })
+    }
     if (path === '/operator/offerings' && method === 'GET') {
       return requireRole(route, role, 'OPERATOR', () =>
         json(route, state.offerings),
@@ -426,6 +461,27 @@ export async function installMockApi(page: Page, state: MockApiState) {
       })
     }
     if (
+      /^\/operator\/offerings\/[0-9a-f-]+$/.test(path) &&
+      method === 'PATCH'
+    ) {
+      return requireRole(route, role, 'OPERATOR', async () => {
+        const id = path.split('/').at(-1)
+        const offering = state.offerings.find((item) => item.id === id)
+        if (!offering) return problem(route, 404, 'offering_not_found')
+        const body = await request.postDataJSON()
+        const vehicle = state.vehicles.find(
+          (item) => item.id === body.vehicleId,
+        )
+        offering.operatorSchoolId = body.operatorSchoolId
+        offering.vehicleId = body.vehicleId
+        offering.vehiclePlate = vehicle?.plate ?? offering.vehiclePlate
+        offering.vehicleCapacity = vehicle?.capacity ?? offering.vehicleCapacity
+        offering.availableSeats = body.availableSeats
+        offering.description = body.description
+        return json(route, offering)
+      })
+    }
+    if (
       path === `/operator/offerings/${offeringId}/coverage` &&
       method === 'PUT'
     ) {
@@ -438,13 +494,14 @@ export async function installMockApi(page: Page, state: MockApiState) {
       })
     }
     if (
-      path === `/operator/offerings/${offeringId}/publish` &&
+      /^\/operator\/offerings\/[0-9a-f-]+\/(publish|unpublish)$/.test(path) &&
       method === 'POST'
     ) {
       return requireRole(route, role, 'OPERATOR', () => {
-        const offering = state.offerings[0]
+        const id = path.split('/').at(-2)
+        const offering = state.offerings.find((item) => item.id === id)
         if (!offering) return problem(route, 404, 'offering_not_found')
-        offering.published = true
+        offering.published = path.endsWith('/publish')
         return json(route, offering)
       })
     }

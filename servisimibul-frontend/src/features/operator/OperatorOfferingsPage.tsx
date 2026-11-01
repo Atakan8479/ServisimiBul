@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatePanel, StatusBadge } from '../../components/design-system'
@@ -28,6 +35,10 @@ export function OperatorOfferingsPage() {
   const [pending, setPending] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
+  const [vehicleCreateOpen, setVehicleCreateOpen] = useState(false)
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle>()
+  const [offeringCreateOpen, setOfferingCreateOpen] = useState(false)
+  const [offeringToEdit, setOfferingToEdit] = useState<ServiceOffering>()
 
   useEffect(() => {
     let active = true
@@ -57,6 +68,17 @@ export function OperatorOfferingsPage() {
   function updateVehicleState(updated: Vehicle) {
     setVehicles((current) =>
       current.map((vehicle) => (vehicle.id === updated.id ? updated : vehicle)),
+    )
+    setOfferings((current) =>
+      current.map((offering) =>
+        offering.vehicleId === updated.id
+          ? {
+              ...offering,
+              vehiclePlate: updated.plate,
+              vehicleCapacity: updated.capacity,
+            }
+          : offering,
+      ),
     )
   }
 
@@ -127,13 +149,22 @@ export function OperatorOfferingsPage() {
 
   return (
     <section className="workspace-page operator-workspace-page operator-offerings-page">
-      <header className="operator-page-header">
-        <h1>Servis ayrıntılarınız</h1>
-        <p>
-          Araç ve servis bilgileri isteğe bağlıdır. Aramalarda görünmek için
-          araç eklemek zorunda değilsiniz.
+      <header className="operator-page-header operator-offerings-header">
+        <h1>Araçlar ve servis teklifleri</h1>
+        <p>Paylaşmak istediğiniz araç ve hizmet ayrıntılarını düzenleyin.</p>
+        <p className="operator-offerings-optional-note">
+          Araç ve ayrıntılı servis teklifi eklemek arama görünürlüğü için
+          zorunlu değildir.
         </p>
       </header>
+
+      <div className="operator-offerings-callout">
+        <InfoIcon />
+        <p>
+          <strong>Bu bölüm isteğe bağlıdır.</strong> Araç veya teklif eklemeden
+          de okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.
+        </p>
+      </div>
 
       {error && (
         <div className="form-error" role="alert">
@@ -167,60 +198,78 @@ export function OperatorOfferingsPage() {
         <>
           <section
             aria-labelledby="vehicles-title"
-            className="management-section operator-flow-stage"
+            className="operator-offerings-section"
           >
-            <div className="section-heading">
+            <div className="operator-offerings-section-heading">
               <div>
-                <h2 id="vehicles-title">Araçlar</h2>
-                <p>Servis ayrıntısı paylaşacaksanız önce aracınızı ekleyin.</p>
+                <h2 id="vehicles-title">Filo bilgileri</h2>
+                <p>Servis tekliflerinizde kullanacağınız araçları yönetin.</p>
               </div>
-              <span className="count-badge">{vehicles.length} araç</span>
+              <button
+                className="secondary-button operator-add-button"
+                onClick={() => setVehicleCreateOpen(true)}
+                type="button"
+              >
+                <PlusIcon />
+                Araç ekle
+              </button>
             </div>
-            <VehicleCreateForm
-              onCreated={(vehicle) => {
-                setVehicles((current) => [...current, vehicle])
-                setNotice('Araç eklendi.')
-              }}
-              onError={(reason) => handleSession(reason, navigate, setError)}
-            />
+
             {vehicles.length === 0 ? (
-              <p className="operator-section-note">Henüz araç eklenmedi.</p>
-            ) : (
-              <div className="management-grid">
-                {vehicles.map((vehicle) => (
-                  <article
-                    className="school-card management-card"
-                    key={vehicle.id}
+              <StatePanel
+                action={
+                  <button
+                    className="primary-button"
+                    onClick={() => setVehicleCreateOpen(true)}
+                    type="button"
                   >
-                    <div className="school-title-row">
-                      <h3>{vehicle.plate}</h3>
-                      <StatusBadge
-                        tone={vehicle.active ? 'success' : 'neutral'}
-                      >
-                        {vehicle.active ? 'Etkin' : 'Pasif'}
-                      </StatusBadge>
+                    İlk aracı ekle
+                  </button>
+                }
+                detail="Servis teklifi paylaşmak isterseniz önce plaka ve kapasite bilgisiyle bir araç ekleyin."
+                title="Henüz araç eklenmedi"
+              />
+            ) : (
+              <div className="operator-vehicle-grid">
+                {vehicles.map((vehicle) => (
+                  <article className="operator-vehicle-card" key={vehicle.id}>
+                    <div className="operator-vehicle-visual" aria-hidden="true">
+                      <BusIcon />
                     </div>
-                    <p>{vehicle.capacity} kişilik kapasite</p>
-                    <VehicleEditor
-                      onError={(reason) =>
-                        handleSession(reason, navigate, setError)
-                      }
-                      onUpdated={(updated) => {
-                        updateVehicleState(updated)
-                        setNotice('Araç bilgileri kaydedildi.')
-                      }}
-                      vehicle={vehicle}
-                    />
-                    <button
-                      className={
-                        vehicle.active ? 'danger-button' : 'secondary-button'
-                      }
-                      disabled={pending === `vehicle-${vehicle.id}`}
-                      onClick={() => void toggleVehicle(vehicle)}
-                      type="button"
-                    >
-                      {vehicle.active ? 'Pasife al' : 'Etkinleştir'}
-                    </button>
+                    <div className="operator-vehicle-body">
+                      <div className="operator-vehicle-status-row">
+                        <StatusBadge
+                          tone={vehicle.active ? 'success' : 'neutral'}
+                        >
+                          {vehicle.active ? 'Etkin' : 'Pasif'}
+                        </StatusBadge>
+                        <button
+                          aria-label={`${vehicle.plate} aracını düzenle`}
+                          className="operator-icon-button"
+                          onClick={() => setVehicleToEdit(vehicle)}
+                          type="button"
+                        >
+                          <EditIcon />
+                        </button>
+                      </div>
+                      <h3>{vehicle.plate}</h3>
+                      <p className="operator-vehicle-capacity">
+                        <SeatIcon /> {vehicle.capacity} kişilik kapasite
+                      </p>
+                      <button
+                        className="operator-text-action"
+                        disabled={pending === `vehicle-${vehicle.id}`}
+                        onClick={() => void toggleVehicle(vehicle)}
+                        type="button"
+                      >
+                        {pending === `vehicle-${vehicle.id}`
+                          ? 'Güncelleniyor…'
+                          : vehicle.active
+                            ? 'Pasife al'
+                            : 'Etkinleştir'}
+                        <ArrowIcon />
+                      </button>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -229,19 +278,29 @@ export function OperatorOfferingsPage() {
 
           <section
             aria-labelledby="offerings-title"
-            className="management-section operator-flow-stage"
+            className="operator-offerings-section"
           >
-            <div className="section-heading">
+            <div className="operator-offerings-section-heading">
               <div>
-                <h2 id="offerings-title">Servis bilgileri</h2>
+                <h2 id="offerings-title">Paylaşılan hizmetler</h2>
                 <p>
-                  Etkin bir okul ve araç seçerek paylaşacağınız servisi
-                  hazırlayın.
+                  Okul ve mahalle kapsamıyla ilişkilendirilmiş servis
+                  teklifleri.
                 </p>
               </div>
-              <span className="count-badge">{offerings.length} servis</span>
+              {activeSchools.length > 0 && activeVehicles.length > 0 && (
+                <button
+                  className="primary-button operator-add-button"
+                  onClick={() => setOfferingCreateOpen(true)}
+                  type="button"
+                >
+                  <PlusIcon />
+                  Teklif oluştur
+                </button>
+              )}
             </div>
-            {activeSchools.length === 0 || activeVehicles.length === 0 ? (
+
+            {(activeSchools.length === 0 || activeVehicles.length === 0) && (
               <StatePanel
                 action={
                   activeSchools.length === 0 ? (
@@ -255,80 +314,183 @@ export function OperatorOfferingsPage() {
                 }
                 detail={
                   activeSchools.length === 0
-                    ? 'Servis bilgisi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
-                    : 'Servis bilgisi oluşturmak için yukarıdan etkin bir araç ekleyin.'
+                    ? 'Servis teklifi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
+                    : 'Servis teklifi oluşturmak için en az bir etkin aracınız olmalıdır.'
                 }
                 title="Önce gerekli bilgileri tamamlayın"
               />
-            ) : (
-              <OfferingCreateForm
-                onCreated={(offering) => {
-                  setOfferings((current) => [...current, offering])
-                  setNotice('Servis taslağı oluşturuldu.')
-                }}
-                onError={(reason) => handleSession(reason, navigate, setError)}
-                schools={activeSchools}
-                vehicles={activeVehicles}
-              />
             )}
+
             {offerings.length === 0 ? (
-              <p className="operator-section-note">Henüz servis taslağı yok.</p>
-            ) : (
-              <div className="management-grid">
-                {offerings.map((offering) => (
-                  <article
-                    className="school-card management-card"
-                    key={offering.id}
-                  >
-                    <div className="school-title-row">
-                      <h3>{offering.schoolName}</h3>
-                      <StatusBadge
-                        tone={offering.published ? 'success' : 'neutral'}
-                      >
-                        {offering.published ? 'Yayında' : 'Taslak'}
-                      </StatusBadge>
-                    </div>
-                    <p>
-                      {offering.vehiclePlate} · {offering.coverage.length}{' '}
-                      mahalle
-                    </p>
-                    {offering.availableSeats !== null && (
-                      <p>
-                        Uygun koltuk: {offering.availableSeats}/
-                        {offering.vehicleCapacity}
-                      </p>
-                    )}
-                    {offering.description && <p>{offering.description}</p>}
-                    <OfferingEditor
-                      offering={offering}
-                      onError={(reason) =>
-                        handleSession(reason, navigate, setError)
-                      }
-                      onUpdated={(updated, message) => {
-                        updateOfferingState(updated)
-                        setNotice(message)
-                      }}
-                      schools={activeSchools}
-                      vehicles={activeVehicles}
-                    />
+              activeSchools.length > 0 &&
+              activeVehicles.length > 0 && (
+                <StatePanel
+                  action={
                     <button
-                      className={
-                        offering.published
-                          ? 'secondary-button'
-                          : 'primary-button'
-                      }
-                      disabled={pending === `offering-${offering.id}`}
-                      onClick={() => void toggleOffering(offering)}
+                      className="primary-button"
+                      onClick={() => setOfferingCreateOpen(true)}
                       type="button"
                     >
-                      {offering.published ? 'Yayından kaldır' : 'Yayımla'}
+                      İlk teklifi oluştur
                     </button>
-                  </article>
-                ))}
+                  }
+                  detail="Taslak oluşturduktan sonra servis mahallelerini seçip teklifi yayımlayabilirsiniz."
+                  title="Henüz servis teklifi yok"
+                />
+              )
+            ) : (
+              <div className="operator-offerings-table-wrap">
+                <table className="operator-offerings-table">
+                  <thead>
+                    <tr>
+                      <th>Hizmet</th>
+                      <th>Kapsam</th>
+                      <th>Durum</th>
+                      <th>İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {offerings.map((offering) => (
+                      <tr key={offering.id}>
+                        <td data-label="Hizmet">
+                          <div className="operator-offering-name">
+                            <span aria-hidden="true">
+                              <BusIcon />
+                            </span>
+                            <div>
+                              <strong>{offering.schoolName}</strong>
+                              <small>{offering.vehiclePlate}</small>
+                              {offering.description && (
+                                <small>{offering.description}</small>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td data-label="Kapsam">
+                          <strong>{offering.coverage.length} mahalle</strong>
+                          <small>
+                            {offering.coverage.length > 0
+                              ? offering.coverage
+                                  .map((item) => item.neighborhoodName)
+                                  .join(', ')
+                              : 'Yayın için kapsam ekleyin'}
+                          </small>
+                          {offering.availableSeats !== null && (
+                            <small>
+                              Uygun koltuk: {offering.availableSeats}/
+                              {offering.vehicleCapacity}
+                            </small>
+                          )}
+                        </td>
+                        <td data-label="Durum">
+                          <StatusBadge
+                            tone={offering.published ? 'success' : 'warning'}
+                          >
+                            {offering.published ? 'Yayında' : 'Taslak'}
+                          </StatusBadge>
+                        </td>
+                        <td data-label="İşlem">
+                          <div className="operator-offering-actions">
+                            <button
+                              className="operator-text-action"
+                              onClick={() => setOfferingToEdit(offering)}
+                              type="button"
+                            >
+                              Düzenle
+                            </button>
+                            <button
+                              className="operator-text-action"
+                              disabled={pending === `offering-${offering.id}`}
+                              onClick={() => void toggleOffering(offering)}
+                              type="button"
+                            >
+                              {pending === `offering-${offering.id}`
+                                ? 'Güncelleniyor…'
+                                : offering.published
+                                  ? 'Taslağa al'
+                                  : 'Yayımla'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </section>
         </>
+      )}
+
+      <ModalDialog
+        onClose={() => setVehicleCreateOpen(false)}
+        open={vehicleCreateOpen}
+        title="Araç ekle"
+      >
+        <VehicleCreateForm
+          onCreated={(vehicle) => {
+            setVehicles((current) => [...current, vehicle])
+            setNotice('Araç eklendi.')
+            setVehicleCreateOpen(false)
+          }}
+          onError={(reason) => dialogErrorFor(reason, navigate)}
+        />
+      </ModalDialog>
+
+      {vehicleToEdit && (
+        <ModalDialog
+          onClose={() => setVehicleToEdit(undefined)}
+          open
+          title="Araç bilgilerini düzenle"
+        >
+          <VehicleEditor
+            onError={(reason) => dialogErrorFor(reason, navigate)}
+            onUpdated={(updated) => {
+              updateVehicleState(updated)
+              setNotice('Araç bilgileri kaydedildi.')
+              setVehicleToEdit(undefined)
+            }}
+            vehicle={vehicleToEdit}
+          />
+        </ModalDialog>
+      )}
+
+      <ModalDialog
+        onClose={() => setOfferingCreateOpen(false)}
+        open={offeringCreateOpen}
+        title="Servis teklifi oluştur"
+      >
+        <OfferingCreateForm
+          onCreated={(offering) => {
+            setOfferings((current) => [...current, offering])
+            setNotice('Servis taslağı oluşturuldu.')
+            setOfferingCreateOpen(false)
+          }}
+          onError={(reason) => dialogErrorFor(reason, navigate)}
+          schools={activeSchools}
+          vehicles={activeVehicles}
+        />
+      </ModalDialog>
+
+      {offeringToEdit && (
+        <ModalDialog
+          onClose={() => setOfferingToEdit(undefined)}
+          open
+          title="Servis teklifini düzenle"
+          wide
+        >
+          <OfferingEditor
+            offering={offeringToEdit}
+            onError={(reason) => dialogErrorFor(reason, navigate)}
+            onUpdated={(updated, message) => {
+              updateOfferingState(updated)
+              setOfferingToEdit(updated)
+              setNotice(message)
+            }}
+            schools={activeSchools}
+            vehicles={activeVehicles}
+          />
+        </ModalDialog>
       )}
     </section>
   )
@@ -339,12 +501,13 @@ function VehicleCreateForm({
   onError,
 }: {
   onCreated: (vehicle: Vehicle) => void
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
 }) {
   const [plate, setPlate] = useState('')
   const [capacity, setCapacity] = useState('')
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -359,6 +522,7 @@ function VehicleCreateForm({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onCreated(
         await createVehicle({ plate: plate.trim(), capacity: parsedCapacity }),
@@ -366,19 +530,17 @@ function VehicleCreateForm({
       setPlate('')
       setCapacity('')
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <form className="form-card compact-card" onSubmit={submit}>
-      <div className="section-heading">
-        <div>
-          <h2>Araç ekle</h2>
-        </div>
-      </div>
+    <form className="operator-dialog-form" onSubmit={submit}>
+      <p className="operator-dialog-intro">
+        Plaka ve kapasite bilgisi servis tekliflerinde kullanılır.
+      </p>
       <div className="form-grid two-columns">
         <label className="form-field">
           Plaka
@@ -398,9 +560,16 @@ function VehicleCreateForm({
         </label>
       </div>
       {validation && <p className="field-error">{validation}</p>}
-      <button className="primary-button" disabled={pending} type="submit">
-        {pending ? 'Ekleniyor…' : 'Araç ekle'}
-      </button>
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
+      <div className="operator-dialog-actions">
+        <button className="primary-button" disabled={pending} type="submit">
+          {pending ? 'Ekleniyor…' : 'Aracı ekle'}
+        </button>
+      </div>
     </form>
   )
 }
@@ -410,7 +579,7 @@ function VehicleEditor({
   onUpdated,
   vehicle,
 }: {
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   onUpdated: (vehicle: Vehicle) => void
   vehicle: Vehicle
 }) {
@@ -418,6 +587,7 @@ function VehicleEditor({
   const [capacity, setCapacity] = useState(String(vehicle.capacity))
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -432,6 +602,7 @@ function VehicleEditor({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onUpdated(
         await updateVehicle(vehicle.id, {
@@ -440,16 +611,18 @@ function VehicleEditor({
         }),
       )
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <details className="inline-editor">
-      <summary>Bilgileri düzenle</summary>
-      <form onSubmit={submit}>
+    <form className="operator-dialog-form" onSubmit={submit}>
+      <p className="operator-dialog-intro">
+        Plaka değişikliği tüm bağlı servis tekliflerinde görünür.
+      </p>
+      <div className="form-grid two-columns">
         <label className="form-field">
           Plaka
           <input
@@ -466,12 +639,19 @@ function VehicleEditor({
             value={capacity}
           />
         </label>
-        {validation && <p className="field-error">{validation}</p>}
-        <button className="secondary-button" disabled={pending} type="submit">
+      </div>
+      {validation && <p className="field-error">{validation}</p>}
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
+      <div className="operator-dialog-actions">
+        <button className="primary-button" disabled={pending} type="submit">
           {pending ? 'Kaydediliyor…' : 'Aracı kaydet'}
         </button>
-      </form>
-    </details>
+      </div>
+    </form>
   )
 }
 
@@ -482,7 +662,7 @@ function OfferingCreateForm({
   vehicles,
 }: {
   onCreated: (offering: ServiceOffering) => void
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   schools: OperatorSchool[]
   vehicles: Vehicle[]
 }) {
@@ -492,6 +672,7 @@ function OfferingCreateForm({
   const [description, setDescription] = useState('')
   const [pending, setPending] = useState(false)
   const [validation, setValidation] = useState<string>()
+  const [apiError, setApiError] = useState<string>()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -510,6 +691,7 @@ function OfferingCreateForm({
     }
     setPending(true)
     setValidation(undefined)
+    setApiError(undefined)
     try {
       onCreated(
         await createOffering({
@@ -522,19 +704,18 @@ function OfferingCreateForm({
       setAvailableSeats('')
       setDescription('')
     } catch (reason) {
-      onError(reason)
+      setApiError(onError(reason))
     } finally {
       setPending(false)
     }
   }
 
   return (
-    <form className="form-card compact-card" onSubmit={submit}>
-      <div className="section-heading">
-        <div>
-          <h2>Servis taslağı oluştur</h2>
-        </div>
-      </div>
+    <form className="operator-dialog-form" onSubmit={submit}>
+      <p className="operator-dialog-intro">
+        Teklif önce taslak olarak oluşturulur. Mahalle kapsamını ekledikten
+        sonra yayımlayabilirsiniz.
+      </p>
       <div className="form-grid two-columns">
         <label className="form-field">
           Okul bağlantısı
@@ -582,18 +763,25 @@ function OfferingCreateForm({
         </label>
       </div>
       {validation && <p className="field-error">{validation}</p>}
+      {apiError && (
+        <div className="form-error" role="alert">
+          {apiError}
+        </div>
+      )}
       {(schools.length === 0 || vehicles.length === 0) && (
         <p className="empty-note">
           Taslak oluşturmak için etkin okul bağlantısı ve etkin araç gerekir.
         </p>
       )}
-      <button
-        className="primary-button"
-        disabled={pending || schools.length === 0 || vehicles.length === 0}
-        type="submit"
-      >
-        {pending ? 'Oluşturuluyor…' : 'Servis taslağı oluştur'}
-      </button>
+      <div className="operator-dialog-actions">
+        <button
+          className="primary-button"
+          disabled={pending || schools.length === 0 || vehicles.length === 0}
+          type="submit"
+        >
+          {pending ? 'Oluşturuluyor…' : 'Taslağı oluştur'}
+        </button>
+      </div>
     </form>
   )
 }
@@ -606,7 +794,7 @@ function OfferingEditor({
   vehicles,
 }: {
   offering: ServiceOffering
-  onError: (reason: unknown) => void
+  onError: (reason: unknown) => string | undefined
   onUpdated: (offering: ServiceOffering, message: string) => void
   schools: OperatorSchool[]
   vehicles: Vehicle[]
@@ -632,6 +820,8 @@ function OfferingEditor({
   )
   const [pending, setPending] = useState<string>()
   const [validation, setValidation] = useState<string>()
+  const [detailsError, setDetailsError] = useState<string>()
+  const [coverageError, setCoverageError] = useState<string>()
 
   const parentSchool = schools.find(
     (school) => school.id === offering.operatorSchoolId,
@@ -666,6 +856,7 @@ function OfferingEditor({
     }
     setPending('details')
     setValidation(undefined)
+    setDetailsError(undefined)
     try {
       const updated = await updateOffering(offering.id, {
         operatorSchoolId,
@@ -678,7 +869,7 @@ function OfferingEditor({
       }
       onUpdated(updated, 'Servis ayrıntıları kaydedildi.')
     } catch (reason) {
-      onError(reason)
+      setDetailsError(onError(reason))
     } finally {
       setPending(undefined)
     }
@@ -688,6 +879,7 @@ function OfferingEditor({
     event.preventDefault()
     setPending('coverage')
     setValidation(undefined)
+    setCoverageError(undefined)
     try {
       const updated = await replaceOfferingCoverage(offering.id, [
         ...selectedCoverage,
@@ -697,69 +889,78 @@ function OfferingEditor({
       )
       onUpdated(updated, 'Servis kapsamı kaydedildi.')
     } catch (reason) {
-      onError(reason)
+      setCoverageError(onError(reason))
     } finally {
       setPending(undefined)
     }
   }
 
   return (
-    <details className="inline-editor">
-      <summary>Servisi düzenle</summary>
-      <form onSubmit={saveDetails}>
-        <label className="form-field">
-          Okul bağlantısı
-          <select
-            onChange={(event) => setOperatorSchoolId(event.target.value)}
-            value={operatorSchoolId}
-          >
-            <option value="">Etkin okul seçin</option>
-            {schools.map((school) => (
-              <option key={school.id} value={school.id}>
-                {school.schoolName}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          Etkin araç
-          <select
-            onChange={(event) => setVehicleId(event.target.value)}
-            value={vehicleId}
-          >
-            <option value="">Araç seçin</option>
-            {vehicles.map((vehicle) => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate} — {vehicle.capacity} kişi
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          Uygun koltuk (isteğe bağlı)
-          <input
-            min="0"
-            onChange={(event) => setAvailableSeats(event.target.value)}
-            type="number"
-            value={availableSeats}
-          />
-        </label>
-        <label className="form-field">
-          Açıklama (isteğe bağlı)
-          <textarea
-            onChange={(event) => setDescription(event.target.value)}
-            rows={3}
-            value={description}
-          />
-        </label>
+    <div className="operator-offering-editor">
+      <form className="operator-dialog-form" onSubmit={saveDetails}>
+        <h3>Teklif ayrıntıları</h3>
+        <div className="form-grid two-columns">
+          <label className="form-field">
+            Okul bağlantısı
+            <select
+              onChange={(event) => setOperatorSchoolId(event.target.value)}
+              value={operatorSchoolId}
+            >
+              <option value="">Etkin okul seçin</option>
+              {schools.map((school) => (
+                <option key={school.id} value={school.id}>
+                  {school.schoolName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="form-field">
+            Etkin araç
+            <select
+              onChange={(event) => setVehicleId(event.target.value)}
+              value={vehicleId}
+            >
+              <option value="">Araç seçin</option>
+              {vehicles.map((vehicle) => (
+                <option key={vehicle.id} value={vehicle.id}>
+                  {vehicle.plate} — {vehicle.capacity} kişi
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="form-field">
+            Uygun koltuk (isteğe bağlı)
+            <input
+              min="0"
+              onChange={(event) => setAvailableSeats(event.target.value)}
+              type="number"
+              value={availableSeats}
+            />
+          </label>
+          <label className="form-field">
+            Açıklama (isteğe bağlı)
+            <textarea
+              onChange={(event) => setDescription(event.target.value)}
+              rows={3}
+              value={description}
+            />
+          </label>
+        </div>
         {validation && <p className="field-error">{validation}</p>}
-        <button
-          className="secondary-button"
-          disabled={pending === 'details'}
-          type="submit"
-        >
-          {pending === 'details' ? 'Kaydediliyor…' : 'Ayrıntıları kaydet'}
-        </button>
+        {detailsError && (
+          <div className="form-error" role="alert">
+            {detailsError}
+          </div>
+        )}
+        <div className="operator-dialog-actions">
+          <button
+            className="secondary-button"
+            disabled={pending === 'details'}
+            type="submit"
+          >
+            {pending === 'details' ? 'Kaydediliyor…' : 'Ayrıntıları kaydet'}
+          </button>
+        </div>
       </form>
 
       <form className="offering-coverage" onSubmit={saveCoverage}>
@@ -794,15 +995,136 @@ function OfferingEditor({
             </fieldset>
           ))
         )}
-        <button
-          className="secondary-button"
-          disabled={pending === 'coverage'}
-          type="submit"
-        >
-          {pending === 'coverage' ? 'Kaydediliyor…' : 'Servis kapsamını kaydet'}
-        </button>
+        {coverageError && (
+          <div className="form-error" role="alert">
+            {coverageError}
+          </div>
+        )}
+        <div className="operator-dialog-actions">
+          <button
+            className="secondary-button"
+            disabled={pending === 'coverage'}
+            type="submit"
+          >
+            {pending === 'coverage'
+              ? 'Kaydediliyor…'
+              : 'Servis kapsamını kaydet'}
+          </button>
+        </div>
       </form>
-    </details>
+    </div>
+  )
+}
+
+function ModalDialog({
+  children,
+  onClose,
+  open,
+  title,
+  wide = false,
+}: {
+  children: ReactNode
+  onClose: () => void
+  open: boolean
+  title: string
+  wide?: boolean
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (open && !dialog.open) dialog.showModal()
+    if (!open && dialog.open) dialog.close()
+  }, [open])
+
+  return (
+    <dialog
+      aria-label={title}
+      className={`operator-dialog${wide ? ' operator-dialog-wide' : ''}`}
+      onCancel={(event) => {
+        event.preventDefault()
+        onClose()
+      }}
+      ref={dialogRef}
+    >
+      <div className="operator-dialog-header">
+        <div>
+          <h2>{title}</h2>
+          <p>Değişiklikler gerçek hesabınıza kaydedilir.</p>
+        </div>
+        <button
+          aria-label={`${title} penceresini kapat`}
+          className="operator-dialog-close"
+          onClick={onClose}
+          type="button"
+        >
+          <CloseIcon />
+        </button>
+      </div>
+      <div className="operator-dialog-content">{children}</div>
+    </dialog>
+  )
+}
+
+function BusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M6 17V6.8C6 4.7 8.7 4 12 4s6 .7 6 2.8V17" />
+      <path d="M6 9h12M8 14h.01M16 14h.01M8 17h8" />
+      <path d="M8 17v2M16 17v2" />
+    </svg>
+  )
+}
+
+function SeatIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="9" cy="7" r="3" />
+      <path d="M4 20v-2.5A4.5 4.5 0 0 1 8.5 13H10a4.5 4.5 0 0 1 4.5 4.5V20M17 10a3 3 0 0 1 3 3v4" />
+    </svg>
+  )
+}
+
+function EditIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m4 16-.8 4 4-.8L18.5 7.9a2.1 2.1 0 0 0-3-3Z" />
+      <path d="m14 6 4 4" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  )
+}
+
+function ArrowIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m9 18 6-6-6-6" />
+    </svg>
+  )
+}
+
+function CloseIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <path d="m6 6 12 12M18 6 6 18" />
+    </svg>
+  )
+}
+
+function InfoIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </svg>
   )
 }
 
@@ -816,6 +1138,17 @@ function handleSession(
     return
   }
   setError(messageFor(reason))
+}
+
+function dialogErrorFor(
+  reason: unknown,
+  navigate: ReturnType<typeof useNavigate>,
+): string | undefined {
+  if (reason instanceof ApiError && reason.sessionExpired) {
+    void navigate('/operator/login?reason=session', { replace: true })
+    return undefined
+  }
+  return messageFor(reason)
 }
 
 function messageFor(reason: unknown): string {
