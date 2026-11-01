@@ -4,6 +4,17 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #180 are present on `main`. UI-FIDELITY-11 is implemented on `codex/ui-fidelity-11-operator-profile` and has completed focused unit, build, accessibility, responsive, and mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
+## UI-FIDELITY-12 O03 before vs Manus gap list — 2026-11-01
+
+Baseline: `docs/screenshots/ui-fidelity-12/before/` from the mocked real page at 1440 and 390. No results are verified yet.
+
+- The page leads with an always-open catalog form; Manus leads with `Okullar ve hizmet kapsamı`, an eyebrow, and an `Okul ekle` action that opens a dialog.
+- Linked schools are large cards; Manus uses a table with school, district, neighborhood chips, status, and actions.
+- There is no coverage guidance note, no filter over linked schools, and no active-school count.
+- Coverage opens inline inside a card; Manus edits it in a dialog.
+- Removal uses `window.confirm`; Manus uses a styled confirmation dialog.
+- Backend-driven adaptations: `OperatorSchoolResponse` has `schoolDistrictId` but no district name, so the name comes from the existing districts endpoint. The real coverage editor keeps multi-district, lazily loaded selection instead of the prototype's single text field. Demo notices and demo wording are not reproduced.
+
 ## Verified UI-FIDELITY-11 O02 operator profile — 2026-11-01
 
 - O02 `/operator/profile` now uses the approved Manus task-card composition while keeping only the real backend profile contract: optional business name, mandatory public contact phone, description, public-visibility preference, approval status, and the existing save/submit/resubmit actions.
