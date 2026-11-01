@@ -1135,6 +1135,62 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         parentPage.getByRole('button', { name: 'İncele' }).first(),
       )
 
+      await parentPage.setViewportSize({ width: 1280, height: 900 })
+      await parentPage.goto('/notifications')
+      const unreadCountOf = async (page: Page) =>
+        (
+          (await (
+            await page.request.get('/api/v1/notifications/unread-count')
+          ).json()) as { unreadCount: number }
+        ).unreadCount
+      const parentUnread = await unreadCountOf(parentPage)
+      const otherParentUnread = await unreadCountOf(secondParentPage)
+      expect(parentUnread).toBeGreaterThan(0)
+      expect(otherParentUnread).toBeGreaterThan(0)
+      await expect(
+        parentPage.getByText(`${parentUnread} okunmamış bildirim`, {
+          exact: true,
+        }),
+      ).toBeVisible()
+      const unreadBadge = parentPage.getByLabel(
+        `${parentUnread} okunmamış bildirim`,
+      )
+      await expect(unreadBadge).toBeVisible()
+      const [readAllResponse] = await Promise.all([
+        parentPage.waitForResponse(
+          (response) =>
+            response.url().endsWith('/api/v1/notifications/read-all') &&
+            response.request().method() === 'PUT',
+        ),
+        parentPage
+          .getByRole('button', { name: 'Tümünü okundu işaretle' })
+          .click(),
+      ])
+      expect(readAllResponse.status()).toBe(200)
+      expect(await readAllResponse.json()).toEqual({ unreadCount: 0 })
+      await expect(
+        parentPage.getByText('Tüm bildirimler okundu olarak işaretlendi.'),
+      ).toBeVisible()
+      await expect(parentPage.getByText('Hepsi okundu')).toBeVisible()
+      await expect(unreadBadge).toHaveCount(0)
+      await expect(
+        parentPage.getByRole('button', { name: 'Okundu olarak işaretle' }),
+      ).toHaveCount(0)
+      expect(await unreadCountOf(parentPage)).toBe(0)
+      await parentPage.reload()
+      await expect(parentPage.getByText('Hepsi okundu')).toBeVisible()
+      await expect(
+        parentPage.getByRole('button', { name: 'Okundu olarak işaretle' }),
+      ).toHaveCount(0)
+      await expect(parentPage.getByLabel(/okunmamış bildirim/)).toHaveCount(0)
+      const persisted = (await (
+        await parentPage.request.get('/api/v1/notifications?size=50')
+      ).json()) as NotificationPage
+      expect(persisted.content.every(({ readAt }) => readAt !== null)).toBe(
+        true,
+      )
+      expect(await unreadCountOf(secondParentPage)).toBe(otherParentUnread)
+
       const duplicatePublication = await operatorPage.request.post(
         responsePath,
         {

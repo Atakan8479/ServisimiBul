@@ -56,8 +56,10 @@ const typeTones: Record<NotificationItem['type'], string> = {
 }
 
 const typeIcons: Record<NotificationItem['type'], string> = {
-  DEMAND_CREATED: 'M12 5v14M5 12h14',
-  SERVICE_PUBLISHED: 'M5 12.5l4.5 4.5L19 7.5',
+  DEMAND_CREATED:
+    'M12 21s-7-6.2-7-11a7 7 0 1 1 14 0c0 4.8-7 11-7 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  SERVICE_PUBLISHED:
+    'M6 5h12a2 2 0 0 1 2 2v9H4V7a2 2 0 0 1 2-2zM4 11h16M8 16v2M16 16v2',
   FEEDBACK_REMINDER: 'M4 5h16v11H9l-5 4zM8 9.5h8M8 12.5h5',
   SUPPORT_EXPIRED: 'M12 7v5l3.5 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',
   SERVICE_WITHDRAWN: 'M6 6l12 12M18 6L6 18',
@@ -99,40 +101,81 @@ export function NotificationCenterPage() {
   const noticeRef = useRef<HTMLDivElement>(null)
   const [notice, setNotice] = useState<string>()
   const [error, setError] = useState<string>()
+  const [actionFailed, setActionFailed] = useState(false)
   const copy = roleFromPath(location.pathname)
+  const mutating = markingAll || !!markingId || !!openingId
+
+  // Responses apply only while they belong to the latest request of their kind.
+  const listRequest = useRef(0)
+  const countRequest = useRef(0)
+  const listInFlight = useRef(false)
+  const mounted = useRef(true)
+
+  const redirectIfSessionExpired = useCallback(
+    (failure: unknown) => {
+      if (!(failure instanceof ApiError && failure.sessionExpired)) return false
+      if (mounted.current) {
+        const loginPath =
+          location.pathname === '/notifications'
+            ? '/parent/login'
+            : '/operator/login'
+        const next = `${location.pathname}${location.search}`
+        void navigate(
+          `${loginPath}?next=${encodeURIComponent(next)}&reason=session`,
+          { replace: true },
+        )
+      }
+      return true
+    },
+    [location.pathname, location.search, navigate],
+  )
 
   const load = useCallback(
     async (signal?: AbortSignal) => {
+      const request = ++listRequest.current
+      listInFlight.current = true
       setLoading(true)
       setError(undefined)
+      setActionFailed(false)
       try {
-        setResult(await listNotifications(page, signal))
+        const response = await listNotifications(page, signal)
+        if (request === listRequest.current) setResult(response)
       } catch (failure) {
+        if (request !== listRequest.current) return
         if (failure instanceof DOMException && failure.name === 'AbortError')
           return
-        if (failure instanceof ApiError && failure.sessionExpired) {
-          const loginPath =
-            location.pathname === '/notifications'
-              ? '/parent/login'
-              : '/operator/login'
-          const next = `${location.pathname}${location.search}`
-          void navigate(
-            `${loginPath}?next=${encodeURIComponent(next)}&reason=session`,
-            { replace: true },
-          )
-          return
-        }
+        if (redirectIfSessionExpired(failure)) return
         setError(
           failure instanceof ApiError
             ? failure.problem.detail
             : 'Bildirimler yüklenemedi. Lütfen tekrar deneyin.',
         )
       } finally {
-        if (!signal?.aborted) setLoading(false)
+        if (request === listRequest.current) {
+          listInFlight.current = false
+          if (!signal?.aborted) setLoading(false)
+        }
       }
     },
-    [location.pathname, location.search, navigate, page],
+    [page, redirectIfSessionExpired],
   )
+
+  const refreshUnreadCount = useCallback(async (signal?: AbortSignal) => {
+    const request = ++countRequest.current
+    try {
+      const response = await unreadNotificationCount(signal)
+      if (request === countRequest.current) {
+        setUnreadCount(response.unreadCount)
+      }
+    } catch (failure) {
+      if (
+        request === countRequest.current &&
+        !(failure instanceof DOMException && failure.name === 'AbortError')
+      ) {
+        setUnreadCount(undefined)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -143,8 +186,17 @@ export function NotificationCenterPage() {
     return () => {
       window.clearTimeout(timer)
       controller.abort()
+      listRequest.current += 1
+      countRequest.current += 1
     }
-  }, [load])
+  }, [load, refreshUnreadCount])
+
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   useEffect(() => {
     if (focusId) document.getElementById(`notification-${focusId}`)?.focus()
@@ -154,28 +206,33 @@ export function NotificationCenterPage() {
     if (notice && !focusId) noticeRef.current?.focus()
   }, [focusId, notice])
 
-  async function refreshUnreadCount(signal?: AbortSignal) {
-    try {
-      const response = await unreadNotificationCount(signal)
-      setUnreadCount(response.unreadCount)
-    } catch (failure) {
-      if (!(failure instanceof DOMException && failure.name === 'AbortError')) {
-        setUnreadCount(undefined)
-      }
-    }
-  }
-
   async function markAllRead() {
     setMarkingAll(true)
+    setFocusId(undefined)
     setError(undefined)
     setNotice(undefined)
     try {
       const response = await markAllNotificationsRead()
+      countRequest.current += 1
       setUnreadCount(response.unreadCount)
+      const readAt = new Date().toISOString()
+      setResult((current) =>
+        current
+          ? {
+              ...current,
+              content: current.content.map((item) => ({
+                ...item,
+                readAt: item.readAt ?? readAt,
+              })),
+            }
+          : current,
+      )
       window.dispatchEvent(new Event(unreadCountChangedEvent))
       await load()
       setNotice('Tüm bildirimler okundu olarak işaretlendi.')
     } catch (failure) {
+      if (redirectIfSessionExpired(failure)) return
+      setActionFailed(true)
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
@@ -206,8 +263,13 @@ export function NotificationCenterPage() {
       setFocusId(updated.id)
       setNotice('Bildirim okundu olarak işaretlendi.')
       window.dispatchEvent(new Event(unreadCountChangedEvent))
-      await refreshUnreadCount()
+      await Promise.all([
+        refreshUnreadCount(),
+        listInFlight.current ? load() : undefined,
+      ])
     } catch (failure) {
+      if (redirectIfSessionExpired(failure)) return
+      setActionFailed(true)
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
@@ -225,6 +287,8 @@ export function NotificationCenterPage() {
       if (!notification.readAt) await markNotificationRead(notification.id)
       void navigate(notification.href, { viewTransition: true })
     } catch (failure) {
+      if (redirectIfSessionExpired(failure)) return
+      setActionFailed(true)
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
@@ -248,7 +312,7 @@ export function NotificationCenterPage() {
         {!!unreadCount && (
           <button
             className="secondary-button notification-mark-all"
-            disabled={markingAll}
+            disabled={mutating}
             onClick={() => void markAllRead()}
             type="button"
           >
@@ -279,7 +343,7 @@ export function NotificationCenterPage() {
             }}
             type="button"
           >
-            Tekrar dene
+            {actionFailed ? 'Listeyi yenile' : 'Tekrar dene'}
           </button>
         </div>
       )}
@@ -358,7 +422,7 @@ export function NotificationCenterPage() {
                         aria-describedby={titleId}
                         aria-label="Okundu olarak işaretle"
                         className="notification-mark"
-                        disabled={markingAll || markingId === notification.id}
+                        disabled={mutating}
                         onClick={() => void markRead(notification)}
                         title="Okundu olarak işaretle"
                         type="button"

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import {
   MemoryRouter,
@@ -367,6 +367,415 @@ describe('notification center', () => {
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
     expect(await screen.findByText('Yeni servis talebi')).toBeInTheDocument()
+  })
+})
+
+describe('notification center asynchronous ordering', () => {
+  const unreadItem = notificationPage().content[0]!
+  const pageOf = (items: unknown[], page = 0, totalPages = 2) => ({
+    content: items,
+    page,
+    size: 20,
+    totalElements: 21,
+    totalPages,
+  })
+
+  function deferred() {
+    let resolve: () => void = () => undefined
+    const promise = new Promise<void>((done) => {
+      resolve = done
+    })
+    return { promise, resolve }
+  }
+
+  function renderCenter(path = '/notifications') {
+    return render(
+      <MemoryRouter initialEntries={[path]}>
+        <NotificationNavLink to="/notifications" />
+        <Routes>
+          <Route element={<NotificationCenterPage />} path={path} />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  // Lets a released response reach the component before asserting its absence.
+  async function settle(served: () => boolean) {
+    await waitFor(() => expect(served()).toBe(true))
+    await act(async () => {
+      await fetch('/api/v1/notifications/unread-count')
+    })
+  }
+
+  it('A: keeps zero when an older unread count arrives after read-all', async () => {
+    const gate = deferred()
+    let unread = 2
+    let countCalls = 0
+    let staleServed = false
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', ({ request }) =>
+        HttpResponse.json(
+          pageOf(
+            [
+              {
+                ...unreadItem,
+                readAt: unread ? null : '2026-10-25T09:10:00Z',
+              },
+            ],
+            Number(new URL(request.url).searchParams.get('page')),
+          ),
+        ),
+      ),
+      http.get('/api/v1/notifications/unread-count', async () => {
+        countCalls += 1
+        const observed = unread
+        // The page and the navigation badge each load once, then page 1 asks again.
+        if (countCalls === 3) {
+          await gate.promise
+          staleServed = true
+        }
+        return HttpResponse.json({ unreadCount: observed })
+      }),
+      http.put('/api/v1/notifications/read-all', () => {
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+    )
+    renderCenter()
+
+    expect(await screen.findByText('2 okunmamış bildirim')).toBeInTheDocument()
+    await waitFor(() => expect(countCalls).toBe(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki' }))
+    await waitFor(() => expect(countCalls).toBe(3))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+    expect(await screen.findByText('0 okunmamış bildirim')).toBeInTheDocument()
+
+    gate.resolve()
+    await settle(() => staleServed)
+
+    expect(screen.getByText('0 okunmamış bildirim')).toBeInTheDocument()
+    expect(screen.queryByText('2 okunmamış bildirim')).not.toBeInTheDocument()
+    expect(screen.getByText('Hepsi okundu')).toBeInTheDocument()
+  })
+
+  it('B: keeps read cards when an older list arrives after read-all', async () => {
+    const gate = deferred()
+    let unread = 1
+    let listCalls = 0
+    let staleServed = false
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', async () => {
+        listCalls += 1
+        const observed = unread
+        if (listCalls === 2) {
+          await gate.promise
+          staleServed = true
+        }
+        return HttpResponse.json(
+          pageOf([
+            {
+              ...unreadItem,
+              readAt: observed ? null : '2026-10-25T09:10:00Z',
+            },
+          ]),
+        )
+      }),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+    )
+    renderCenter()
+
+    expect(await screen.findByText('Yeni')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki' }))
+    await waitFor(() => expect(listCalls).toBe(2))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+    expect(
+      await screen.findByText('Tüm bildirimler okundu olarak işaretlendi.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+
+    gate.resolve()
+    await settle(() => staleServed)
+
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Okundu olarak işaretle' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('B2: does not show unread cards when reloading after read-all fails', async () => {
+    let unread = 1
+    let listCalls = 0
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () => {
+        listCalls += 1
+        if (listCalls > 1) {
+          return HttpResponse.json(
+            { title: 'Error', status: 503, detail: 'Liste alınamadı.' },
+            {
+              status: 503,
+              headers: { 'Content-Type': 'application/problem+json' },
+            },
+          )
+        }
+        return HttpResponse.json(pageOf([unreadItem]))
+      }),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+    )
+    renderCenter()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Liste alınamadı.',
+    )
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+    expect(screen.getByText('0 okunmamış bildirim')).toBeInTheDocument()
+  })
+
+  it('C: shows only page 1 when page 0 resolves last', async () => {
+    const pageZero = deferred()
+    let pageZeroCalls = 0
+    let staleServed = false
+    server.use(
+      http.get('/api/v1/notifications', async ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get('page'))
+        if (page === 1) {
+          return HttpResponse.json(
+            pageOf([{ ...unreadItem, title: 'İkinci sayfa' }], 1),
+          )
+        }
+        pageZeroCalls += 1
+        if (pageZeroCalls === 2) {
+          await pageZero.promise
+          staleServed = true
+        }
+        return HttpResponse.json(
+          pageOf([{ ...unreadItem, title: 'İlk sayfa' }], 0),
+        )
+      }),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+    )
+    renderCenter()
+
+    expect(await screen.findByText('İlk sayfa')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki' }))
+    expect(await screen.findByText('İkinci sayfa')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Önceki' }))
+    await waitFor(() => expect(pageZeroCalls).toBe(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki' }))
+    expect(await screen.findByText('İkinci sayfa')).toBeInTheDocument()
+
+    pageZero.resolve()
+    await settle(() => staleServed)
+
+    expect(screen.getByText('İkinci sayfa')).toBeInTheDocument()
+    expect(screen.queryByText('İlk sayfa')).not.toBeInTheDocument()
+    expect(screen.getByText('Sayfa 2 / 2')).toBeInTheDocument()
+  })
+
+  it('D: keeps unread state after a failed read-all and succeeds on retry', async () => {
+    let attempts = 0
+    let unread = 1
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(
+          pageOf(
+            [
+              {
+                ...unreadItem,
+                readAt: unread ? null : '2026-10-25T09:10:00Z',
+              },
+            ],
+            0,
+            1,
+          ),
+        ),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        attempts += 1
+        if (attempts === 1) {
+          return HttpResponse.json(
+            { title: 'Error', status: 503, detail: 'Şu anda işaretlenemiyor.' },
+            {
+              status: 503,
+              headers: { 'Content-Type': 'application/problem+json' },
+            },
+          )
+        }
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+    )
+    renderCenter()
+
+    const action = await screen.findByRole('button', {
+      name: 'Tümünü okundu işaretle',
+    })
+    fireEvent.click(action)
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Şu anda işaretlenemiyor.',
+    )
+    expect(screen.getByText('Yeni')).toBeInTheDocument()
+    expect(screen.getByText('1 okunmamış bildirim')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Listeyi yenile' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+    expect(
+      await screen.findByText('Tüm bildirimler okundu olarak işaretlendi.'),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+  })
+
+  it('E: an unmounted view cannot affect a newly mounted one', async () => {
+    const gate = deferred()
+    let listCalls = 0
+    let staleServed = false
+    server.use(
+      http.get('/api/v1/notifications', async () => {
+        listCalls += 1
+        if (listCalls === 1) {
+          await gate.promise
+          staleServed = true
+          return HttpResponse.json(
+            pageOf([{ ...unreadItem, title: 'Eski görünüm' }], 0, 1),
+          )
+        }
+        return HttpResponse.json(
+          pageOf([{ ...unreadItem, title: 'Yeni görünüm' }], 0, 1),
+        )
+      }),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+    )
+    const first = renderCenter()
+    await waitFor(() => expect(listCalls).toBe(1))
+    first.unmount()
+
+    renderCenter()
+    expect(await screen.findByText('Yeni görünüm')).toBeInTheDocument()
+
+    gate.resolve()
+    await settle(() => staleServed)
+
+    expect(screen.getByText('Yeni görünüm')).toBeInTheDocument()
+    expect(screen.queryByText('Eski görünüm')).not.toBeInTheDocument()
+  })
+
+  it('blocks conflicting actions while one mark is running', async () => {
+    const gate = deferred()
+    let singleCalls = 0
+    let allCalls = 0
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(pageOf([unreadItem], 0, 1)),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        allCalls += 1
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+      http.put('/api/v1/notifications/:id/read', async () => {
+        singleCalls += 1
+        await gate.promise
+        return HttpResponse.json({
+          ...unreadItem,
+          readAt: '2026-10-25T09:10:00Z',
+        })
+      }),
+    )
+    renderCenter()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Okundu olarak işaretle' }),
+    )
+    const all = screen.getByRole('button', { name: 'Tümünü okundu işaretle' })
+    expect(all).toBeDisabled()
+    fireEvent.click(all)
+    await waitFor(() => expect(singleCalls).toBe(1))
+    expect(allCalls).toBe(0)
+
+    gate.resolve()
+    expect(
+      await screen.findByText('Bildirim okundu olarak işaretlendi.'),
+    ).toBeInTheDocument()
+  })
+
+  it('sends the parent to login when a mutation finds the session expired', async () => {
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(pageOf([unreadItem], 0, 1)),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.put('/api/v1/notifications/read-all', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Oturum gerekli.',
+            code: 'AUTHENTICATION_REQUIRED',
+          },
+          {
+            status: 401,
+            headers: { 'Content-Type': 'application/problem+json' },
+          },
+        ),
+      ),
+    )
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+          <Route element={<h1>Veli girişi</h1>} path="/parent/login" />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Veli girişi' }),
+    ).toBeInTheDocument()
   })
 })
 

@@ -1,7 +1,18 @@
-.notification-page {
+.workspace-page.notification-page {
   display: grid;
   width: min(76rem, 100%);
   gap: 1.25rem;
+}
+
+/* The decorative road would otherwise lower the contrast of text on the page. */
+.app-shell:has(.notification-page) .road-lane {
+  opacity: 0.12;
+}
+
+.notification-page .notification-open:focus-visible,
+.notification-page .notification-mark:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
 }
 
 .notification-page .notification-heading {
