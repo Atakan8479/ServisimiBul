@@ -1452,6 +1452,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/offerings')
 
     expect(await screen.findByText('34 OLD 123')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Teklif oluştur' }))
     const vehicleSelect = screen.getByLabelText('Etkin araç')
     expect(
       within(vehicleSelect).getByRole('option', {
@@ -1461,6 +1462,60 @@ describe('operator workspace flows', () => {
     expect(
       within(vehicleSelect).queryByRole('option', { name: /34 OLD 123/ }),
     ).not.toBeInTheDocument()
+  })
+
+  it('edits a vehicle through the focused dialog', async () => {
+    let updateBody: unknown
+    const currentVehicle = vehicle(
+      '11111111-1111-4111-8111-111111111111',
+      '34 ABC 123',
+      true,
+    )
+    server.use(
+      authHandler(),
+      csrfHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        HttpResponse.json([currentVehicle]),
+      ),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+      http.patch('/api/v1/operator/vehicles/:id', async ({ request }) => {
+        updateBody = await request.json()
+        return HttpResponse.json({
+          ...currentVehicle,
+          plate: '34 XYZ 987',
+          capacity: 18,
+        })
+      }),
+    )
+
+    renderRoute('/operator/offerings')
+
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: '34 ABC 123 aracını düzenle',
+      }),
+    )
+    const dialog = screen.getByRole('dialog', {
+      name: 'Araç bilgilerini düzenle',
+    })
+    fireEvent.change(within(dialog).getByLabelText('Plaka'), {
+      target: { value: '34 XYZ 987' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Kapasite'), {
+      target: { value: '18' },
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Aracı kaydet' }),
+    )
+
+    expect(
+      await screen.findByText('Araç bilgileri kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(await screen.findByText('34 XYZ 987')).toBeInTheDocument()
+    expect(updateBody).toEqual({ plate: '34 XYZ 987', capacity: 18 })
   })
 
   it('retries a failed offerings load without showing misleading empty states', async () => {
@@ -1490,11 +1545,11 @@ describe('operator workspace flows', () => {
     expect(
       await screen.findByText('Servis bilgileri şu anda alınamıyor.'),
     ).toBeInTheDocument()
-    expect(screen.queryByText('Henüz araç eklenmedi.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Henüz araç eklenmedi')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Yeniden dene' }))
 
-    expect(await screen.findByText('Henüz araç eklenmedi.')).toBeInTheDocument()
+    expect(await screen.findByText('Henüz araç eklenmedi')).toBeInTheDocument()
     expect(attempts).toBe(2)
   })
 
@@ -1540,7 +1595,7 @@ describe('operator workspace flows', () => {
     )
 
     renderRoute('/operator/offerings')
-    fireEvent.click(await screen.findByText('Servisi düzenle'))
+    fireEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const uskudar = screen.getByRole('group', { name: 'Üsküdar' })
     fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
     fireEvent.click(
@@ -1552,6 +1607,11 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
 
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: 'Servis teklifini düzenle penceresini kapat',
+      }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Yayımla' }))
     expect(await screen.findByText('Servis yayımlandı.')).toBeInTheDocument()
     expect(published).toBe(true)

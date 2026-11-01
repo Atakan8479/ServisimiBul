@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-12 operator schools ready for CI review
+## Current stage: UI-FIDELITY-13 operator offerings ready for PR review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #180 are present on `main`. UI-FIDELITY-11 is implemented on `codex/ui-fidelity-11-operator-profile` and has completed focused unit, build, accessibility, responsive, and mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #184 are present on `main`. UI-FIDELITY-13 is implemented on `codex/ui-fidelity-13-operator-offerings` with focused unit, build, accessibility, responsive, and mocked-browser verification complete. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-FIDELITY-13 O04 operator vehicles and offerings — 2026-11-01
+
+- `/operator/offerings` now follows the approved O04 hierarchy with an optional-data notice, fleet cards, a responsive offerings table/card layout, and native create/edit dialogs. The UI uses only real plate, capacity, school, vehicle, seat, description, coverage, and publication fields; Manus-only vehicle names, model years, deletion, prices, routes, and statistics were not introduced.
+- Existing vehicle/offering CRUD, CSRF/session handling, active-resource selectors, seat validation, per-offering coverage subset selection, draft/publish transitions, vehicle-deactivation unpublishing, and discovery without optional data remain authoritative. Vehicle edits now refresh the plate and capacity shown by already loaded offering rows.
+- Loading, retry, empty, inactive, client validation, and session-required states remain explicit. Browser coverage verifies WCAG 2.2 A/AA and no horizontal overflow at 1440, 768, 390, and 320 pixels, plus vehicle edit, coverage choices, draft/unpublish/publish, and operator-session routing.
+- Before/after desktop and mobile captures and the vehicle-edit dialog are under `docs/screenshots/ui-fidelity-13/`; API responses in them are mocked. The focused Impeccable critique drove the dialog/card/table hierarchy, and the final deterministic detector returned no findings.
+- Focused operator Vitest passed 37/37 and focused Chromium passed 6/6. ESLint, strict TypeScript, scoped Prettier, the Vite production build, and `git diff --check` passed. The complete serial Vitest run passed 212/213; only the pre-existing demand-feedback assertion failed after its known unhandled notification-count request. A parallel run timed out broadly under contention and was superseded by the standard serial run. Repository-wide Prettier still reports the existing 102-file line-ending baseline; every changed text file passes.
+- No backend source, API contract, dependency, lockfile, database migration, shared Supabase state, credential, or production configuration changed.
 
 ## Verified UI-FIDELITY-12 O03 operator schools — 2026-11-01
 
