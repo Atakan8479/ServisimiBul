@@ -30,6 +30,7 @@ interface SearchSelection {
   schoolId: string
   schoolName: string
   districtName: string
+  pickupDistrictId: number
   neighborhoodId: number
   neighborhoodName: string
   provinceCode: string
@@ -417,6 +418,7 @@ export function PublicDiscoveryPage() {
         schoolId: selectedSchool.id,
         schoolName: selectedSchool.name,
         districtName: district.name,
+        pickupDistrictId: district.id,
         neighborhoodId: neighborhood.id,
         neighborhoodName: neighborhood.name,
         provinceCode: selectedSchool.provinceCode,
@@ -1137,7 +1139,11 @@ function DiscoveryResults({
                   panosunda görebilirsiniz.
                 </p>
               </div>
-              <Link className="secondary-button" to="/demands" viewTransition>
+              <Link
+                className="secondary-button"
+                to={demandBoardPath(selection)}
+                viewTransition
+              >
                 Talep panosuna git
               </Link>
             </div>
@@ -1187,6 +1193,24 @@ function DiscoveryResults({
       </div>
     </section>
   )
+}
+
+function demandBoardPath(selection?: SearchSelection) {
+  if (
+    !selection?.schoolId ||
+    !Number.isInteger(selection.pickupDistrictId) ||
+    selection.pickupDistrictId <= 0 ||
+    !Number.isInteger(selection.neighborhoodId) ||
+    selection.neighborhoodId <= 0
+  ) {
+    return '/demands'
+  }
+  const parameters = new URLSearchParams({
+    schoolId: selection.schoolId,
+    pickupDistrictId: String(selection.pickupDistrictId),
+    neighborhoodId: String(selection.neighborhoodId),
+  })
+  return `/demands?${parameters.toString()}`
 }
 
 function SearchContext({ selection }: { selection: SearchSelection }) {
