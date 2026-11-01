@@ -217,6 +217,117 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
   })
 
+  it('links an empty result to the demand board with the executed search context', async () => {
+    const demandRequests: URLSearchParams[] = []
+    server.use(
+      ...locationHandlers(),
+      tariffHandler(),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+      http.get('/api/v1/schools/:id', () => HttpResponse.json(school)),
+      http.get('/api/v1/demands', ({ request }) => {
+        demandRequests.push(new URL(request.url).searchParams)
+        return HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      }),
+    )
+
+    renderHome()
+    expect(
+      screen
+        .queryByRole('link', { name: 'Talep panosuna git', hidden: true })
+        ?.getAttribute('href') ?? '/demands',
+    ).toBe('/demands')
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+    await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
+
+    const expected = `/demands?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=201`
+    const links = screen.getAllByRole('link', { name: 'Talep panosuna git' })
+    const emptyLink = links.find(
+      (link) => link.getAttribute('href') !== '/demands',
+    )
+    expect(emptyLink).toHaveAttribute('href', expected)
+    // School district is 10 (Kadıköy) but pickup is 11 (Üsküdar).
+    expect(emptyLink?.getAttribute('href')).not.toContain('pickupDistrictId=10')
+    // The unrelated promotional link keeps its plain destination.
+    expect(
+      links.filter((link) => link.getAttribute('href') === '/demands'),
+    ).toHaveLength(1)
+
+    // Unsubmitted edits never produce a link for the unexecuted selection.
+    fireEvent.change(screen.getByLabelText('Servis alınacak ilçe'), {
+      target: { value: '10' },
+    })
+    for (const link of screen.getAllByRole('link', {
+      name: 'Talep panosuna git',
+    })) {
+      expect(link.getAttribute('href')).not.toContain('pickupDistrictId=10')
+    }
+  })
+
+  it('restores the empty-result context on the demand board through the deep link', async () => {
+    const demandRequests: URLSearchParams[] = []
+    server.use(
+      ...locationHandlers(),
+      tariffHandler(),
+      http.get('/api/v1/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+      http.get('/api/v1/schools/:id', () => HttpResponse.json(school)),
+      http.get('/api/v1/demands', ({ request }) => {
+        demandRequests.push(new URL(request.url).searchParams)
+        return HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 10,
+          totalElements: 0,
+          totalPages: 0,
+        })
+      }),
+    )
+
+    const router = createMemoryRouter(routes, { initialEntries: ['/'] })
+    render(<RouterProvider router={router} />)
+    await selectLocation()
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
+    )
+    await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
+    const emptyLink = screen
+      .getAllByRole('link', { name: 'Talep panosuna git' })
+      .find((link) => link.getAttribute('href') !== '/demands')
+    fireEvent.click(emptyLink!)
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/demands'))
+    await waitFor(() =>
+      expect(demandRequests.at(-1)?.get('neighborhoodId')).toBe('201'),
+    )
+    expect(demandRequests.at(-1)?.get('schoolId')).toBe(school.id)
+    expect(router.state.location.search).toContain('pickupDistrictId=11')
+    expect(router.state.location.search).not.toContain('intent')
+  })
+
   it('focuses the error and retries the same discovery selection', async () => {
     let attempts = 0
     server.use(
