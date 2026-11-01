@@ -988,14 +988,26 @@
   gap: 0 0.9rem;
 }
 
-.operator-school-actions .text-button[aria-disabled='true'] {
-  cursor: progress;
-  opacity: 0.6;
+.operator-school-row .text-button[aria-disabled='true'],
+.operator-school-toolbar .secondary-button[aria-disabled='true'] {
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.operator-schools-page :is(button, input, select):focus-visible {
+  outline-color: var(--color-focus);
 }
 
 .operator-school-row .school-warning {
   grid-column: 1 / -1;
   margin: 0;
+  color: #70470c;
+  font-weight: 700;
+}
+
+.operator-school-coverage .text-button,
+.operator-school-actions .text-button:first-child {
+  margin-inline-start: -0.4rem;
 }
 
 .operator-school-no-match {
@@ -1072,8 +1084,47 @@
   background: var(--color-surface-soft);
 }
 
+.operator-dialog fieldset {
+  min-width: 0;
+}
+
+.operator-dialog .district-groups {
+  max-height: none;
+  overflow-y: visible;
+  margin-bottom: 0;
+  padding-right: 0;
+}
+
+.operator-dialog .district-toggle {
+  justify-content: flex-start;
+  gap: 0.6rem;
+  padding-right: 5rem;
+}
+
+.operator-dialog .district-toggle::before {
+  flex: 0 0 auto;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  content: '';
+  transform: rotate(-45deg);
+  transition: transform var(--motion-fast) ease;
+}
+
+.operator-dialog .district-toggle[aria-expanded='true']::before {
+  transform: rotate(45deg);
+}
+
+.operator-dialog .district-panel {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
 .operator-dialog-body {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 1rem;
   padding: 1.25rem 1.5rem 1.5rem;
 }
@@ -1208,5 +1259,16 @@
 
   .operator-dialog-actions > button {
     flex: 1 1 8rem;
+  }
+
+  .operator-dialog-sticky-actions {
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+  }
+
+  .operator-dialog-sticky-actions > button {
+    flex: 1 1 auto;
+    padding-inline: 0.75rem;
+    white-space: nowrap;
   }
 }

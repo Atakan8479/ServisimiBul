@@ -1053,6 +1053,339 @@ describe('operator workspace flows', () => {
     expect(within(dialog).getByText('Seçili: Moda')).toBeInTheDocument()
   })
 
+  describe('O03 review regressions', () => {
+    const secondId = '85ef6bb0-e313-43fb-a01c-c935774434b4'
+    const emptyCatalog = {
+      content: [],
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0,
+    }
+    const two = () => [
+      operatorSchool([coverage(101, 10, 'Moda', 'Kadıköy')]),
+      operatorSchool([coverage(201, 11, 'Acıbadem', 'Üsküdar')], {
+        id: secondId,
+        schoolId: '7de54e65-6e04-4168-a1cb-967a98d7ec12',
+        schoolName: 'İkinci Okul',
+      }),
+    ]
+
+    function deferred() {
+      let resolve: () => void = () => undefined
+      const promise = new Promise<void>((done) => {
+        resolve = done
+      })
+      return { promise, resolve }
+    }
+
+    function base(schools: unknown[]) {
+      return [
+        authHandler(false, 'DRAFT'),
+        csrfHandler(),
+        readinessHandler({ approvalRequired: false, approvalSatisfied: true }),
+        http.get('/api/v1/operator/schools', () => HttpResponse.json(schools)),
+        http.get('/api/v1/schools', () => HttpResponse.json(emptyCatalog)),
+      ]
+    }
+
+    const districtsFail = http.get('/api/v1/districts', () =>
+      HttpResponse.json(
+        { title: 'Error', status: 503, detail: 'İlçeler alınamadı.' },
+        { status: 503 },
+      ),
+    )
+
+    it.each([
+      ['success', 200],
+      ['failure', 503],
+    ])(
+      'marks conflicting row actions during a mutation and unlocks after %s',
+      async (_, status) => {
+        const gate = deferred()
+        const patches: string[] = []
+        server.use(
+          ...base(two()),
+          http.get('/api/v1/districts', () => HttpResponse.json([])),
+          http.patch('/api/v1/operator/schools/:id', async ({ params }) => {
+            patches.push(String(params.id))
+            await gate.promise
+            return status === 200
+              ? HttpResponse.json(operatorSchool([], { active: false }))
+              : HttpResponse.json(
+                  { title: 'Error', status, detail: 'Okul güncellenemedi.' },
+                  { status },
+                )
+          }),
+        )
+
+        renderRoute('/operator/schools')
+        const firstCard = (await screen.findByText('Örnek Okulu')).closest(
+          'article',
+        )!
+        const secondCard = screen.getByText('İkinci Okul').closest('article')!
+        const toggle = within(firstCard).getByRole('button', {
+          name: 'Pasifleştir',
+        })
+        const otherToggle = within(secondCard).getByRole('button', {
+          name: 'Pasifleştir',
+        })
+        toggle.focus()
+        fireEvent.click(toggle)
+        fireEvent.click(toggle)
+        await waitFor(() => expect(patches).toHaveLength(1))
+
+        expect(toggle).toHaveFocus()
+        for (const action of [
+          toggle,
+          otherToggle,
+          within(firstCard).getByRole('button', { name: 'Kaldır' }),
+          within(secondCard).getByRole('button', { name: 'Kaldır' }),
+          within(firstCard).getByRole('button', { name: 'Düzenle' }),
+          within(firstCard).getByRole('button', { name: '+ Mahalle düzenle' }),
+        ]) {
+          expect(action).toHaveAttribute('aria-disabled', 'true')
+        }
+        expect(screen.getByRole('button', { name: 'Okul ekle' })).toBeDisabled()
+        expect(
+          within(secondCard).getByRole('button', { name: 'Düzenle' }),
+        ).toHaveAttribute('aria-disabled', 'false')
+
+        fireEvent.click(otherToggle)
+        fireEvent.click(
+          within(secondCard).getByRole('button', { name: 'Kaldır' }),
+        )
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(patches).toEqual([operatorSchool([]).id])
+
+        gate.resolve()
+
+        await waitFor(() =>
+          expect(otherToggle).toHaveAttribute('aria-disabled', 'false'),
+        )
+        expect(screen.getByRole('button', { name: 'Okul ekle' })).toBeEnabled()
+        expect(document.activeElement).toBe(toggle)
+        if (status !== 200) {
+          expect(screen.getByRole('alert')).toHaveTextContent(
+            'Okul güncellenemedi.',
+          )
+        }
+        expect(
+          within(firstCard).getByRole('button', { name: 'Kaldır' }),
+        ).toHaveAttribute('aria-disabled', 'false')
+      },
+    )
+
+    it('uses the school district from the geography endpoint', async () => {
+      server.use(
+        ...base([operatorSchool([coverage(201, 11, 'Acıbadem', 'Üsküdar')])]),
+        http.get('/api/v1/districts', () =>
+          HttpResponse.json([{ id: 10, provinceId: 34, name: 'Kadıköy' }]),
+        ),
+      )
+      renderRoute('/operator/schools')
+      expect(await screen.findByText('Kadıköy')).toBeInTheDocument()
+    })
+
+    it('falls back to matching coverage when the district lookup fails', async () => {
+      server.use(
+        ...base([operatorSchool([coverage(101, 10, 'Moda', 'Kadıköy')])]),
+        districtsFail,
+      )
+      renderRoute('/operator/schools')
+      expect(await screen.findByText('Kadıköy')).toBeInTheDocument()
+      expect(screen.queryByText('İlçe bilgisi alınamadı')).toBeNull()
+    })
+
+    it('never shows the province or another district as the school district', async () => {
+      server.use(
+        ...base([operatorSchool([coverage(201, 11, 'Acıbadem', 'Üsküdar')])]),
+        districtsFail,
+      )
+      renderRoute('/operator/schools')
+
+      expect(
+        await screen.findByText('İlçe bilgisi alınamadı'),
+      ).toBeInTheDocument()
+      expect(screen.queryByText('İstanbul')).toBeNull()
+      expect(screen.queryByText('Üsküdar')).toBeNull()
+      expect(screen.getByText('Acıbadem · Üsküdar')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Düzenle' })).toHaveAttribute(
+        'aria-disabled',
+        'false',
+      )
+
+      const filter = screen.getByLabelText('Okul veya mahalle ara')
+      fireEvent.change(filter, { target: { value: 'alınamadı' } })
+      expect(screen.getByText(/Eşleşen okul yok/)).toBeInTheDocument()
+      fireEvent.change(filter, { target: { value: 'acıbadem' } })
+      expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
+    })
+
+    it('saves coverage only for the edited school', async () => {
+      const puts: { id: string; body: unknown }[] = []
+      server.use(
+        ...base(two()),
+        http.get('/api/v1/districts', () =>
+          HttpResponse.json([{ id: 10, provinceId: 34, name: 'Kadıköy' }]),
+        ),
+        http.put(
+          '/api/v1/operator/schools/:id/coverage',
+          async ({ params, request }) => {
+            puts.push({ id: String(params.id), body: await request.json() })
+            return HttpResponse.json(operatorSchool([]))
+          },
+        ),
+      )
+      renderRoute('/operator/schools')
+      const firstCard = (await screen.findByText('Örnek Okulu')).closest(
+        'article',
+      )!
+      fireEvent.click(
+        within(firstCard).getByRole('button', { name: 'Düzenle' }),
+      )
+      const dialog = await screen.findByRole('dialog')
+      await within(dialog).findByRole('group', { name: 'Kadıköy' })
+      fireEvent.click(
+        within(dialog).getByRole('button', { name: 'Kapsamı kaydet' }),
+      )
+      await screen.findByText(/Tüm hizmet mahalleleri kaldırıldı/)
+
+      expect(puts).toEqual([
+        { id: operatorSchool([]).id, body: { neighborhoodIds: [101] } },
+      ])
+      const secondCard = screen.getByText('İkinci Okul').closest('article')!
+      expect(
+        within(secondCard).getByText('Acıbadem · Üsküdar'),
+      ).toBeInTheDocument()
+    })
+
+    describe('add-school dialog lifecycle', () => {
+      function catalogHandler(gates: Record<string, Promise<void>>) {
+        const signals: Record<string, AbortSignal> = {}
+        const handler = http.get('/api/v1/schools', async ({ request }) => {
+          const query = new URL(request.url).searchParams.get('query') ?? ''
+          signals[query] = request.signal
+          await gates[query]
+          return HttpResponse.json({
+            content: [school({ name: `${query || 'Varsayılan'} Sonucu` })],
+            page: 0,
+            size: 10,
+            totalElements: 1,
+            totalPages: 1,
+          })
+        })
+        return { handler, signals }
+      }
+
+      function search(value: string) {
+        fireEvent.change(screen.getByLabelText('Okul ara'), {
+          target: { value },
+        })
+        fireEvent.submit(screen.getByLabelText('Okul ara').closest('form')!)
+      }
+
+      async function closeDialog() {
+        fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }))
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        )
+      }
+
+      it('keeps only the latest search when an older one finishes last', async () => {
+        const a = deferred()
+        const b = deferred()
+        const { handler, signals } = catalogHandler({
+          Eski: a.promise,
+          Yeni: b.promise,
+        })
+        server.use(handler, ...base([]))
+        renderRoute('/operator/schools')
+        await openAddSchool()
+        await screen.findByRole('option', { name: /Varsayılan Sonucu/ })
+
+        search('Eski')
+        await waitFor(() => expect(signals.Eski).toBeDefined())
+        await closeDialog()
+        await waitFor(() => expect(signals.Eski?.aborted).toBe(true))
+
+        await openAddSchool()
+        search('Yeni')
+        await waitFor(() => expect(signals.Yeni).toBeDefined())
+        b.resolve()
+        await screen.findByRole('option', { name: /Yeni Sonucu/ })
+        a.resolve()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+
+        expect(screen.queryByRole('option', { name: /Eski Sonucu/ })).toBeNull()
+        expect(
+          screen.getByRole('option', { name: /Yeni Sonucu/ }),
+        ).toBeInTheDocument()
+        expect(screen.queryByRole('alert')).toBeNull()
+      })
+
+      it('does not restore a stale search when reopened without searching', async () => {
+        const a = deferred()
+        const { handler, signals } = catalogHandler({ Eski: a.promise })
+        server.use(handler, ...base([]))
+        renderRoute('/operator/schools')
+        await openAddSchool()
+        await screen.findByRole('option', { name: /Varsayılan Sonucu/ })
+
+        search('Eski')
+        await waitFor(() => expect(signals.Eski).toBeDefined())
+        await closeDialog()
+        a.resolve()
+        await new Promise((resolve) => setTimeout(resolve, 20))
+        await openAddSchool()
+
+        expect(await screen.findByLabelText('Okul ara')).toHaveValue('')
+        await screen.findByRole('option', { name: /Varsayılan Sonucu/ })
+        expect(screen.queryByRole('option', { name: /Eski Sonucu/ })).toBeNull()
+        expect(screen.queryByRole('alert')).toBeNull()
+      })
+
+      it('does not let a pending add be cancelled before it persists', async () => {
+        const gate = deferred()
+        const created = operatorSchool([])
+        const { handler } = catalogHandler({})
+        server.use(
+          handler,
+          ...base([]),
+          http.get('/api/v1/districts', () => HttpResponse.json([])),
+          http.post('/api/v1/operator/schools', async () => {
+            await gate.promise
+            return HttpResponse.json(created)
+          }),
+        )
+        renderRoute('/operator/schools')
+        await openAddSchool()
+        await screen.findByRole('option', { name: /Varsayılan Sonucu/ })
+        fireEvent.change(screen.getByLabelText('Aktif okul'), {
+          target: { value: created.schoolId },
+        })
+        fireEvent.click(screen.getByRole('button', { name: 'Okulu ekle' }))
+
+        expect(
+          await screen.findByRole('button', { name: 'Ekleniyor…' }),
+        ).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Vazgeç' })).toBeDisabled()
+        expect(screen.getByRole('button', { name: 'Kapat' })).toBeDisabled()
+        fireEvent(
+          screen.getByRole('dialog'),
+          new Event('cancel', { cancelable: true }),
+        )
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+        gate.resolve()
+        expect(
+          await screen.findByRole('dialog', { name: 'Okul kapsamını düzenle' }),
+        ).toBeInTheDocument()
+        expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
+      })
+    })
+  })
+
   it('warns when saving removes every neighborhood from a school', async () => {
     server.use(
       authHandler(false, 'DRAFT'),
@@ -1301,7 +1634,9 @@ function profile(status: string) {
 }
 
 async function openAddSchool() {
-  fireEvent.click(await screen.findByRole('button', { name: 'Okul ekle' }))
+  const open = await screen.findByRole('button', { name: 'Okul ekle' })
+  await waitFor(() => expect(open).toBeEnabled())
+  fireEvent.click(open)
 }
 
 function operatorSchool(

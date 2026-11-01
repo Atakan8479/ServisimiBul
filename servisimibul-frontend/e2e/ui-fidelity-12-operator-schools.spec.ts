@@ -248,6 +248,56 @@ test('O03 add dialog stays usable with a shrunken viewport', async ({
   ).toBeInViewport({ ratio: 1 })
 })
 
+test('O03 coverage editor stays usable at 320px with many selections', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 800 })
+  await prepare(page, approvedState())
+  await page.route('**/api/v1/neighborhoods*', (route) =>
+    route.fulfill({
+      json: Array.from({ length: 24 }, (_, index) => ({
+        id: 1000 + index,
+        districtId: 10,
+        name: `Küçükbakkalköy Mahalle ${index + 1}`,
+      })),
+    }),
+  )
+  await page.goto('/operator/schools')
+  const opener = page.getByRole('button', { name: 'Düzenle', exact: true })
+  await opener.click()
+  const editor = page.getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+  const kadikoy = editor.getByRole('group', { name: 'Kadıköy' })
+  await kadikoy.getByRole('button', { name: 'Kadıköy' }).click()
+  await kadikoy.getByRole('button', { name: 'Bu ilçenin tümünü seç' }).click()
+
+  expect(
+    await editor.evaluate((node) => node.scrollWidth - node.clientWidth),
+  ).toBeLessThanOrEqual(0)
+  await expect(kadikoy.getByText(/^Seçili:/)).toHaveCount(0)
+  const last = kadikoy.getByRole('checkbox', {
+    name: 'Küçükbakkalköy Mahalle 24',
+  })
+  await last.scrollIntoViewIfNeeded()
+  await expect(last).toBeInViewport()
+  await expect(
+    editor.getByRole('button', { name: 'Kapsamı kaydet' }),
+  ).toBeInViewport({ ratio: 1 })
+  await assertAccessibleAndContained(page)
+
+  const hit = await page.evaluate(() => {
+    const dialog = document.querySelector('dialog[open]')!
+    const element = document.elementFromPoint(4, 4)
+    return element === dialog || !element?.closest('article, header, nav')
+  })
+  expect(hit).toBe(true)
+  await page.mouse.click(4, 4)
+  await expect(editor).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await expect(editor).toHaveCount(0)
+  await expect(opener).toBeFocused()
+})
+
 test('O03 remains protected from unauthenticated access', async ({ page }) => {
   await installMockApi(page, approvedState())
   await page.goto('/operator/schools')

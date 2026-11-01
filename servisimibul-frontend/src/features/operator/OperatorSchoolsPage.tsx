@@ -42,6 +42,7 @@ export function OperatorSchoolsPage() {
   const [relationships, setRelationships] = useState<OperatorSchool[]>([])
   const [readiness, setReadiness] = useState<DiscoveryReadiness>()
   const [districtNames, setDistrictNames] = useState<Record<number, string>>({})
+  const [settledProvinceKey, setSettledProvinceKey] = useState<string>()
   const [schoolPage, setSchoolPage] = useState<SchoolPage>()
   const [schoolRequestParameters, setSchoolRequestParameters] = useState({
     query: '',
@@ -86,23 +87,6 @@ export function OperatorSchoolsPage() {
 
   useEffect(() => {
     let active = true
-    const controller = new AbortController()
-    schoolRequest.current = controller
-    void searchSchools({ query: '', page: 0, signal: controller.signal })
-      .then((result) => {
-        if (active && !controller.signal.aborted) setSchoolPage(result)
-      })
-      .catch((reason: unknown) => {
-        if (active && !controller.signal.aborted) {
-          setSchoolError(messageFor(reason))
-        }
-      })
-      .finally(() => {
-        if (active && !controller.signal.aborted) setSchoolLoading(false)
-        if (schoolRequest.current === controller) {
-          schoolRequest.current = undefined
-        }
-      })
     void getDiscoveryReadiness()
       .then((discoveryReadiness) => {
         if (active) setReadiness(discoveryReadiness)
@@ -115,7 +99,6 @@ export function OperatorSchoolsPage() {
       })
     return () => {
       active = false
-      controller.abort()
       schoolRequest.current?.abort()
     }
   }, [navigate])
@@ -130,18 +113,22 @@ export function OperatorSchoolsPage() {
   useEffect(() => {
     if (!provinceKey) return
     const controller = new AbortController()
-    provinceKey.split(',').forEach((provinceId) => {
-      void getDistricts(Number(provinceId), controller.signal)
-        .then((districts) => {
-          if (controller.signal.aborted) return
-          setDistrictNames((current) => ({
-            ...current,
-            ...Object.fromEntries(
-              districts.map((item) => [item.id, item.name]),
-            ),
-          }))
-        })
-        .catch(() => undefined)
+    void Promise.allSettled(
+      provinceKey.split(',').map((provinceId) =>
+        getDistricts(Number(provinceId), controller.signal).then(
+          (districts) => {
+            if (controller.signal.aborted) return
+            setDistrictNames((current) => ({
+              ...current,
+              ...Object.fromEntries(
+                districts.map((item) => [item.id, item.name]),
+              ),
+            }))
+          },
+        ),
+      ),
+    ).then(() => {
+      if (!controller.signal.aborted) setSettledProvinceKey(provinceKey)
     })
     return () => controller.abort()
   }, [provinceKey])
@@ -182,7 +169,16 @@ export function OperatorSchoolsPage() {
     }
   }
 
+  // Each dialog session starts from the default catalog, so a closed search cannot return.
+  function openAddDialog() {
+    setQuery('')
+    setAddOpen(true)
+    void loadSchoolPage(0, '')
+  }
+
   function closeAddDialog() {
+    schoolRequest.current?.abort()
+    schoolRequest.current = undefined
     setAddOpen(false)
     setAddError(undefined)
     setSelectedSchool(undefined)
@@ -296,6 +292,8 @@ export function OperatorSchoolsPage() {
   const editingRelationship = relationships.find(
     (relationship) => relationship.id === editingCoverageId,
   )
+  // Row mutations run one at a time, so every row shows the shared lock.
+  const rowMutating = pending !== undefined
   const activeCount = relationships.filter(
     (relationship) => relationship.active && relationship.schoolActive,
   ).length
@@ -314,10 +312,6 @@ export function OperatorSchoolsPage() {
       .includes(normalizedFilter),
   )
 
-  if (loading) {
-    return <InlineLoading label="Okullar yükleniyor" />
-  }
-
   return (
     <section className="workspace-page operator-workspace-page operator-schools-page">
       <header className="operator-page-header operator-overview-header">
@@ -328,8 +322,8 @@ export function OperatorSchoolsPage() {
         </div>
         <button
           className="primary-button operator-school-add"
-          disabled={Boolean(loadError)}
-          onClick={() => setAddOpen(true)}
+          disabled={loading || Boolean(loadError) || rowMutating}
+          onClick={openAddDialog}
           ref={addButtonRef}
           type="button"
         >
@@ -379,7 +373,9 @@ export function OperatorSchoolsPage() {
         </div>
       </aside>
 
-      {loadError ? (
+      {loading ? (
+        <InlineLoading label="Okullar yükleniyor" />
+      ) : loadError ? (
         <StatePanel
           action={
             <button
@@ -401,12 +397,16 @@ export function OperatorSchoolsPage() {
       ) : relationships.length === 0 ? (
         <div className="empty-state">
           <h2>Henüz okul eklenmedi</h2>
+          <p>
+            Hizmet verdiğiniz okulları ekleyin; her okul için mahalleleri ayrı
+            seçersiniz.
+          </p>
           <button
-            className="text-button"
-            onClick={() => setAddOpen(true)}
+            className="primary-button"
+            onClick={openAddDialog}
             type="button"
           >
-            Okul aramasına git
+            İlk okulunuzu ekleyin
           </button>
         </div>
       ) : (
@@ -424,6 +424,7 @@ export function OperatorSchoolsPage() {
             <div>
               <span className="count-badge">{activeCount} aktif okul</span>
               <button
+                aria-disabled={!filter}
                 className="secondary-button"
                 onClick={() => {
                   setFilter('')
@@ -452,7 +453,12 @@ export function OperatorSchoolsPage() {
               <ul>
                 {visibleRelationships.map((relationship) => (
                   <SchoolRow
-                    districtName={districtNameFor(relationship)}
+                    districtName={
+                      districtNameFor(relationship) ??
+                      (settledProvinceKey === provinceKey
+                        ? 'İlçe bilgisi alınamadı'
+                        : '—')
+                    }
                     key={relationship.id}
                     onEdit={() => setEditingCoverageId(relationship.id)}
                     onRemove={() => {
@@ -460,6 +466,8 @@ export function OperatorSchoolsPage() {
                       setRemoveTarget(relationship)
                     }}
                     onToggle={() => void toggleActive(relationship)}
+                    locked={rowMutating}
+                    showAllCoverage={Boolean(normalizedFilter)}
                     pending={pending === relationship.id}
                     relationship={relationship}
                   />
@@ -686,24 +694,32 @@ export function OperatorSchoolsPage() {
 
 function SchoolRow({
   districtName,
+  locked,
   onEdit,
   onRemove,
   onToggle,
   pending,
   relationship,
+  showAllCoverage,
 }: {
-  districtName: string | undefined
+  districtName: string
+  locked: boolean
   onEdit: () => void
   onRemove: () => void
   onToggle: () => void
   pending: boolean
   relationship: OperatorSchool
+  showAllCoverage: boolean
 }) {
   const nameId = `operator-school-${relationship.id}`
-  const hiddenChips = relationship.coverage.length - visibleCoverageChips
+  // A filter can match any neighborhood, so the match must stay visible.
+  const chipLimit = showAllCoverage
+    ? relationship.coverage.length
+    : visibleCoverageChips
+  const hiddenChips = relationship.coverage.length - chipLimit
   return (
     <li>
-      <article className="operator-school-row">
+      <article aria-busy={pending} className="operator-school-row">
         <div className="operator-school-identity">
           <span className="operator-school-mark" aria-hidden="true">
             {schoolInitials(relationship.schoolName)}
@@ -719,29 +735,30 @@ function SchoolRow({
         <dl>
           <div>
             <dt>İlçe</dt>
-            <dd>{districtName ?? relationship.schoolProvinceName}</dd>
+            <dd>{districtName}</dd>
           </div>
           <div className="operator-school-coverage">
             <dt>Hizmet mahalleleri</dt>
             <dd>
               {relationship.coverage.length > 0 && (
                 <ul className="operator-coverage-chips">
-                  {relationship.coverage
-                    .slice(0, visibleCoverageChips)
-                    .map((item) => (
-                      <li key={item.neighborhoodId}>
-                        {item.neighborhoodName}
-                        {item.districtId !== relationship.schoolDistrictId &&
-                          ` · ${item.districtName}`}
-                      </li>
-                    ))}
+                  {relationship.coverage.slice(0, chipLimit).map((item) => (
+                    <li key={item.neighborhoodId}>
+                      {item.neighborhoodName}
+                      {item.districtId !== relationship.schoolDistrictId &&
+                        ` · ${item.districtName}`}
+                    </li>
+                  ))}
                   {hiddenChips > 0 && <li>+{hiddenChips} mahalle</li>}
                 </ul>
               )}
               <button
                 aria-describedby={nameId}
+                aria-disabled={pending}
                 className="text-button"
-                onClick={onEdit}
+                onClick={() => {
+                  if (!pending) onEdit()
+                }}
                 type="button"
               >
                 + Mahalle düzenle
@@ -770,8 +787,11 @@ function SchoolRow({
         <div className="operator-school-actions">
           <button
             aria-describedby={nameId}
+            aria-disabled={pending}
             className="text-button"
-            onClick={onEdit}
+            onClick={() => {
+              if (!pending) onEdit()
+            }}
             type="button"
           >
             Düzenle
@@ -779,11 +799,11 @@ function SchoolRow({
           {/* aria-disabled keeps keyboard focus on the button during the request. */}
           <button
             aria-describedby={nameId}
-            aria-disabled={pending}
+            aria-disabled={locked}
             className="text-button"
             disabled={!relationship.schoolActive}
             onClick={() => {
-              if (!pending) onToggle()
+              if (!locked) onToggle()
             }}
             type="button"
           >
@@ -791,10 +811,10 @@ function SchoolRow({
           </button>
           <button
             aria-describedby={nameId}
-            aria-disabled={pending}
-            className="text-button"
+            aria-disabled={locked}
+            className="text-button danger-text"
             onClick={() => {
-              if (!pending) onRemove()
+              if (!locked) onRemove()
             }}
             type="button"
           >
@@ -1126,7 +1146,7 @@ function CoverageEditor({
                   </button>
                   <span id={countId}>{districtSelection.length} seçili</span>
                 </legend>
-                {districtSelection.length > 0 && (
+                {!expanded && districtSelection.length > 0 && (
                   <p className="district-selection-summary">
                     Seçili:{' '}
                     {districtSelection.map((item) => item.name).join(', ')}
