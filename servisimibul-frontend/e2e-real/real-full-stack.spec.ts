@@ -1132,7 +1132,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         parentPage,
         '/notifications',
         { width: 320, height: 844 },
-        parentPage.getByRole('button', { name: /Ayrıntıyı aç/ }).first(),
+        parentPage.getByRole('button', { name: 'İncele' }).first(),
       )
 
       const duplicatePublication = await operatorPage.request.post(
