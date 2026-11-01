@@ -779,6 +779,255 @@ describe('notification center asynchronous ordering', () => {
   })
 })
 
+describe('notification action locking', () => {
+  const first = notificationPage().content[0]!
+  const second = {
+    ...first,
+    id: '7bd12425-ea60-45e5-b937-ddf75db2eb46',
+    title: 'İkinci bildirim',
+    href: '/demands/1b0b4456-5e55-4814-b8f8-64d1343617fe',
+  }
+  const list = (items: unknown[]) => ({
+    content: items,
+    page: 0,
+    size: 20,
+    totalElements: items.length,
+    totalPages: 1,
+  })
+
+  function deferred() {
+    let resolve: () => void = () => undefined
+    const promise = new Promise<void>((done) => {
+      resolve = done
+    })
+    return { promise, resolve }
+  }
+
+  function problem(status: number, detail: string) {
+    return HttpResponse.json(
+      { title: 'Error', status, detail },
+      { status, headers: { 'Content-Type': 'application/problem+json' } },
+    )
+  }
+
+  function renderCenter() {
+    render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+          <Route element={<h1>Talep ayrıntısı</h1>} path="/demands/:id" />
+          <Route element={<h1>Veli girişi</h1>} path="/parent/login" />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  const button = (name: string) => screen.getAllByRole('button', { name })
+
+  it('A: locks every action while read-all runs', async () => {
+    const gate = deferred()
+    const mutations: string[] = []
+    let unread = 2
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(
+          list(
+            [first, second].map((item) => ({
+              ...item,
+              readAt: unread ? null : '2026-10-25T09:10:00Z',
+            })),
+          ),
+        ),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread }),
+      ),
+      http.put('/api/v1/notifications/read-all', async () => {
+        mutations.push('all')
+        await gate.promise
+        unread = 0
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+      http.put('/api/v1/notifications/:id/read', () => {
+        mutations.push('single')
+        return HttpResponse.json({ ...first, readAt: '2026-10-25T09:10:00Z' })
+      }),
+    )
+    renderCenter()
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Tümünü okundu işaretle' }),
+    )
+    await waitFor(() => expect(mutations).toEqual(['all']))
+    for (const action of [
+      ...button('İncele'),
+      ...button('Okundu olarak işaretle'),
+    ]) {
+      expect(action).toBeDisabled()
+      fireEvent.click(action)
+    }
+    expect(
+      screen.getByRole('button', { name: 'İşaretleniyor…' }),
+    ).toBeDisabled()
+
+    gate.resolve()
+
+    expect(
+      await screen.findByText('Tüm bildirimler okundu olarak işaretlendi.'),
+    ).toBeInTheDocument()
+    expect(mutations).toEqual(['all'])
+    expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
+    for (const action of button('İncele')) expect(action).toBeEnabled()
+  })
+
+  it('B: locks other actions while opening and then follows the deep link', async () => {
+    const gate = deferred()
+    const mutations: string[] = []
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(list([first, second])),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 2 }),
+      ),
+      http.put('/api/v1/notifications/read-all', () => {
+        mutations.push('all')
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+      http.put('/api/v1/notifications/:id/read', async ({ params }) => {
+        mutations.push(String(params.id))
+        await gate.promise
+        return HttpResponse.json({ ...first, readAt: '2026-10-25T09:10:00Z' })
+      }),
+    )
+    renderCenter()
+
+    await screen.findByText('2 okunmamış bildirim')
+    fireEvent.click(button('İncele')[1]!)
+    await waitFor(() => expect(mutations).toEqual([second.id]))
+
+    const all = screen.getByRole('button', { name: 'Tümünü okundu işaretle' })
+    expect(all).toBeDisabled()
+    fireEvent.click(all)
+    const firstOpen = button('İncele')[0]!
+    expect(firstOpen).toBeDisabled()
+    fireEvent.click(firstOpen)
+    for (const action of button('Okundu olarak işaretle')) {
+      expect(action).toBeDisabled()
+    }
+
+    gate.resolve()
+
+    expect(
+      await screen.findByRole('heading', { name: 'Talep ayrıntısı' }),
+    ).toBeInTheDocument()
+    expect(mutations).toEqual([second.id])
+  })
+
+  it('C: unlocks actions and keeps unread state after a failed open', async () => {
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(list([first, second])),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 2 }),
+      ),
+      http.put('/api/v1/notifications/:id/read', () =>
+        problem(503, 'Bildirim açılamıyor.'),
+      ),
+    )
+    renderCenter()
+
+    await screen.findByText('2 okunmamış bildirim')
+    fireEvent.click(button('İncele')[0]!)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Bildirim açılamıyor.',
+    )
+    expect(screen.getAllByText('Yeni')).toHaveLength(2)
+    expect(screen.getByText('2 okunmamış bildirim')).toBeInTheDocument()
+    for (const action of [
+      ...button('İncele'),
+      ...button('Okundu olarak işaretle'),
+      ...button('Tümünü okundu işaretle'),
+    ]) {
+      expect(action).toBeEnabled()
+    }
+  })
+
+  it('D: redirects to login when opening finds the session expired', async () => {
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () => HttpResponse.json(list([first]))),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.put('/api/v1/notifications/:id/read', () =>
+        problem(401, 'Oturum gerekli.'),
+      ),
+    )
+    renderCenter()
+
+    fireEvent.click(await screen.findByRole('button', { name: 'İncele' }))
+
+    expect(
+      await screen.findByRole('heading', { name: 'Veli girişi' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('heading', { name: 'Talep ayrıntısı' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('E: sends one request for two different actions in the same tick', async () => {
+    const gate = deferred()
+    const mutations: string[] = []
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications', () =>
+        HttpResponse.json(list([first, second])),
+      ),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 2 }),
+      ),
+      http.put('/api/v1/notifications/read-all', async () => {
+        mutations.push('all')
+        await gate.promise
+        return HttpResponse.json({ unreadCount: 0 })
+      }),
+      http.put('/api/v1/notifications/:id/read', async () => {
+        mutations.push('single')
+        await gate.promise
+        return HttpResponse.json({ ...first, readAt: '2026-10-25T09:10:00Z' })
+      }),
+    )
+    renderCenter()
+
+    await screen.findByText('2 okunmamış bildirim')
+    const [open] = button('İncele')
+    const [mark] = button('Okundu olarak işaretle')
+    const [all] = button('Tümünü okundu işaretle')
+    act(() => {
+      open!.click()
+      mark!.click()
+      all!.click()
+    })
+
+    await waitFor(() => expect(mutations).toHaveLength(1))
+    await act(async () => {
+      await fetch('/api/v1/notifications/unread-count')
+    })
+    expect(mutations).toHaveLength(1)
+
+    gate.resolve()
+    expect(
+      await screen.findByRole('heading', { name: 'Talep ayrıntısı' }),
+    ).toBeInTheDocument()
+  })
+})
+
 function csrfHandler() {
   return http.get('/api/v1/auth/csrf', () =>
     HttpResponse.json({

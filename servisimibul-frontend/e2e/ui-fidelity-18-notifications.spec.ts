@@ -165,6 +165,38 @@ test('N01 keeps text readable and keyboard focus visible', async ({ page }) => {
   expect(outline).toBe('solid 3px')
 })
 
+test('N01 keeps keyboard access after failed actions', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await prepare(page, roles[0], feed('N01'))
+  const failure = {
+    status: 503,
+    contentType: 'application/problem+json',
+    json: { title: 'Error', status: 503, detail: 'İşlem başarısız.' },
+  }
+  await page.route('**/api/v1/notifications/*/read', (route) =>
+    route.fulfill(failure),
+  )
+  await page.route('**/api/v1/notifications/read-all', (route) =>
+    route.fulfill(failure),
+  )
+  await page.goto('/notifications')
+
+  for (const action of [
+    page.getByRole('button', { name: 'İncele' }).first(),
+    page.getByRole('button', { name: 'Okundu olarak işaretle' }).first(),
+    page.getByRole('button', { name: 'Tümünü okundu işaretle' }),
+  ]) {
+    await action.focus()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('alert')).toContainText('İşlem başarısız.')
+    await expect(action).toBeEnabled()
+    await expect(action).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.locator('body')).not.toBeFocused()
+  }
+  await expect(page.getByText('2 okunmamış bildirim')).toBeVisible()
+})
+
 test('N02 shows an empty center without read actions', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 800 })
   await prepare(page, roles[1], [])

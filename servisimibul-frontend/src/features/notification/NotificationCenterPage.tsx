@@ -110,6 +110,11 @@ export function NotificationCenterPage() {
   const countRequest = useRef(0)
   const listInFlight = useRef(false)
   const mounted = useRef(true)
+  // State updates only after the event, so two clicks in one tick need a sync lock.
+  const mutationLock = useRef(false)
+  // Disabling a button drops its focus, so a failed action returns focus to it.
+  const mutationTrigger = useRef<Element | null>(null)
+  const restoreTrigger = useRef(false)
 
   const redirectIfSessionExpired = useCallback(
     (failure: unknown) => {
@@ -199,14 +204,32 @@ export function NotificationCenterPage() {
   }, [])
 
   useEffect(() => {
-    if (focusId) document.getElementById(`notification-${focusId}`)?.focus()
-  }, [focusId])
+    if (focusId && !mutating) {
+      document.getElementById(`notification-${focusId}`)?.focus()
+    }
+  }, [focusId, mutating])
 
   useEffect(() => {
     if (notice && !focusId) noticeRef.current?.focus()
   }, [focusId, notice])
 
+  useEffect(() => {
+    if (mutating || !restoreTrigger.current) return
+    restoreTrigger.current = false
+    if (mutationTrigger.current instanceof HTMLElement) {
+      mutationTrigger.current.focus()
+    }
+  }, [mutating])
+
+  function acquireMutationLock() {
+    if (mutationLock.current) return false
+    mutationLock.current = true
+    mutationTrigger.current = document.activeElement
+    return true
+  }
+
   async function markAllRead() {
+    if (!acquireMutationLock()) return
     setMarkingAll(true)
     setFocusId(undefined)
     setError(undefined)
@@ -232,6 +255,7 @@ export function NotificationCenterPage() {
       setNotice('Tüm bildirimler okundu olarak işaretlendi.')
     } catch (failure) {
       if (redirectIfSessionExpired(failure)) return
+      restoreTrigger.current = true
       setActionFailed(true)
       setError(
         failure instanceof ApiError
@@ -239,11 +263,13 @@ export function NotificationCenterPage() {
           : 'Bildirimler işaretlenemedi. Lütfen tekrar deneyin.',
       )
     } finally {
+      mutationLock.current = false
       setMarkingAll(false)
     }
   }
 
   async function markRead(notification: NotificationItem) {
+    if (!acquireMutationLock()) return
     setMarkingId(notification.id)
     setFocusId(undefined)
     setError(undefined)
@@ -269,6 +295,7 @@ export function NotificationCenterPage() {
       ])
     } catch (failure) {
       if (redirectIfSessionExpired(failure)) return
+      restoreTrigger.current = true
       setActionFailed(true)
       setError(
         failure instanceof ApiError
@@ -276,24 +303,29 @@ export function NotificationCenterPage() {
           : 'Bildirim işaretlenemedi. Lütfen tekrar deneyin.',
       )
     } finally {
+      mutationLock.current = false
       setMarkingId(undefined)
     }
   }
 
   async function openNotification(notification: NotificationItem) {
+    if (!acquireMutationLock()) return
     setOpeningId(notification.id)
+    setFocusId(undefined)
     setError(undefined)
     try {
       if (!notification.readAt) await markNotificationRead(notification.id)
       void navigate(notification.href, { viewTransition: true })
     } catch (failure) {
       if (redirectIfSessionExpired(failure)) return
+      restoreTrigger.current = true
       setActionFailed(true)
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
           : 'Bildirim açılamadı. Lütfen tekrar deneyin.',
       )
+      mutationLock.current = false
       setOpeningId(undefined)
     }
   }
@@ -409,7 +441,7 @@ export function NotificationCenterPage() {
                     <button
                       aria-describedby={titleId}
                       className="notification-open"
-                      disabled={openingId === notification.id}
+                      disabled={mutating}
                       id={`notification-${notification.id}`}
                       onClick={() => void openNotification(notification)}
                       type="button"
