@@ -35,6 +35,11 @@ public class NotificationController {
         return service.unreadCount(currentUser.id());
     }
 
+    @PutMapping("/read-all")
+    public UnreadCountResponse markAllRead() {
+        return service.markAllRead(currentUser.id());
+    }
+
     @PutMapping("/{id}/read")
     public NotificationResponse markRead(@PathVariable UUID id) {
         return service.markRead(id, currentUser.id());

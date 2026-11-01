@@ -439,7 +439,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'Bildirim merkezi' }),
+      await screen.findByRole('heading', { name: 'Bildirimler' }),
     ).toBeInTheDocument()
 
     view.unmount()

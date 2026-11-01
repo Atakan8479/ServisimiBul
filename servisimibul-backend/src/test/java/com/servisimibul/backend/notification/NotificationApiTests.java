@@ -40,6 +40,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class NotificationApiTests {
 
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
     @Autowired private AppUserRepository userRepository;
@@ -92,6 +95,41 @@ class NotificationApiTests {
                 .andExpect(jsonPath("$.unreadCount").value(0));
 
         assertThat(notificationRepository.count()).isEqualTo(2);
+    }
+
+    @Test
+    void readAllMarksOnlyTheCurrentRecipientAndRequiresCsrf() throws Exception {
+        AppUser recipient = parent("read-all-recipient@example.com");
+        AppUser other = parent("read-all-other@example.com");
+        Demand demand = demand(recipient);
+        writeStore.insert(notification(recipient.getId(), demand.getId(), "one"));
+        writeStore.insert(notification(recipient.getId(), demand.getId(), "two"));
+        writeStore.insert(notification(other.getId(), demand.getId(), "other"));
+        jdbcTemplate.update(
+                "update in_app_notification set created_at = now() + interval '1 hour' where recipient_user_id = ?",
+                recipient.getId()
+        );
+
+        mockMvc.perform(put("/api/v1/notifications/read-all").with(csrf()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(put("/api/v1/notifications/read-all").with(as(recipient)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/notifications/unread-count").with(as(recipient)))
+                .andExpect(jsonPath("$.unreadCount").value(2));
+
+        mockMvc.perform(put("/api/v1/notifications/read-all").with(as(recipient)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unreadCount").value(0));
+
+        mockMvc.perform(get("/api/v1/notifications").with(as(recipient)))
+                .andExpect(jsonPath("$.content[0].readAt").isNotEmpty())
+                .andExpect(jsonPath("$.content[1].readAt").isNotEmpty());
+        mockMvc.perform(get("/api/v1/notifications/unread-count").with(as(other)))
+                .andExpect(jsonPath("$.unreadCount").value(1));
+
+        mockMvc.perform(put("/api/v1/notifications/read-all").with(as(recipient)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unreadCount").value(0));
     }
 
     private NotificationWrite notification(UUID recipientId, UUID demandId, String suffix) {

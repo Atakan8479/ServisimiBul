@@ -41,6 +41,8 @@ const unreadCountSchema = z.object({
 export type NotificationItem = z.infer<typeof notificationSchema>
 export type NotificationPage = z.infer<typeof notificationPageSchema>
 
+export const unreadCountChangedEvent = 'servisimibul:unread-count-changed'
+
 export function listNotifications(page = 0, signal?: AbortSignal) {
   return apiRequest(`/notifications?page=${page}&size=20`, {
     requiresSession: true,
@@ -53,6 +55,14 @@ export function unreadNotificationCount(signal?: AbortSignal) {
   return apiRequest('/notifications/unread-count', {
     requiresSession: true,
     signal,
+    schema: unreadCountSchema,
+  })
+}
+
+export function markAllNotificationsRead() {
+  return apiRequest('/notifications/read-all', {
+    method: 'PUT',
+    requiresSession: true,
     schema: unreadCountSchema,
   })
 }

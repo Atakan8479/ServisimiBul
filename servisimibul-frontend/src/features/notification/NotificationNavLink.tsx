@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { clearKnownAuthRole } from '../auth/auth-api'
-import { unreadNotificationCount } from './notification-api'
+import {
+  unreadCountChangedEvent,
+  unreadNotificationCount,
+} from './notification-api'
 import './notification-ui.css'
 
 export function NotificationNavLink({ to }: { to: string }) {
@@ -41,12 +44,14 @@ export function NotificationNavLink({ to }: { to: string }) {
       if (document.visibilityState === 'visible') load()
     }, 60_000)
     window.addEventListener('focus', load)
+    window.addEventListener(unreadCountChangedEvent, load)
     document.addEventListener('visibilitychange', onVisibility)
     return () => {
       disposed = true
       activeController?.abort()
       window.clearInterval(interval)
       window.removeEventListener('focus', load)
+      window.removeEventListener(unreadCountChangedEvent, load)
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [location.key])
