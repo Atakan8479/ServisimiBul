@@ -40,6 +40,9 @@ export function DemandBoardPage() {
   const [academicYear, setAcademicYear] = useState(
     searchParams.get('academicYear') ?? '',
   )
+  const [appliedAcademicYear, setAppliedAcademicYear] = useState(
+    searchParams.get('academicYear') ?? '',
+  )
   const [sort, setSort] = useState<DemandSort>('newest')
   const [demands, setDemands] = useState<DemandPage>()
   const [loadingDemands, setLoadingDemands] = useState(true)
@@ -102,7 +105,7 @@ export function DemandBoardPage() {
     const timer = initialLocationRef.current
       ? undefined
       : window.setTimeout(
-          () => void loadDemands(undefined, academicYear, sort, 0),
+          () => void loadDemands(undefined, appliedAcademicYear, sort, 0),
           0,
         )
     return () => {
@@ -141,7 +144,7 @@ export function DemandBoardPage() {
           'Seçtiğiniz okul veya mahalle artık bulunamıyor. Yeniden seçin.',
         )
         setSearchParams({}, { replace: true })
-        void loadDemands(undefined, academicYear, sort, 0)
+        void loadDemands(undefined, appliedAcademicYear, sort, 0)
       }
       if (
         nextSelection &&
@@ -156,11 +159,11 @@ export function DemandBoardPage() {
             'Seçiminiz korundu. Devam etmeden önce mevcut servisleri yeniden kontrol edin.',
           )
         }
-        void loadDemands(nextSelection, academicYear, sort, 0)
+        void loadDemands(nextSelection, appliedAcademicYear, sort, 0)
       }
     },
     [
-      academicYear,
+      appliedAcademicYear,
       initialLocation,
       loadDemands,
       resetCreationFlow,
@@ -195,16 +198,17 @@ export function DemandBoardPage() {
     }
     if (year) parameters.set('academicYear', year)
     setSearchParams(parameters, { replace: true })
+    setAppliedAcademicYear(year)
     await loadDemands(selection, year, sort, 0)
   }
 
   async function changeSort(nextSort: DemandSort) {
     setSort(nextSort)
-    await loadDemands(appliedSelection, academicYear.trim(), nextSort, 0)
+    await loadDemands(appliedSelection, appliedAcademicYear, nextSort, 0)
   }
 
   async function changeDemandPage(page: number) {
-    await loadDemands(appliedSelection, academicYear.trim(), sort, page)
+    await loadDemands(appliedSelection, appliedAcademicYear, sort, page)
   }
 
   function clearFilters() {
@@ -212,6 +216,7 @@ export function DemandBoardPage() {
     setSelection(undefined)
     setAppliedSelection(undefined)
     setAcademicYear('')
+    setAppliedAcademicYear('')
     setSort('newest')
     setFilterError(undefined)
     setReturnNotice(undefined)
@@ -266,7 +271,7 @@ export function DemandBoardPage() {
         const next = createReturnPath(
           location.pathname,
           appliedSelection,
-          academicYear.trim(),
+          appliedAcademicYear,
         )
         void navigate(`/parent/login?next=${encodeURIComponent(next)}`)
         return
@@ -282,7 +287,7 @@ export function DemandBoardPage() {
         appliedSelection.school.id,
         appliedSelection.neighborhood.id,
         values,
-        academicYear.trim() || undefined,
+        appliedAcademicYear || undefined,
       )
       void navigate(`/demands/${response.demand.id}`, {
         state: {
@@ -301,7 +306,7 @@ export function DemandBoardPage() {
         const next = createReturnPath(
           location.pathname,
           appliedSelection,
-          academicYear.trim(),
+          appliedAcademicYear,
         )
         void navigate(
           `/parent/login?next=${encodeURIComponent(next)}&reason=session`,
@@ -463,7 +468,7 @@ export function DemandBoardPage() {
                 onClick={() =>
                   void loadDemands(
                     appliedSelection,
-                    academicYear.trim(),
+                    appliedAcademicYear,
                     sort,
                     demands?.page ?? 0,
                   )
