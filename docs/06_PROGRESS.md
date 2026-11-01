@@ -1,8 +1,17 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-04 operator search results ready for CI review
+## Current stage: UI-FIDELITY-11 operator profile ready for CI review
 
-Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #160 are present on `main`. UI-FIDELITY-04 is implemented on `codex/issue-142-p02-manus-results` and has completed focused unit, build, accessibility, responsive, and complete mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #180 are present on `main`. UI-FIDELITY-11 is implemented on `codex/ui-fidelity-11-operator-profile` and has completed focused unit, build, accessibility, responsive, and mocked-browser verification. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-FIDELITY-11 O02 operator profile — 2026-11-01
+
+- O02 `/operator/profile` now uses the approved Manus task-card composition while keeping only the real backend profile contract: optional business name, mandatory public contact phone, description, public-visibility preference, approval status, and the existing save/submit/resubmit actions.
+- The visibility control remains backend-authoritative. Successful saves refresh the confirmed profile and O01 readiness; failed saves restore the confirmed visibility value and never display false success. Approval-required `DRAFT`, `PENDING`, `CHANGES_REQUESTED`, and `APPROVED` behavior and approval-disabled operation remain intact.
+- The two-column desktop form becomes one column on mobile. Browser checks at 320, 390, 768, and 1440 pixels found no horizontal overflow or axe WCAG 2.2 A/AA violations; keyboard order, 200% zoom, reduced motion, pending read-only behavior, failed saves, unauthorized routing, and O01 readiness refresh have focused coverage.
+- Before/after desktop and mobile evidence is stored under `docs/screenshots/ui-fidelity-11`. The final dual-agent Impeccable review scored the page 34/40 with no release blocker, and the deterministic detector returned no findings.
+- Focused operator tests pass 24/24. ESLint, strict TypeScript, scoped Prettier, production build, the 13 O01/O02 browser regressions, and the complete 123-test mocked Chromium suite pass. The repository-wide Vitest suite passes 177/178 tests; the unchanged demand-feedback test identified in UI-FIDELITY-04 still fails because its notification request is unhandled.
+- No backend source, API contract, authentication rule, dependency, lockfile, database migration, shared Supabase operation, credential, or production setting changed.
 
 ## Verified UI-FIDELITY-04 P02 operator search results — 2026-10-31
 

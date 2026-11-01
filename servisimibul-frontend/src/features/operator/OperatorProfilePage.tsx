@@ -31,32 +31,26 @@ const profileFormSchema = z.object({
 
 type ProfileForm = z.infer<typeof profileFormSchema>
 
-const statusContent: Record<
-  ApprovalStatus,
-  { label: string; detail: string; tone: string }
-> = {
-  DRAFT: {
-    label: 'Taslak',
-    detail: 'Bilgilerinizi tamamlayıp incelemeye gönderebilirsiniz.',
-    tone: 'neutral',
-  },
-  PENDING: {
-    label: 'İncelemede',
-    detail: 'Başvurunuz yönetici incelemesini bekliyor.',
-    tone: 'pending',
-  },
-  CHANGES_REQUESTED: {
-    label: 'Düzeltme istendi',
-    detail: 'Profil bilgilerinizi güncelledikten sonra yeniden gönderin.',
-    tone: 'warning',
-  },
-  APPROVED: {
-    label: 'Onaylandı',
-    detail:
-      'Geçerli görünürlük koşulları sağlandığında profiliniz bulunabilir.',
-    tone: 'success',
-  },
-}
+const statusContent: Record<ApprovalStatus, { label: string; detail: string }> =
+  {
+    DRAFT: {
+      label: 'Taslak',
+      detail: 'Bilgilerinizi tamamlayıp incelemeye gönderebilirsiniz.',
+    },
+    PENDING: {
+      label: 'İncelemede',
+      detail: 'Başvurunuz yönetici incelemesini bekliyor.',
+    },
+    CHANGES_REQUESTED: {
+      label: 'Düzeltme istendi',
+      detail: 'Profil bilgilerinizi güncelledikten sonra yeniden gönderin.',
+    },
+    APPROVED: {
+      label: 'Onaylandı',
+      detail:
+        'Geçerli görünürlük koşulları sağlandığında profiliniz bulunabilir.',
+    },
+  }
 
 export function OperatorProfilePage() {
   const navigate = useNavigate()
@@ -65,11 +59,13 @@ export function OperatorProfilePage() {
   const [loadError, setLoadError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const [actionPending, setActionPending] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
   const {
     register,
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileFormSchema),
@@ -100,7 +96,7 @@ export function OperatorProfilePage() {
     return () => {
       active = false
     }
-  }, [navigate, reset])
+  }, [loadAttempt, navigate, reset])
 
   async function save(values: ProfileForm) {
     setLoadError(undefined)
@@ -131,6 +127,11 @@ export function OperatorProfilePage() {
             setError(field, { type: 'server', message })
           }
         }
+      }
+      if (profile && values.publiclyVisible !== profile.publiclyVisible) {
+        setValue('publiclyVisible', profile.publiclyVisible, {
+          shouldDirty: true,
+        })
       }
       setLoadError(messageFor(error))
     }
@@ -170,150 +171,179 @@ export function OperatorProfilePage() {
   return (
     <section className="workspace-page operator-workspace-page operator-profile-page">
       <header className="operator-page-header">
-        <h1>İşletme bilgileriniz</h1>
+        <h1>İşletme profilim</h1>
         <p>
-          Velilerin göreceği iletişim ve profil bilgilerini güncel tutun.
-          {user.operatorApprovalRequired && (
-            <> İletişim telefonu onaydan sonra velilere gösterilir.</>
-          )}
+          Velilerin arama sonuçlarında görebileceği işletme ve iletişim
+          bilgilerini yönetin.
         </p>
       </header>
 
-      {profile && user.operatorApprovalRequired && (
-        <div
-          className={`status-banner operator-profile-status ${statusContent[profile.approvalStatus].tone}`}
-          role="status"
-        >
-          <StatusBadge
-            tone={
-              profile.approvalStatus === 'APPROVED'
-                ? 'success'
-                : profile.approvalStatus === 'CHANGES_REQUESTED'
-                  ? 'warning'
-                  : profile.approvalStatus === 'PENDING'
-                    ? 'info'
-                    : 'neutral'
-            }
-          >
-            {statusContent[profile.approvalStatus].label}
-          </StatusBadge>
-          <span>{statusContent[profile.approvalStatus].detail}</span>
-        </div>
-      )}
-      {profile && !user.operatorApprovalRequired && (
-        <div className="status-banner success" role="status">
-          <strong>Yönetici onayı gerekmiyor</strong>
-        </div>
-      )}
-      {loadError && (
+      {!profile && loadError && (
         <div className="form-error" role="alert">
-          {loadError}
-        </div>
-      )}
-      {notice && (
-        <div
-          className="status-banner operator-action-notice success"
-          role="status"
-        >
-          {notice}
+          <span>{loadError}</span>
+          <button
+            className="secondary-button"
+            onClick={() => {
+              setLoadError(undefined)
+              setLoadAttempt((attempt) => attempt + 1)
+            }}
+            type="button"
+          >
+            Yeniden dene
+          </button>
         </div>
       )}
 
       {profile && (
         <form
-          className="form-card form-stack operator-profile-form"
+          className="operator-profile-card"
           onSubmit={handleSubmit(save)}
           noValidate
         >
-          <label className="form-field">
-            <span>İşletme adı (isteğe bağlı)</span>
-            <input
-              aria-invalid={Boolean(errors.businessName)}
-              autoComplete="organization"
-              disabled={!profileEditable}
-              {...register('businessName')}
-            />
-            {errors.businessName && (
-              <small className="field-error">
-                {errors.businessName.message}
-              </small>
+          <div className="operator-profile-card-header">
+            <div>
+              <h2>İşletme bilgileri</h2>
+              <p>Aramalarda kullanılacak güncel profil bilgilerinizi girin.</p>
+            </div>
+            {user.operatorApprovalRequired ? (
+              <StatusBadge
+                tone={
+                  profile.approvalStatus === 'APPROVED'
+                    ? 'success'
+                    : profile.approvalStatus === 'CHANGES_REQUESTED'
+                      ? 'warning'
+                      : profile.approvalStatus === 'PENDING'
+                        ? 'info'
+                        : 'neutral'
+                }
+              >
+                {statusContent[profile.approvalStatus].label}
+              </StatusBadge>
+            ) : (
+              <StatusBadge tone="success">Onay gerekmiyor</StatusBadge>
             )}
-          </label>
-          <label className="form-field">
-            <span>Herkese açık iletişim telefonu</span>
+          </div>
 
-            <input
-              aria-invalid={Boolean(errors.contactPhone)}
-              autoComplete="tel"
-              disabled={!profileEditable}
-              type="tel"
-              {...register('contactPhone')}
-            />
-            {errors.contactPhone && (
-              <small className="field-error">
-                {errors.contactPhone.message}
-              </small>
+          <div className="operator-profile-status" role="status">
+            {user.operatorApprovalRequired ? (
+              statusContent[profile.approvalStatus].detail
+            ) : (
+              <>
+                <strong>Yönetici onayı gerekmiyor</strong>
+                <span>Profil bilgilerinizi doğrudan güncelleyebilirsiniz.</span>
+              </>
             )}
-          </label>
-          <label className="form-field">
-            <span>Kısa açıklama</span>
-            <textarea
-              disabled={!profileEditable}
-              rows={5}
-              {...register('description')}
-            />
-          </label>
-          <label className="checkbox-row visibility-control">
+          </div>
+
+          {loadError && (
+            <div className="form-error" role="alert">
+              {loadError}
+            </div>
+          )}
+          {notice && (
+            <div className="status-banner success" role="status">
+              {notice}
+            </div>
+          )}
+
+          <div className="operator-profile-fields">
+            <label className="form-field">
+              <span>İşletme adı (isteğe bağlı)</span>
+              <input
+                aria-invalid={Boolean(errors.businessName)}
+                autoComplete="organization"
+                disabled={!profileEditable}
+                {...register('businessName')}
+              />
+              {errors.businessName && (
+                <small className="field-error">
+                  {errors.businessName.message}
+                </small>
+              )}
+            </label>
+            <label className="form-field">
+              <span>Herkese açık iletişim telefonu</span>
+              <input
+                aria-invalid={Boolean(errors.contactPhone)}
+                autoComplete="tel"
+                disabled={!profileEditable}
+                type="tel"
+                {...register('contactPhone')}
+              />
+              {errors.contactPhone && (
+                <small className="field-error">
+                  {errors.contactPhone.message}
+                </small>
+              )}
+            </label>
+            <label className="form-field operator-profile-description">
+              <span>Kısa açıklama</span>
+              <textarea
+                disabled={!profileEditable}
+                rows={5}
+                {...register('description')}
+              />
+              <small>
+                Hizmetinizi kısaca anlatın; öğrenci veya aile bilgisi eklemeyin.
+              </small>
+            </label>
+          </div>
+
+          <label className="operator-profile-visibility">
+            <span>
+              <strong>Profil görünürlük tercihi</strong>
+              <small>
+                Kapalıyken profiliniz aramalarda görünmez. Açık olması tek
+                başına yayımlanacağınız anlamına gelmez.
+              </small>
+            </span>
             <input
               disabled={!profileEditable}
+              role="switch"
               type="checkbox"
               {...register('publiclyVisible')}
             />
-            <span>
-              <strong>Profilimi velilere göster</strong>
-              <small>
-                Bu ayarı kapatırsanız profiliniz aramalarda görünmez.
-              </small>
-            </span>
           </label>
-          <div className="button-row">
-            {profileEditable && (
-              <button
-                className="primary-button"
-                disabled={isSubmitting || !isDirty}
-                type="submit"
-              >
-                {isSubmitting ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
-              </button>
-            )}
-            {user.operatorApprovalRequired &&
-              (profile.approvalStatus === 'DRAFT' ||
-                profile.approvalStatus === 'CHANGES_REQUESTED') && (
+
+          <footer className="operator-profile-footer">
+            <div className="operator-profile-guidance">
+              {user.operatorApprovalRequired && !profileEditable
+                ? 'İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.'
+                : user.operatorApprovalRequired &&
+                    isDirty &&
+                    (profile.approvalStatus === 'DRAFT' ||
+                      profile.approvalStatus === 'CHANGES_REQUESTED')
+                  ? 'Başvuruyu göndermeden önce değişiklikleri kaydedin.'
+                  : 'Aramalarda görünmek için hesap, profil, okul ve kapsam koşullarının da sağlanması gerekir.'}
+            </div>
+            <div className="button-row">
+              {profileEditable && (
                 <button
-                  className="secondary-button"
-                  disabled={actionPending || isDirty}
-                  onClick={moveApplication}
-                  type="button"
+                  className="primary-button"
+                  disabled={isSubmitting || !isDirty}
+                  type="submit"
                 >
-                  {actionPending
-                    ? 'Gönderiliyor…'
-                    : profile.approvalStatus === 'DRAFT'
-                      ? 'Başvuruyu gönder'
-                      : 'Yeniden gönder'}
+                  {isSubmitting ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
                 </button>
               )}
-          </div>
-          {user.operatorApprovalRequired &&
-            isDirty &&
-            (profile.approvalStatus === 'DRAFT' ||
-              profile.approvalStatus === 'CHANGES_REQUESTED') && (
-              <small>Başvuruyu göndermeden önce değişiklikleri kaydedin.</small>
-            )}
-          {user.operatorApprovalRequired && !profileEditable && (
-            <small>
-              İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.
-            </small>
-          )}
+              {user.operatorApprovalRequired &&
+                (profile.approvalStatus === 'DRAFT' ||
+                  profile.approvalStatus === 'CHANGES_REQUESTED') && (
+                  <button
+                    className="secondary-button"
+                    disabled={actionPending || isDirty}
+                    onClick={moveApplication}
+                    type="button"
+                  >
+                    {actionPending
+                      ? 'Gönderiliyor…'
+                      : profile.approvalStatus === 'DRAFT'
+                        ? 'Başvuruyu gönder'
+                        : 'Yeniden gönder'}
+                  </button>
+                )}
+            </div>
+          </footer>
         </form>
       )}
     </section>

@@ -451,7 +451,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
 
     await test.step('invalidate and restore publication through profile and coverage state', async () => {
       await operatorPage.goto('/operator/profile')
-      await operatorPage.getByLabel('Profilimi velilere göster').uncheck()
+      await operatorPage
+        .getByRole('switch', { name: /Profil görünürlük tercihi/ })
+        .uncheck()
       await operatorPage
         .getByRole('button', { name: 'Değişiklikleri kaydet' })
         .click()
@@ -460,7 +462,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
       ).toBeVisible()
 
-      await operatorPage.getByLabel('Profilimi velilere göster').check()
+      await operatorPage
+        .getByRole('switch', { name: /Profil görünürlük tercihi/ })
+        .check()
       await operatorPage
         .getByRole('button', { name: 'Değişiklikleri kaydet' })
         .click()
