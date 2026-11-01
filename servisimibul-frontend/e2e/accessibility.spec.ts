@@ -82,7 +82,7 @@ for (const viewport of viewports) {
     await audit(page, 'operator readiness overview')
     await page.goto('/operator/profile')
     await expect(
-      page.getByRole('heading', { name: 'İşletme bilgileriniz' }),
+      page.getByRole('heading', { name: 'İşletme profilim' }),
     ).toBeVisible()
     await audit(page, 'operator profile')
 

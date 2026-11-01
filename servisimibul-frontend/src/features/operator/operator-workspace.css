@@ -492,14 +492,154 @@
   color: var(--neutral-0);
 }
 
-.operator-profile-status {
-  align-items: center;
+.operator-profile-page {
+  width: min(64rem, 100%);
 }
 
-.operator-profile-form {
-  width: min(48rem, 100%);
-  max-width: none;
-  margin-top: 0;
+.operator-profile-card {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  background: var(--color-surface);
+  box-shadow: 0 0.75rem 2rem rgba(13, 42, 35, 0.06);
+}
+
+.operator-profile-card-header,
+.operator-profile-footer,
+.operator-profile-visibility {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.operator-profile-card-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.operator-profile-card-header h2,
+.operator-profile-card-header p {
+  margin: 0;
+}
+
+.operator-profile-card-header h2 {
+  font-size: 1.35rem;
+}
+
+.operator-profile-card-header p,
+.operator-profile-guidance,
+.operator-profile-visibility small,
+.operator-profile-description small {
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
+.operator-profile-card-header p {
+  margin-top: 0.35rem;
+}
+
+.operator-profile-status {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  color: var(--color-muted);
+}
+
+.operator-profile-card > .form-error,
+.operator-profile-card > .status-banner {
+  margin: 1.25rem 1.5rem 0;
+}
+
+.operator-profile-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.operator-profile-description {
+  grid-column: 1 / -1;
+}
+
+.operator-profile-description small,
+.operator-profile-visibility small {
+  display: block;
+  margin-top: 0.3rem;
+  font-weight: 400;
+}
+
+.operator-profile-visibility {
+  min-height: 5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface-soft);
+  cursor: pointer;
+}
+
+.operator-profile-visibility input {
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.9rem;
+  height: 1.65rem;
+  margin: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 999px;
+  appearance: none;
+  background: var(--neutral-200);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease;
+}
+
+.operator-profile-visibility input::before {
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--neutral-0);
+  box-shadow: 0 1px 3px rgba(13, 42, 35, 0.25);
+  content: '';
+  transition: transform 160ms ease;
+}
+
+.operator-profile-visibility input:checked {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.operator-profile-visibility input:checked::before {
+  transform: translateX(1.25rem);
+}
+
+.operator-profile-visibility input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+.operator-profile-visibility input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.operator-profile-footer {
+  padding: 1.25rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.operator-profile-guidance {
+  max-width: 36rem;
+  font-size: 0.9rem;
+}
+
+.operator-profile-footer .button-row {
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .operator-add-school {
@@ -578,6 +718,35 @@
   .operator-page-header h1 {
     max-width: none;
     font-size: clamp(2rem, 11vw, 2.75rem);
+  }
+
+  .operator-profile-card-header,
+  .operator-profile-footer,
+  .operator-profile-visibility {
+    align-items: flex-start;
+  }
+
+  .operator-profile-card-header,
+  .operator-profile-footer {
+    flex-direction: column;
+  }
+
+  .operator-profile-fields {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 1.25rem;
+  }
+
+  .operator-profile-description {
+    grid-column: auto;
+  }
+
+  .operator-profile-visibility {
+    align-items: center;
+  }
+
+  .operator-profile-footer .button-row,
+  .operator-profile-footer .button-row > button {
+    width: 100%;
   }
 
   .operator-overview-header {

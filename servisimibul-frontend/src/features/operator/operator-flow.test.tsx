@@ -258,6 +258,88 @@ describe('operator workspace flows', () => {
     expect(resubmitted).toBe(true)
   })
 
+  it('restores the confirmed visibility setting when saving fails', async () => {
+    server.use(
+      authHandler(false, 'DRAFT'),
+      csrfHandler(),
+      http.get('/api/v1/operator/profile', () =>
+        HttpResponse.json(profile('DRAFT')),
+      ),
+      http.patch('/api/v1/operator/profile', () =>
+        HttpResponse.json(
+          {
+            title: 'Service Unavailable',
+            status: 503,
+            detail: 'Profil şu anda kaydedilemiyor.',
+            code: 'profile_unavailable',
+          },
+          { status: 503 },
+        ),
+      ),
+    )
+
+    renderRoute('/operator/profile')
+
+    const visibility = await screen.findByRole('switch', {
+      name: /Profil görünürlük tercihi/,
+    })
+    expect(visibility).toBeChecked()
+    fireEvent.click(visibility)
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Değişiklikleri kaydet' }),
+    )
+
+    expect(
+      await screen.findByText('Profil şu anda kaydedilemiyor.'),
+    ).toBeInTheDocument()
+    expect(visibility).toBeChecked()
+    expect(
+      screen.queryByText('Profil bilgileriniz kaydedildi.'),
+    ).not.toBeInTheDocument()
+  })
+
+  it('requires a public phone while allowing an empty business name', async () => {
+    let patchBody: Record<string, unknown> | undefined
+    server.use(
+      authHandler(false, 'DRAFT'),
+      csrfHandler(),
+      http.get('/api/v1/operator/profile', () =>
+        HttpResponse.json(profile('DRAFT')),
+      ),
+      http.patch('/api/v1/operator/profile', async ({ request }) => {
+        patchBody = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json({
+          ...profile('DRAFT'),
+          contactPhone: patchBody.contactPhone,
+        })
+      }),
+    )
+
+    renderRoute('/operator/profile')
+
+    const phone = await screen.findByLabelText('Herkese açık iletişim telefonu')
+    fireEvent.change(phone, { target: { value: '' } })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Değişiklikleri kaydet' }),
+    )
+    expect(
+      await screen.findByText('İletişim telefonu zorunludur.'),
+    ).toBeInTheDocument()
+    expect(patchBody).toBeUndefined()
+
+    fireEvent.change(phone, { target: { value: '+905551112233' } })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Değişiklikleri kaydet' }),
+    )
+    expect(
+      await screen.findByText('Profil bilgileriniz kaydedildi.'),
+    ).toBeInTheDocument()
+    expect(patchBody).toMatchObject({
+      businessName: '',
+      contactPhone: '+905551112233',
+    })
+  })
+
   it('loads neighborhoods on demand and preserves unopened district coverage', async () => {
     let coverageBody: unknown
     const neighborhoodRequests: string[] = []

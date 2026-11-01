@@ -107,7 +107,7 @@ test('mobile workspace drawer contains and restores keyboard focus', async ({
   await toggle.click()
   await drawer.getByRole('link', { name: 'Profil ve başvuru' }).click()
   await expect(
-    page.getByRole('heading', { name: 'İşletme bilgileriniz' }),
+    page.getByRole('heading', { name: 'İşletme profilim' }),
   ).toBeFocused()
 })
 
