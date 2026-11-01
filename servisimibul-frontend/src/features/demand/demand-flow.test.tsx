@@ -290,6 +290,169 @@ describe('demand board regression cases', () => {
   })
 })
 
+describe('demand board draft vs applied academic year', () => {
+  function pagedHandler(
+    requests: URLSearchParams[],
+    failNext = { value: false },
+  ) {
+    return http.get('/api/v1/demands', ({ request }) => {
+      const parameters = new URL(request.url).searchParams
+      requests.push(new URLSearchParams(parameters))
+      if (failNext.value) {
+        failNext.value = false
+        return HttpResponse.json(problem(500, 'boom'), { status: 500 })
+      }
+      return HttpResponse.json({
+        ...demandPage([demand()]),
+        page: Number(parameters.get('page')),
+        totalElements: 11,
+        totalPages: 2,
+      })
+    })
+  }
+
+  async function renderBoard(path = '/demands') {
+    renderRoute(path)
+    await screen.findByRole('heading', { name: school.name })
+  }
+
+  function typeYear(value: string) {
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value },
+    })
+  }
+
+  function apply() {
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+  }
+
+  it('does not request anything when the year is only edited', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      pagedHandler(requests),
+    )
+    await renderBoard()
+    typeYear('2026-2027')
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(requests).toHaveLength(1)
+    expect(requests[0].get('academicYear')).toBeNull()
+  })
+
+  it('sorts and paginates with the last applied year, not the uncommitted draft', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      pagedHandler(requests),
+    )
+    await renderBoard()
+    typeYear('2026-2027')
+    apply()
+    await waitFor(() => expect(requests).toHaveLength(2))
+
+    typeYear('2025-2026')
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'most-supported' },
+    })
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].get('sort')).toBe('most-supported')
+    expect(requests[2].get('academicYear')).toBe('2026-2027')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    await waitFor(() => expect(requests).toHaveLength(4))
+    expect(requests[3].get('page')).toBe('1')
+    expect(requests[3].get('academicYear')).toBe('2026-2027')
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('2025-2026')
+  })
+
+  it('never applies an uncommitted or invalid year when sorting or retrying', async () => {
+    const requests: URLSearchParams[] = []
+    const failNext = { value: false }
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      pagedHandler(requests, failNext),
+    )
+    await renderBoard()
+    typeYear('2026-2028')
+    apply()
+    expect(
+      screen.getByText(/Eğitim yılını 2026-2027 biçiminde/),
+    ).toBeInTheDocument()
+    expect(requests).toHaveLength(1)
+
+    failNext.value = true
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'most-supported' },
+    })
+    expect(await screen.findByText('Talepler yüklenemedi')).toBeInTheDocument()
+    expect(requests[1].get('academicYear')).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].get('academicYear')).toBeNull()
+    expect(requests[2].get('sort')).toBe('most-supported')
+  })
+
+  it('retries a failed apply with the applied year after the draft changed', async () => {
+    const requests: URLSearchParams[] = []
+    const failNext = { value: false }
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      pagedHandler(requests, failNext),
+    )
+    await renderBoard()
+    failNext.value = true
+    typeYear('2026-2027')
+    apply()
+    expect(await screen.findByText('Talepler yüklenemedi')).toBeInTheDocument()
+    typeYear('2025-2026')
+    fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].get('academicYear')).toBe('2026-2027')
+  })
+
+  it('resets draft and applied year when filters are cleared', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      pagedHandler(requests),
+    )
+    await renderBoard()
+    typeYear('2026-2027')
+    apply()
+    await waitFor(() => expect(requests).toHaveLength(2))
+    typeYear('2025-2026')
+    fireEvent.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].get('academicYear')).toBeNull()
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('')
+
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'most-supported' },
+    })
+    await waitFor(() => expect(requests).toHaveLength(4))
+    expect(requests[3].get('academicYear')).toBeNull()
+  })
+
+  it('uses the academic year from the URL for the initial load, sorting and paging', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(...locationHandlers(), pagedHandler(requests))
+    await renderBoard(`${filteredBoardPath}&academicYear=2026-2027`)
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('2026-2027')
+    expect(requests.at(-1)?.get('academicYear')).toBe('2026-2027')
+
+    typeYear('2025-2026')
+    fireEvent.change(screen.getByLabelText('Sıralama'), {
+      target: { value: 'most-supported' },
+    })
+    await waitFor(() =>
+      expect(requests.at(-1)?.get('sort')).toBe('most-supported'),
+    )
+    expect(requests.at(-1)?.get('academicYear')).toBe('2026-2027')
+    expect(requests.at(-1)?.get('neighborhoodId')).toBe('201')
+  })
+})
+
 describe('demand support management', () => {
   it('lets a new parent reopen an inactive demand by joining it', async () => {
     let current = demand({
