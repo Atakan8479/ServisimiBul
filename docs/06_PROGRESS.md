@@ -4,6 +4,14 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
+## LEG-01 legal-role decision record — 2026-11-02 (Draft PR #227, not approved)
+
+- Added `docs/18_LEGAL_ROLE_AND_DATA_CONTROLLER.md` for issue #194 and open question 4 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel.
+- Verified by reading `main` at `e304a3b`: no data controller, controller contact, legal page, age field, or age gate exists; registration collects only the fields in `RegisterRequest` and `ParentRegisterRequest`; there is no payment code and no analytics script or SDK; and AUDIT-F4 (#166) produced no policy, notice, retention schedule, or decision on `main` before it was closed.
+- Still open for the owner and counsel: questions L1–L8 (controller identity and contact, platform role, operator responsibilities, audience and age, free-pilot scope, KVKK/5651/6502/6563/ETBIS applicability, and real-user pilot). Every outcome is `[PENDING]`; nothing was approved or invented.
+- Review follow-up: the record now separates verified facts, PROPOSED safeguards, pending legal decisions, and approved decisions. It rewrites statements about the platform's role as functionality only, adds L8 (real-user pilot) to the approval workflow as a separate release decision with its own pending fields, and splits L2 between the owner, who supplies contact details, and counsel, who reviews them. No launch, compliance claim, or legal outcome was added.
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check`, a conflict-marker search, and link and cross-reference checks were run. The commit's own CI results are reported on PR #227.
+
 ## Verified UI-07 rollout gate — 2026-11-02
 
 - Full results, contracts, and per-screen dispositions are in `docs/17_UI_ROLLOUT_GATE.md`.
