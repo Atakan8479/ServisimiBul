@@ -1,5 +1,16 @@
 # Progress ledger (update only after verification)
 
+## Current stage: APP-02 account and privacy settings ready for PR review
+
+## Verified APP-02 shared account settings — 2026-11-02
+
+- Added role-protected `/parent/account` and `/operator/account` routes using the existing parent `PublicLayout`, operator workspace, role loaders, and `/auth/me` contract. The page renders only the authenticated email and role; no backend, authentication, API, database, migration, dependency, or lockfile changed.
+- Parent and operator navigation now expose the shared account page. Operator public-business-profile editing remains a separate `/operator/profile` destination, and both roles receive a safe return link to their existing area.
+- Loading, API failure with retry, expired-session redirect, anonymous login return, cross-role denial, and responsive states are covered. Email/password changes, sign-out-all, personal-data requests, deactivation, and erasure are visibly unavailable and cannot produce success messages.
+- Manus UX-01 remains an unaccepted visual reference. Production deliberately keeps the existing public parent shell and operator workspace instead of prototype shells, uses only real API fields, omits prototype demo/legal copy, and presents future features as disabled. No legal notice, retention period, contact channel, or account-deletion promise was invented.
+- Focused Vitest passed 56/56. ESLint, strict TypeScript, scoped Prettier, the production build, `git diff --check`, and the Impeccable detector passed. The full Vitest suite passed 231/232; the sole failure is the pre-existing demand-feedback assertion at `src/features/demand/demand-flow.test.tsx:781`, following its known unhandled notification-count request.
+- Mocked Chromium printed 9/9 passing APP-02 cases: axe WCAG 2.2 A/AA and horizontal-overflow checks at 1440, 768, 390, and 320 pixels for both roles, plus preservation of the operator profile flow. The Playwright process did not terminate after printing all passing cases and was stopped manually; assertions had completed.
+
 ## Current stage: UI-FIDELITY-13 operator offerings ready for PR review
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #184 are present on `main`. UI-FIDELITY-13 is implemented on `codex/ui-fidelity-13-operator-offerings` with focused unit, build, accessibility, responsive, and mocked-browser verification complete. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.

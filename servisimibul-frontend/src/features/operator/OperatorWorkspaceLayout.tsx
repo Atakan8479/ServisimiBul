@@ -69,6 +69,9 @@ export function OperatorWorkspaceLayout() {
           <NavLink to="/operator/profile" viewTransition>
             {user.operatorApprovalRequired ? 'Profil ve başvuru' : 'Profil'}
           </NavLink>
+          <NavLink to="/operator/account" viewTransition>
+            Hesap ve gizlilik
+          </NavLink>
           <NotificationNavLink to="/operator/notifications" />
           {canManageResources && (
             <>
