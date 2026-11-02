@@ -1,0 +1,104 @@
+{
+  "routes": [
+    {
+      "path": "/privacy/notice",
+      "title": "Gizlilik ve Kişisel Veriler"
+    },
+    {
+      "path": "/privacy/requests",
+      "title": "KVKK Başvuru Yolu ve Giriş"
+    },
+    {
+      "path": "/parent/account",
+      "title": "Veli Hesap ve Gizlilik Ayarları"
+    },
+    {
+      "path": "/parent/account/email",
+      "title": "Veli Hesap E-postası"
+    },
+    {
+      "path": "/parent/account/password",
+      "title": "Veli Şifre Değişikliği"
+    },
+    {
+      "path": "/parent/account/sessions",
+      "title": "Veli Oturum Güvenliği"
+    },
+    {
+      "path": "/parent/privacy/requests",
+      "title": "Veli Kişisel Veri Başvuruları"
+    },
+    {
+      "path": "/parent/privacy/requests/new",
+      "title": "Veli Yeni KVKK Başvurusu"
+    },
+    {
+      "path": "/parent/privacy/requests/received",
+      "title": "Veli Başvuru Alındı Durumu"
+    },
+    {
+      "path": "/parent/privacy/requests/status/:status",
+      "title": "Veli KVKK Başvuru Durumu"
+    },
+    {
+      "path": "/parent/lifecycle",
+      "title": "Veli Hesap Yaşam Döngüsü"
+    },
+    {
+      "path": "/parent/lifecycle/deactivate",
+      "title": "Veli Hesap Devre Dışı Akışı"
+    },
+    {
+      "path": "/parent/lifecycle/erasure",
+      "title": "Veli Veri Silme Başvurusu Bilgisi"
+    },
+    {
+      "path": "/operator/account",
+      "title": "İşletmeci Hesap ve Gizlilik Ayarları"
+    },
+    {
+      "path": "/operator/account/email",
+      "title": "İşletmeci Hesap E-postası"
+    },
+    {
+      "path": "/operator/account/password",
+      "title": "İşletmeci Şifre Değişikliği"
+    },
+    {
+      "path": "/operator/account/sessions",
+      "title": "İşletmeci Oturum Güvenliği"
+    },
+    {
+      "path": "/operator/privacy/requests",
+      "title": "İşletmeci Kişisel Veri Başvuruları"
+    },
+    {
+      "path": "/operator/privacy/requests/new",
+      "title": "İşletmeci Yeni KVKK Başvurusu"
+    },
+    {
+      "path": "/operator/privacy/requests/received",
+      "title": "İşletmeci Başvuru Alındı Durumu"
+    },
+    {
+      "path": "/operator/privacy/requests/status/:status",
+      "title": "İşletmeci KVKK Başvuru Durumu"
+    },
+    {
+      "path": "/operator/lifecycle",
+      "title": "İşletmeci Hesap Yaşam Döngüsü"
+    },
+    {
+      "path": "/operator/lifecycle/deactivate",
+      "title": "İşletmeci Hesap Devre Dışı Akışı"
+    },
+    {
+      "path": "/operator/lifecycle/erasure",
+      "title": "İşletmeci Veri Silme Başvurusu Bilgisi"
+    },
+    {
+      "path": "/operator/lifecycle/suspended",
+      "title": "Yönetici Askısı Durum Örneği"
+    }
+  ]
+}
