@@ -118,6 +118,22 @@ describe('user-facing API messages', () => {
     ).toContain('Talep bu sırada değişti.')
   })
 
+  it('localizes a session-store failure during sign-out-all', () => {
+    const error = normalizeApiProblem(
+      {
+        title: 'Authentication service unavailable',
+        detail: 'The request could not be completed. Try again.',
+        code: 'AUTH_SERVICE_UNAVAILABLE',
+      },
+      503,
+    )
+    expect(error.code).toBe('AUTH_SERVICE_UNAVAILABLE')
+    expect(error.status).toBe(503)
+    expect(error.detail).toBe(
+      'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
+    )
+  })
+
   it('preserves field-specific validation errors and unknown API codes', () => {
     const error = normalizeApiProblem(
       {
