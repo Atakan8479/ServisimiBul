@@ -25,17 +25,27 @@ Issue: [#198](https://github.com/Atakan8479/ServisimiBul/issues/198). Depends on
 
 Each context is a group of people whose data is processed in a recognizably different way. The LEG-02 category numbers show which data each notice must cover. "Screens" lists the existing routes (`servisimibul-frontend/src/app/router.tsx`) where a link to the notice would be shown; the placement is PROPOSED and implementing it is APP-01 ([#208](https://github.com/Atakan8479/ServisimiBul/issues/208)).
 
+"LEG-02 categories" lists the data processed **about** the people in each context. A context covers people who are the subject of a record even when they cannot access it.
+
 | # | Context | Who | LEG-02 categories | Screens (PROPOSED placement) | Existing in-product text (verified, not a notice) |
 |---|---|---|---|---|---|
-| N1 | Visitor | Anyone using public search, demand board, or demand pages without an account | 1, 6, 11, 12 (as readers), 17 | Public footer on every `PublicLayout` page | Footer links only to home, demand board, and the two registration pages (`layouts.tsx`) |
-| N2 | Parent account | Parents who register, create or support demands, comment, report, or give feedback | 1–5, 9, 9a, 10, 12, 13, 15, 16, 17, 18 | `/parent/register` before submission, `/parent/account`, footer | `/parent/register` says a parent account is not needed for searching and is used only for demands and notifications (`AuthPages.tsx`, `ParentSignupPage`) |
-| N3 | Operator account and public profile | Operators, including individuals, and anyone named in their profile | 1–8, 11, 12, 13, 15, 16, 17, 18 | `/operator/register` before submission, `/operator/profile`, `/operator/account`, footer | `/operator/register` says the phone and shared business information may be visible to visitors (D043, `RegisterPage`); `/operator/profile` labels the phone as public and explains the visibility toggle (`OperatorProfilePage.tsx`) |
+| N1 | Visitor | Anyone using public search, demand board, or demand pages without an account | 1, 17. Visitors also read third-party data (operator profiles 6, responses 11, comments 12). That data is about operators and authors and belongs to N2, N3, and N5, not to the visitor. | Public footer on every `PublicLayout` page | Footer links only to home, demand board, and the two registration pages (`layouts.tsx`) |
+| N2 | Parent account | Parents who register, create or support demands, comment, report, or give feedback | 1–5, 9, 9a, 10, 12, 13, 14, 15, 16, 17, 18 | `/parent/register` before submission, `/parent/account`, footer | `/parent/register` says a parent account is not needed for searching and is used only for demands and notifications (`AuthPages.tsx`, `ParentSignupPage`) |
+| N3 | Operator account and public profile | Operators, including individuals, and anyone named in their profile | 1–8, 11, 12, 13, 14, 15, 16, 17, 18 | `/operator/register` before submission, `/operator/profile`, `/operator/account`, footer | `/operator/register` says the phone and shared business information may be visible to visitors (D043, `RegisterPage`); `/operator/profile` labels the phone as public and explains the visibility toggle (`OperatorProfilePage.tsx`) |
 | N4 | Reporting | Reporters, and people whose content is reported | 13, 14, 15 | The report form (`ReportControl.tsx`) next to the submit action | The form warns against writing a student name, full address, or phone number |
 | N5 | Public comments | Comment authors, and people they mention | 12, 14 | The comment form on demand pages (`DemandComments.tsx`) | The form explains parent pseudonyms and warns against sharing student names, phone numbers, or full addresses; the demand board and detail page repeat similar guidance |
-| N6 | Administration | Administrators, and every user whose data administrators see in reviews, moderation, and audit | 2, 7, 13, 14, 15, 17 | Admin area for administrators; the moderation part also belongs in N2–N5 | None |
+| N6 | Administration | Administrators, and every user whose data administrators see in reviews, moderation, and audit | Administrators' own: 2, 3, 5, 15, 17, 18. Data administrators record or see about others: 7, 13, 14 | Admin area for administrators; the moderation part also belongs in N2–N5 | None |
 | N7 | Account emails | Recipients of verification and password-reset emails, once delivery is enabled | 2, 4, 16 | Inside or linked from each email template | Delivery is disabled until `SB_MAIL_*` is configured |
 
 Whether N4–N7 are separate notices or sections of N1–N3 is `[PENDING: counsel]`. The table only makes sure no context is forgotten.
+
+**Moderation records (category 14).** A moderation case can hold data about several people:
+- the author of the reported content, through `target_snapshot`, which keeps a copy even after the author deletes the comment
+- the reporter, through the linked `content_report`
+- a person named in the reported content
+- the administrator, through `moderated_by`, `decision_reason`, and the audit events
+
+That is why category 14 appears in N2, N3, N4, N5, and N6. Being covered by a notice context does not mean direct access. Only administrators can read moderation cases, and reporter identity is excluded even from administrator responses (D053; LEG-02 categories 13 and 14).
 
 **Public operator phone.** The issue requires a clear explanation of operator phone visibility. The facts the notice must reflect are in LEG-02 category 6 and in D028, D037, and D043:
 - an eligible profile is public by default, and the operator can hide it
@@ -58,7 +68,13 @@ The issue lists seven elements. Each one depends on a decision that is not yet m
 | Rights | LEG-06 | `[PENDING]` |
 | Contact route | LEG-01 L2, LEG-06, APP-06 | `[PENDING]`. No monitored channel exists today. |
 
-PROPOSED: the notice also states retention in line with LEG-03 once approved, and that no student records are collected (D015). Both are `[PENDING: counsel]` as to wording.
+PROPOSED: the notice also states retention in line with LEG-03 once approved, and accurately describes children's data. The technical facts for counsel are below; they are not user-facing wording:
+
+- The application does not request or maintain structured student records or dedicated home-address fields (D015).
+- User-generated free text may still contain personal information about children or other individuals, for example in comments, operator and offering descriptions, report explanations, and moderation snapshots that are kept after the original is deleted (LEG-02 section 5).
+- The existing warnings and post-publication moderation reduce this but do not guarantee that such information is never entered or stored.
+
+How the notice describes this, and whether special-category data needs particular safeguards (LEG-02 P1, P4), is `[PENDING: counsel]`.
 
 ## 4. Versions, publication, and ownership (PROPOSED, B)
 
@@ -68,18 +84,30 @@ None of this exists today. PROPOSED for the owner's decision:
 - **Screens link to a version, not to copied text.** Each screen in section 2 links to the current version of its notice, so changing a notice never requires editing several components.
 - **Change history visible to users.** Each published notice shows its effective date and links to its earlier versions.
 - **A notice change goes through a reviewed PR**, carries counsel's evidence reference, and is recorded in `docs/06_PROGRESS.md`.
-- **No per-user acknowledgement record** unless counsel decides that some processing needs consent (section 5). A notice informs; it is not something the user accepts.
+- **No per-user acknowledgement record** unless counsel decides one is necessary (see the delivery evidence subsection below, and section 5 for consent). A notice informs; it is not something the user accepts.
 
 Who owns notice maintenance after launch is `[PENDING]`.
+
+### PROPOSED — Notice delivery evidence
+
+Showing that a notice was published and showing that it was made available to the right people are separate questions. PROPOSED evidence levels, for the owner and counsel to choose from:
+
+1. **Publication evidence.** That a given notice version existed and was in force: version identifier, effective and publication dates, the approving review reference, and the PR or release that published it.
+2. **Presentation evidence.** That the relevant notice was available at the right point of each user journey: a version-to-screen mapping (section 2), the processing context each screen covers, and release or deployment evidence showing which version each screen linked to over time. It needs no data about individual users.
+3. **Individual-level evidence.** A minimal record that a specific person was shown a specific version, kept only if counsel decides it is necessary for a specific processing. Nothing here assumes it is required.
+
+The evidence model, where it is stored, who can access it, and how long it is kept are `[PENDING: owner + counsel]`. Nothing in this subsection adds tracking, database tables, API endpoints, or mandatory checkboxes. Showing or delivering a notice does not by itself establish explicit consent (section 5).
 
 ## 5. Transparency is not consent
 
 Verified facts:
 - Neither registration form has a consent or "I accept" checkbox; the only checkbox on the authentication pages is "remember me" on login (`AuthPages.tsx`).
 - D043 explicitly decided that registration needs no separate acknowledgement or publication-confirmation step.
-- No analytics, advertising, or marketing processing exists (LEG-02 section 3), so nothing currently suggests a consent-based process.
+- No analytics, advertising, or marketing processing is implemented (LEG-02 section 3).
 
-PROPOSED: notices are shown as information, with links, and never as a mandatory checkbox. A consent mechanism is added only for a specific processing that counsel identifies as requiring explicit consent. Cookies and marketing belong to LEG-09 ([#202](https://github.com/Atakan8479/ServisimiBul/issues/202)). Whether any current processing needs explicit consent is `[PENDING: counsel]`.
+That last fact rules out only those specific processing types. It does not settle whether any other processing needs consent. The lawful basis has to be assessed for each processing purpose under LEG-02 P1, including the open question of publishing an individual operator's phone (LEG-02 P2). This record assumes neither that consent is needed nor that it is not.
+
+PROPOSED: notices are shown as information, with links, and never as an unnecessary mandatory checkbox. A consent mechanism is added only for a specific processing that counsel identifies as requiring explicit consent, and it is kept separate from notice delivery (section 4). Cookies and marketing belong to LEG-09 ([#202](https://github.com/Atakan8479/ServisimiBul/issues/202)). Whether any current processing needs explicit consent is `[PENDING: counsel]`.
 
 ## 6. Existing in-product guidance is not a notice
 
