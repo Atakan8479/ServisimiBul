@@ -86,6 +86,37 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             Pageable pageable
     );
 
+    /**
+     * Counts operators that at least one school and neighborhood search can return,
+     * using the same eligibility rules as {@link #findPublishedOperators}.
+     */
+    @Query("""
+            select count(distinct profile.id)
+            from OperatorProfile profile
+            join profile.user user
+            where user.emailVerifiedAt is not null
+              and user.enabled = true
+              and user.role = :userRole
+              and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
+              and profile.active = true
+              and profile.publiclyVisible = true
+              and exists (
+                  select coverage.id
+                  from OperatorSchoolCoverage coverage
+                  join coverage.operatorSchool operatorSchool
+                  join operatorSchool.school school
+                  where operatorSchool.operator = profile
+                    and operatorSchool.active = true
+                    and school.active = true
+                    and coverage.neighborhood.district.province.id = school.neighborhood.district.province.id
+              )
+            """)
+    long countDiscoverableOperators(
+            @Param("userRole") UserRole userRole,
+            @Param("approvalStatus") OperatorApprovalStatus approvalStatus,
+            @Param("approvalRequired") boolean approvalRequired
+    );
+
     @Query("""
             select distinct profile
             from OperatorProfile profile

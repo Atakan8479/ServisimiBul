@@ -62,7 +62,7 @@ Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty s
 - `GET /api/v1/operators?schoolId=...&neighborhoodId=...&page=0&size=20`
 - `GET /api/v1/operators/{id}`
 - `GET /api/v1/tariffs?provinceCode=...` (official JSON only)
-- `GET /api/v1/demands?schoolId=...&neighborhoodId=...&academicYear=...&sort=newest&page=0&size=20`
+- `GET /api/v1/demands?schoolId=...&neighborhoodId=...&academicYear=...&status=OPEN&sort=newest&page=0&size=20`; `status` is `OPEN` (default), `FULFILLED`, `CLOSED`, or `ALL` (D058), and any other value returns 400 with `fieldErrors.status`.
 - `GET /api/v1/demands/{id}`
 - `GET /api/v1/demands/{id}/responses?page=0&size=20`
 
@@ -100,6 +100,7 @@ Creating a report never changes target visibility or lifecycle. Only an explicit
 ### In-app notifications
 
 - `GET /api/v1/notifications` and `GET /api/v1/notifications/unread-count` require an authenticated PARENT, OPERATOR, or ADMIN and return only rows whose `recipient_user_id` is the current principal. Pagination is bounded and newest-first.
+- `GET /api/v1/notifications` accepts an optional `readState=ALL|UNREAD|READ` (default `ALL`). `UNREAD` means `read_at IS NULL` and `READ` means `read_at IS NOT NULL`. Filtering happens before pagination, so page totals describe the filtered set, and any other value returns 400.
 - `PUT /api/v1/notifications/{notificationId}/read` requires the same authenticated ownership plus CSRF. A notification owned by another account is exposed as not found.
 - `PUT /api/v1/notifications/read-all` requires the same authentication plus CSRF, marks every unread notification of the current principal, and returns the resulting `{unreadCount}` (D057).
 - Delivery is part of the originating business transaction and uses a unique deterministic event key with conflict-safe insertion. Repeated demand, publication, lifecycle, or report handling therefore cannot create duplicate recipient/event rows.
@@ -141,6 +142,7 @@ Notifications never change demand, response, feedback, report, moderation, or ac
 
 ## Admin endpoints (draft)
 - `GET /api/v1/admin/operators?status=PENDING`
+- `GET /api/v1/admin/operators/summary` returns `{total, discoverable, changesRequested, suspended}` over the whole dataset. `discoverable` uses the same eligibility rules as public search: verified, enabled, approval policy, active, publicly visible, and at least one active school with same-province coverage. `suspended` counts deactivated profiles. Approval alone is never reported as published.
 - `POST /api/v1/admin/operators/{id}/approve`
 - `POST /api/v1/admin/operators/{id}/request-revision`
 - `POST /api/v1/admin/operators/{id}/suspend` (requires a non-blank `{reason}`; D056)

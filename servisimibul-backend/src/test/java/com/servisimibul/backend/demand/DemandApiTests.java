@@ -440,6 +440,96 @@ class DemandApiTests {
                 .andExpect(jsonPath("$.fieldErrors.size").exists());
     }
 
+    @Test
+    void statusFilterListsOnlyPublicLifecycleStatesBeforePagination() throws Exception {
+        AppUser creator = createParent("status-filter@example.com");
+        Province province = provinceRepository.save(new Province("93", "Status Province"));
+        District district = districtRepository.save(new District(province, "Status District"));
+        Neighborhood[] pickups = new Neighborhood[7];
+        for (int index = 0; index < pickups.length; index += 1) {
+            pickups[index] = neighborhoodRepository.saveAndFlush(
+                    new Neighborhood(district, "Status Pickup " + index)
+            );
+        }
+        School school = schoolRepository.saveAndFlush(
+                new School(pickups[0], "Status School", null, null, null)
+        );
+        Demand firstOpen = demandRepository.saveAndFlush(
+                new Demand(school, pickups[0], "2026-2027", creator)
+        );
+        demandRepository.saveAndFlush(new Demand(school, pickups[1], "2026-2027", creator));
+        Demand fulfilled = statusDemand(school, pickups[2], "2026-2027", creator,
+                DemandClosureReason.FULFILLED);
+        statusDemand(school, pickups[3], "2026-2027", creator, DemandClosureReason.INACTIVE);
+        statusDemand(school, pickups[4], "2026-2027", creator, DemandClosureReason.ADMIN);
+        Demand archived = statusDemand(school, pickups[5], "2026-2027", creator,
+                DemandClosureReason.INACTIVE);
+        jdbcTemplate.update("update demand set status = 'ARCHIVED' where id = ?", archived.getId());
+        statusDemand(school, pickups[6], "2025-2026", creator, DemandClosureReason.INACTIVE);
+        entityManager.clear();
+        String schoolId = school.getId().toString();
+
+        listByStatus(schoolId, null).andExpect(jsonPath("$.totalElements").value(2));
+        listByStatus(schoolId, "OPEN").andExpect(jsonPath("$.totalElements").value(2));
+        listByStatus(schoolId, "FULFILLED")
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(fulfilled.getId().toString()))
+                .andExpect(jsonPath("$.content[0].closureReason").value("FULFILLED"));
+        listByStatus(schoolId, "CLOSED")
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].closureReason").value("INACTIVE"));
+        listByStatus(schoolId, "ALL").andExpect(jsonPath("$.totalElements").value(4));
+        mockMvc.perform(get("/api/v1/demands").param("schoolId", schoolId)
+                        .param("status", "ALL").param("size", "1").param("page", "3"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(4))
+                .andExpect(jsonPath("$.totalPages").value(4));
+        mockMvc.perform(get("/api/v1/demands").param("schoolId", schoolId)
+                        .param("neighborhoodId", pickups[2].getId().toString())
+                        .param("status", "OPEN"))
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mockMvc.perform(get("/api/v1/demands").param("schoolId", schoolId)
+                        .param("neighborhoodId", pickups[2].getId().toString())
+                        .param("status", "FULFILLED"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        mockMvc.perform(get("/api/v1/demands").param("schoolId", schoolId)
+                        .param("academicYear", "2025-2026").param("status", "CLOSED"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+        for (String invalid : new String[] {"closed", "ARCHIVED", "ADMIN"}) {
+            mockMvc.perform(get("/api/v1/demands").param("status", invalid))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.fieldErrors.status").exists());
+        }
+
+        Demand closing = demandRepository.findById(firstOpen.getId()).orElseThrow();
+        closing.close(DemandClosureReason.FULFILLED, OffsetDateTime.now());
+        demandRepository.saveAndFlush(closing);
+        listByStatus(schoolId, "OPEN").andExpect(jsonPath("$.totalElements").value(1));
+        listByStatus(schoolId, "FULFILLED").andExpect(jsonPath("$.totalElements").value(2));
+        listByStatus(schoolId, "ALL").andExpect(jsonPath("$.totalElements").value(4));
+    }
+
+    private ResultActions listByStatus(String schoolId, String status) throws Exception {
+        var request = get("/api/v1/demands").param("schoolId", schoolId);
+        if (status != null) {
+            request = request.param("status", status);
+        }
+        return mockMvc.perform(request).andExpect(status().isOk());
+    }
+
+    private Demand statusDemand(
+            School school,
+            Neighborhood pickup,
+            String academicYear,
+            AppUser creator,
+            DemandClosureReason reason
+    ) {
+        Demand demand = new Demand(school, pickup, academicYear, creator);
+        demand.close(reason, OffsetDateTime.now());
+        return demandRepository.saveAndFlush(demand);
+    }
+
     private UUID createDemand(AppUser parent, GeographyFixture geography) throws Exception {
         MvcResult result = mockMvc.perform(post("/api/v1/demands")
                         .with(as(parent))

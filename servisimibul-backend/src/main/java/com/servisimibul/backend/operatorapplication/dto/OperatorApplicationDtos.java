@@ -95,6 +95,19 @@ public final class OperatorApplicationDtos {
     public record SuspensionRequest(@NotBlank String reason) {
     }
 
+    /**
+     * Whole-dataset admin counts. {@code discoverable} uses the public search
+     * eligibility rules, {@code suspended} counts deactivated profiles, and
+     * approval status alone never implies public visibility.
+     */
+    public record OperatorSummaryResponse(
+            long total,
+            long discoverable,
+            long changesRequested,
+            long suspended
+    ) {
+    }
+
     public record ProfileResponse(
             UUID id,
             String businessName,

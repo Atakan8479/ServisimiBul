@@ -1,5 +1,17 @@
 package com.servisimibul.backend.identity;
 
+import com.servisimibul.backend.geography.District;
+import com.servisimibul.backend.geography.DistrictRepository;
+import com.servisimibul.backend.geography.Neighborhood;
+import com.servisimibul.backend.geography.NeighborhoodRepository;
+import com.servisimibul.backend.geography.Province;
+import com.servisimibul.backend.geography.ProvinceRepository;
+import com.servisimibul.backend.geography.School;
+import com.servisimibul.backend.geography.SchoolRepository;
+import com.servisimibul.backend.operatorschool.OperatorSchool;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
+import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
+import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.AfterEach;
@@ -15,6 +27,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
 import java.util.HashSet;
@@ -53,6 +67,16 @@ class OperatorApplicationApiTests {
 
     @Autowired
     private FindByIndexNameSessionRepository<?> sessionRepository;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Autowired private ProvinceRepository provinceRepository;
+    @Autowired private DistrictRepository districtRepository;
+    @Autowired private NeighborhoodRepository neighborhoodRepository;
+    @Autowired private SchoolRepository schoolRepository;
+    @Autowired private OperatorSchoolRepository operatorSchoolRepository;
+    @Autowired private OperatorSchoolCoverageRepository coverageRepository;
 
     private final Set<String> testedEmails = new HashSet<>();
 
@@ -335,6 +359,98 @@ class OperatorApplicationApiTests {
         mockMvc.perform(get("/api/v1/operator/profile").with(asUser(operator)))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("operator_suspended"));
+    }
+
+    @Test
+    void adminSummaryCountsTheWholeDatasetWithSeparateDefinitions() throws Exception {
+        AppUser admin = createAdmin("summary-admin@example.com");
+        JsonNode before = summary(admin);
+        String suffix = java.util.UUID.randomUUID().toString().substring(0, 8);
+        Province province = provinceRepository.save(new Province("92", "Summary " + suffix));
+        District district = districtRepository.save(new District(province, "District " + suffix));
+        Neighborhood neighborhood = neighborhoodRepository.saveAndFlush(
+                new Neighborhood(district, "Neighborhood " + suffix)
+        );
+        School school = schoolRepository.saveAndFlush(
+                new School(neighborhood, "School " + suffix, null, null, null)
+        );
+
+        createOperator("summary-draft@example.com", "Draft", true);
+        profile(createOperator("summary-pending@example.com", "Pending", true)).submit();
+        OperatorProfile corrections = profile(
+                createOperator("summary-changes@example.com", "Changes", true)
+        );
+        corrections.submit();
+        corrections.requestChanges();
+        approvedWithCoverage("summary-visible@example.com", true, school, neighborhood);
+        approve(profile(createOperator("summary-uncovered@example.com", "Uncovered", true)));
+        approvedWithCoverage("summary-hidden@example.com", false, school, neighborhood);
+        OperatorProfile suspended = approvedWithCoverage(
+                "summary-suspended@example.com", true, school, neighborhood
+        );
+        suspended.suspend();
+        suspended.getUser().disable();
+        profileRepository.flush();
+        userRepository.flush();
+
+        JsonNode after = summary(admin);
+        assertThat(after.path("total").asLong() - before.path("total").asLong()).isEqualTo(7);
+        assertThat(after.path("discoverable").asLong() - before.path("discoverable").asLong())
+                .isEqualTo(1);
+        assertThat(after.path("changesRequested").asLong()
+                - before.path("changesRequested").asLong()).isEqualTo(1);
+        assertThat(after.path("suspended").asLong() - before.path("suspended").asLong())
+                .isEqualTo(1);
+
+        // Counts describe the whole dataset, independent of any listing page.
+        mockMvc.perform(get("/api/v1/admin/operators").with(asUser(admin)).param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.totalElements").value(after.path("total").asLong()));
+
+        AppUser operator = createOperator("summary-operator@example.com", "Operator", true);
+        mockMvc.perform(get("/api/v1/admin/operators/summary").with(asUser(operator)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/admin/operators/summary"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private JsonNode summary(AppUser admin) throws Exception {
+        MvcResult result = mockMvc.perform(get("/api/v1/admin/operators/summary")
+                        .with(asUser(admin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.total").isNumber())
+                .andExpect(jsonPath("$.discoverable").isNumber())
+                .andExpect(jsonPath("$.changesRequested").isNumber())
+                .andExpect(jsonPath("$.suspended").isNumber())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsByteArray());
+    }
+
+    private OperatorProfile profile(AppUser operator) {
+        return profileRepository.findByUserId(operator.getId()).orElseThrow();
+    }
+
+    private void approve(OperatorProfile profile) {
+        profile.submit();
+        profile.approve();
+        profileRepository.flush();
+    }
+
+    private OperatorProfile approvedWithCoverage(
+            String email,
+            boolean publiclyVisible,
+            School school,
+            Neighborhood neighborhood
+    ) {
+        OperatorProfile profile = profile(createOperator(email, email, true));
+        profile.update(profile.getBusinessName(), profile.getContactPhone(), null, publiclyVisible);
+        approve(profile);
+        OperatorSchool operatorSchool = operatorSchoolRepository.saveAndFlush(
+                new OperatorSchool(profile, school, true)
+        );
+        coverageRepository.saveAndFlush(new OperatorSchoolCoverage(operatorSchool, neighborhood));
+        return profile;
     }
 
     private OperatorProfile submit(AppUser operator) throws Exception {

@@ -26,15 +26,31 @@ public class NotificationService {
     private final Clock clock;
 
     @Transactional(readOnly = true)
-    public PageResponse<NotificationResponse> list(UUID recipientId, int page, int size) {
+    public PageResponse<NotificationResponse> list(
+            UUID recipientId,
+            NotificationReadState readState,
+            int page,
+            int size
+    ) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid notification page");
         }
-        Page<InAppNotification> notifications = repository
-                .findByRecipientUserIdOrderByCreatedAtDescIdDesc(
-                        recipientId,
-                        PageRequest.of(page, size)
-                );
+        PageRequest pageable = PageRequest.of(page, size);
+        // Filtering happens in the query, so page totals describe the filtered set.
+        Page<InAppNotification> notifications = switch (readState) {
+            case ALL -> repository.findByRecipientUserIdOrderByCreatedAtDescIdDesc(
+                    recipientId,
+                    pageable
+            );
+            case UNREAD -> repository.findByRecipientUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(
+                    recipientId,
+                    pageable
+            );
+            case READ -> repository.findByRecipientUserIdAndReadAtIsNotNullOrderByCreatedAtDescIdDesc(
+                    recipientId,
+                    pageable
+            );
+        };
         return new PageResponse<>(
                 notifications.getContent().stream().map(this::response).toList(),
                 notifications.getNumber(),

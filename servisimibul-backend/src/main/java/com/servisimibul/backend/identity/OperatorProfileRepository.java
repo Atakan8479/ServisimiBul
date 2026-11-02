@@ -24,6 +24,25 @@ public interface OperatorProfileRepository extends JpaRepository<OperatorProfile
     @Query("select profile from OperatorProfile profile join fetch profile.user where profile.id = :id")
     Optional<OperatorProfile> findDetailedById(@Param("id") UUID id);
 
+    interface StatusCounts {
+
+        long getTotal();
+
+        long getChangesRequested();
+
+        long getSuspended();
+    }
+
+    @Query("""
+            select count(profile.id) as total,
+                   coalesce(sum(case when profile.approvalStatus =
+                       com.servisimibul.backend.identity.OperatorApprovalStatus.CHANGES_REQUESTED
+                       then 1 else 0 end), 0) as changesRequested,
+                   coalesce(sum(case when profile.active = false then 1 else 0 end), 0) as suspended
+            from OperatorProfile profile
+            """)
+    StatusCounts countByStatus();
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select profile from OperatorProfile profile join fetch profile.user where profile.id = :id")
     Optional<OperatorProfile> findDetailedByIdForUpdate(@Param("id") UUID id);
