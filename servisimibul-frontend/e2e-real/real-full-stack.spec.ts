@@ -603,6 +603,93 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
     })
 
+    await test.step('guard tariff administration with roles, validation, and optimistic concurrency', async () => {
+      const tariffPath = '/api/v1/admin/tariffs/34'
+      const current = await publicPage.request.get(
+        '/api/v1/tariffs?provinceCode=34',
+      )
+      expect(current.status()).toBe(200)
+      const tariff = (await current.json()) as Record<string, unknown>
+      expect(tariff.version).toBe('j03-v2')
+
+      const operatorCsrf = await csrf(operatorPage)
+      const operatorWrite = await operatorPage.request.put(tariffPath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { expectedVersion: 'j03-v2', tariff },
+      })
+      expect(operatorWrite.status()).toBe(403)
+
+      const adminCsrf = await csrf(adminPage)
+      const missingCsrf = await adminPage.request.put(tariffPath, {
+        data: { expectedVersion: 'j03-v2', tariff },
+      })
+      expect(missingCsrf.status()).toBe(403)
+
+      const stale = await adminPage.request.put(tariffPath, {
+        headers: { [adminCsrf.headerName]: adminCsrf.token },
+        data: {
+          expectedVersion: 'j03-stale',
+          tariff: { ...tariff, version: 'j03-v3' },
+        },
+      })
+      expect(stale.status()).toBe(409)
+
+      const invalid = await adminPage.request.put(tariffPath, {
+        headers: { [adminCsrf.headerName]: adminCsrf.token },
+        data: {
+          expectedVersion: 'j03-v2',
+          tariff: { ...tariff, version: 'j03-v3', bands: [] },
+        },
+      })
+      expect(invalid.status()).toBe(400)
+
+      const unchanged = await publicPage.request.get(
+        '/api/v1/tariffs?provinceCode=34',
+      )
+      expect(((await unchanged.json()) as { version: string }).version).toBe(
+        'j03-v2',
+      )
+    })
+
+    await test.step('page through the real school catalog without losing the selection path', async () => {
+      const adminCsrf = await csrf(adminPage)
+      for (let index = 1; index <= 11; index += 1) {
+        const suffix = String(index).padStart(2, '0')
+        const created = await adminPage.request.post('/api/v1/admin/schools', {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            neighborhoodId: 340201,
+            name: `J03 Sayfa Okulu ${suffix}`,
+            address: null,
+            sourceName: 'J03 pagination fixture',
+            sourceCode: `J03-PAGE-${suffix}`,
+            active: true,
+          },
+        })
+        expect(created.status()).toBe(201)
+      }
+
+      await publicPage.goto('/')
+      await publicPage
+        .getByLabel('Okulun bulunduğu il')
+        .selectOption({ label: 'İstanbul' })
+      await expect(
+        publicPage.getByRole('button', {
+          name: 'Bu okulu seç: J03 Gerçek Okulu',
+        }),
+      ).toBeVisible()
+      await expect(publicPage.getByText('Sayfa 1 / 2').first()).toBeVisible()
+      await publicPage
+        .getByRole('button', { name: 'Sonraki sayfa' })
+        .first()
+        .click()
+      await expect(publicPage.getByText('Sayfa 2 / 2').first()).toBeVisible()
+      await publicPage
+        .getByRole('button', { name: 'Bu okulu seç: J03 Sayfa Okulu 11' })
+        .click()
+      await selectLoadedOption(publicPage, 'Servis alınacak ilçe', 'Üsküdar')
+    })
+
     let sharedDemandId = ''
     let firstParentSupportId = ''
     let secondParentSupportId = ''

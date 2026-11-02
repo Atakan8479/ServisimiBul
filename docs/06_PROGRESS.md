@@ -1,8 +1,16 @@
 # Progress ledger (update only after verification)
 
-## Current stage: UI-FIDELITY-13 operator offerings ready for PR review
+## Current stage: UI-07 rollout gate verified and ready for review
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #184 are present on `main`. UI-FIDELITY-13 is implemented on `codex/ui-fidelity-13-operator-offerings` with focused unit, build, accessibility, responsive, and mocked-browser verification complete. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
+
+## Verified UI-07 rollout gate — 2026-11-02
+
+- Full results and per-screen dispositions are in `docs/17_UI_ROLLOUT_GATE.md`.
+- Typecheck, lint, and build passed; Vitest 223/223; mocked Playwright 180/180 without retries; real full-stack E2E 1/1; isolated backend 295/295.
+- A new gate spec checks all 25 screen IDs at 320, 390, 768, and 1440 for overflow and axe violations, plus skip links, 200% text, and reduced motion. All 21 gate tests pass.
+- The real journey now also proves tariff role, CSRF, 409, and validation guards, and public school-catalog pagination.
+- Dispositions: 13 MATCH, 12 MINOR GAP, no MAJOR GAP or NOT VERIFIED. Follow-up issues: #191 notification read-state filters, #192 admin application counts, #193 demand status filters.
 
 ## Verified UI-FIDELITY-13 O04 operator vehicles and offerings — 2026-11-01
 
