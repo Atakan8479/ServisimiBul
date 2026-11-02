@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import {
   MemoryRouter,
@@ -118,7 +125,10 @@ describe('notification center', () => {
     expect(
       screen.queryByRole('button', { name: 'Okundu olarak işaretle' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus()
+    // Focus moves in an effect after the commit that renders the change.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus(),
+    )
   })
 
   it('marks every notification read through the backend', async () => {
@@ -166,7 +176,7 @@ describe('notification center', () => {
     const notice = await screen.findByText(
       'Tüm bildirimler okundu olarak işaretlendi.',
     )
-    expect(notice).toHaveFocus()
+    await waitFor(() => expect(notice).toHaveFocus())
     expect(calls).toBe(1)
     expect(screen.getByText('Hepsi okundu')).toBeInTheDocument()
     expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
@@ -1037,6 +1047,159 @@ function csrfHandler() {
     }),
   )
 }
+
+describe('notification read-state filters', () => {
+  const unreadItem = notificationPage().content[0]!
+  const readItem = {
+    ...unreadItem,
+    id: '7bd12425-ea60-45e5-b937-ddf75db2eb46',
+    title: 'Okunmuş bildirim',
+    readAt: '2026-10-25T09:10:00Z',
+  }
+  const pageOf = (items: unknown[], page = 0, totalPages = 1) => ({
+    content: items,
+    page,
+    size: 20,
+    totalElements: items.length + page * 20,
+    totalPages,
+  })
+
+  function renderCenter() {
+    return render(
+      <MemoryRouter initialEntries={['/notifications']}>
+        <Routes>
+          <Route element={<NotificationCenterPage />} path="/notifications" />
+        </Routes>
+      </MemoryRouter>,
+    )
+  }
+
+  it('filters on the server, resets paging, and keeps the filter while paging', async () => {
+    const requests: Array<{ readState: string | null; page: string | null }> =
+      []
+    server.use(
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.get('/api/v1/notifications', ({ request }) => {
+        const params = new URL(request.url).searchParams
+        requests.push({
+          readState: params.get('readState'),
+          page: params.get('page'),
+        })
+        return HttpResponse.json(
+          pageOf([unreadItem], Number(params.get('page')), 2),
+        )
+      }),
+    )
+    renderCenter()
+
+    const group = await screen.findByRole('group', {
+      name: 'Okunma durumuna göre filtrele',
+    })
+    expect(within(group).getByRole('button', { name: 'Tümü' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    fireEvent.click(await screen.findByRole('button', { name: 'Sonraki' }))
+    await waitFor(() => expect(requests.at(-1)?.page).toBe('1'))
+
+    fireEvent.click(within(group).getByRole('button', { name: /Okunmamış/ }))
+    await waitFor(() =>
+      expect(requests.at(-1)).toEqual({ readState: 'UNREAD', page: '0' }),
+    )
+    expect(
+      within(group).getByRole('button', { name: /Okunmamış/ }),
+    ).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(await screen.findByRole('button', { name: 'Sonraki' }))
+    await waitFor(() =>
+      expect(requests.at(-1)).toEqual({ readState: 'UNREAD', page: '1' }),
+    )
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Okunmuş' }))
+    await waitFor(() =>
+      expect(requests.at(-1)).toEqual({ readState: 'READ', page: '0' }),
+    )
+    expect(requests[0]).toEqual({ readState: null, page: '0' })
+  })
+
+  it('removes a read notification from the unread view and explains the empty view', async () => {
+    let unread = true
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: unread ? 1 : 0 }),
+      ),
+      http.get('/api/v1/notifications', ({ request }) => {
+        const state = new URL(request.url).searchParams.get('readState')
+        if (state === 'UNREAD') {
+          return HttpResponse.json(pageOf(unread ? [unreadItem] : []))
+        }
+        return HttpResponse.json(pageOf([unread ? unreadItem : readItem]))
+      }),
+      http.put('/api/v1/notifications/:id/read', () => {
+        unread = false
+        return HttpResponse.json({ ...unreadItem, readAt: readItem.readAt })
+      }),
+    )
+    renderCenter()
+
+    fireEvent.click(await screen.findByRole('button', { name: /Okunmamış/ }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Okundu olarak işaretle' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Okunmamış bildiriminiz yok',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(unreadItem.title)).toBeNull()
+    await waitFor(() =>
+      expect(
+        screen.getByText('Bildirim okundu olarak işaretlendi.'),
+      ).toHaveFocus(),
+    )
+  })
+
+  it('ignores a slower response from the previous filter', async () => {
+    let releaseAll: () => void = () => undefined
+    const allGate = new Promise<void>((resolve) => {
+      releaseAll = resolve
+    })
+    let allRequests = 0
+    let staleServed = false
+    server.use(
+      http.get('/api/v1/notifications/unread-count', () =>
+        HttpResponse.json({ unreadCount: 1 }),
+      ),
+      http.get('/api/v1/notifications', async ({ request }) => {
+        const state = new URL(request.url).searchParams.get('readState')
+        if (state === 'READ') return HttpResponse.json(pageOf([readItem]))
+        allRequests += 1
+        if (allRequests === 1) {
+          await allGate
+          staleServed = true
+          return HttpResponse.json(pageOf([unreadItem]))
+        }
+        return HttpResponse.json(pageOf([unreadItem]))
+      }),
+    )
+    renderCenter()
+
+    await waitFor(() => expect(allRequests).toBe(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Okunmuş' }))
+    expect(await screen.findByText(readItem.title)).toBeInTheDocument()
+    releaseAll()
+    await waitFor(() => expect(staleServed).toBe(true))
+    // Let the released response reach the component before asserting its absence.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    })
+    expect(screen.getByText(readItem.title)).toBeInTheDocument()
+    expect(screen.queryByText(unreadItem.title)).toBeNull()
+  })
+})
 
 function notificationPage() {
   return {

@@ -18,6 +18,16 @@ public interface InAppNotificationRepository extends JpaRepository<InAppNotifica
             Pageable pageable
     );
 
+    Page<InAppNotification> findByRecipientUserIdAndReadAtIsNullOrderByCreatedAtDescIdDesc(
+            UUID recipientUserId,
+            Pageable pageable
+    );
+
+    Page<InAppNotification> findByRecipientUserIdAndReadAtIsNotNullOrderByCreatedAtDescIdDesc(
+            UUID recipientUserId,
+            Pageable pageable
+    );
+
     long countByRecipientUserIdAndReadAtIsNull(UUID recipientUserId);
 
     long countByRecipientUserIdAndType(UUID recipientUserId, NotificationType type);

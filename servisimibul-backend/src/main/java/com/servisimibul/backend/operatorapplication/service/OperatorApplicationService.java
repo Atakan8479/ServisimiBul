@@ -2,6 +2,7 @@ package com.servisimibul.backend.operatorapplication.service;
 
 import com.servisimibul.backend.auth.exception.AuthValidationException;
 import com.servisimibul.backend.auth.service.AuthInputValidator;
+import com.servisimibul.backend.discovery.PublicOperatorDiscoveryRepository;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.OperatorApplicationReview;
@@ -12,6 +13,7 @@ import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.identity.ReviewDecision;
 import com.servisimibul.backend.identity.UserRole;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ApplicationDetailResponse;
+import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.OperatorSummaryResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.PageResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfilePatchRequest;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfileResponse;
@@ -42,6 +44,7 @@ public class OperatorApplicationService {
     private final AuthInputValidator inputValidator;
     private final SessionRevoker sessionRevoker;
     private final OperatorApprovalPolicy approvalPolicy;
+    private final PublicOperatorDiscoveryRepository discoveryRepository;
 
     @Transactional(readOnly = true)
     public ProfileResponse profile() {
@@ -105,6 +108,22 @@ public class OperatorApplicationService {
         profile.resubmit();
         profileRepository.flush();
         return toProfileResponse(profile);
+    }
+
+    @Transactional(readOnly = true)
+    public OperatorSummaryResponse summary() {
+        OperatorProfileRepository.StatusCounts counts = profileRepository.countByStatus();
+        long discoverable = discoveryRepository.countDiscoverableOperators(
+                UserRole.OPERATOR,
+                OperatorApprovalStatus.APPROVED,
+                approvalPolicy.isRequired()
+        );
+        return new OperatorSummaryResponse(
+                counts.getTotal(),
+                discoverable,
+                counts.getChangesRequested(),
+                counts.getSuspended()
+        );
     }
 
     @Transactional(readOnly = true)

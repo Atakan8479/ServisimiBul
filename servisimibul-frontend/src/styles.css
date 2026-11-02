@@ -3804,6 +3804,35 @@ button:disabled {
 }
 
 .demand-filter-panel .section-heading p,
+.demand-status-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-medium);
+  background: var(--color-surface-soft);
+}
+
+.demand-status-filter button {
+  min-height: 2.75rem;
+  padding: 0 0.95rem;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.demand-status-filter button[aria-pressed='true'] {
+  background: var(--neutral-0);
+  color: var(--teal-700);
+  box-shadow: 0 1px 3px rgba(13, 42, 35, 0.12);
+}
+
 .demand-board-results .section-heading p {
   max-width: 62ch;
   margin: 0.45rem 0 0;

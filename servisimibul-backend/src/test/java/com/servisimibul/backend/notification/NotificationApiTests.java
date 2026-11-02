@@ -132,6 +132,71 @@ class NotificationApiTests {
                 .andExpect(jsonPath("$.unreadCount").value(0));
     }
 
+    @Test
+    void readStateFiltersBeforePaginationWithinTheRecipient() throws Exception {
+        AppUser recipient = parent("filter-recipient@example.com");
+        AppUser other = parent("filter-other@example.com");
+        Demand demand = demand(recipient);
+        for (int index = 0; index < 5; index += 1) {
+            writeStore.insert(notification(recipient.getId(), demand.getId(), "n" + index));
+        }
+        writeStore.insert(notification(other.getId(), demand.getId(), "other"));
+        jdbcTemplate.update(
+                "update in_app_notification set read_at = created_at where event_key like ?",
+                "%" + recipient.getId() + ":n0"
+        );
+        jdbcTemplate.update(
+                "update in_app_notification set read_at = created_at where event_key like ?",
+                "%" + recipient.getId() + ":n1"
+        );
+
+        mockMvc.perform(get("/api/v1/notifications").param("size", "2").with(as(recipient)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(5))
+                .andExpect(jsonPath("$.totalPages").value(3));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "ALL")
+                        .param("size", "2").with(as(recipient)))
+                .andExpect(jsonPath("$.totalElements").value(5));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "UNREAD")
+                        .param("size", "2").with(as(recipient)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].readAt").doesNotExist())
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(2));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "UNREAD")
+                        .param("size", "2").param("page", "1").with(as(recipient)))
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].readAt").doesNotExist())
+                .andExpect(jsonPath("$.page").value(1));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "READ")
+                        .with(as(recipient)))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].readAt").isNotEmpty())
+                .andExpect(jsonPath("$.content[1].readAt").isNotEmpty());
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "READ")
+                        .with(as(other)))
+                .andExpect(jsonPath("$.totalElements").value(0));
+
+        for (String invalid : new String[] {"unread", "SEEN", "ALL,READ"}) {
+            mockMvc.perform(get("/api/v1/notifications").param("readState", invalid)
+                            .with(as(recipient)))
+                    .andExpect(status().isBadRequest());
+        }
+
+        mockMvc.perform(put("/api/v1/notifications/read-all").with(as(recipient)).with(csrf()))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "UNREAD")
+                        .with(as(recipient)))
+                .andExpect(jsonPath("$.totalElements").value(0));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "READ")
+                        .with(as(recipient)))
+                .andExpect(jsonPath("$.totalElements").value(5));
+        mockMvc.perform(get("/api/v1/notifications").param("readState", "UNREAD")
+                        .with(as(other)))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
     private NotificationWrite notification(UUID recipientId, UUID demandId, String suffix) {
         return new NotificationWrite(
                 recipientId,

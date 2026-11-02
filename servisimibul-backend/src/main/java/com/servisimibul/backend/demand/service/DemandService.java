@@ -2,6 +2,7 @@ package com.servisimibul.backend.demand.service;
 
 import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.demand.Demand;
+import com.servisimibul.backend.demand.DemandListStatus;
 import com.servisimibul.backend.demand.DemandRepository;
 import com.servisimibul.backend.demand.DemandRepository.DemandReasonCount;
 import com.servisimibul.backend.demand.DemandRepository.DemandSummary;
@@ -63,12 +64,14 @@ public class DemandService {
             UUID schoolId,
             Long neighborhoodId,
             String academicYear,
+            String status,
             String sort,
             int page,
             int size,
             UUID currentParentId
     ) {
         validatePage(page, size);
+        DemandListStatus listStatus = listStatus(status);
         requirePositiveIfPresent(neighborhoodId, "neighborhoodId");
         String selectedYear = academicYear == null || academicYear.isBlank()
                 ? properties.academicYear()
@@ -82,7 +85,10 @@ public class DemandService {
             );
         };
 
-        Page<DemandSummary> summaries = demandRepository.findOpenDemandSummaries(
+        Page<DemandSummary> summaries = demandRepository.findListedDemandSummaries(
+                listStatus.includesOpen(),
+                listStatus.includesFulfilled(),
+                listStatus.includesInactive(),
                 schoolId,
                 neighborhoodId,
                 selectedYear,
@@ -106,6 +112,18 @@ public class DemandService {
                 summaries.getSize(),
                 summaries.getTotalElements(),
                 summaries.getTotalPages()
+        );
+    }
+
+    private DemandListStatus listStatus(String status) {
+        for (DemandListStatus candidate : DemandListStatus.values()) {
+            if (candidate.name().equals(status)) {
+                return candidate;
+            }
+        }
+        throw DemandApiException.validation(
+                "status",
+                "must be one of OPEN, FULFILLED, CLOSED, or ALL"
         );
     }
 

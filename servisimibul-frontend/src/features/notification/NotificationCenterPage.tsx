@@ -9,6 +9,7 @@ import {
   unreadCountChangedEvent,
   unreadNotificationCount,
   type NotificationItem,
+  type NotificationReadState,
   type NotificationPage,
 } from './notification-api'
 import './notification-ui.css'
@@ -69,6 +70,41 @@ const typeIcons: Record<NotificationItem['type'], string> = {
 const bellIcon = 'M6 16.5V11a6 6 0 1 1 12 0v5.5l1.5 2h-15zM10 21h4'
 const checkIcon = 'M5 12.5l4.5 4.5L19 7.5'
 
+const readFilters: Array<{
+  value: NotificationReadState
+  label: string
+  summary: string
+  empty: { title: string; detail: string }
+}> = [
+  {
+    value: 'ALL',
+    label: 'Tümü',
+    summary: 'toplam bildirim',
+    empty: {
+      title: 'Henüz bildiriminiz yok',
+      detail: 'Yeni bir gelişme olduğunda burada göreceksiniz.',
+    },
+  },
+  {
+    value: 'UNREAD',
+    label: 'Okunmamış',
+    summary: 'okunmamış bildirim listeleniyor',
+    empty: {
+      title: 'Okunmamış bildiriminiz yok',
+      detail: 'Tüm bildirimlerinizi okudunuz.',
+    },
+  },
+  {
+    value: 'READ',
+    label: 'Okunmuş',
+    summary: 'okunmuş bildirim listeleniyor',
+    empty: {
+      title: 'Okunmuş bildiriminiz yok',
+      detail: 'Okuduğunuz bildirimler burada listelenir.',
+    },
+  },
+]
+
 function Icon({ path }: { path: string }) {
   return (
     <svg
@@ -91,6 +127,7 @@ export function NotificationCenterPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [page, setPage] = useState(0)
+  const [readState, setReadState] = useState<NotificationReadState>('ALL')
   const [result, setResult] = useState<NotificationPage>()
   const [loading, setLoading] = useState(true)
   const [unreadCount, setUnreadCount] = useState<number>()
@@ -103,6 +140,8 @@ export function NotificationCenterPage() {
   const [error, setError] = useState<string>()
   const [actionFailed, setActionFailed] = useState(false)
   const copy = roleFromPath(location.pathname)
+  const filter =
+    readFilters.find((item) => item.value === readState) ?? readFilters[0]!
   const mutating = markingAll || !!markingId || !!openingId
 
   // Responses apply only while they belong to the latest request of their kind.
@@ -143,8 +182,14 @@ export function NotificationCenterPage() {
       setError(undefined)
       setActionFailed(false)
       try {
-        const response = await listNotifications(page, signal)
-        if (request === listRequest.current) setResult(response)
+        const response = await listNotifications(page, readState, signal)
+        if (request !== listRequest.current) return
+        // Reading items can shrink a filtered list below the current page.
+        if (response.content.length === 0 && response.page > 0) {
+          setPage(Math.max(0, response.totalPages - 1))
+          return
+        }
+        setResult(response)
       } catch (failure) {
         if (request !== listRequest.current) return
         if (failure instanceof DOMException && failure.name === 'AbortError')
@@ -162,7 +207,7 @@ export function NotificationCenterPage() {
         }
       }
     },
-    [page, redirectIfSessionExpired],
+    [page, readState, redirectIfSessionExpired],
   )
 
   const refreshUnreadCount = useCallback(async (signal?: AbortSignal) => {
@@ -204,10 +249,12 @@ export function NotificationCenterPage() {
   }, [])
 
   useEffect(() => {
-    if (focusId && !mutating) {
-      document.getElementById(`notification-${focusId}`)?.focus()
-    }
-  }, [focusId, mutating])
+    if (!focusId || mutating || loading) return
+    // A filtered list can drop the item that was just read, so fall back to the notice.
+    const item = document.getElementById(`notification-${focusId}`)
+    if (item) item.focus()
+    else noticeRef.current?.focus()
+  }, [focusId, loading, mutating])
 
   useEffect(() => {
     if (notice && !focusId) noticeRef.current?.focus()
@@ -291,7 +338,7 @@ export function NotificationCenterPage() {
       window.dispatchEvent(new Event(unreadCountChangedEvent))
       await Promise.all([
         refreshUnreadCount(),
-        listInFlight.current ? load() : undefined,
+        listInFlight.current || readState !== 'ALL' ? load() : undefined,
       ])
     } catch (failure) {
       if (redirectIfSessionExpired(failure)) return
@@ -380,21 +427,48 @@ export function NotificationCenterPage() {
         </div>
       )}
 
-      {result && !loading && (
-        <div className="notification-summary">
-          <span className="notification-icon notification-icon-info">
-            <Icon path={bellIcon} />
-          </span>
-          <div>
-            {unreadCount !== undefined && (
-              <strong>{unreadCount} okunmamış bildirim</strong>
-            )}
-            <p>
-              {result.totalElements} toplam bildirim · {copy.account}
-            </p>
-          </div>
+      <div className="notification-summary">
+        <span className="notification-icon notification-icon-info">
+          <Icon path={bellIcon} />
+        </span>
+        <div className="notification-summary-copy">
+          {unreadCount !== undefined && (
+            <strong>{unreadCount} okunmamış bildirim</strong>
+          )}
+          <p>
+            {result && !loading
+              ? `${result.totalElements} ${filter.summary} · `
+              : ''}
+            {copy.account}
+          </p>
         </div>
-      )}
+        <div
+          aria-label="Okunma durumuna göre filtrele"
+          className="notification-filters"
+          role="group"
+        >
+          {readFilters.map((item) => (
+            <button
+              aria-pressed={readState === item.value}
+              disabled={mutating}
+              key={item.value}
+              onClick={() => {
+                if (readState === item.value) return
+                setReadState(item.value)
+                setPage(0)
+                setFocusId(undefined)
+                setNotice(undefined)
+              }}
+              type="button"
+            >
+              {item.label}
+              {item.value === 'UNREAD' && !!unreadCount && (
+                <span aria-hidden="true">{unreadCount}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {loading ? (
         <StatePanel
@@ -403,10 +477,7 @@ export function NotificationCenterPage() {
           tone="loading"
         />
       ) : result?.content.length === 0 ? (
-        <StatePanel
-          detail="Yeni bir gelişme olduğunda burada göreceksiniz."
-          title="Henüz bildiriminiz yok"
-        />
+        <StatePanel detail={filter.empty.detail} title={filter.empty.title} />
       ) : result ? (
         <section aria-labelledby="notification-feed-title">
           <h2 className="notification-feed-title" id="notification-feed-title">

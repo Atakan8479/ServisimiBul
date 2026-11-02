@@ -61,7 +61,15 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
                      and support.parent.enabled = true
                      and (:parentVerificationRequired = false
                           or support.parent.emailVerifiedAt is not null)
-                    where demand.status = com.servisimibul.backend.demand.DemandStatus.OPEN
+                    where (
+                      (:includeOpen = true
+                        and demand.status = com.servisimibul.backend.demand.DemandStatus.OPEN)
+                      or (demand.status = com.servisimibul.backend.demand.DemandStatus.CLOSED
+                        and ((:includeFulfilled = true
+                              and demand.closureReason = com.servisimibul.backend.demand.DemandClosureReason.FULFILLED)
+                          or (:includeInactive = true
+                              and demand.closureReason = com.servisimibul.backend.demand.DemandClosureReason.INACTIVE)))
+                    )
                       and demand.academicYear = :academicYear
                       and (:schoolId is null or school.id = :schoolId)
                       and (:neighborhoodId is null or neighborhood.id = :neighborhoodId)
@@ -74,13 +82,24 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
             countQuery = """
                     select count(demand.id)
                     from Demand demand
-                    where demand.status = com.servisimibul.backend.demand.DemandStatus.OPEN
+                    where (
+                      (:includeOpen = true
+                        and demand.status = com.servisimibul.backend.demand.DemandStatus.OPEN)
+                      or (demand.status = com.servisimibul.backend.demand.DemandStatus.CLOSED
+                        and ((:includeFulfilled = true
+                              and demand.closureReason = com.servisimibul.backend.demand.DemandClosureReason.FULFILLED)
+                          or (:includeInactive = true
+                              and demand.closureReason = com.servisimibul.backend.demand.DemandClosureReason.INACTIVE)))
+                    )
                       and demand.academicYear = :academicYear
                       and (:schoolId is null or demand.school.id = :schoolId)
                       and (:neighborhoodId is null or demand.neighborhood.id = :neighborhoodId)
                     """
     )
-    Page<DemandSummary> findOpenDemandSummaries(
+    Page<DemandSummary> findListedDemandSummaries(
+            @Param("includeOpen") boolean includeOpen,
+            @Param("includeFulfilled") boolean includeFulfilled,
+            @Param("includeInactive") boolean includeInactive,
             @Param("schoolId") UUID schoolId,
             @Param("neighborhoodId") Long neighborhoodId,
             @Param("academicYear") String academicYear,

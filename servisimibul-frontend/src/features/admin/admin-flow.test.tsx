@@ -259,6 +259,93 @@ describe('admin workspace flows', () => {
     ).toBeInTheDocument()
   })
 
+  it('shows real operator summary counts from the summary endpoint', async () => {
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/operators/summary', () =>
+        HttpResponse.json({
+          total: 12,
+          discoverable: 5,
+          changesRequested: 2,
+          suspended: 1,
+        }),
+      ),
+      http.get('/api/v1/admin/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/admin/applications')
+    const summary = await screen.findByRole('region', {
+      name: 'İşletmeci özeti',
+    })
+    await waitFor(() =>
+      expect(within(summary).getByText('12')).toBeInTheDocument(),
+    )
+    for (const [label, value] of [
+      ['Toplam işletmeci', '12'],
+      ['Aramalarda görünen', '5'],
+      ['Düzeltme bekleyen', '2'],
+      ['Askıya alınan', '1'],
+    ] as const) {
+      const card = within(summary).getByText(label).closest('div')!
+      expect(within(card).getByText(value)).toBeInTheDocument()
+    }
+  })
+
+  it('never shows zero counts when the summary fails, and retries', async () => {
+    let attempts = 0
+    server.use(
+      authHandler('ADMIN'),
+      http.get('/api/v1/admin/operators/summary', () => {
+        attempts += 1
+        return attempts === 1
+          ? HttpResponse.json(
+              { title: 'Error', status: 503, detail: 'unavailable' },
+              { status: 503 },
+            )
+          : HttpResponse.json({
+              total: 3,
+              discoverable: 1,
+              changesRequested: 0,
+              suspended: 0,
+            })
+      }),
+      http.get('/api/v1/admin/operators', () =>
+        HttpResponse.json({
+          content: [],
+          page: 0,
+          size: 20,
+          totalElements: 0,
+          totalPages: 0,
+        }),
+      ),
+    )
+
+    renderRoute('/admin/applications')
+    const summary = await screen.findByRole('region', {
+      name: 'İşletmeci özeti',
+    })
+    expect(
+      await within(summary).findByText('Özet sayılar yüklenemedi.'),
+    ).toBeInTheDocument()
+    expect(within(summary).queryByText('0')).toBeNull()
+
+    fireEvent.click(
+      within(summary).getByRole('button', { name: 'Tekrar dene' }),
+    )
+    await waitFor(() =>
+      expect(within(summary).getByText('3')).toBeInTheDocument(),
+    )
+    expect(attempts).toBe(2)
+  })
+
   it('filters by the status the API supports and pages through results', async () => {
     const requests: Array<{ status: string | null; page: string | null }> = []
     server.use(

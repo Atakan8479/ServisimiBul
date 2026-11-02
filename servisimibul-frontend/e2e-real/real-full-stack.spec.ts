@@ -603,6 +603,93 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       ).toBeVisible()
     })
 
+    await test.step('guard tariff administration with roles, validation, and optimistic concurrency', async () => {
+      const tariffPath = '/api/v1/admin/tariffs/34'
+      const current = await publicPage.request.get(
+        '/api/v1/tariffs?provinceCode=34',
+      )
+      expect(current.status()).toBe(200)
+      const tariff = (await current.json()) as Record<string, unknown>
+      expect(tariff.version).toBe('j03-v2')
+
+      const operatorCsrf = await csrf(operatorPage)
+      const operatorWrite = await operatorPage.request.put(tariffPath, {
+        headers: { [operatorCsrf.headerName]: operatorCsrf.token },
+        data: { expectedVersion: 'j03-v2', tariff },
+      })
+      expect(operatorWrite.status()).toBe(403)
+
+      const adminCsrf = await csrf(adminPage)
+      const missingCsrf = await adminPage.request.put(tariffPath, {
+        data: { expectedVersion: 'j03-v2', tariff },
+      })
+      expect(missingCsrf.status()).toBe(403)
+
+      const stale = await adminPage.request.put(tariffPath, {
+        headers: { [adminCsrf.headerName]: adminCsrf.token },
+        data: {
+          expectedVersion: 'j03-stale',
+          tariff: { ...tariff, version: 'j03-v3' },
+        },
+      })
+      expect(stale.status()).toBe(409)
+
+      const invalid = await adminPage.request.put(tariffPath, {
+        headers: { [adminCsrf.headerName]: adminCsrf.token },
+        data: {
+          expectedVersion: 'j03-v2',
+          tariff: { ...tariff, version: 'j03-v3', bands: [] },
+        },
+      })
+      expect(invalid.status()).toBe(400)
+
+      // Every rejected write must leave the whole public response untouched.
+      const unchanged = await publicPage.request.get(
+        '/api/v1/tariffs?provinceCode=34',
+      )
+      expect(unchanged.ok()).toBe(true)
+      expect(await unchanged.json()).toEqual(tariff)
+    })
+
+    await test.step('page through the real school catalog without losing the selection path', async () => {
+      const adminCsrf = await csrf(adminPage)
+      for (let index = 1; index <= 11; index += 1) {
+        const suffix = String(index).padStart(2, '0')
+        const created = await adminPage.request.post('/api/v1/admin/schools', {
+          headers: { [adminCsrf.headerName]: adminCsrf.token },
+          data: {
+            neighborhoodId: 340201,
+            name: `J03 Sayfa Okulu ${suffix}`,
+            address: null,
+            sourceName: 'J03 pagination fixture',
+            sourceCode: `J03-PAGE-${suffix}`,
+            active: true,
+          },
+        })
+        expect(created.status()).toBe(201)
+      }
+
+      await publicPage.goto('/')
+      await publicPage
+        .getByLabel('Okulun bulunduğu il')
+        .selectOption({ label: 'İstanbul' })
+      await expect(
+        publicPage.getByRole('button', {
+          name: 'Bu okulu seç: J03 Gerçek Okulu',
+        }),
+      ).toBeVisible()
+      await expect(publicPage.getByText('Sayfa 1 / 2').first()).toBeVisible()
+      await publicPage
+        .getByRole('button', { name: 'Sonraki sayfa' })
+        .first()
+        .click()
+      await expect(publicPage.getByText('Sayfa 2 / 2').first()).toBeVisible()
+      await publicPage
+        .getByRole('button', { name: 'Bu okulu seç: J03 Sayfa Okulu 11' })
+        .click()
+      await selectLoadedOption(publicPage, 'Servis alınacak ilçe', 'Üsküdar')
+    })
+
     let sharedDemandId = ''
     let firstParentSupportId = ''
     let secondParentSupportId = ''
@@ -1785,6 +1872,125 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       }
     })
 
+    let summaryBeforeSuspension = { discoverable: 0, suspended: 0 }
+    await test.step('filter notifications, demand lifecycle, and operator summary on the real stack', async () => {
+      type Page_ = { totalElements: number; totalPages: number }
+      const notificationsPath = '/api/v1/notifications?size=50'
+      const parentCsrf = await csrf(parentPage)
+      const total = async (page: typeof parentPage, path: string) => {
+        const response = await page.request.get(path)
+        expect(response.status()).toBe(200)
+        return (await response.json()) as Page_ & {
+          content: Array<{ id: string; readAt: string | null }>
+        }
+      }
+
+      const all = await total(parentPage, notificationsPath)
+      const unread = await total(
+        parentPage,
+        `${notificationsPath}&readState=UNREAD`,
+      )
+      const read = await total(
+        parentPage,
+        `${notificationsPath}&readState=READ`,
+      )
+      expect(all.totalElements).toBeGreaterThan(0)
+      expect(unread.totalElements + read.totalElements).toBe(all.totalElements)
+      expect(unread.content.every((item) => item.readAt === null)).toBe(true)
+      expect(read.content.every((item) => item.readAt !== null)).toBe(true)
+      expect(
+        (
+          await parentPage.request.get(`${notificationsPath}&readState=unread`)
+        ).status(),
+      ).toBe(400)
+      const otherParent = await total(secondParentPage, notificationsPath)
+      const ownIds = new Set(all.content.map((item) => item.id))
+      expect(otherParent.content.some((item) => ownIds.has(item.id))).toBe(
+        false,
+      )
+      if (unread.content.length > 0) {
+        const marked = await parentPage.request.put(
+          `/api/v1/notifications/${unread.content[0]!.id}/read`,
+          { headers: { [parentCsrf.headerName]: parentCsrf.token } },
+        )
+        expect(marked.ok()).toBe(true)
+        expect(
+          (await total(parentPage, `${notificationsPath}&readState=UNREAD`))
+            .totalElements,
+        ).toBe(unread.totalElements - 1)
+        expect(
+          (await total(parentPage, `${notificationsPath}&readState=READ`))
+            .totalElements,
+        ).toBe(read.totalElements + 1)
+      }
+
+      const boardPath =
+        '/api/v1/demands?schoolId=10000000-0000-4000-8000-000000000001&size=50'
+      const demandsBy = async (status?: string) =>
+        (await total(
+          publicPage,
+          status ? `${boardPath}&status=${status}` : boardPath,
+        )) as Page_ & {
+          content: Array<{ status: string; closureReason: string | null }>
+        }
+      const openDemands = await demandsBy()
+      const fulfilled = await demandsBy('FULFILLED')
+      const closed = await demandsBy('CLOSED')
+      const everything = await demandsBy('ALL')
+      expect((await demandsBy('OPEN')).totalElements).toBe(
+        openDemands.totalElements,
+      )
+      expect(openDemands.content.every((item) => item.status === 'OPEN')).toBe(
+        true,
+      )
+      expect(fulfilled.totalElements).toBeGreaterThan(0)
+      expect(
+        fulfilled.content.every(
+          (item) =>
+            item.status === 'CLOSED' && item.closureReason === 'FULFILLED',
+        ),
+      ).toBe(true)
+      expect(
+        closed.content.every(
+          (item) =>
+            item.status === 'CLOSED' && item.closureReason === 'INACTIVE',
+        ),
+      ).toBe(true)
+      expect(everything.totalElements).toBe(
+        openDemands.totalElements +
+          fulfilled.totalElements +
+          closed.totalElements,
+      )
+      const paged = await total(
+        publicPage,
+        '/api/v1/demands?schoolId=10000000-0000-4000-8000-000000000001&status=ALL&size=1',
+      )
+      expect(paged.totalPages).toBe(everything.totalElements)
+      expect(
+        (await publicPage.request.get(`${boardPath}&status=ARCHIVED`)).status(),
+      ).toBe(400)
+
+      const summaryResponse = await adminPage.request.get(
+        '/api/v1/admin/operators/summary',
+      )
+      expect(summaryResponse.status()).toBe(200)
+      const summary = (await summaryResponse.json()) as {
+        total: number
+        discoverable: number
+        changesRequested: number
+        suspended: number
+      }
+      const listed = await total(adminPage, '/api/v1/admin/operators?size=1')
+      expect(summary.total).toBe(listed.totalElements)
+      expect(summary.discoverable).toBeGreaterThan(0)
+      expect(
+        (
+          await operatorPage.request.get('/api/v1/admin/operators/summary')
+        ).status(),
+      ).toBe(403)
+      summaryBeforeSuspension = summary
+    })
+
     await test.step('suspend the operator, revoke the session, and remove discovery', async () => {
       await adminPage.goto('/admin/applications')
       await adminPage
@@ -1816,6 +2022,16 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(
         publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
       ).toBeVisible()
+
+      const afterSuspension = (await (
+        await adminPage.request.get('/api/v1/admin/operators/summary')
+      ).json()) as { discoverable: number; suspended: number }
+      expect(afterSuspension.suspended).toBe(
+        summaryBeforeSuspension.suspended + 1,
+      )
+      expect(afterSuspension.discoverable).toBe(
+        summaryBeforeSuspension.discoverable - 1,
+      )
     })
 
     await test.step('persist and securely end the parent session', async () => {

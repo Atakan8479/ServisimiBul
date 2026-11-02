@@ -43,8 +43,16 @@ export type NotificationPage = z.infer<typeof notificationPageSchema>
 
 export const unreadCountChangedEvent = 'servisimibul:unread-count-changed'
 
-export function listNotifications(page = 0, signal?: AbortSignal) {
-  return apiRequest(`/notifications?page=${page}&size=20`, {
+export type NotificationReadState = 'ALL' | 'UNREAD' | 'READ'
+
+export function listNotifications(
+  page = 0,
+  readState: NotificationReadState = 'ALL',
+  signal?: AbortSignal,
+) {
+  // ALL is the server default, so the original request shape stays unchanged.
+  const filter = readState === 'ALL' ? '' : `&readState=${readState}`
+  return apiRequest(`/notifications?page=${page}&size=20${filter}`, {
     requiresSession: true,
     signal,
     schema: notificationPageSchema,

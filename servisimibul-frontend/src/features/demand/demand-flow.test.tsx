@@ -290,6 +290,91 @@ describe('demand board regression cases', () => {
   })
 })
 
+describe('demand board status filters', () => {
+  it('filters on the server and keeps the applied year while resetting the page', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/demands', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(new URLSearchParams(parameters))
+        return HttpResponse.json({
+          ...demandPage([demand()]),
+          page: Number(parameters.get('page')),
+          totalElements: 11,
+          totalPages: 2,
+        })
+      }),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: school.name })
+    const group = screen.getByRole('group', {
+      name: 'Talep durumuna göre filtrele',
+    })
+    expect(within(group).getByRole('button', { name: 'Açık' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2027' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await waitFor(() => expect(requests).toHaveLength(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Sonraki sayfa' }))
+    await waitFor(() => expect(requests.at(-1)?.get('page')).toBe('1'))
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Karşılandı' }))
+    await waitFor(() =>
+      expect(requests.at(-1)?.get('status')).toBe('FULFILLED'),
+    )
+    expect(requests.at(-1)?.get('page')).toBe('0')
+    expect(requests.at(-1)?.get('academicYear')).toBe('2026-2027')
+    expect(
+      await screen.findByRole('heading', { name: 'Karşılanan talepler' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Kapalı' }))
+    await waitFor(() => expect(requests.at(-1)?.get('status')).toBe('CLOSED'))
+    fireEvent.click(within(group).getByRole('button', { name: 'Tümü' }))
+    await waitFor(() => expect(requests.at(-1)?.get('status')).toBe('ALL'))
+    fireEvent.click(within(group).getByRole('button', { name: 'Açık' }))
+    await waitFor(() => expect(requests.at(-1)?.has('status')).toBe(false))
+    expect(requests[0]?.has('status')).toBe(false)
+  })
+
+  it('keeps the selection and only offers a new demand in the open view', async () => {
+    const statuses: Array<string | null> = []
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/demands', ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        statuses.push(parameters.get('status'))
+        expect(parameters.get('schoolId')).toBe(school.id)
+        expect(parameters.get('neighborhoodId')).toBe('201')
+        return HttpResponse.json(demandPage([]))
+      }),
+    )
+
+    renderRoute(filteredBoardPath)
+    await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
+    expect(
+      screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Kapalı' }))
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Bu seçim için kapanan talep yok',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+    ).toBeNull()
+    expect(statuses.at(-1)).toBe('CLOSED')
+  })
+})
+
 describe('demand board draft vs applied academic year', () => {
   function pagedHandler(
     requests: URLSearchParams[],

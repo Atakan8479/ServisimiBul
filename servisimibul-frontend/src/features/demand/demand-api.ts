@@ -209,7 +209,11 @@ export interface SupportValues {
   reasons: SupportReason[]
 }
 
+// Public board lifecycle filter (D058); OPEN is the server default.
+export type DemandListStatus = 'ALL' | 'OPEN' | 'FULFILLED' | 'CLOSED'
+
 export interface DemandFilters {
+  status?: DemandListStatus
   schoolId?: string
   neighborhoodId?: number
   academicYear?: string
@@ -228,6 +232,9 @@ export function listDemands(filters: DemandFilters): Promise<DemandPage> {
     page: String(filters.page),
     size: '10',
   })
+  if (filters.status && filters.status !== 'OPEN') {
+    parameters.set('status', filters.status)
+  }
   if (filters.schoolId) parameters.set('schoolId', filters.schoolId)
   if (filters.neighborhoodId) {
     parameters.set('neighborhoodId', String(filters.neighborhoodId))

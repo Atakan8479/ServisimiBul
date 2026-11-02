@@ -2,6 +2,7 @@ package com.servisimibul.backend.operatorapplication.controller;
 
 import com.servisimibul.backend.identity.OperatorApprovalStatus;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ApplicationDetailResponse;
+import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.OperatorSummaryResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.PageResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.ProfileResponse;
 import com.servisimibul.backend.operatorapplication.dto.OperatorApplicationDtos.RevisionRequest;
@@ -33,6 +34,11 @@ public class AdminOperatorApplicationController {
             @RequestParam(defaultValue = "20") int size
     ) {
         return operatorApplicationService.queue(status, page, size);
+    }
+
+    @GetMapping("/summary")
+    public OperatorSummaryResponse summary() {
+        return operatorApplicationService.summary();
     }
 
     @GetMapping("/{id}")
