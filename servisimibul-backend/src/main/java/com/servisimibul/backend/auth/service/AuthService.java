@@ -154,6 +154,10 @@ public class AuthService {
         sessionRevoker.revokeAll(userId);
     }
 
+    public void logoutAll(UUID userId) {
+        sessionRevoker.revokeAll(userId);
+    }
+
     private void requireEmail() {
         if (!emailSender.isAvailable()) {
             throw new EmailUnavailableException();

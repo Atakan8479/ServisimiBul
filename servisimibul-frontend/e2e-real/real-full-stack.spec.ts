@@ -2126,6 +2126,120 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       await expect(passwordSessionPage).toHaveURL(/\/demands$/)
     })
+
+    await test.step('sign out of all devices revokes every real parent and operator session', async () => {
+      const changedPassword = `${parentPassword!}-changed`
+
+      // Context A (parentPage) and context B (passwordSessionPage) are two
+      // independent real sessions for the same parent at this point.
+      await login(parentPage, parentEmail, changedPassword, 'parent')
+      expect(
+        (await passwordSessionPage.request.get('/api/v1/auth/me')).status(),
+      ).toBe(200)
+      expect((await adminPage.request.get('/api/v1/auth/me')).status()).toBe(
+        200,
+      )
+
+      await parentPage.goto('/parent/account')
+      await parentPage
+        .getByRole('button', { name: 'Oturumları sonlandır' })
+        .click()
+      const parentLogoutAll = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/auth/logout-all'),
+      )
+      await parentPage
+        .getByRole('button', {
+          name: 'Tüm cihazlardan çıkış yap',
+          exact: true,
+        })
+        .click()
+      expect((await parentLogoutAll).status()).toBe(204)
+      await expect(parentPage).toHaveURL(/\/parent\/login\?.*loggedOutAll=true/)
+
+      expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
+        401,
+      )
+      expect(
+        (await passwordSessionPage.request.get('/api/v1/auth/me')).status(),
+      ).toBe(401)
+      expect((await adminPage.request.get('/api/v1/auth/me')).status()).toBe(
+        200,
+      )
+
+      await login(parentPage, parentEmail, changedPassword, 'parent')
+
+      const operatorRememberedContext = await browser.newContext()
+      try {
+        const operatorRememberedPage = await operatorRememberedContext.newPage()
+        await operatorRememberedPage.goto('/operator/login')
+        await operatorRememberedPage
+          .getByLabel('E-posta')
+          .fill(secondOperatorEmail)
+        await operatorRememberedPage
+          .getByRole('textbox', { name: 'Şifre', exact: true })
+          .fill(secondOperatorPassword)
+        await operatorRememberedPage
+          .getByRole('checkbox', { name: /Beni hatırla/ })
+          .check()
+        const rememberedLogin = operatorRememberedPage.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            response.url().endsWith('/api/v1/auth/login'),
+        )
+        await operatorRememberedPage
+          .getByRole('button', { name: 'Giriş yap' })
+          .click()
+        expect((await rememberedLogin).status()).toBe(200)
+        await expect(operatorRememberedPage).toHaveURL(/\/operator(?:\/|$)/)
+
+        expect(
+          (await secondOperatorPage.request.get('/api/v1/auth/me')).status(),
+        ).toBe(200)
+
+        await secondOperatorPage.goto('/operator/account')
+        await secondOperatorPage
+          .getByRole('button', { name: 'Oturumları sonlandır' })
+          .click()
+        const operatorLogoutAll = secondOperatorPage.waitForResponse(
+          (response) =>
+            response.request().method() === 'POST' &&
+            response.url().endsWith('/api/v1/auth/logout-all'),
+        )
+        await secondOperatorPage
+          .getByRole('button', {
+            name: 'Tüm cihazlardan çıkış yap',
+            exact: true,
+          })
+          .click()
+        expect((await operatorLogoutAll).status()).toBe(204)
+        await expect(secondOperatorPage).toHaveURL(
+          /\/operator\/login\?.*loggedOutAll=true/,
+        )
+
+        expect(
+          (await secondOperatorPage.request.get('/api/v1/auth/me')).status(),
+        ).toBe(401)
+        expect(
+          (
+            await operatorRememberedPage.request.get('/api/v1/auth/me')
+          ).status(),
+        ).toBe(401)
+        expect((await adminPage.request.get('/api/v1/auth/me')).status()).toBe(
+          200,
+        )
+
+        await login(
+          secondOperatorPage,
+          secondOperatorEmail,
+          secondOperatorPassword,
+          'operator',
+        )
+      } finally {
+        await operatorRememberedContext.close()
+      }
+    })
   } finally {
     await Promise.all([
       operatorContext.close(),

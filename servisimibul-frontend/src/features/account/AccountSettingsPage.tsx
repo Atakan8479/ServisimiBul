@@ -1,8 +1,10 @@
+import { useEffect, useId, useRef, useState } from 'react'
 import {
   Link,
   isRouteErrorResponse,
   useLoaderData,
   useLocation,
+  useNavigate,
   useRevalidator,
   useRouteError,
 } from 'react-router-dom'
@@ -14,12 +16,48 @@ import {
   StatusBadge,
   SurfaceCard,
 } from '../../components/design-system'
-import type { AuthUser } from '../auth/auth-api'
+import {
+  clearKnownAuthRole,
+  logoutAllDevices,
+  type AuthUser,
+} from '../auth/auth-api'
 import './account-settings.css'
 
 export function AccountSettingsPage() {
   const user = useLoaderData() as AuthUser
+  const navigate = useNavigate()
   const isOperator = user.role === 'OPERATOR'
+  const loginPath = isOperator ? '/operator/login' : '/parent/login'
+  const [signOutAllOpen, setSignOutAllOpen] = useState(false)
+  const [signOutAllPending, setSignOutAllPending] = useState(false)
+  const [signOutAllError, setSignOutAllError] = useState<string>()
+
+  async function confirmSignOutAll() {
+    setSignOutAllPending(true)
+    setSignOutAllError(undefined)
+    try {
+      await logoutAllDevices()
+      void navigate(`${loginPath}?loggedOutAll=true`, { replace: true })
+    } catch (error) {
+      if (error instanceof ApiError && error.sessionExpired) {
+        clearKnownAuthRole()
+        void navigate(`${loginPath}?reason=session`, { replace: true })
+        return
+      }
+      setSignOutAllPending(false)
+      if (error instanceof ApiError) {
+        setSignOutAllError(
+          error.problem.code === 'RATE_LIMITED'
+            ? 'Çok sık denediniz. Biraz sonra tekrar deneyin.'
+            : error.problem.detail,
+        )
+        return
+      }
+      setSignOutAllError(
+        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+      )
+    }
+  }
 
   return (
     <section className="account-settings-page">
@@ -76,9 +114,8 @@ export function AccountSettingsPage() {
                   : '/parent/account/password'
               }
             />
-            <FutureAction
-              description="Diğer oturumları sonlandırma işlemi henüz kullanıma açık değil."
-              title="Tüm cihazlardan çıkış yap"
+            <SignOutAllAction
+              onRequestConfirm={() => setSignOutAllOpen(true)}
             />
           </SurfaceCard>
         </SectionShell>
@@ -131,6 +168,19 @@ export function AccountSettingsPage() {
       >
         {isOperator ? 'Genel bakışa dön' : 'Talep panosuna dön'}
       </Link>
+
+      {signOutAllOpen && (
+        <SignOutAllDialog
+          error={signOutAllError}
+          onCancel={() => {
+            if (signOutAllPending) return
+            setSignOutAllOpen(false)
+            setSignOutAllError(undefined)
+          }}
+          onConfirm={confirmSignOutAll}
+          pending={signOutAllPending}
+        />
+      )}
     </section>
   )
 }
@@ -220,5 +270,106 @@ function FutureAction({
         </Button>
       </div>
     </div>
+  )
+}
+
+function SignOutAllAction({
+  onRequestConfirm,
+}: {
+  onRequestConfirm: () => void
+}) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>Oturumları sonlandır</h3>
+        <p>
+          Tüm cihazlardan çıkış yaparak bu cihaz dahil açık olan oturumları
+          sonlandırın.
+        </p>
+      </div>
+      <div className="account-action-state">
+        <Button onClick={onRequestConfirm} tone="quiet" type="button">
+          Oturumları sonlandır
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function SignOutAllDialog({
+  error,
+  onCancel,
+  onConfirm,
+  pending,
+}: {
+  error?: string
+  onCancel: () => void
+  onConfirm: () => void
+  pending: boolean
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    dialog?.showModal()
+    cancelRef.current?.focus()
+    return () => {
+      dialog?.close()
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [])
+
+  return (
+    <dialog
+      aria-labelledby={titleId}
+      className="account-confirm-dialog"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onCancel()
+      }}
+      onClose={(event) => {
+        // Repeated Escape can close a native dialog without a cancel event.
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
+      }}
+      ref={dialogRef}
+    >
+      <h2 id={titleId}>Tüm cihazlardan çıkış yap</h2>
+      <div className="account-confirm-body">
+        <p>
+          Bu işlem bu cihaz dahil, hesabınızla açık olan tüm oturumları
+          sonlandırır. Devam etmek için yeniden giriş yapmanız gerekir.
+        </p>
+        {error && (
+          <p className="account-confirm-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="account-confirm-actions">
+        <button
+          className="ui-button ui-button-secondary"
+          disabled={pending}
+          onClick={onCancel}
+          ref={cancelRef}
+          type="button"
+        >
+          Vazgeç
+        </button>
+        <Button
+          disabled={pending}
+          onClick={onConfirm}
+          tone="danger"
+          type="button"
+        >
+          {pending ? 'Çıkış yapılıyor…' : 'Tüm cihazlardan çıkış yap'}
+        </Button>
+      </div>
+    </dialog>
   )
 }

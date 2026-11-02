@@ -67,6 +67,8 @@ const localizedProblems: Record<string, string> = {
   CURRENT_PASSWORD_INVALID: 'Mevcut şifre doğrulanamadı.',
   PARENT_REGISTRATION_UNAVAILABLE: 'Şu anda veli hesabı oluşturulamıyor.',
   EMAIL_UNAVAILABLE: 'Bu işlem şu anda tamamlanamıyor.',
+  AUTH_SERVICE_UNAVAILABLE:
+    'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
   RATE_LIMIT_EXCEEDED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
   AUTHENTICATION_REQUIRED: 'Devam etmek için giriş yapın.',
   UNAUTHENTICATED: 'Devam etmek için giriş yapın.',
