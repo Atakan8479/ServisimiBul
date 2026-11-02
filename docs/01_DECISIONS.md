@@ -71,6 +71,7 @@ Approval state is important: never turn a proposal into a settled decision witho
 1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
 2. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
 3. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
+4. **LEG-01 (#194), needs the owner and qualified Turkish counsel:** the data controller's identity and public contact details, the platform's legal role versus operators, the intended audience and minimum age, and whether KVKK, 5651, 6502, 6563, and ETBIS apply to the free pilot or only to future commercial models. Questions L1–L8, verified facts, and reassessment triggers are in `docs/18_LEGAL_ROLE_AND_DATA_CONTROLLER.md`. No answer is approved; legal notices, rights channels, and real-user launch must not name a controller or contact until an approved decision replaces this item. Closing AUDIT-F4 (#166) did not resolve it.
 
 ## Decision change procedure
 When an approved decision changes: update this document, related domain/API/roadmap files, acceptance tests and task scope in the same reviewed PR. Never silently overwrite the old rule.
