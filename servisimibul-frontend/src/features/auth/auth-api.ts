@@ -113,6 +113,15 @@ export async function logout(): Promise<void> {
   clearKnownAuthRole()
 }
 
+export async function logoutAllDevices(): Promise<void> {
+  await apiRequest('/auth/logout-all', {
+    method: 'POST',
+    requiresSession: true,
+  })
+  resetCsrfToken()
+  clearKnownAuthRole()
+}
+
 export function knownAuthRole(): AuthRole | undefined {
   const role = window.sessionStorage.getItem(AUTH_ROLE_KEY)
   return role === 'ADMIN' || role === 'OPERATOR' || role === 'PARENT'

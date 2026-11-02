@@ -145,4 +145,17 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/logout-all")
+    ResponseEntity<Void> logoutAll(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest
+    ) {
+        authService.logoutAll(user.id());
+        if (httpRequest.getSession(false) != null) {
+            httpRequest.getSession(false).invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
+    }
+
 }

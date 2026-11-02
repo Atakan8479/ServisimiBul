@@ -113,6 +113,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/change-password")
                         .hasAnyRole("PARENT", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/reports")
                         .hasAnyRole("PARENT", "OPERATOR")

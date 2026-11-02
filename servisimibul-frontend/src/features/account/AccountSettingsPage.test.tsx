@@ -6,11 +6,20 @@ import {
   waitFor,
 } from '@testing-library/react'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
 import { knownAuthRole } from '../auth/auth-api'
+
+beforeAll(() => {
+  HTMLDialogElement.prototype.showModal = function showModal() {
+    this.setAttribute('open', '')
+  }
+  HTMLDialogElement.prototype.close = function close() {
+    this.removeAttribute('open')
+  }
+})
 
 const parentUser = {
   id: 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd',
@@ -167,12 +176,15 @@ describe('account settings', () => {
     const unavailable = screen.getAllByRole('button', {
       name: 'Kullanılamıyor',
     })
-    expect(unavailable).toHaveLength(5)
+    expect(unavailable).toHaveLength(4)
     unavailable.forEach((button) => expect(button).toBeDisabled())
     expect(screen.getByRole('link', { name: 'Değiştir' })).toHaveAttribute(
       'href',
       '/parent/account/password',
     )
+    expect(
+      screen.getByRole('button', { name: 'Oturumları sonlandır' }),
+    ).toBeInTheDocument()
     expect(screen.queryByText(/başar/i)).not.toBeInTheDocument()
   })
 
@@ -401,6 +413,249 @@ describe('password change', () => {
     expect(await screen.findByText(/Oturumunuz sona erdi/)).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/parent/login')
     expect(router.state.location.search).toBe('?reason=session')
+  })
+})
+
+describe('sign out of all devices', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  it('opens a confirmation dialog without calling the backend', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Tüm cihazlardan çıkış yap',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vazgeç' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    ).toBeInTheDocument()
+  })
+
+  it('cancelling leaves the current session unchanged and sends no request', async () => {
+    let requests = 0
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/logout-all', () => {
+        requests += 1
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(requests).toBe(0)
+    expect(knownAuthRole()).toBe('PARENT')
+  })
+
+  it('confirms, clears client auth state and redirects a parent to the parent login', async () => {
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/logout-all',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    )
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/parent/login'),
+    )
+    expect(router.state.location.search).toContain('loggedOutAll=true')
+    expect(knownAuthRole()).toBeUndefined()
+  })
+
+  it('confirms and redirects an operator to the operator login', async () => {
+    useAuthenticatedUser(operatorUser)
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/logout-all',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    const router = renderRoute('/operator/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    )
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/operator/login'),
+    )
+    expect(router.state.location.search).toContain('loggedOutAll=true')
+  })
+
+  it('disables both dialog actions while the request is pending and ignores a repeat click', async () => {
+    let requests = 0
+    let release: (() => void) | undefined
+    const pending = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/logout-all', async () => {
+        requests += 1
+        await pending
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    const confirm = screen.getByRole('button', {
+      name: 'Tüm cihazlardan çıkış yap',
+    })
+    fireEvent.click(confirm)
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Vazgeç' })).toBeDisabled(),
+    )
+    await waitFor(() => expect(requests).toBe(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Çıkış yapılıyor…' }))
+    expect(requests).toBe(1)
+    release?.()
+  })
+
+  it('shows a retryable error and keeps the session when the backend reports failure', async () => {
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/logout-all', () =>
+        HttpResponse.json(problem(503), { status: 503 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Hesap bilgileri şu anda yüklenemiyor.',
+    )
+    expect(router.state.location.pathname).toBe('/parent/account')
+    expect(knownAuthRole()).toBe('PARENT')
+    expect(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    ).toBeEnabled()
+  })
+
+  it('shows a retryable network error without claiming success', async () => {
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/logout-all', () => HttpResponse.error()),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Bağlantı kurulamadı',
+    )
+    expect(router.state.location.pathname).toBe('/parent/account')
+    expect(knownAuthRole()).toBe('PARENT')
+  })
+
+  it('treats an already-expired session through the existing login flow', async () => {
+    useAuthenticatedUser(parentUser)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/logout-all', () =>
+        HttpResponse.json(problem(401), { status: 401 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Oturumları sonlandır' }),
+    )
+    await screen.findByRole('heading', { name: 'Tüm cihazlardan çıkış yap' })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Tüm cihazlardan çıkış yap' }),
+    )
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/parent/login'),
+    )
+    expect(router.state.location.search).toBe('?reason=session')
+    expect(knownAuthRole()).toBeUndefined()
+  })
+
+  it('moves focus to the cancel action and restores it to the trigger on close', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/account')
+
+    const trigger = await screen.findByRole('button', {
+      name: 'Oturumları sonlandır',
+    })
+    trigger.focus()
+    fireEvent.click(trigger)
+    const cancel = await screen.findByRole('button', { name: 'Vazgeç' })
+    await waitFor(() => expect(cancel).toHaveFocus())
+
+    fireEvent.click(cancel)
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+    )
+    expect(trigger).toHaveFocus()
+  })
+
+  it('leaves the other account and privacy actions untouched', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/account')
+
+    await screen.findByRole('button', { name: 'Oturumları sonlandır' })
+    expect(
+      screen.getAllByRole('button', { name: 'Kullanılamıyor' }),
+    ).toHaveLength(4)
+    expect(screen.getByRole('link', { name: 'Değiştir' })).toHaveAttribute(
+      'href',
+      '/parent/account/password',
+    )
   })
 })
 
