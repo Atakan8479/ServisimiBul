@@ -125,7 +125,10 @@ describe('notification center', () => {
     expect(
       screen.queryByRole('button', { name: 'Okundu olarak işaretle' }),
     ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus()
+    // Focus moves in an effect after the commit that renders the change.
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'İncele' })).toHaveFocus(),
+    )
   })
 
   it('marks every notification read through the backend', async () => {
@@ -173,7 +176,7 @@ describe('notification center', () => {
     const notice = await screen.findByText(
       'Tüm bildirimler okundu olarak işaretlendi.',
     )
-    expect(notice).toHaveFocus()
+    await waitFor(() => expect(notice).toHaveFocus())
     expect(calls).toBe(1)
     expect(screen.getByText('Hepsi okundu')).toBeInTheDocument()
     expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
