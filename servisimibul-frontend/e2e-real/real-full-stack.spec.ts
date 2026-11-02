@@ -112,6 +112,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const secondParentContext = await browser.newContext()
   const nonSupportingParentContext = await browser.newContext()
   const secondOperatorContext = await browser.newContext()
+  const passwordSessionContext = await browser.newContext()
   const operatorPage = await operatorContext.newPage()
   const adminPage = await adminContext.newPage()
   const publicPage = await publicContext.newPage()
@@ -119,6 +120,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
   const secondParentPage = await secondParentContext.newPage()
   const nonSupportingParentPage = await nonSupportingParentContext.newPage()
   const secondOperatorPage = await secondOperatorContext.newPage()
+  const passwordSessionPage = await passwordSessionContext.newPage()
 
   adminPage.on('dialog', (dialog) => void dialog.accept())
 
@@ -2052,6 +2054,78 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         /\/parent\/login\?.*next=%2Fnotifications/,
       )
     })
+
+    await test.step('change the parent password and revoke every real session', async () => {
+      const changedPassword = `${parentPassword!}-changed`
+      await login(parentPage, parentEmail, parentPassword!, 'parent')
+      await login(passwordSessionPage, parentEmail, parentPassword!, 'parent')
+
+      await parentPage.goto('/parent/account/password')
+      await parentPage.getByLabel('Mevcut şifre').fill('wrong current password')
+      await parentPage
+        .getByLabel('Yeni şifre', { exact: true })
+        .fill(changedPassword)
+      await parentPage
+        .getByLabel('Yeni şifreyi tekrar girin')
+        .fill(changedPassword)
+      const rejectedChange = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/auth/change-password'),
+      )
+      await parentPage.getByRole('button', { name: 'Şifreyi güncelle' }).click()
+      expect((await rejectedChange).status()).toBe(400)
+      await expect(
+        parentPage.getByText('Mevcut şifre doğrulanamadı.'),
+      ).toBeVisible()
+      expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
+        200,
+      )
+
+      await parentPage.getByLabel('Mevcut şifre').fill(parentPassword!)
+      const successfulChange = parentPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/auth/change-password'),
+      )
+      await parentPage.getByRole('button', { name: 'Şifreyi güncelle' }).click()
+      expect((await successfulChange).status()).toBe(204)
+      await expect(parentPage).toHaveURL(
+        /\/parent\/login\?passwordChanged=true$/,
+      )
+      await expect(
+        parentPage.getByText(/Şifreniz güncellendi ve açık oturumlarınız/),
+      ).toBeVisible()
+      expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
+        401,
+      )
+      expect(
+        (await passwordSessionPage.request.get('/api/v1/auth/me')).status(),
+      ).toBe(401)
+
+      await passwordSessionPage.goto('/parent/login')
+      await passwordSessionPage.getByLabel('E-posta').fill(parentEmail)
+      await passwordSessionPage
+        .getByRole('textbox', { name: 'Şifre', exact: true })
+        .fill(parentPassword!)
+      const rejectedLogin = passwordSessionPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith('/api/v1/auth/login'),
+      )
+      await passwordSessionPage
+        .getByRole('button', { name: 'Giriş yap' })
+        .click()
+      expect((await rejectedLogin).status()).toBe(401)
+
+      await passwordSessionPage
+        .getByRole('textbox', { name: 'Şifre', exact: true })
+        .fill(changedPassword)
+      await passwordSessionPage
+        .getByRole('button', { name: 'Giriş yap' })
+        .click()
+      await expect(passwordSessionPage).toHaveURL(/\/demands$/)
+    })
   } finally {
     await Promise.all([
       operatorContext.close(),
@@ -2061,6 +2135,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       secondParentContext.close(),
       nonSupportingParentContext.close(),
       secondOperatorContext.close(),
+      passwordSessionContext.close(),
     ])
   }
 })

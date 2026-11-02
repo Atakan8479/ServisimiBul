@@ -1,7 +1,9 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
+import com.servisimibul.backend.auth.exception.AuthValidationException;
 import com.servisimibul.backend.auth.exception.InvalidAuthTokenException;
+import com.servisimibul.backend.auth.exception.InvalidCurrentPasswordException;
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.EmailVerificationToken;
@@ -145,6 +147,21 @@ class AuthPersistenceService {
                 .orElseThrow(InvalidAuthTokenException::new)
                 .changePasswordHash(passwordEncoder.encode(password));
         return userId;
+    }
+
+    void changePassword(UUID userId, String currentPassword, String newPassword) {
+        AppUser user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(InvalidCurrentPasswordException::new);
+        if (!user.passwordMatches(currentPassword, passwordEncoder)) {
+            throw new InvalidCurrentPasswordException();
+        }
+        if (user.passwordMatches(newPassword, passwordEncoder)) {
+            throw new AuthValidationException(
+                    "newPassword",
+                    "New password must be different from the current password"
+            );
+        }
+        user.changePasswordHash(passwordEncoder.encode(newPassword));
     }
 
     private boolean withinCooldown(Optional<OffsetDateTime> latest, OffsetDateTime now) {

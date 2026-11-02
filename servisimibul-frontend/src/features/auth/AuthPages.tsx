@@ -25,16 +25,8 @@ import {
   verifyEmail,
 } from './auth-api'
 import { AuthFrame } from './AuthFrame'
+import { passwordSchema } from './password-policy'
 import './auth-ui.css'
-
-const passwordSchema = z
-  .string()
-  .min(12, 'Şifre en az 12 karakter olmalıdır.')
-  .max(64, 'Şifre en fazla 64 karakter olabilir.')
-  .refine(
-    (value) => new TextEncoder().encode(value).length <= 72,
-    'Şifre UTF-8 olarak en fazla 72 bayt olabilir.',
-  )
 
 const registrationSchema = z.object({
   email: z.string().trim().email('Geçerli bir e-posta adresi girin.'),
@@ -713,6 +705,12 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
       {searchParams.get('reason') === 'session' && (
         <div className="status-banner warning" role="status">
           Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.
+        </div>
+      )}
+      {searchParams.get('passwordChanged') === 'true' && (
+        <div className="status-banner success" role="status">
+          Şifreniz güncellendi ve açık oturumlarınız sonlandırıldı. Yeni
+          şifrenizle yeniden giriş yapın.
         </div>
       )}
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
