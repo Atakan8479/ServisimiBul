@@ -100,6 +100,22 @@ export function getApplications(
   })
 }
 
+const operatorSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  discoverable: z.number().int().nonnegative(),
+  changesRequested: z.number().int().nonnegative(),
+  suspended: z.number().int().nonnegative(),
+})
+
+export type OperatorSummary = z.infer<typeof operatorSummarySchema>
+
+export function getOperatorSummary(): Promise<OperatorSummary> {
+  return apiRequest('/admin/operators/summary', {
+    requiresSession: true,
+    schema: operatorSummarySchema,
+  })
+}
+
 export function getApplication(id: string): Promise<ApplicationDetail> {
   return apiRequest(`/admin/operators/${id}`, {
     requiresSession: true,

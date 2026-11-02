@@ -60,6 +60,10 @@ export interface MockApiState {
     updatedAt: string
   }>
   tariff: ReturnType<typeof tariff>
+  // Notifications the signed-in account owns; read state follows readAt.
+  notifications?: MockNotification[]
+  // A closed demand reports its closure reason; undefined keeps it OPEN.
+  demandClosure?: 'FULFILLED' | 'INACTIVE'
   demandCreated: boolean
   parentSupport: null | {
     status: 'ACTIVE' | 'WITHDRAWN'
@@ -171,18 +175,58 @@ export async function installMockApi(page: Page, state: MockApiState) {
 
     if (path === '/notifications/unread-count' && method === 'GET') {
       return requireAuthenticated(route, role, () =>
-        json(route, { unreadCount: 0 }),
+        json(route, {
+          unreadCount: (state.notifications ?? []).filter(
+            (item) => !item.readAt,
+          ).length,
+        }),
       )
     }
     if (path === '/notifications' && method === 'GET') {
-      return requireAuthenticated(route, role, () =>
-        json(route, pageResponse([], 20)),
-      )
+      return requireAuthenticated(route, role, () => {
+        const readState = url.searchParams.get('readState') ?? 'ALL'
+        if (!['ALL', 'UNREAD', 'READ'].includes(readState)) {
+          return problem(route, 400, 'invalid_read_state')
+        }
+        const matching = (state.notifications ?? []).filter((item) =>
+          readState === 'UNREAD'
+            ? !item.readAt
+            : readState === 'READ'
+              ? Boolean(item.readAt)
+              : true,
+        )
+        const pageNumber = Number(url.searchParams.get('page') ?? '0')
+        const pageSize = Number(url.searchParams.get('size') ?? '20')
+        return json(route, {
+          content: matching.slice(
+            pageNumber * pageSize,
+            pageNumber * pageSize + pageSize,
+          ),
+          page: pageNumber,
+          size: pageSize,
+          totalElements: matching.length,
+          totalPages: Math.ceil(matching.length / pageSize),
+        })
+      })
+    }
+    if (path === '/notifications/read-all' && method === 'PUT') {
+      return requireAuthenticated(route, role, () => {
+        const readAt = new Date().toISOString()
+        state.notifications = (state.notifications ?? []).map((item) => ({
+          ...item,
+          readAt: item.readAt ?? readAt,
+        }))
+        return json(route, { unreadCount: 0 })
+      })
     }
     if (/^\/notifications\/[0-9a-f-]+\/read$/.test(path) && method === 'PUT') {
-      return requireAuthenticated(route, role, () =>
-        problem(route, 404, 'notification_not_found'),
-      )
+      return requireAuthenticated(route, role, () => {
+        const id = path.split('/')[2]
+        const item = state.notifications?.find((entry) => entry.id === id)
+        if (!item) return problem(route, 404, 'notification_not_found')
+        item.readAt = item.readAt ?? new Date().toISOString()
+        return json(route, item)
+      })
     }
 
     if (path === '/operator/profile' && method === 'GET') {
@@ -218,6 +262,17 @@ export async function installMockApi(page: Page, state: MockApiState) {
       })
     }
 
+    if (path === '/admin/operators/summary' && method === 'GET') {
+      return requireRole(route, role, 'ADMIN', () =>
+        json(route, {
+          total: 1,
+          discoverable: discoveryReadiness(state).discoveryEligible ? 1 : 0,
+          changesRequested:
+            state.approvalStatus === 'CHANGES_REQUESTED' ? 1 : 0,
+          suspended: state.active ? 0 : 1,
+        }),
+      )
+    }
     if (path === '/admin/operators' && method === 'GET') {
       return requireRole(route, role, 'ADMIN', () =>
         json(route, pageResponse([profile(state)], 20)),
@@ -549,12 +604,21 @@ export async function installMockApi(page: Page, state: MockApiState) {
       )
     }
     if (path === '/demands' && method === 'GET') {
+      const status = url.searchParams.get('status') ?? 'OPEN'
+      if (!['OPEN', 'FULFILLED', 'CLOSED', 'ALL'].includes(status)) {
+        return problem(route, 400, 'validation_failed')
+      }
+      const actual =
+        state.demandClosure === 'FULFILLED'
+          ? 'FULFILLED'
+          : state.demandClosure === 'INACTIVE'
+            ? 'CLOSED'
+            : 'OPEN'
+      const listed =
+        state.demandCreated && (status === 'ALL' || status === actual)
       return json(
         route,
-        pageResponse(
-          state.demandCreated ? [demandResponse(state, role)] : [],
-          10,
-        ),
+        pageResponse(listed ? [demandResponse(state, role)] : [], 10),
       )
     }
     if (path === '/demands' && method === 'POST') {
@@ -754,9 +818,9 @@ function demandResponse(state: MockApiState, role: Role | undefined) {
   const active = support?.status === 'ACTIVE'
   return {
     id: demandId,
-    status: 'OPEN',
-    closureReason: null,
-    closedAt: null,
+    status: state.demandClosure ? 'CLOSED' : 'OPEN',
+    closureReason: state.demandClosure ?? null,
+    closedAt: state.demandClosure ? '2026-10-20T09:00:00Z' : null,
     academicYear: '2026-2027',
     createdAt,
     updatedAt: createdAt,
@@ -998,6 +1062,40 @@ function tariff(version: string) {
       },
     ],
   }
+}
+
+export interface MockNotification {
+  id: string
+  type: 'DEMAND_CREATED'
+  demandId: string
+  serviceResponseId: null
+  publicationEventId: null
+  feedbackId: null
+  moderationCaseId: null
+  title: string
+  message: string
+  href: string
+  readAt: string | null
+  createdAt: string
+}
+
+export function mockNotifications(count: number, readEvery = 3) {
+  return Array.from({ length: count }, (_, index): MockNotification => ({
+    id: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+    type: 'DEMAND_CREATED',
+    demandId,
+    serviceResponseId: null,
+    publicationEventId: null,
+    feedbackId: null,
+    moderationCaseId: null,
+    title: `Talep güncellemesi ${index + 1}`,
+    message: 'Örnek Okulu · Acıbadem talebinde yeni bir gelişme var.',
+    href: `/demands/${demandId}`,
+    readAt: index % readEvery === 0 ? '2026-10-24T09:00:00Z' : null,
+    createdAt: new Date(
+      Date.UTC(2026, 9, 25, 12, 0) - index * 3_600_000,
+    ).toISOString(),
+  }))
 }
 
 function pageResponse<T>(content: T[], size: number) {

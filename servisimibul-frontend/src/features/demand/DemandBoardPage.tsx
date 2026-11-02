@@ -18,6 +18,7 @@ import {
   type DemandFilters,
   type DemandPage,
   type SupportValues,
+  type DemandListStatus,
 } from './demand-api'
 import {
   DemandLocationPicker,
@@ -28,6 +29,38 @@ import { DemandSummaryCard } from './DemandSummaryCard'
 import { DemandSupportForm } from './DemandSupportForm'
 
 type DemandSort = DemandFilters['sort']
+
+const statusFilters: Array<{
+  value: DemandListStatus
+  label: string
+  title: string
+  empty: string
+}> = [
+  {
+    value: 'ALL',
+    label: 'Tümü',
+    title: 'Tüm talepler',
+    empty: 'Bu seçim için listelenecek talep yok',
+  },
+  {
+    value: 'OPEN',
+    label: 'Açık',
+    title: 'Açık servis talepleri',
+    empty: 'Bu seçim için açık talep yok',
+  },
+  {
+    value: 'FULFILLED',
+    label: 'Karşılandı',
+    title: 'Karşılanan talepler',
+    empty: 'Bu seçim için karşılanan talep yok',
+  },
+  {
+    value: 'CLOSED',
+    label: 'Kapalı',
+    title: 'Hareketsizlik nedeniyle kapanan talepler',
+    empty: 'Bu seçim için kapanan talep yok',
+  },
+]
 
 export function DemandBoardPage() {
   const navigate = useNavigate()
@@ -44,6 +77,9 @@ export function DemandBoardPage() {
     searchParams.get('academicYear') ?? '',
   )
   const [sort, setSort] = useState<DemandSort>('newest')
+  const [status, setStatus] = useState<DemandListStatus>('OPEN')
+  // Every load reads the latest status without threading it through each caller.
+  const statusRef = useRef<DemandListStatus>('OPEN')
   const [demands, setDemands] = useState<DemandPage>()
   const [loadingDemands, setLoadingDemands] = useState(true)
   const [demandError, setDemandError] = useState<string>()
@@ -82,6 +118,7 @@ export function DemandBoardPage() {
       setDemandError(undefined)
       try {
         const result = await listDemands({
+          status: statusRef.current,
           schoolId: nextSelection?.school.id,
           neighborhoodId: nextSelection?.neighborhood.id,
           academicYear: nextYear || undefined,
@@ -207,6 +244,14 @@ export function DemandBoardPage() {
     await loadDemands(appliedSelection, appliedAcademicYear, nextSort, 0)
   }
 
+  async function changeStatus(nextStatus: DemandListStatus) {
+    if (nextStatus === statusRef.current) return
+    statusRef.current = nextStatus
+    setStatus(nextStatus)
+    resetCreationFlow()
+    await loadDemands(appliedSelection, appliedAcademicYear, sort, 0)
+  }
+
   async function changeDemandPage(page: number) {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, page)
   }
@@ -218,6 +263,8 @@ export function DemandBoardPage() {
     setAcademicYear('')
     setAppliedAcademicYear('')
     setSort('newest')
+    statusRef.current = 'OPEN'
+    setStatus('OPEN')
     setFilterError(undefined)
     setReturnNotice(undefined)
     resetCreationFlow()
@@ -323,8 +370,11 @@ export function DemandBoardPage() {
     }
   }
 
+  const statusFilter =
+    statusFilters.find((item) => item.value === status) ?? statusFilters[1]!
+  // Only the open view decides whether a new demand is needed.
   const exactDemand =
-    appliedSelection && demands?.content.length === 1
+    status === 'OPEN' && appliedSelection && demands?.content.length === 1
       ? demands.content[0]
       : undefined
 
@@ -447,12 +497,28 @@ export function DemandBoardPage() {
         <section className="demand-board-results" aria-live="polite">
           <div className="section-heading">
             <div>
-              <h2>Açık servis talepleri</h2>
+              <h2>{statusFilter.title}</h2>
               <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
             </div>
-            {demands && (
+            {demands && !loadingDemands && (
               <span className="count-badge">{demands.totalElements} talep</span>
             )}
+          </div>
+          <div
+            aria-label="Talep durumuna göre filtrele"
+            className="demand-status-filter"
+            role="group"
+          >
+            {statusFilters.map((item) => (
+              <button
+                aria-pressed={status === item.value}
+                key={item.value}
+                onClick={() => void changeStatus(item.value)}
+                type="button"
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
 
           {loadingDemands && <DemandListSkeleton />}
@@ -480,7 +546,7 @@ export function DemandBoardPage() {
           )}
           {!loadingDemands && demands?.content.length === 0 && (
             <div className="empty-state demand-empty-state">
-              <h3>Bu seçim için açık talep yok</h3>
+              <h3>{statusFilter.empty}</h3>
               <p>
                 Yeni talebe geçmeden önce mevcut servis işletmecilerini kontrol
                 edebilirsiniz.
@@ -556,95 +622,100 @@ export function DemandBoardPage() {
         </aside>
       </div>
 
-      {appliedSelection && !loadingDemands && !demandError && (
-        <section
-          className="demand-create-panel"
-          aria-labelledby="create-demand-title"
-        >
-          {exactDemand ? (
-            <div className="existing-demand-callout">
-              <div>
-                <h2 id="create-demand-title">
-                  Bu okul ve mahalle için zaten bir talep var
-                </h2>
-              </div>
-              <Link
-                className="button-link"
-                to={`/demands/${exactDemand.id}`}
-                viewTransition
-              >
-                Mevcut talebe git
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="section-heading">
+      {appliedSelection &&
+        status === 'OPEN' &&
+        !loadingDemands &&
+        !demandError && (
+          <section
+            className="demand-create-panel"
+            aria-labelledby="create-demand-title"
+          >
+            {exactDemand ? (
+              <div className="existing-demand-callout">
                 <div>
-                  <h2 id="create-demand-title">Servise mi ihtiyacınız var?</h2>
+                  <h2 id="create-demand-title">
+                    Bu okul ve mahalle için zaten bir talep var
+                  </h2>
                 </div>
-                {!operators && (
+                <Link
+                  className="button-link"
+                  to={`/demands/${exactDemand.id}`}
+                  viewTransition
+                >
+                  Mevcut talebe git
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="section-heading">
+                  <div>
+                    <h2 id="create-demand-title">
+                      Servise mi ihtiyacınız var?
+                    </h2>
+                  </div>
+                  {!operators && (
+                    <button
+                      className="primary-button"
+                      disabled={checkingOperators}
+                      type="button"
+                      onClick={() => void checkOperators(0)}
+                    >
+                      {checkingOperators
+                        ? 'Servisler kontrol ediliyor…'
+                        : 'Mevcut servisleri kontrol et'}
+                    </button>
+                  )}
+                </div>
+                {operatorError && (
+                  <div className="demand-load-error" role="alert">
+                    <p>{operatorError}</p>
+                    <button
+                      className="secondary-button"
+                      type="button"
+                      onClick={() => void checkOperators(operatorPage)}
+                    >
+                      Tekrar dene
+                    </button>
+                  </div>
+                )}
+                {operators && (
+                  <OperatorCheckResult
+                    operators={operators}
+                    onPageChange={(page) => void checkOperators(page)}
+                  />
+                )}
+                {operators && !showCreateForm && (
                   <button
-                    className="primary-button"
-                    disabled={checkingOperators}
+                    className="primary-button demand-continue-button"
                     type="button"
-                    onClick={() => void checkOperators(0)}
+                    onClick={() => void beginCreate()}
                   >
-                    {checkingOperators
-                      ? 'Servisler kontrol ediliyor…'
-                      : 'Mevcut servisleri kontrol et'}
+                    {operators.totalElements > 0
+                      ? 'Yine de servise ihtiyacım var'
+                      : 'Yeni talep oluştur'}
                   </button>
                 )}
-              </div>
-              {operatorError && (
-                <div className="demand-load-error" role="alert">
-                  <p>{operatorError}</p>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => void checkOperators(operatorPage)}
-                  >
-                    Tekrar dene
-                  </button>
-                </div>
-              )}
-              {operators && (
-                <OperatorCheckResult
-                  operators={operators}
-                  onPageChange={(page) => void checkOperators(page)}
-                />
-              )}
-              {operators && !showCreateForm && (
-                <button
-                  className="primary-button demand-continue-button"
-                  type="button"
-                  onClick={() => void beginCreate()}
-                >
-                  {operators.totalElements > 0
-                    ? 'Yine de servise ihtiyacım var'
-                    : 'Yeni talep oluştur'}
-                </button>
-              )}
-              {accessError && (
-                <div className="form-error" role="alert">
-                  {accessError}
-                </div>
-              )}
-              {showCreateForm && (
-                <div className="demand-inline-form">
-                  <h3>İhtiyacınızı ekleyin</h3>
+                {accessError && (
+                  <div className="form-error" role="alert">
+                    {accessError}
+                  </div>
+                )}
+                {showCreateForm && (
+                  <div className="demand-inline-form">
+                    <h3>İhtiyacınızı ekleyin</h3>
 
-                  <DemandSupportForm
-                    busyLabel="Talep oluşturuluyor…"
-                    submitLabel="Talebi ve desteğimi oluştur"
-                    onCancel={() => setShowCreateForm(false)}
-                    onSubmit={submitCreate}
-                  />
-                </div>
-              )}
-            </>
-          )}
-        </section>
-      )}
+                    <DemandSupportForm
+                      busyLabel="Talep oluşturuluyor…"
+                      submitLabel="Talebi ve desteğimi oluştur"
+                      onCancel={() => setShowCreateForm(false)}
+                      onSubmit={submitCreate}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </section>
+        )}
     </section>
   )
 }

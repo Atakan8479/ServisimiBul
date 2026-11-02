@@ -22,6 +22,8 @@ import {
   type ApplicationDetail,
   type ApplicationPage,
   type ApplicationStatus,
+  getOperatorSummary,
+  type OperatorSummary,
 } from './admin-api'
 
 type OperatorProfile = ApplicationDetail['profile']
@@ -62,6 +64,101 @@ const statusFilters: Array<{
   { label: statusLabels.APPROVED, value: 'APPROVED' },
   { label: statusLabels.DRAFT, value: 'DRAFT' },
 ]
+
+const summaryCards: Array<{
+  key: keyof OperatorSummary
+  label: string
+  detail: string
+  tone: string
+}> = [
+  {
+    key: 'total',
+    label: 'Toplam işletmeci',
+    detail: 'Tüm işletmeci profilleri',
+    tone: 'neutral',
+  },
+  {
+    key: 'discoverable',
+    label: 'Aramalarda görünen',
+    detail: 'Veli aramalarında listelenebilir',
+    tone: 'success',
+  },
+  {
+    key: 'changesRequested',
+    label: 'Düzeltme bekleyen',
+    detail: 'Düzeltme istenen başvurular',
+    tone: 'warning',
+  },
+  {
+    key: 'suspended',
+    label: 'Askıya alınan',
+    detail: 'Hesabı durdurulan işletmeciler',
+    tone: 'danger',
+  },
+]
+
+function OperatorSummaryCards() {
+  const navigate = useNavigate()
+  const [summary, setSummary] = useState<OperatorSummary>()
+  const [failed, setFailed] = useState(false)
+  // Only the latest request may update the cards.
+  const request = useRef(0)
+
+  const load = useCallback(() => {
+    const current = ++request.current
+    setFailed(false)
+    void getOperatorSummary()
+      .then((response) => {
+        if (current === request.current) setSummary(response)
+      })
+      .catch((reason: unknown) => {
+        if (current !== request.current) return
+        if (reason instanceof ApiError && reason.sessionExpired) {
+          void navigate('/operator/login?reason=session', { replace: true })
+          return
+        }
+        setSummary(undefined)
+        setFailed(true)
+      })
+  }, [navigate])
+
+  useEffect(() => {
+    const timer = window.setTimeout(load, 0)
+    return () => {
+      window.clearTimeout(timer)
+      request.current += 1
+    }
+  }, [load])
+
+  return (
+    <section aria-label="İşletmeci özeti" className="admin-operator-summary">
+      {failed ? (
+        <div className="admin-operator-summary-error" role="alert">
+          <span>Özet sayılar yüklenemedi.</span>
+          <button className="text-button" onClick={load} type="button">
+            Tekrar dene
+          </button>
+        </div>
+      ) : (
+        <dl aria-busy={!summary}>
+          {summaryCards.map((card) => (
+            <div className={`admin-summary-card ${card.tone}`} key={card.key}>
+              <dt>{card.label}</dt>
+              <dd>
+                {summary ? (
+                  summary[card.key]
+                ) : (
+                  <span aria-label="Yükleniyor">—</span>
+                )}
+              </dd>
+              <dd className="admin-summary-detail">{card.detail}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </section>
+  )
+}
 
 export function AdminApplicationsPage() {
   const navigate = useNavigate()
@@ -116,6 +213,8 @@ export function AdminApplicationsPage() {
             : 'İşletmeci profillerini inceleyin ve hesap durumlarını yönetin.'}
         </p>
       </header>
+
+      <OperatorSummaryCards />
 
       <div className="admin-operator-toolbar">
         {approvalRequired && (
