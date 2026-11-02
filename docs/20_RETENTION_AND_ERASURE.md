@@ -104,13 +104,13 @@ These are two separate clocks and must not be merged into one number:
 
 1. **Response deadline.** The time within which a data subject must receive an answer to a request. Its length, start, and handling belong to LEG-06 ([#199](https://github.com/Atakan8479/ServisimiBul/issues/199)); that issue's title refers to a 30-day process, which this record does not confirm.
 2. **Technical erasure schedule.** When the data actually disappears from each place it lives. Section 2 shows these places differ:
-   - live database rows: immediately, once an approved erasure sequence exists (APP-11)
-   - sessions: within a minute of expiry
-   - rate-limiter memory: on restart
-   - logs: per host setting
-   - backups: only when each backup copy expires or is destroyed
+   - **Live database rows:** `[PENDING: owner + counsel]`. Approving an erasure mechanism does not mean every row is deleted at once. The schedule depends on identity verification, assessment of the request, other people's rights in shared records, any lawful obligation to keep data, legal holds, and the approved disposal rules. APP-11 ([#218](https://github.com/Atakan8479/ServisimiBul/issues/218)) builds the approved erasure or anonymization mechanism with foreign-key-safe processing. APP-12 ([#219](https://github.com/Atakan8479/ServisimiBul/issues/219)) builds the approved retention schedules, controlled disposal, evidence, and recovery procedures.
+   - **Sessions:** Spring Session JDBC schedules expired-session cleanup once per minute by default (`docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`). Physical deletion can be delayed by scheduler execution, application downtime, or database failures.
+   - **Rate-limiter memory:** on restart or key expiry.
+   - **Logs:** per host setting (LEG-04).
+   - **Backups:** only when each backup copy expires or is destroyed.
 
-An answer to a request may therefore truthfully say that live data was erased while copies remain in backups until a stated date. Whether that wording is acceptable is `[PENDING: counsel]`.
+The response deadline and these physical schedules are independent. An answer may, for example, report erasure from live data while copies remain in backups until a stated date. Whether such wording is acceptable, and when, is `[PENDING: counsel]`.
 
 **Disposal evidence (PROPOSED, B).** Each erasure, anonymization, or scheduled disposal run records what was disposed (table and row count, not the data), when, by which job or administrator, by which method, and under which approved rule. The evidence itself must not copy the disposed personal data. Where and for how long this evidence is kept is `[PENDING]`. Implementation belongs to APP-12 ([#219](https://github.com/Atakan8479/ServisimiBul/issues/219)) and APP-07.
 
@@ -161,8 +161,10 @@ PROPOSED O5: erasing one person detaches or anonymizes that person's link and ke
 
 ## 9. How to approve
 
-1. Counsel reviews sections 2–5 and answers R2–R6 and R8; the owner answers R1 with counsel, and R7.
-2. The owner fills section 1 and each `[PENDING]` cell in section 3, referencing evidence without committing privileged content.
-3. In the same PR, the owner adds an approved `D0xx` entry to `docs/01_DECISIONS.md` and removes the matching open question.
-4. Only then do APP-10, APP-11, and APP-12 implement disposal, erasure, and restore handling, each through its own reviewed PR and Flyway migration where needed.
-5. Issue #196 stays open until its acceptance criteria are met by recorded, reviewed answers.
+Technical review and legal approval are separate steps that happen in separate PRs:
+
+1. **Technical draft.** PR #229 may be merged as a technical documentation draft once its technical review passes. Merging it is not legal approval. This record keeps its `DRAFT — NOT APPROVED, NOT LAWYER-REVIEWED` status until the review in step 2 has actually happened.
+2. **Owner and counsel review.** Counsel answers R2–R6 and R8 as applicable. The owner answers R1 with counsel, and R7.
+3. **Recording decisions.** A later, separately reviewed PR fills section 1 and the `[PENDING]` cells in section 3, referencing evidence without committing privileged content. The same PR adds the approved `D0xx` entry to `docs/01_DECISIONS.md`, removes open question 6, and changes this record's status line. No date, reviewer, legal basis, retention period, or decision is recorded before it is actually given.
+4. **Implementation gate.** APP-10, APP-11, and APP-12 may build safe, reversible scaffolding when their own issues allow it. They must not activate real erasure, anonymization, or retention-based disposal before the approved decision from step 3 exists (see open question 6 in `docs/01_DECISIONS.md`).
+5. **Issue status.** Issue #196 stays open until its legal and operational acceptance criteria are met by recorded, reviewed answers.
