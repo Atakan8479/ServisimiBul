@@ -52,7 +52,7 @@ Nothing else is deleted automatically. The only other scheduler, `DemandFeedback
 
 ### 2.4 Foreign-key constraints on erasing an account
 
-Deleting an `app_user` row fails while any of these `ON DELETE RESTRICT` references exist (V3, V10, V12, V14):
+Deleting an `app_user` row fails while any of these ten `ON DELETE RESTRICT` columns has a referencing row (V3, V10, V12, V14):
 
 | Referencing column | Data |
 |---|---|
@@ -81,7 +81,7 @@ For each category: the retention reason, deadline or trigger, disposal method, o
 | LEG-02 cat. | Data | Retention reason | PROPOSED trigger (option) | Deadline | Disposal method | Technical constraint | Owner | Exceptions |
 |---|---|---|---|---|---|---|---|---|
 | 1 | IP in rate limiter | `[PENDING]` | Already in memory only | Restart or key expiry (verified) | Already automatic | None | `[PENDING]` | — |
-| 2–3 | Account email, password hash, role | `[PENDING]` | Erasure request; prolonged inactivity (no last-login column exists today) | `[PENDING]` | `[PENDING]` delete or anonymize | Nine `RESTRICT` references (2.4) | `[PENDING]` | `[PENDING]` legal hold, open dispute |
+| 2–3 | Account email, password hash, role | `[PENDING]` | Erasure request; prolonged inactivity (no last-login column exists today) | `[PENDING]` | `[PENDING]` delete or anonymize | Ten `RESTRICT` references (2.4) | `[PENDING]` | `[PENDING]` legal hold, open dispute |
 | 4 | Verification and reset tokens | `[PENDING]` | `expires_at` or `consumed_at` already stored | `[PENDING]` | Delete (option) | None beyond `user_id` | `[PENDING]` | — |
 | 5 | Sessions | Sign-in | Expiry (verified) | 30 min idle or 90 days absolute (D022) | Automatic delete (verified) | None | `[PENDING]` | — |
 | 6 | Operator public profile | `[PENDING]` | Account erasure; long hidden or suspended state | `[PENDING]` | `[PENDING]` | Responses, reviews, vehicles reference the profile with `RESTRICT` | `[PENDING]` | `[PENDING]` |
