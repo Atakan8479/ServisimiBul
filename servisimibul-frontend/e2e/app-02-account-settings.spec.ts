@@ -44,8 +44,11 @@ for (const role of roles) {
       )
       await expect(
         page.getByRole('button', { name: 'Kullanılamıyor' }),
-      ).toHaveCount(5)
+      ).toHaveCount(4)
       await expect(page.getByRole('link', { name: 'Değiştir' })).toBeVisible()
+      await expect(
+        page.getByRole('button', { name: 'Oturumları sonlandır' }),
+      ).toBeVisible()
       await assertAccessibleAndContained(page)
       if (
         process.env.APP_02_CAPTURE &&
