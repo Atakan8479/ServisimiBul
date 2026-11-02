@@ -10,7 +10,7 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 - Typecheck, lint, and build passed; Vitest 223/223; mocked Playwright 180/180 without retries; real full-stack E2E 1/1; isolated backend 295/295.
 - A new gate spec checks all 25 screen IDs at 320, 390, 768, and 1440 for overflow and axe violations, plus skip links, 200% text, and reduced motion. All 21 gate tests pass.
 - The real journey now also proves tariff role, CSRF, 409, and validation guards, and public school-catalog pagination.
-- Dispositions: 13 MATCH, 12 MINOR GAP, no MAJOR GAP or NOT VERIFIED. Follow-up issues: #191 notification read-state filters, #192 admin application counts, #193 demand status filters.
+- Dispositions: 14 MATCH, 11 MINOR GAP, no MAJOR GAP or NOT VERIFIED. Follow-up issues: #191 notification read-state filters, #192 admin application counts, #193 demand status filters.
 
 ## Verified UI-FIDELITY-13 O04 operator vehicles and offerings — 2026-11-01
 
