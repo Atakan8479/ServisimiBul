@@ -224,6 +224,7 @@ for (const group of groups) {
   }) => {
     await page.setViewportSize(viewports[0])
     await installMockApi(page, gateState())
+    await routeModeration(page)
     await group.signIn?.(page)
 
     for (const screen of group.screens.filter((item) => !item.reach)) {
@@ -402,11 +403,12 @@ async function expectScreen(page: Page, screen: Screen, timeout = 5_000) {
       timeout,
     })
   }
+  // Errors can only be ruled out once loading has finished.
+  await settle(page, screen.id)
   await expect(
     page.getByText(/yüklenemedi|Mock route not found|Sayfa bulunamadı/),
     `${screen.id} shows no load error`,
   ).toHaveCount(0, { timeout })
-  await settle(page, screen.id)
 }
 
 async function settle(page: Page, id: string) {
