@@ -9,7 +9,8 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 - Added `docs/18_LEGAL_ROLE_AND_DATA_CONTROLLER.md` for issue #194 and open question 4 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel.
 - Verified by reading `main` at `e304a3b`: no data controller, controller contact, legal page, age field, or age gate exists; registration collects only the fields in `RegisterRequest` and `ParentRegisterRequest`; there is no payment code and no analytics script or SDK; and AUDIT-F4 (#166) produced no policy, notice, retention schedule, or decision on `main` before it was closed.
 - Still open for the owner and counsel: questions L1–L8 (controller identity and contact, platform role, operator responsibilities, audience and age, free-pilot scope, KVKK/5651/6502/6563/ETBIS applicability, and real-user pilot). Every outcome is `[PENDING]`; nothing was approved or invented.
-- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed, so no build or test suite was run.
+- Review follow-up: the record now separates verified facts, PROPOSED safeguards, pending legal decisions, and approved decisions. It rewrites statements about the platform's role as functionality only, adds L8 (real-user pilot) to the approval workflow as a separate release decision with its own pending fields, and splits L2 between the owner, who supplies contact details, and counsel, who reviews them. No launch, compliance claim, or legal outcome was added.
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check`, a conflict-marker search, and link and cross-reference checks were run. The commit's own CI results are reported on PR #227.
 
 ## Verified UI-07 rollout gate — 2026-11-02
 
