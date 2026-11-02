@@ -172,6 +172,12 @@ export async function installMockApi(page: Page, state: MockApiState) {
       role = undefined
       return empty(route)
     }
+    if (path === '/auth/change-password' && method === 'POST') {
+      return requireAuthenticated(route, role, () => {
+        role = undefined
+        return empty(route)
+      })
+    }
 
     if (path === '/notifications/unread-count' && method === 'GET') {
       return requireAuthenticated(route, role, () =>

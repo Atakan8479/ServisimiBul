@@ -111,6 +111,8 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/change-password")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/reports")
                         .hasAnyRole("PARENT", "OPERATOR")

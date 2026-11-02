@@ -1,5 +1,6 @@
 package com.servisimibul.backend.auth.controller;
 
+import com.servisimibul.backend.auth.dto.ChangePasswordRequest;
 import com.servisimibul.backend.auth.dto.CsrfResponse;
 import com.servisimibul.backend.auth.dto.CurrentUserResponse;
 import com.servisimibul.backend.auth.dto.EmailRequest;
@@ -9,8 +10,8 @@ import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.service.AuthService;
-import com.servisimibul.backend.auth.service.SessionAuthenticationService;
 import com.servisimibul.backend.auth.service.CurrentUserResponseFactory;
+import com.servisimibul.backend.auth.service.SessionAuthenticationService;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import com.servisimibul.backend.security.ClientIdentityResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -121,6 +122,24 @@ public class AuthController {
     ResponseEntity<Void> logout(HttpServletRequest request) {
         if (request.getSession(false) != null) {
             request.getSession(false).invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/change-password")
+    ResponseEntity<Void> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest
+    ) {
+        authService.changePassword(
+                request,
+                user.id(),
+                clientIdentityResolver.resolve(httpRequest)
+        );
+        if (httpRequest.getSession(false) != null) {
+            httpRequest.getSession(false).invalidate();
         }
         SecurityContextHolder.clearContext();
         return ResponseEntity.noContent().build();

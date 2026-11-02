@@ -69,9 +69,12 @@ export function AccountSettingsPage() {
               description="E-posta değişikliği henüz kullanıma açık değil."
               title="E-posta adresini değiştir"
             />
-            <FutureAction
-              description="Şifre değiştirme işlemi henüz kullanıma açık değil."
-              title="Şifreyi değiştir"
+            <PasswordAction
+              path={
+                isOperator
+                  ? '/operator/account/password'
+                  : '/parent/account/password'
+              }
             />
             <FutureAction
               description="Diğer oturumları sonlandırma işlemi henüz kullanıma açık değil."
@@ -129,6 +132,22 @@ export function AccountSettingsPage() {
         {isOperator ? 'Genel bakışa dön' : 'Talep panosuna dön'}
       </Link>
     </section>
+  )
+}
+
+function PasswordAction({ path }: { path: string }) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>Şifreyi değiştir</h3>
+        <p>Mevcut şifrenizi doğrulayarak yeni bir şifre belirleyin.</p>
+      </div>
+      <div className="account-action-state">
+        <Link className="ui-button ui-button-quiet" to={path} viewTransition>
+          Değiştir
+        </Link>
+      </div>
+    </div>
   )
 }
 

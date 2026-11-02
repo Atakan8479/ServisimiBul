@@ -70,6 +70,16 @@ const applicationRoutes: RouteObject[] = [
         },
       },
       {
+        path: 'parent/account/password',
+        handle: { pageTitle: 'Şifreyi değiştir' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/account/PasswordChangePage'))
+            .PasswordChangePage,
+        }),
+      },
+      {
         path: 'register',
         handle: { pageTitle: 'Hesap türü seçimi' },
         HydrateFallback: LoadingPage,
@@ -208,6 +218,16 @@ const applicationRoutes: RouteObject[] = [
             ErrorBoundary: account.AccountSettingsRouteError,
           }
         },
+      },
+      {
+        path: 'account/password',
+        handle: { pageTitle: 'Şifreyi değiştir' },
+        loader: operatorLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/account/PasswordChangePage'))
+            .PasswordChangePage,
+        }),
       },
     ],
   },

@@ -13,6 +13,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.OffsetDateTime;
 import java.util.Locale;
@@ -92,6 +93,10 @@ public class AppUser {
 
     public void changePasswordHash(String passwordHash) {
         this.passwordHash = Objects.requireNonNull(passwordHash);
+    }
+
+    public boolean passwordMatches(String password, PasswordEncoder passwordEncoder) {
+        return passwordEncoder.matches(password, passwordHash);
     }
 
     private static String normalizeEmail(String email) {

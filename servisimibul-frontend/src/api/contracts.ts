@@ -64,6 +64,7 @@ const rawProblemSchema = z
 // API codes remain unchanged. Only user-facing descriptions are localized.
 const localizedProblems: Record<string, string> = {
   INVALID_CREDENTIALS: 'E-posta veya şifre yanlış.',
+  CURRENT_PASSWORD_INVALID: 'Mevcut şifre doğrulanamadı.',
   PARENT_REGISTRATION_UNAVAILABLE: 'Şu anda veli hesabı oluşturulamıyor.',
   EMAIL_UNAVAILABLE: 'Bu işlem şu anda tamamlanamıyor.',
   RATE_LIMIT_EXCEEDED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',

@@ -64,6 +64,19 @@ export function resetPassword(token: string, newPassword: string) {
   })
 }
 
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  await apiRequest('/auth/change-password', {
+    method: 'POST',
+    json: { currentPassword, newPassword },
+    requiresSession: true,
+  })
+  resetCsrfToken()
+  clearKnownAuthRole()
+}
+
 export async function login(request: LoginRequest): Promise<AuthUser> {
   const user = await apiRequest('/auth/login', {
     method: 'POST',

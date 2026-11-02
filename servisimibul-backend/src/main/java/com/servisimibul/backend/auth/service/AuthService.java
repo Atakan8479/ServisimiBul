@@ -3,6 +3,7 @@ package com.servisimibul.backend.auth.service;
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
 import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.auth.config.ParentRegistrationProperties;
+import com.servisimibul.backend.auth.dto.ChangePasswordRequest;
 import com.servisimibul.backend.auth.dto.EmailRequest;
 import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
@@ -141,6 +142,15 @@ public class AuthService {
                 password,
                 now()
         );
+        sessionRevoker.revokeAll(userId);
+    }
+
+    public void changePassword(ChangePasswordRequest request, UUID userId, String remoteAddress) {
+        String currentPassword = validator.password(request.currentPassword(), "currentPassword");
+        String newPassword = validator.password(request.newPassword(), "newPassword");
+        rateLimiter.requireAllowance(RateLimitRule.PASSWORD_CHANGE_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.PASSWORD_CHANGE_ACCOUNT, userId.toString());
+        persistence.changePassword(userId, currentPassword, newPassword);
         sessionRevoker.revokeAll(userId);
     }
 

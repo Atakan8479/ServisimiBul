@@ -143,6 +143,25 @@ class ApiExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(InvalidCurrentPasswordException.class)
+    ResponseEntity<ProblemDetail> handleInvalidCurrentPassword(
+            InvalidCurrentPasswordException exception,
+            HttpServletRequest request
+    ) {
+        ProblemDetail problem = problem(
+                HttpStatus.BAD_REQUEST,
+                "Password change failed",
+                exception.getMessage(),
+                "CURRENT_PASSWORD_INVALID",
+                request
+        );
+        problem.setProperty("fieldErrors", List.of(Map.of(
+                "field", "currentPassword",
+                "message", exception.getMessage()
+        )));
+        return ResponseEntity.badRequest().body(problem);
+    }
+
     private ProblemDetail problem(
             HttpStatus status,
             String title,

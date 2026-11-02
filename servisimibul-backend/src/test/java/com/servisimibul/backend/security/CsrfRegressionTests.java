@@ -94,6 +94,8 @@ class CsrfRegressionTests {
                         json(post("/api/v1/auth/reset-password"), "{}")),
                 new CsrfCase("login", () -> json(post("/api/v1/auth/login"), "{}")),
                 new CsrfCase("logout", () -> post("/api/v1/auth/logout").with(operator)),
+                new CsrfCase("password change", () ->
+                        json(post("/api/v1/auth/change-password").with(parent), "{}")),
                 new CsrfCase("operator profile", () ->
                         json(patch("/api/v1/operator/profile").with(operator), "{}")),
                 new CsrfCase("operator application", () ->
