@@ -1,9 +1,10 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
   createMockApiState,
   demandId,
   installMockApi,
+  mockNotifications,
   type MockApiState,
 } from './support/mock-api'
 
@@ -20,15 +21,22 @@ const capture = process.env.UI_07_CAPTURE === '1'
 interface Screen {
   id: string
   path: string
+  // The page's own h1, in production copy.
+  heading: string
+  // A control or landmark only this screen has, when the heading is shared.
+  marker?: (page: Page) => Locator
   // Optional interaction that reaches the screen from its route.
   reach?: (page: Page) => Promise<void>
 }
 
 const publicScreens: Screen[] = [
-  { id: 'P01', path: '/' },
+  { id: 'P01', path: '/', heading: 'Okul servisini birlikte bulalım.' },
   {
     id: 'P02',
     path: '/',
+    heading: 'Okul servisini birlikte bulalım.',
+    marker: (page) =>
+      page.getByRole('heading', { name: '1 işletmeci bulundu' }),
     reach: async (page) => {
       await chooseSchool(page)
       await page.getByLabel('Servis alınacak ilçe').selectOption('11')
@@ -44,6 +52,9 @@ const publicScreens: Screen[] = [
   {
     id: 'P03',
     path: '/',
+    heading: 'Okul servisini birlikte bulalım.',
+    marker: (page) =>
+      page.getByRole('region', { name: 'Mesafeye göre aylık resmî ücretler' }),
     reach: async (page) => {
       await chooseSchool(page)
       await expect(
@@ -53,39 +64,104 @@ const publicScreens: Screen[] = [
       ).toBeVisible()
     },
   },
-  { id: 'D01', path: '/demands' },
-  { id: 'D02', path: `/demands/${demandId}` },
-  { id: 'A01', path: '/register' },
-  { id: 'A02', path: '/parent/register' },
-  { id: 'A03', path: '/parent/login' },
-  { id: 'A04', path: '/operator/register' },
-  { id: 'A05', path: '/operator/login' },
-  { id: 'A06', path: '/operator/verify-email?token=email-token' },
-  { id: 'A07', path: '/forgot-password' },
-  { id: 'A08', path: '/reset-password?token=reset-token' },
+  {
+    id: 'D01',
+    path: '/demands',
+    heading: 'Servis talep panosu',
+    marker: (page) =>
+      page.getByRole('group', { name: 'Talep durumuna göre filtrele' }),
+  },
+  {
+    id: 'D02',
+    path: `/demands/${demandId}`,
+    heading: 'Örnek Okulu',
+    marker: (page) => page.getByRole('heading', { name: 'Yorumlar' }),
+  },
+  { id: 'A01', path: '/register', heading: 'Nasıl katılmak istersiniz?' },
+  { id: 'A02', path: '/parent/register', heading: 'Veli hesabı oluşturun' },
+  { id: 'A03', path: '/parent/login', heading: 'Yeniden hoş geldiniz.' },
+  {
+    id: 'A04',
+    path: '/operator/register',
+    heading: 'İşletmenizi tanıtalım.',
+  },
+  {
+    id: 'A05',
+    path: '/operator/login',
+    heading: 'İşletmeci paneline giriş',
+  },
+  {
+    id: 'A06',
+    path: '/operator/verify-email?token=email-token',
+    heading: 'E-posta adresinizi doğrulayın',
+  },
+  { id: 'A07', path: '/forgot-password', heading: 'Şifrenizi yenileyin' },
+  {
+    id: 'A08',
+    path: '/reset-password?token=reset-token',
+    heading: 'Yeni şifrenizi belirleyin',
+  },
 ]
 
 const operatorScreens: Screen[] = [
-  { id: 'O01', path: '/operator' },
-  { id: 'O02', path: '/operator/profile' },
-  { id: 'O03', path: '/operator/schools' },
-  { id: 'O04', path: '/operator/offerings' },
-  { id: 'N02', path: '/operator/notifications' },
+  { id: 'O01', path: '/operator', heading: 'Genel bakış' },
+  { id: 'O02', path: '/operator/profile', heading: 'İşletme profilim' },
+  {
+    id: 'O03',
+    path: '/operator/schools',
+    heading: 'Okullar ve hizmet kapsamı',
+  },
+  {
+    id: 'O04',
+    path: '/operator/offerings',
+    heading: 'Araçlar ve servis teklifleri',
+  },
+  {
+    id: 'N02',
+    path: '/operator/notifications',
+    heading: 'Bildirimler',
+    marker: (page) =>
+      page.getByRole('group', { name: 'Okunma durumuna göre filtrele' }),
+  },
 ]
 
 const adminScreens: Screen[] = [
-  { id: 'M01', path: '/admin/applications' },
+  {
+    id: 'M01',
+    path: '/admin/applications',
+    heading: 'İşletmeci başvuruları',
+    marker: (page) => page.getByRole('region', { name: 'İşletmeci özeti' }),
+  },
   {
     id: 'M02',
     path: '/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20',
+    heading: 'Moda Öğrenci Servisi',
   },
-  { id: 'M03', path: '/admin/schools' },
-  { id: 'M04', path: '/admin/tariffs' },
-  { id: 'M05', path: '/admin/moderation' },
-  { id: 'N03', path: '/admin/notifications' },
+  { id: 'M03', path: '/admin/schools', heading: 'Okul kataloğu' },
+  { id: 'M04', path: '/admin/tariffs', heading: 'UKOME tarife yönetimi' },
+  {
+    id: 'M05',
+    path: '/admin/moderation',
+    heading: 'Raporlama ve moderasyon',
+  },
+  {
+    id: 'N03',
+    path: '/admin/notifications',
+    heading: 'Yönetim bildirimleri',
+    marker: (page) =>
+      page.getByRole('group', { name: 'Okunma durumuna göre filtrele' }),
+  },
 ]
 
-const parentScreens: Screen[] = [{ id: 'N01', path: '/notifications' }]
+const parentScreens: Screen[] = [
+  {
+    id: 'N01',
+    path: '/notifications',
+    heading: 'Bildirimler',
+    marker: (page) =>
+      page.getByRole('group', { name: 'Okunma durumuna göre filtrele' }),
+  },
+]
 
 const groups = [
   { name: 'public', screens: publicScreens, signIn: undefined },
@@ -108,7 +184,7 @@ for (const group of groups) {
       for (const screen of group.screens) {
         await page.goto(screen.path)
         await screen.reach?.(page)
-        await settle(page, screen.id)
+        await expectScreen(page, screen)
         await expectContained(page, screen.id)
         await expectAxeClean(page, screen.id)
 
@@ -152,7 +228,7 @@ for (const group of groups) {
 
     for (const screen of group.screens.filter((item) => !item.reach)) {
       await page.goto(screen.path)
-      await settle(page, screen.id)
+      await expectScreen(page, screen)
       await page.locator('body').focus()
       await page.keyboard.press('Tab')
       const skipLink = page.getByRole('link', { name: 'İçeriğe geç' })
@@ -175,6 +251,25 @@ for (const group of groups) {
     }
   })
 }
+
+test('UI-07 screen identity check rejects the wrong screen', async ({
+  page,
+}) => {
+  await installMockApi(page, gateState())
+  // An unauthenticated visit to O01 lands on the login screen instead.
+  const overview = operatorScreens.find((item) => item.id === 'O01')!
+  await page.goto(overview.path)
+  await expect(expectScreen(page, overview, 1_500)).rejects.toThrow()
+  // A missing route renders the not-found screen, never a gate screen.
+  await page.goto('/demands-missing')
+  await expect(
+    expectScreen(
+      page,
+      publicScreens.find((item) => item.id === 'D01')!,
+      1_500,
+    ),
+  ).rejects.toThrow()
+})
 
 test('UI-07 reduced motion removes transitions on every workspace shell', async ({
   page,
@@ -218,6 +313,7 @@ function gateState(): MockApiState {
   state.operatorSchoolAdded = true
   state.generalCoverage = [101, 201]
   state.demandCreated = true
+  state.notifications = mockNotifications(6)
   state.vehicles = [
     {
       id: '11111111-1111-4111-8111-111111111111',
@@ -293,6 +389,24 @@ async function routeModeration(page: Page) {
 async function chooseSchool(page: Page) {
   await page.getByLabel('Okulun bulunduğu il').selectOption('34')
   await page.getByRole('button', { name: 'Bu okulu seç: Örnek Okulu' }).click()
+}
+
+// Proves the intended screen loaded, not an error, fallback or another route.
+async function expectScreen(page: Page, screen: Screen, timeout = 5_000) {
+  await expect(
+    page.getByRole('heading', { level: 1, name: screen.heading, exact: true }),
+    `${screen.id} heading`,
+  ).toBeVisible({ timeout })
+  if (screen.marker) {
+    await expect(screen.marker(page), `${screen.id} marker`).toBeVisible({
+      timeout,
+    })
+  }
+  await expect(
+    page.getByText(/yüklenemedi|Mock route not found|Sayfa bulunamadı/),
+    `${screen.id} shows no load error`,
+  ).toHaveCount(0, { timeout })
+  await settle(page, screen.id)
 }
 
 async function settle(page: Page, id: string) {

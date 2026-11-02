@@ -6,11 +6,19 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 
 ## Verified UI-07 rollout gate — 2026-11-02
 
-- Full results and per-screen dispositions are in `docs/17_UI_ROLLOUT_GATE.md`.
-- Typecheck, lint, and build passed; Vitest 223/223; mocked Playwright 180/180 without retries; real full-stack E2E 1/1; isolated backend 295/295.
-- A new gate spec checks all 25 screen IDs at 320, 390, 768, and 1440 for overflow and axe violations, plus skip links, 200% text, and reduced motion. All 21 gate tests pass.
-- The real journey now also proves tariff role, CSRF, 409, and validation guards, and public school-catalog pagination.
-- Dispositions: 14 MATCH, 11 MINOR GAP, no MAJOR GAP or NOT VERIFIED. Follow-up issues: #191 notification read-state filters, #192 admin application counts, #193 demand status filters.
+- Full results, contracts, and per-screen dispositions are in `docs/17_UI_ROLLOUT_GATE.md`.
+- The repository owner folded #191, #192, and #193 into this PR:
+  - notification `readState` filtering
+  - an admin operator summary whose `discoverable` count reuses the public search predicate
+  - demand board `status` filtering under D058, which never lists moderation closures or archived demands
+- Results:
+  - Prettier, lint, typecheck, and build passed
+  - Vitest 230/230
+  - mocked Playwright 204/204 without retries
+  - real full-stack E2E 1/1
+  - isolated backend 298/298
+- The gate now proves each of the 25 screens by heading and marker, and compares the full public tariff after rejected writes.
+- Dispositions: 17 MATCH, 8 MINOR GAP, no MAJOR GAP or NOT VERIFIED.
 
 ## Verified UI-FIDELITY-13 O04 operator vehicles and offerings — 2026-11-01
 
