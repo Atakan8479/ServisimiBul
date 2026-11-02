@@ -188,6 +188,9 @@ export function PublicLayout() {
               <>
                 <span className="nav-session">Veli oturumu açık</span>
                 <NotificationNavLink to="/notifications" />
+                <NavLink to="/parent/account" viewTransition>
+                  Hesap ve gizlilik
+                </NavLink>
                 <button
                   disabled={loggingOut}
                   onClick={() => void signOutParent()}

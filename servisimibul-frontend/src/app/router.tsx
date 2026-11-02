@@ -56,6 +56,20 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'parent/account',
+        handle: { pageTitle: 'Hesap ve gizlilik' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => {
+          const account =
+            await import('../features/account/AccountSettingsPage')
+          return {
+            Component: account.AccountSettingsPage,
+            ErrorBoundary: account.AccountSettingsRouteError,
+          }
+        },
+      },
+      {
         path: 'register',
         handle: { pageTitle: 'Hesap türü seçimi' },
         HydrateFallback: LoadingPage,
@@ -180,6 +194,20 @@ const applicationRoutes: RouteObject[] = [
             await import('../features/notification/NotificationCenterPage')
           ).NotificationCenterPage,
         }),
+      },
+      {
+        path: 'account',
+        handle: { pageTitle: 'Hesap ve gizlilik' },
+        loader: operatorLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => {
+          const account =
+            await import('../features/account/AccountSettingsPage')
+          return {
+            Component: account.AccountSettingsPage,
+            ErrorBoundary: account.AccountSettingsRouteError,
+          }
+        },
       },
     ],
   },
