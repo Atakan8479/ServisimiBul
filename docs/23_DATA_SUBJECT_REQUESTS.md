@@ -4,7 +4,27 @@ Issue: [#199](https://github.com/Atakan8479/ServisimiBul/issues/199). Depends on
 
 This document is not legal advice, not a request procedure in force, and not a compliance claim. It records what the software can and cannot do today for someone who wants to exercise data rights. It then sets out the process decisions, including the channel, identity checks, deadlines, templates, and failure handling, that the owner and qualified Turkish counsel must make. It uses the same status categories as the LEG-01 record: **A** verified fact, **B** PROPOSED, **C** pending legal decision, **D** approved decision. It adds no approved decision.
 
-**About "30 days".** The issue title names a 30-day process. This record treats it as the issue's working assumption, not a confirmed legal deadline. The applicable deadline, when it starts, and what it covers are `[PENDING: counsel]`. No response template text is written here.
+**Legal sources checked (A, verified on 2026-11-03).** The following are quoted from official sources as facts for the decision-makers. How they apply to ServisimiBul is still `[PENDING: counsel]`.
+
+- **Law No. 6698, Article 13.** The data controller must conclude a data subject's request as soon as possible and within thirty days at the latest, free of charge unless the process has a separate cost. Source: KVKK, [İlgili Kişiler Tarafından Yapılan Başvuruların Cevaplanması Yükümlülüğü](https://www.kvkk.gov.tr/Icerik/2046/Ilgili-Kisiler-Tarafindan-Yapilan-Basvurularin-Cevaplanmasi-Yukumlulugu).
+- **Communiqué on Application Procedures and Principles to the Data Controller** (*Veri Sorumlusuna Başvuru Usul ve Esasları Hakkında Tebliğ*, Resmî Gazete No. 30356, 10 March 2018; [text](https://www.resmigazete.gov.tr/eskiler/2018/03/20180310-6.htm)):
+  - Article 5(1) lists the application methods: in writing, by registered electronic mail (KEP), with a secure electronic or mobile signature, from an email address previously given to and registered with the controller, or through a software or application built for the purpose.
+  - Article 5(2) lists what an application contains:
+    - name and surname, and a signature for written applications
+    - the T.C. identity number for Turkish citizens, or nationality and passport or identity number for foreigners
+    - a residence or business address for notifications
+    - an email address, telephone, or fax if available
+    - the subject of the request
+  - Article 5(4)–(5) defines the application date as the date the application reaches the controller (for written applications, delivery to the controller or its representative).
+  - Article 6 repeats the thirty-day maximum.
+  - Article 7 covers when a fee may be charged.
+
+The thirty-day general maximum is therefore a verified statutory requirement, not an assumption. Still `[PENDING: counsel]`:
+- how valid receipt and the start date apply to each channel in section 3
+- how incomplete submissions and requests for further identity proof affect the period
+- any procedural exceptions
+
+The internal service level and who owns it are `[PENDING: owner]`. Nothing in this record states that the application meets the deadline today; section 2 shows no channel exists. No response template text is written here.
 
 ## 1. Decision summary
 
@@ -14,7 +34,8 @@ This document is not legal advice, not a request procedure in force, and not a c
 | Responsible person for handling requests | `[PENDING: owner]` |
 | Rights and request types covered | `[PENDING: counsel]` |
 | Identity verification method per requester type | `[PENDING: owner + counsel]` — section 4 |
-| Response deadline, its start, and any extension | `[PENDING: counsel]` |
+| Response deadline | Statutory general maximum of 30 days (verified, see the legal sources above). How receipt, start date, incomplete submissions, and further identity proof apply: `[PENDING: counsel]`. Internal service level and owner: `[PENDING: owner]` |
+| Identifying fields legally required for each supported request method | `[PENDING: counsel]` — section 4 |
 | Response templates (Turkish) | `[PENDING: counsel drafts, owner approves]` |
 | Rejection and appeal or complaint information | `[PENDING: counsel]` |
 | Handling of failed submissions, extra identity proof, and delivery failures | `[PENDING: owner + counsel]` — section 6 |
@@ -55,14 +76,22 @@ PROPOSED: C1 is required in any approved design, because it is the only option t
 
 ## 4. Identity verification with data minimization (PROPOSED, B)
 
-The issue forbids unnecessary Turkish ID numbers. PROPOSED principles, pending counsel:
+The issue forbids *unnecessary* Turkish ID numbers. The Communiqué's Article 5(2), quoted above, lists the T.C. identity number among the contents of a formal application to the controller. So the identity number cannot be categorically excluded from a formal request. Nor does that make it a field for ordinary product use. PROPOSED principles, pending counsel:
 
-- **Ask only for what links the requester to the data already held.** The platform holds an email, a role, and, for operators, a business name and phone. It holds no national ID, birth date, or address (LEG-02). Requesting a national ID would add new personal data the platform does not otherwise need. PROPOSED: no Turkish ID number is requested.
-- **Signed-in requester (C2).** The session proves account control. For OPERATOR and ADMIN, the email is verified. For a PARENT with an unverified email (D052), PROPOSED: reply only inside the account, never by email, until the email is verified.
-- **Requester without an account (C1, C3).** PROPOSED: ask for a description of the data concerned, such as the demand, comment, or public profile it relates to, and a contact route for the reply. Additional proof is requested only when the request cannot otherwise be linked to the data, and is limited to what is needed for that link.
-- **Requests about another person's data.** These are not answered with that person's data. Handling of third-party records follows LEG-03 O5 once it is decided.
+- **Formal request versus product interaction.** A formal data-subject application under the Law and Communiqué is a different thing from ordinary signed-in actions such as editing a profile, deleting one's own comment, or changing a password. No identity number is added to registration, login, account settings, or any other existing flow. Which identifying fields are legally required for each supported request method (C1–C3) is `[PENDING: counsel]`.
+- **Collect only with a documented reason.** The platform holds an email, a role, and, for operators, a business name and phone. It holds no national ID, birth date, or address (LEG-02). Any identifying field collected for a request must have a documented justification: either a legal requirement for that method, confirmed by counsel, or a specific need to link the request to data already held. It is used only for that request. How it is stored, who may access it, and how long it is kept are `[PENDING: owner + counsel]` (RQ7, LEG-03).
+- **Four separate questions for every requester.** These are separate questions, and answering one does not answer the others:
+  1. Does the requester control an authenticated session?
+  2. Do they control the email address?
+  3. Are they the data subject?
+  4. Are they entitled to the specific data requested?
 
-The exact method, what counts as sufficient proof, and how long proof is kept are `[PENDING: owner + counsel]`. The Manus reference package's `[IDENTITY_VERIFICATION_METHOD_PENDING]` placeholder is a UX placeholder, not a decision.
+  A signed-in session answers only the first. For OPERATOR and ADMIN, the email has also been verified (D005). For a PARENT with an unverified email (D052), PROPOSED: answers are delivered inside the account rather than by email. That reduces the risk of sending data to an address the account holder may not own, but it does not prove who the account holder is, or that they may receive every item requested.
+- **When more proof may be needed.** Further verification may be necessary before disclosure when a request covers another person's data, sensitive information, or a case where the identity link is uncertain, for example an unverified parent email claiming data beyond its own account. The method is `[PENDING: owner + counsel]`. This PR adds no identity check to the application and does not change D052.
+- **Requester without an account (C1, C3).** PROPOSED: ask for the information counsel confirms as required for the method, plus a description of the data concerned, such as the demand, comment, or public profile it relates to. Additional proof is requested only when the request cannot otherwise be linked to the data, and is limited to what is needed for that link.
+- **Authorized representatives versus unauthorized third parties.** A request from someone without authority is never answered with another person's data. Handling of third-party records follows LEG-03 O5 once it is decided. A request from a legal representative, guardian, or other authorized agent acting for the data subject is different: their authority must be verified before any data is disclosed. What evidence of authority is acceptable for each case is `[PENDING: counsel]`. Such evidence is collected only as needed, stored with restricted access, and kept only as long as the approved retention rule allows (RQ4, RQ7).
+
+The exact methods, what counts as sufficient proof, and how long proof is kept are `[PENDING: owner + counsel]`. The Manus reference package's `[IDENTITY_VERIFICATION_METHOD_PENDING]` placeholder is a UX placeholder, not a decision.
 
 ## 5. Handling stages and the response clock (PROPOSED, B)
 
@@ -70,7 +99,7 @@ PROPOSED stages, for APP-07 to implement once approved: received → identity ch
 
 The response deadline and the technical erasure schedule are separate clocks (LEG-03 section 4). Answering a request on time does not mean the data has already disappeared from backups or logs. The response must not claim more than has happened.
 
-When the clock starts, whether waiting for extra identity proof pauses it, and what a rejection must say are `[PENDING: counsel]`.
+The statutory general maximum is thirty days (legal sources above). How the application date applies to each channel, how incomplete submissions and requests for more proof or authority evidence are treated, and what a rejection must say are `[PENDING: counsel]`. PROPOSED: APP-07 records the application date as received, so the period can be tracked from the start.
 
 ## 6. Failures and exceptions (PROPOSED, B)
 
@@ -95,8 +124,8 @@ The issue requires response templates. **None is written here.** Templates must 
 |---|---|---|
 | RQ1 | Which channel or channels are legally appropriate (C1–C3), and who monitors each one? | Counsel (channels), owner (person) |
 | RQ2 | Which rights and request types does the process cover? | Counsel |
-| RQ3 | What is the response deadline, when does it start, and does waiting for identity proof pause it? | Counsel |
-| RQ4 | What identity proof is sufficient for each requester type, without a national ID number? | Owner + counsel |
+| RQ3 | Within the statutory thirty-day maximum: how valid receipt and the application date apply to each channel, and how incomplete submissions and requests for further proof affect the period. | Counsel |
+| RQ4 | Which identifying fields are legally required for each request method, including when a T.C. identity number is required? What further proof is sufficient for each requester type, including unverified parent accounts? What evidence of authority is required from legal representatives, guardians, or authorized agents? | Owner + counsel |
 | RQ5 | Approved Turkish templates for acknowledgement, request for proof, answer, partial answer, and rejection, including complaint or appeal information. | Counsel drafts, owner approves |
 | RQ6 | How are delivery failures recorded, and when does a request count as answered? | Owner + counsel |
 | RQ7 | How long are request records and identity proof kept? (feeds LEG-03) | Owner + counsel |
