@@ -30,7 +30,18 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-## Consolidated legal approval tracker — 2026-11-03 (Draft PR #237, not approved)
+## LEG-08 terms, content safety, and child-data record — 2026-11-03 (Draft PR #239, not approved)
+
+- Added `docs/26_TERMS_CONTENT_SAFETY_AND_CHILD_DATA.md` for issue #201 and open question 11 in `docs/01_DECISIONS.md`. This is a structured draft with no terms or policy text, and it has not been reviewed by the owner or by counsel.
+- Verified by reading `main` at `e5623d1`:
+  - No terms, content policy, or appeal route exists.
+  - Moderation offers eight admin-only actions and six report reasons. The only moderation notification is `CONTENT_REPORTED` to admins.
+  - No structured student, address, health, or route field exists.
+  - Child-data warnings appear on the comment form, demand pages, report form, and operator profile description, but not on the service offering description.
+- Still open for the owner and counsel: TQ1–TQ7 (terms, content policy, outcome notices, complaint route, acceptance step, offering-description guidance, moderation guidance and timelines).
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #239.
+
+## Consolidated legal approval tracker — 2026-11-03 (merged in PR #237; no decision approved)
 
 - Added `docs/25_LEGAL_APPROVAL_TRACKER.md` and a pointer above open questions 4–10 in `docs/01_DECISIONS.md`. The tracker gathers every pending LEG-01 to LEG-07 decision in one place: L1–L8, B1–B4, P1–P5, R1–R8, V1–V8, VQ1–VQ5, NQ1–NQ5, RQ1–RQ7, AQ1–AQ7, unnumbered items, and the sign-off fields. Each item names who decides and the evidence needed, and every item is `PENDING`.
 - It defines the six-stage approval workflow, separates the development allowed now from per-APP production release gates, and gives a completion checklist. It replaces neither the seven records nor legal review. LEG-08 to LEG-11 are out of scope.
