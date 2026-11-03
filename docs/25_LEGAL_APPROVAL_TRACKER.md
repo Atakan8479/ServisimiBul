@@ -24,13 +24,42 @@ Issue states on 2026-11-03: #194–#199 closed after their technical PRs merged;
 
 ## 2. Approval workflow
 
-Every decision moves through these stages in order. A stage counts as complete only when its evidence is recorded; nothing is inferred from earlier stages.
+### 2.1 Where the work happens
+
+This tracker's Draft PR ([#237](https://github.com/Atakan8479/ServisimiBul/pull/237)) is the single working place for the pending LEG-01 to LEG-07 approvals.
+
+- Owner evidence and counsel decisions are added to this same PR as reviewed commits. This PR is the "later, separately reviewed PR" that the approval sections of the seven source records refer to.
+- Parallel PRs that change the same pending decision records are avoided unless explicitly necessary.
+- The PR stays Draft until the consolidated approval process is complete, or until the owner decides to merge part of it.
+- Merging the PR, in whole or in part, never authorizes a production feature by itself. Activation still needs its own release gate (section 5, stage 6).
+
+### 2.2 Decision types
+
+The "Who decides" column in section 3 follows each source record. It sets which review stages apply:
+
+| Type | Stages that apply | IDs |
+|---|---|---|
+| **Owner-only** (product or factual decisions) | Owner evidence or decision, then recording and release gate. No counsel review is required unless the owner or counsel finds a legal implication. | L6, P4, R7, V1–V6, VQ1, VQ4, NQ5, AQ1, AQ3, B1–B4, the LEG-06 service level |
+| **Counsel** (legal opinions) | Counsel opinion, owner acceptance, recording, release gate | L3, L4, L7, P1–P3, V7, V8 (VQ2, VQ3), R2, NQ1, NQ3, NQ4, RQ2, RQ3, AQ5, AQ6 |
+| **Joint** (owner supplies or decides; counsel reviews or drafts) | All stages | L1, L2, L5, L8, P5, R1, R3–R6, R8, VQ5, NQ2, RQ1, RQ4–RQ7, AQ2, AQ4, AQ7, and the unnumbered items in section 3 |
+
+Counsel review is never skipped for a Counsel or Joint item. Owner-only items are not held back waiting for counsel.
+
+### 2.3 Stages
+
+A stage counts as complete only when its evidence is recorded. Nothing is inferred from earlier stages.
 
 1. **Technical inventory completed.** Done for all seven areas: the records are merged.
-2. **Owner evidence supplied.** Facts only the owner can provide, such as the controller's identity, vendor regions, or the monitoring person.
-3. **Qualified Turkish counsel review.** A dated written opinion or equivalent. The tracker cites a reference to it; privileged content is never committed.
-4. **Owner approval.** The owner accepts the reviewed answer.
-5. **Decision recorded.** A separate reviewed PR adds a `D0xx` entry to `docs/01_DECISIONS.md`, removes or narrows the open question, updates the source record's status line, and ticks the row here.
+2. **Owner evidence or decision.** Facts or product choices only the owner can provide, such as the controller's identity, vendor regions, or the monitoring person.
+3. **Qualified Turkish counsel review** (Counsel and Joint items only). A dated written opinion or equivalent. The tracker cites a reference to it; privileged content is never committed.
+4. **Owner approval.** The owner accepts the decision or the reviewed answer.
+5. **Decision recorded.** Only after actual authorization, a reviewed commit (in this PR, per 2.1):
+   - adds a `D0xx` entry to `docs/01_DECISIONS.md`
+   - removes or narrows the open question
+   - updates the source record's status line
+   - sets the row here to `APPROVED` with the evidence reference, the reviewer's identity where counsel was involved, and the date
+
+   Nothing is marked approved without all three.
 6. **Release gates reviewed and authorized.** The dependent APP issues are checked against the recorded decision, and any production activation is explicitly authorized (section 5).
 
 Status values used below: `PENDING` (stages 2–5 not complete), `EVIDENCE SUPPLIED`, `COUNSEL REVIEWED`, `APPROVED` (stage 5 recorded). Every item is `PENDING` today.
@@ -50,7 +79,7 @@ Status values used below: `PENDING` (stages 2–5 not complete), `EVIDENCE SUPPL
 | L5 | Audience and minimum age | Owner + counsel | Policy statement; how it is shown without over-collection | `PENDING` |
 | L6 | Whether the pilot is free in every respect | Owner | Statement of any fees or plans | `PENDING` |
 | L7 | Which regimes apply (KVKK, 5651, 6502, 6563, ETBIS) | Counsel | Per-regime outcome in the record's section 4 | `PENDING` |
-| L8 | Real-user pilot eligibility | Owner + counsel, then a release decision | Recorded decision with conditions | `PENDING` |
+| L8 | Real-user pilot eligibility | Owner + counsel, then a release decision | Recorded decision with conditions, after reviewing the applicable outstanding requirements of LEG-08 to LEG-11 and the QA and release gates (section 5) | `PENDING` |
 | B1–B4 | PROPOSED interim safeguards | Owner | Adopt, change, or reject | `PENDING` |
 
 ### LEG-02 — Personal data map and legal bases
@@ -146,17 +175,22 @@ Many items depend on others. A practical order, which the owner may change:
 2. **L3, L4, L7, P1–P3, V7, V8** (counsel's core opinions).
 3. **R1–R8, RQ1–RQ7, AQ1–AQ7** (process decisions that depend on step 2).
 4. **NQ1–NQ5** (notices, which need steps 1–3).
-5. **L8** (real-user pilot eligibility), last.
+5. **L8** (real-user pilot eligibility), last. Completing LEG-01 to LEG-07 is not enough for L8 by itself; see the launch gate in section 5.
 
 ## 5. Development permissions and production release gates
 
-**Safe, reversible development may continue** where the APP issue concerned allows it, using synthetic or disposable data only:
+**Safe, reversible development may continue** where the APP issue concerned allows it:
 
 - UI scaffolding and disabled legal-page routes (APP-01)
 - request intake and status infrastructure (APP-06, APP-07, APP-13)
 - authorization and ownership checks
 - internal-only workflows that do not run legally dependent processing (APP-09 to APP-12)
 - tests
+
+Data rules for that work are unchanged:
+- Automated tests keep using disposable environments with synthetic data (D045). Shared Supabase is never used as an automated test database.
+- Controlled shared-data development through `dev-supabase.ps1` remains permitted under D046 and its existing restrictions. This tracker neither revokes nor expands D046.
+- New legally dependent processing is not activated early. Nothing here authorizes unrestricted processing of real data.
 
 **Not allowed before the relevant decision reaches stage 6:**
 
@@ -169,23 +203,23 @@ Many items depend on others. A practical order, which the owner may change:
 | Real erasure or anonymization | R1–R6, AQ5, AQ6, RQ4 | APP-10 [#217](https://github.com/Atakan8479/ServisimiBul/issues/217), APP-11 [#218](https://github.com/Atakan8479/ServisimiBul/issues/218) |
 | Retention-based disposal | R1, R2, R4–R6 | APP-12 [#219](https://github.com/Atakan8479/ServisimiBul/issues/219) |
 | Enabling SMTP for real users | V3, V7, V8 | APP-03 [#210](https://github.com/Atakan8479/ServisimiBul/issues/210) (also its own gates) |
-| Real-user pilot or public launch | L8, plus every gate above that the launch relies on | QA-01 [#223](https://github.com/Atakan8479/ServisimiBul/issues/223), QA-03 [#225](https://github.com/Atakan8479/ServisimiBul/issues/225) |
+| Real-user pilot or public launch | L8; every gate above that the launch relies on; review of the applicable outstanding requirements of LEG-08 to LEG-11 ([#201](https://github.com/Atakan8479/ServisimiBul/issues/201)–[#204](https://github.com/Atakan8479/ServisimiBul/issues/204)): terms and content safety, cookies and marketing consent, VERBIS/ETBIS/IYS, breach response | QA-01 [#223](https://github.com/Atakan8479/ServisimiBul/issues/223), QA-03 [#225](https://github.com/Atakan8479/ServisimiBul/issues/225) |
 
-These gates add to, and never replace, each APP issue's own dependencies and release gates, and the existing security rules in `AGENTS.md` and `docs/03_SECURITY_AND_API.md`. Administrative suspension must never be bypassed through self-service flows (LEG-07 section 4). No real-user launch may be authorized on the strength of technical documentation alone.
+These gates add to, and never replace, each APP issue's own dependencies and release gates, and the existing security rules in `AGENTS.md` and `docs/03_SECURITY_AND_API.md`. Administrative suspension must never be bypassed through self-service flows (LEG-07 section 4). No real-user launch may be authorized on the strength of technical documentation alone. Completing every item in this tracker is also not sufficient on its own: LEG-08 to LEG-11 stay outside this tracker and keep their own issues and status, but their applicable requirements must be reviewed before any real-user pilot.
 
 ## 6. Completion checklist
 
-- [ ] Stage 2: owner evidence supplied for L1, L2, L5, L6, and V1–V6
-- [ ] Stage 3: counsel opinions referenced for L3, L4, L7, P1–P3, V7, V8, R2, NQ1, NQ3, NQ4, RQ2–RQ3, AQ5, AQ6
-- [ ] Stage 3–4: joint decisions made for P5, R1, R3–R6, R8, RQ4, RQ6, RQ7, AQ2, AQ4, VQ5, and the unnumbered items in section 3
-- [ ] Stage 4: owner-only decisions made for P4, R7, VQ4, NQ5, AQ1, AQ3, B1–B4, and the LEG-06 service level
-- [ ] Stage 4: approved Turkish texts for NQ2, RQ5, AQ7
-- [ ] Stage 5: each area's decisions recorded through a reviewed PR (`D0xx` entries; open questions 4–10 removed or narrowed; record status lines updated)
+- [ ] Owner-only: evidence or decisions for L6, P4, R7, V1–V6 (VQ1), VQ4, NQ5, AQ1, AQ3, B1–B4, and the LEG-06 service level
+- [ ] Counsel: opinions referenced for L3, L4, L7, P1–P3, V7, V8, R2, NQ1, NQ3, NQ4, RQ2, RQ3, AQ5, AQ6
+- [ ] Joint: owner input and counsel review for L1, L2, L5, P5, R1, R3–R6, R8, VQ5, RQ1, RQ4, RQ6, RQ7, AQ2, AQ4, and the unnumbered items in section 3
+- [ ] Joint: approved Turkish texts (counsel drafts, owner approves) for NQ2, RQ5, AQ7
+- [ ] Stage 5: each decision recorded by a reviewed commit in this PR, with evidence, reviewer where applicable, and date (`D0xx` entries; open questions 4–10 removed or narrowed; record status lines updated)
 - [ ] Stage 6: APP release gates in section 5 reviewed and authorized per gate
+- [ ] LEG-08 to LEG-11 applicable requirements reviewed for launch (outside this tracker)
 - [ ] L8 real-user pilot decision recorded last
 
 ## 7. Maintaining this tracker
 
-- Change a row's status only together with its evidence reference, in the same reviewed PR that records the decision.
-- If a source record changes its questions, update the matching row here in the same PR.
+- Change a row's status only together with its evidence reference, reviewer where applicable, and date, in the same reviewed commit that records the decision (section 2.3, stage 5). That commit goes into this tracker's PR while it is open.
+- If a source record changes its questions, update the matching row here in the same commit.
 - This file never carries legal text, contract content, or privileged advice. It holds references only.
