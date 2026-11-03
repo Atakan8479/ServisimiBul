@@ -16,7 +16,19 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-## LEG-05 privacy notice requirements record — 2026-11-02 (Draft PR #231, not approved)
+## LEG-04 vendor and transfer review record — 2026-11-03 (Draft PR #233, not approved)
+
+- Added `docs/22_VENDORS_AND_TRANSFERS.md` for issue #197 and open question 8 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel. Shared Supabase and vendor dashboards were not accessed.
+- Verified by reading `main` at `7d593e9`:
+  - The database is Supabase PostgreSQL, last recorded on the Free plan; its region is not recorded in the repository.
+  - The host, email provider, log storage, monitoring, and DNS/CDN are not selected or recorded.
+  - The frontend loads no third-party scripts, fonts, or SDKs.
+  - CI uses synthetic data only; the encrypted logical export's location is not recorded.
+  - `dev-supabase.ps1` can put shared data on developer machines (D046).
+- Still open: owner evidence V1–V6 (Supabase region and terms, host, email provider, DNS/CDN, export location, log storage) and counsel decisions V7–V8 and VQ2–VQ5 (KVKK Article 9 transfers, vendor roles and contracts, workstation rules).
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #233.
+
+## LEG-05 privacy notice requirements record — 2026-11-02 (merged in PR #231; not legally approved)
 
 - Added `docs/21_PRIVACY_NOTICE_REQUIREMENTS.md` for issue #198 and open question 7 in `docs/01_DECISIONS.md`. It is a requirements record with no notice text, and it has not been reviewed by the owner or by counsel. LEG-04 (#197), on which it depends, has not started.
 - Verified by reading `main` at `a5c04de`:
