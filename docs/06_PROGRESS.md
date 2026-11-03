@@ -16,7 +16,18 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-## LEG-04 vendor and transfer review record — 2026-11-03 (Draft PR #233, not approved)
+## LEG-06 data subject request process record — 2026-11-03 (Draft PR #235, not approved)
+
+- Added `docs/23_DATA_SUBJECT_REQUESTS.md` for issue #199 and open question 9 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel, and it contains no template text.
+- Verified by reading `main` at `a6a3828`:
+  - The account page lists personal-data requests, deactivation, and deletion requests as disabled.
+  - No request table, API, or admin screen exists. No controller contact or legal page exists, and email delivery is disabled.
+  - Pilot PARENT accounts may log in with an unverified email (D052).
+  - Password change (APP-04) and sign-out-all (APP-05) are the only related self-service actions.
+- Still open for the owner and counsel: RQ1–RQ7 (channels and monitoring person, rights covered, response deadline, identity proof, templates, delivery failures, record retention), plus LEG-01 L1/L2.
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #235.
+
+## LEG-04 vendor and transfer review record — 2026-11-03 (merged in PR #233; not legally approved)
 
 - Added `docs/22_VENDORS_AND_TRANSFERS.md` for issue #197 and open question 8 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel. Shared Supabase and vendor dashboards were not accessed.
 - Verified by reading `main` at `7d593e9`:
