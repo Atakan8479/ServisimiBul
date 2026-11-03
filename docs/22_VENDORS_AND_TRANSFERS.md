@@ -11,7 +11,7 @@ No vendor country, contract, legal role, or transfer basis under KVKK Article 9 
 | Field | Value |
 |---|---|
 | Vendor legal roles (processor, independent controller, or neither) | `[PENDING: counsel]` — section 3 |
-| Physical location of personal data per vendor | `[PENDING: owner evidence]` — release blockers in section 4 |
+| Storage region, remote-access countries, and subprocessors per vendor | `[PENDING: owner evidence]` — section 3, release blockers in section 4 |
 | Contracts or terms in force per vendor | `[PENDING: owner evidence]` |
 | Whether each flow is a transfer abroad, and its basis under KVKK Article 9 | `[PENDING: counsel]` |
 | Required safeguards, notices, or contract responsibilities | `[PENDING: counsel]`, recorded only where actually applicable |
@@ -25,10 +25,10 @@ No vendor country, contract, legal role, or transfer basis under KVKK Article 9 
 Verified against `main` at `7d593e9` on 2026-11-03 by reading decisions, deployment and operations docs, configuration, workflows, and the frontend entry point. Shared Supabase and every vendor dashboard were deliberately not accessed.
 
 - **Database.** PostgreSQL is provided by Supabase; Supabase Auth, Storage, and the Data API are not used for application data (D003, D018, D033). The last recorded evidence shows the shared project on PostgreSQL 17.11 and the organization on the Free plan (`docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`). **The project's region is not recorded anywhere in the repository.**
-- **Application hosting.** Railway, Render, and a managed VPS are candidates; none is selected (D042, `docs/07_BACKEND_DEPLOYMENT.md`). Production serves the frontend and `/api/v1` from the same origin (D036), so the frontend host is the same unselected decision.
+- **Application hosting.** Railway, Render, and a managed VPS are candidates; none is selected (D042, `docs/07_BACKEND_DEPLOYMENT.md`). D036 requires that the browser sees the frontend and `/api/v1` on the same origin. That is a browser-side requirement, not a physical topology. The frontend host, backend host, reverse proxy, and TLS terminator may be one provider or several, depending on the deployment that is eventually approved. Every one of these assignments is `[PENDING]`, and section 3 lists them separately so either architecture can be recorded.
 - **Email.** SMTP delivery for verification and password reset is implemented through `SB_MAIL_*` settings and disabled until configured. No provider is selected (`docs/07_BACKEND_DEPLOYMENT.md`).
 - **Logs and monitoring.** Production writes structured ECS logs to the console (`application-prod.properties`). Where they are stored, and any monitoring or alerting service, depend on the unselected host (D040).
-- **DNS, CDN, domain.** Nothing in the repository records a domain, DNS provider, CDN, or TLS terminator.
+- **Domain, DNS, CDN, reverse proxy, TLS.** Nothing in the repository records a domain, DNS provider, CDN, external reverse proxy, or TLS terminator. The production profile requires an HTTPS frontend origin when email is enabled (`docs/07_BACKEND_DEPLOYMENT.md`), so TLS will be terminated somewhere, but where and by whom is not decided.
 - **Browser-side third parties.** None: `servisimibul-frontend/index.html` loads only the application bundle, `package.json` has no analytics or monitoring SDK, and no external fonts or scripts are loaded (LEG-02 section 3).
 - **GitHub.** Hosts the repository, issues, and pull requests, and runs CI through GitHub Actions: checkout, Java and Node setup, artifact upload, and Gitleaks (`.github/workflows`). CI uses disposable PostgreSQL with synthetic fixtures only (D045).
 - **Backups.** Supabase managed backups depend on the plan. An encrypted logical export exists outside Git, and its storage location is not recorded in the repository (`docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`).
@@ -37,43 +37,68 @@ Verified against `main` at `7d593e9` on 2026-11-03 by reading decisions, deploym
 
 ## 3. Vendor and transfer matrix
 
-Purpose and data categories are verified from the repository (LEG-02 numbering). Every column after them is `[PENDING]` until the owner supplies evidence and counsel decides. "Evidence needed" names what would settle the cell. It does not presume the answer.
+### 3.1 Usage status
 
-| Vendor / system | Purpose | LEG-02 categories | Provider | Country of storage / access | Legal role | Contract / terms | Who at the vendor can access | Transfer basis (KVKK Art. 9) | Evidence needed |
-|---|---|---|---|---|---|---|---|---|---|
-| Database | Stores all application data | 2–15, 9a | Supabase (D003) | `[PENDING]` | `[PENDING: counsel]` | `[PENDING]` | `[PENDING]` | `[PENDING: counsel]` | Project region and organization plan from the Supabase dashboard; the terms or DPA accepted for the organization |
-| Database backups | Recovery | 18 | Supabase (plan-dependent) | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Whether managed backups exist on the current plan, and where they are kept |
-| Logical export storage | Recovery before migrations | 18 | `[PENDING: not recorded]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Where the encrypted export is held, and who holds the key |
-| Application and frontend host | Runs the backend and serves the SPA | 1–17 in transit and in memory; 17 stored | Not selected (D042) | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Selected provider, region, and terms; part of provider selection |
-| Log storage and monitoring | Operations, incidents | 17 | Not selected | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Same as host, plus any separate log or alerting service |
-| Email delivery | Verification and reset emails | 2, 16 | Not selected | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Selected SMTP provider, region, terms; needed before `SB_MAIL_ENABLED=true` |
-| DNS, CDN, TLS | Name resolution and traffic delivery | 1 in transit | Not recorded | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Whether a domain and CDN or proxy will be used, and which |
-| GitHub (repository, Actions) | Source code, issues, CI | None of the platform's users' data is designed to be stored there; developers' own account data | GitHub | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Confirmation that no production personal data enters issues, PRs, logs, or artifacts (PROPOSED check, O2) |
-| Developer workstations (`dev-supabase.ps1`) | Shared-data development | 2–15 when used | Developers' own machines | `[PENDING]` | `[PENDING]` | `[PENDING]` | Two developers | `[PENDING]` | Who uses shared-data mode, from where, and under what rules |
-| Developer tooling (AI coding assistants and similar) | Code changes | None by design | Varies per developer | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | `[PENDING]` | Confirmation that production personal data is never pasted into such tools (PROPOSED rule, O2) |
+Each row has one status, assigned only from repository evidence:
 
-Analytics, advertising, chat, and support tools are omitted because none is in use (section 2). They must be added here before any is introduced.
+| Status | Meaning |
+|---|---|
+| **ACTIVE** | Exists and processes, or can process, personal data today |
+| **PLANNED** | Required before a real-user launch, but not yet selected |
+| **DISABLED** | Implemented in code but switched off; must be reassessed here before it is turned on |
+| **UNDECIDED** | Might or might not be part of the deployment; the owner decides whether it is used |
+| **NOT USED** | No integration exists; adding one triggers a new review here (O4) |
+
+### 3.2 Matrix
+
+Status, purpose, and data categories are verified (LEG-02 numbering). Every other value is `[PENDING: owner evidence]` (facts only the owner can supply, for example from a vendor dashboard or contract) or `[PENDING: counsel]` (legal decisions). For a vendor that is not selected yet, every evidence column depends on that future selection and is marked "on selection". "Evidence needed" names what would settle the row. It does not presume the answer.
+
+| System | Status | Purpose | LEG-02 categories | Provider | Primary storage country / region | Countries of remote vendor access | Subprocessors | Contract / DPA and subprocessor-list reference | Legal role | Transfer abroad and basis (KVKK Art. 9) | Evidence needed |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| Database | ACTIVE | Stores all application data | 2–15, 9a | Supabase (D003) | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: counsel]` | `[PENDING: counsel]` | Project region; terms or DPA accepted for the organization; Supabase's published subprocessor list and support-access terms (V1) |
+| Managed database backups | UNDECIDED | Recovery | 18 | Supabase, if the plan provides them | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: counsel]` | `[PENDING: counsel]` | Whether the current plan keeps managed backups, and where (V1). The last recorded plan was Free. |
+| Logical export storage | ACTIVE | Recovery before migrations | 18 | `[PENDING: not recorded]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: counsel]` | `[PENDING: counsel]` | Where the encrypted export is held and who holds the key (V5) |
+| Backend host | PLANNED | Runs Spring Boot | 1–17 in memory and in transit; 17 if logs are stored there | Not selected (D042) | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Provider, region, support-access terms, subprocessors (V2) |
+| Frontend host | PLANNED | Serves the SPA files | None, if it only serves static files; more if it also proxies `/api/v1` | Not selected; may be the backend host | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Whether it is separate from the backend host, and if so the same evidence as V2 |
+| Log storage | PLANNED | Operations, incidents | 17 | Not selected; may be the backend host | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Where host logs are stored and for how long (V6) |
+| Separate monitoring or alerting service | UNDECIDED | Alerts and metrics | 17, if it receives logs | None selected; may not be needed if the host provides it | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Whether one is used at all (V6) |
+| Email delivery | DISABLED | Verification and reset emails | 2, 16 | Not selected | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Provider, region, terms, subprocessors before `SB_MAIL_ENABLED=true` (V3) |
+| DNS | UNDECIDED | Resolves the domain name | Lookup metadata, such as the resolver's IP and the queried name; no request paths, headers, or bodies | Not recorded | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Domain and DNS provider (V4) |
+| CDN, reverse proxy, or TLS terminator | UNDECIDED | Delivers traffic; may terminate HTTPS | Without TLS termination, only encrypted traffic and connection metadata (1). If it terminates TLS, it can technically see request paths, headers, the `SBSESSION` cookie, credentials during login, and API payloads, so potentially 1–16 in transit, depending on configuration | Not recorded; the host platform may fill this role | On selection | On selection | On selection | On selection | `[PENDING: counsel]` | `[PENDING: counsel]` | Whether TLS terminates at the host or at a separate intermediary, and what that intermediary logs or retains (V4) |
+| GitHub (repository, Actions) | ACTIVE | Source code, issues, CI | None of the platform users' data by design; developers' own account data | GitHub | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: counsel]` | `[PENDING: counsel]` | Confirmation that no production personal data enters issues, PRs, logs, or artifacts (O2) |
+| Developer workstations (`dev-supabase.ps1`) | ACTIVE when shared-data mode is used | Shared-data development | 2–15 | Developers' own machines | `[PENDING: owner evidence]` | — | — | — | `[PENDING: counsel]` | `[PENDING: counsel]` | Who uses shared-data mode, from where, and under what rules (VQ5) |
+| Developer tooling (AI coding assistants and similar) | ACTIVE | Code changes | None by design | Varies per developer | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: owner evidence]` | `[PENDING: counsel]` | `[PENDING: counsel]` | Confirmation that production personal data is never pasted into such tools (O2) |
+| Analytics, advertising, chat, support tools | NOT USED | — | — | None | — | — | — | — | — | — | None now; adding one requires a new row first (O4) |
+
+A row marked "on selection" never needs invented values. It is filled when the provider is chosen. The CDN row does not assume that a CDN or external proxy will be used, or that any provider retains everything it can technically see.
 
 ## 4. Release blockers (unknown evidence)
 
-These unknowns are not resolved by assumption. PROPOSED: each blocks a real-user launch until it is recorded with evidence. A real-user pilot is separately gated by LEG-01 L8.
+These unknowns are not resolved by assumption. Which ones block depends on each row's status in section 3:
 
-| # | Unknown | Who can supply it |
-|---|---|---|
-| V1 | Supabase project region and the terms or DPA accepted for the organization | Owner, from the Supabase dashboard (read-only) |
-| V2 | Application host, region, and terms | Owner, at provider selection (D042) |
-| V3 | Email provider, region, and terms, before enabling SMTP | Owner |
-| V4 | Domain, DNS, CDN, or proxy, if any | Owner |
-| V5 | Location and key custody of the encrypted logical export | Owner |
-| V6 | Log storage location and retention at the chosen host (also LEG-03) | Owner |
-| V7 | Whether any flow is a transfer abroad, and its basis under KVKK Article 9 | Counsel, after V1–V6 |
-| V8 | Each vendor's legal role and required contract terms | Counsel, after V1–V6 |
+- **ACTIVE and PLANNED rows:** PROPOSED, their evidence and the counsel decisions V7–V8 block a real-user launch.
+- **DISABLED rows:** they block only their own activation, which needs this record updated first.
+- **UNDECIDED rows:** the owner first decides whether the service is part of the approved deployment. If it is, it becomes PLANNED and blocks like any other. If not, it becomes NOT USED and needs no further details.
+- **NOT USED rows:** they block nothing until they are adopted (O4).
+
+A release blocker therefore applies to the deployment actually approved and the personal-data flows it really has. It never requires details about a service that will not be used. This does not relax anything for active or planned flows. The real-user pilot stays separately gated by LEG-01 L8, and production release by its own approval.
+
+| # | Unknown (for each row it applies to: storage region, remote-access countries, subprocessors, contract or DPA, subprocessor-list reference) | Status of the related rows | Who can supply it |
+|---|---|---|---|
+| V1 | Supabase database and, if used, managed backups | ACTIVE / UNDECIDED | Owner, from the Supabase dashboard and published terms (read-only) |
+| V2 | Backend host and, if separate, frontend host | PLANNED | Owner, at provider selection (D042) |
+| V3 | Email provider | DISABLED; required before enabling SMTP | Owner |
+| V4 | Domain and DNS, and whether a separate CDN, reverse proxy, or TLS terminator is used | UNDECIDED | Owner, as part of the deployment decision |
+| V5 | Location and key custody of the encrypted logical export | ACTIVE | Owner |
+| V6 | Log storage at the chosen host, and whether a separate monitoring service is used (retention also LEG-03) | PLANNED / UNDECIDED | Owner |
+| V7 | Whether any flow is a transfer abroad, counting remote access as well as storage, and its basis under KVKK Article 9 | All ACTIVE and PLANNED rows | Counsel, after V1–V6 |
+| V8 | Each vendor's legal role and required contract terms, including subprocessor terms | All ACTIVE and PLANNED rows | Counsel, after V1–V6 |
 
 ## 5. Safeguards, notices, and contracts (PROPOSED, B — only where applicable)
 
 The issue asks for safeguards, notices, or standard contract responsibilities only where they actually apply. Until V7–V8 are answered, none is known to apply. PROPOSED working rules, which are not legal requirements:
 
-- **O1 — Region-first selection.** When choosing the host (D042) and email provider, record the region and terms as part of the selection decision, so that V2–V3 are answered by design.
+- **O1 — Region-first selection.** When choosing the host (D042), email provider, and any DNS, CDN, or proxy, record the storage region, remote-access countries, subprocessor list, and terms as part of the selection decision, so that V2–V4 are answered by design.
 - **O2 — Keep personal data out of development tools.** No production personal data in GitHub issues, PRs, CI logs, artifacts, or developer AI tools. Synthetic fixtures only (D045). This extends the existing rule against committing secrets or private data (`AGENTS.md`).
 - **O3 — Notice input.** Once V1–V8 are recorded, the recipients-and-transfers element of every LEG-05 notice is filled from section 3, not written independently.
 - **O4 — Change trigger.** Adding or changing a vendor, region, or plan updates section 3 in the same PR as the change, before data flows to it.
