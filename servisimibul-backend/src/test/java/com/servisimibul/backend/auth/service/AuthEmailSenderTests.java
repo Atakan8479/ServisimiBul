@@ -68,6 +68,25 @@ class AuthEmailSenderTests {
     }
 
     @Test
+    void emailChangeLinksToTheDedicatedConfirmationRoute() {
+        JavaMailSender mailSender = mock(JavaMailSender.class);
+
+        sender(mailSender, "https://example.com/").sendEmailChangeVerification(
+                "new@example.com",
+                RESERVED_CHARACTER_TOKEN
+        );
+
+        SimpleMailMessage message = deliveredMessage(mailSender);
+        assertThat(message.getTo()).containsExactly("new@example.com");
+        assertThat(message.getSubject()).isEqualTo("ServisimiBul yeni e-posta adresinizi doğrulayın");
+        assertThat(message.getText()).isEqualTo(
+                "Yeni e-posta adresinizi doğrulamak için bağlantıyı açın: "
+                        + "https://example.com/verify-email-change?token="
+                        + ENCODED_RESERVED_CHARACTER_TOKEN
+        );
+    }
+
+    @Test
     void smtpDeliveryDoesNotBlockTheCallingThread() throws Exception {
         CountDownLatch deliveryStarted = new CountDownLatch(1);
         CountDownLatch releaseDelivery = new CountDownLatch(1);

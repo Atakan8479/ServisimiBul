@@ -61,6 +61,53 @@
   gap: 1.15rem;
 }
 
+.account-email-current {
+  margin: 0 0 1.25rem;
+  padding: 1rem;
+  border-radius: var(--radius-small);
+  background: var(--neutral-50);
+}
+
+.account-email-current dt {
+  color: var(--color-muted);
+  font-size: 0.82rem;
+}
+
+.account-email-current dd {
+  margin: 0.3rem 0 0;
+  overflow-wrap: anywhere;
+  color: var(--navy-950);
+  font-weight: 750;
+}
+
+.account-email-unavailable,
+.account-email-pending {
+  display: grid;
+  gap: 1rem;
+}
+
+.account-email-unavailable h2,
+.account-email-unavailable p,
+.account-email-pending h2,
+.account-email-pending p {
+  margin: 0;
+}
+
+.account-email-unavailable p,
+.account-email-pending p {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.account-email-unavailable .ui-button,
+.account-email-pending .ui-button {
+  width: fit-content;
+}
+
+.account-email-confirmation {
+  padding: clamp(1rem, 4vw, 2rem);
+}
+
 .account-password-card .ui-field {
   gap: 0.45rem;
 }

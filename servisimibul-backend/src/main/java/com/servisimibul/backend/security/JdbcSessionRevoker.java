@@ -19,8 +19,13 @@ class JdbcSessionRevoker implements SessionRevoker {
     @Override
     public void revokeAll(UUID userId) {
         userRepository.findById(userId).ifPresent(user ->
-                sessionRepository.findByPrincipalName(user.getEmail()).values()
-                        .forEach(session -> sessionRepository.deleteById(session.getId()))
+                revokeAll(user.getEmail())
         );
+    }
+
+    @Override
+    public void revokeAll(String principalName) {
+        sessionRepository.findByPrincipalName(principalName).values()
+                .forEach(session -> sessionRepository.deleteById(session.getId()));
     }
 }

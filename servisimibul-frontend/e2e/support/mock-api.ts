@@ -17,6 +17,7 @@ const createdAt = '2026-10-18T10:00:00Z'
 
 export interface MockApiState {
   operatorApprovalRequired?: boolean
+  emailChangeAvailable?: boolean
   registered: boolean
   parentRegistered: boolean
   verified: boolean
@@ -177,6 +178,13 @@ export async function installMockApi(page: Page, state: MockApiState) {
         role = undefined
         return empty(route)
       })
+    }
+    if (path === '/auth/email-change' && method === 'POST') {
+      return requireAuthenticated(route, role, () => empty(route, 202))
+    }
+    if (path === '/auth/email-change/confirm' && method === 'POST') {
+      role = undefined
+      return empty(route)
     }
 
     if (path === '/notifications/unread-count' && method === 'GET') {
@@ -816,6 +824,7 @@ function authUser(role: Role, state: MockApiState) {
     role,
     operatorApprovalRequired: state.operatorApprovalRequired ?? true,
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
+    emailChangeAvailable: state.emailChangeAvailable ?? false,
   }
 }
 

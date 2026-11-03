@@ -29,6 +29,10 @@ class RateLimitPropertiesTests {
                 invalid,
                 invalid,
                 invalid,
+                invalid,
+                invalid,
+                invalid,
+                invalid,
                 invalid
         );
 

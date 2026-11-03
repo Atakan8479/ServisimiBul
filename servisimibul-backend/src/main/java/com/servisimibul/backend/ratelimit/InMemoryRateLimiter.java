@@ -221,6 +221,10 @@ public class InMemoryRateLimiter {
             case PASSWORD_RESET_TOKEN -> properties.passwordResetToken();
             case PASSWORD_CHANGE_IP -> properties.passwordChangeIp();
             case PASSWORD_CHANGE_ACCOUNT -> properties.passwordChangeAccount();
+            case EMAIL_CHANGE_IP -> properties.emailChangeIp();
+            case EMAIL_CHANGE_ACCOUNT -> properties.emailChangeAccount();
+            case EMAIL_CHANGE_CONFIRM_IP -> properties.emailChangeConfirmIp();
+            case EMAIL_CHANGE_CONFIRM_TOKEN -> properties.emailChangeConfirmToken();
             case PUBLIC_SEARCH_IP -> properties.publicSearchIp();
             case COMMENT_ACCOUNT -> properties.commentAccount();
             case REPORT_ACCOUNT -> properties.reportAccount();

@@ -4,6 +4,7 @@ import com.servisimibul.backend.auth.dto.ChangePasswordRequest;
 import com.servisimibul.backend.auth.dto.CsrfResponse;
 import com.servisimibul.backend.auth.dto.CurrentUserResponse;
 import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.EmailChangeRequest;
 import com.servisimibul.backend.auth.dto.LoginRequest;
 import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
@@ -155,6 +156,29 @@ public class AuthController {
             httpRequest.getSession(false).invalidate();
         }
         SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/email-change")
+    ResponseEntity<Void> requestEmailChange(
+            @Valid @RequestBody EmailChangeRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest
+    ) {
+        authService.requestEmailChange(
+                request,
+                user.id(),
+                clientIdentityResolver.resolve(httpRequest)
+        );
+        return ResponseEntity.accepted().build();
+    }
+
+    @PostMapping("/email-change/confirm")
+    ResponseEntity<Void> confirmEmailChange(
+            @Valid @RequestBody TokenRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        authService.confirmEmailChange(request, clientIdentityResolver.resolve(httpRequest));
         return ResponseEntity.noContent().build();
     }
 

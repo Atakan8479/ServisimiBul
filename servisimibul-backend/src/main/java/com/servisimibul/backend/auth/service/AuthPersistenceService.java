@@ -12,6 +12,8 @@ import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.identity.PasswordResetToken;
 import com.servisimibul.backend.identity.PasswordResetTokenRepository;
+import com.servisimibul.backend.identity.PendingEmailChange;
+import com.servisimibul.backend.identity.PendingEmailChangeRepository;
 import com.servisimibul.backend.ratelimit.InMemoryRateLimiter;
 import com.servisimibul.backend.ratelimit.RateLimitRule;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ class AuthPersistenceService {
     private final OperatorProfileRepository profileRepository;
     private final EmailVerificationTokenRepository verificationTokenRepository;
     private final PasswordResetTokenRepository resetTokenRepository;
+    private final PendingEmailChangeRepository pendingEmailChangeRepository;
     private final PasswordEncoder passwordEncoder;
     private final InMemoryRateLimiter rateLimiter;
 
@@ -164,7 +167,65 @@ class AuthPersistenceService {
         user.changePasswordHash(passwordEncoder.encode(newPassword));
     }
 
+    boolean issueEmailChange(
+            UUID userId,
+            String proposedEmail,
+            String tokenHash,
+            OffsetDateTime now
+    ) {
+        AppUser user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(InvalidAuthTokenException::new);
+        if (user.getEmail().equals(proposedEmail)
+                || userRepository.findByEmail(proposedEmail).isPresent()) {
+            return false;
+        }
+        pendingEmailChangeRepository.invalidateExpiredByProposedEmail(proposedEmail, now);
+
+        PendingEmailChange change = pendingEmailChangeRepository.findByUserId(userId)
+                .orElseGet(() -> new PendingEmailChange(
+                        user,
+                        proposedEmail,
+                        tokenHash,
+                        now,
+                        now.plusHours(24)
+                ));
+        if (change.getId() != null) {
+            change.reissue(proposedEmail, tokenHash, now, now.plusHours(24));
+        }
+        pendingEmailChangeRepository.saveAndFlush(change);
+        return true;
+    }
+
+    void invalidateEmailChange(String tokenHash, OffsetDateTime now) {
+        pendingEmailChangeRepository.findByTokenHashForUpdate(tokenHash)
+                .ifPresent(change -> change.invalidate(now));
+    }
+
+    Optional<ConfirmedEmailChange> confirmEmailChange(String tokenHash, OffsetDateTime now) {
+        PendingEmailChange change = pendingEmailChangeRepository.findByTokenHashForUpdate(tokenHash)
+                .orElseThrow(InvalidAuthTokenException::new);
+        if (!change.consumeIfValid(now)) {
+            return Optional.empty();
+        }
+
+        AppUser user = userRepository.findByIdForUpdate(change.getUser().getId())
+                .orElseThrow(InvalidAuthTokenException::new);
+        Optional<AppUser> conflict = userRepository.findByEmail(change.getProposedEmail())
+                .filter(existing -> !existing.getId().equals(user.getId()));
+        if (conflict.isPresent()) {
+            return Optional.empty();
+        }
+
+        String oldEmail = user.getEmail();
+        user.changeEmail(change.getProposedEmail(), now);
+        userRepository.flush();
+        return Optional.of(new ConfirmedEmailChange(user.getId(), oldEmail));
+    }
+
     private boolean withinCooldown(Optional<OffsetDateTime> latest, OffsetDateTime now) {
         return latest.filter(createdAt -> createdAt.isAfter(now.minus(TOKEN_COOLDOWN))).isPresent();
+    }
+
+    record ConfirmedEmailChange(UUID userId, String oldEmail) {
     }
 }

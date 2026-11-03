@@ -15,6 +15,7 @@ public class CurrentUserResponseFactory {
 
     private final OperatorApprovalPolicy approvalPolicy;
     private final OperatorProfileRepository profileRepository;
+    private final AuthService authService;
 
     public CurrentUserResponse create(AuthenticatedUser user) {
         OperatorApprovalStatus approvalStatus = user.role() == UserRole.OPERATOR
@@ -27,7 +28,8 @@ public class CurrentUserResponseFactory {
                 user.getUsername(),
                 user.role(),
                 approvalPolicy.isRequired(),
-                approvalStatus
+                approvalStatus,
+                authService.isEmailChangeAvailable()
         );
     }
 }

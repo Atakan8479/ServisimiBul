@@ -107,6 +107,7 @@ public class SecurityConfiguration {
                                 "/api/v1/auth/resend-verification",
                                 "/api/v1/auth/forgot-password",
                                 "/api/v1/auth/reset-password",
+                                "/api/v1/auth/email-change/confirm",
                                 "/api/v1/auth/login"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
@@ -114,6 +115,8 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/change-password")
                         .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout-all")
+                        .hasAnyRole("PARENT", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/email-change")
                         .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/reports")

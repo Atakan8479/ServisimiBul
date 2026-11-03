@@ -95,6 +95,11 @@ public class AppUser {
         this.passwordHash = Objects.requireNonNull(passwordHash);
     }
 
+    public void changeEmail(String email, OffsetDateTime verifiedAt) {
+        this.email = normalizeEmail(email);
+        this.emailVerifiedAt = Objects.requireNonNull(verifiedAt);
+    }
+
     public boolean passwordMatches(String password, PasswordEncoder passwordEncoder) {
         return passwordEncoder.matches(password, passwordHash);
     }

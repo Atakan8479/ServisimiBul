@@ -2055,6 +2055,36 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       )
     })
 
+    await test.step('fail closed while email delivery is unavailable', async () => {
+      await login(parentPage, parentEmail, parentPassword!, 'parent')
+      await parentPage.goto('/parent/account/email')
+      await expect(
+        parentPage.getByRole('heading', {
+          name: 'E-posta değişikliği şu anda kullanılamıyor',
+        }),
+      ).toBeVisible()
+
+      const csrfToken = await csrf(parentPage)
+      const before = (await (
+        await parentPage.request.get('/api/v1/auth/me')
+      ).json()) as { email: string }
+      const rejected = await parentPage.request.post(
+        '/api/v1/auth/email-change',
+        {
+          headers: { [csrfToken.headerName]: csrfToken.token },
+          data: { email: 'j03.parent.changed@example.test' },
+        },
+      )
+      expect(rejected.status()).toBe(503)
+      expect(
+        (
+          (await (await parentPage.request.get('/api/v1/auth/me')).json()) as {
+            email: string
+          }
+        ).email,
+      ).toBe(before.email)
+    })
+
     await test.step('change the parent password and revoke every real session', async () => {
       const changedPassword = `${parentPassword!}-changed`
       await login(parentPage, parentEmail, parentPassword!, 'parent')

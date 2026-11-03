@@ -27,6 +27,10 @@ public record RateLimitProperties(
         @Valid @NotNull Limit passwordResetToken,
         @Valid @NotNull Limit passwordChangeIp,
         @Valid @NotNull Limit passwordChangeAccount,
+        @Valid @NotNull Limit emailChangeIp,
+        @Valid @NotNull Limit emailChangeAccount,
+        @Valid @NotNull Limit emailChangeConfirmIp,
+        @Valid @NotNull Limit emailChangeConfirmToken,
         @Valid @NotNull Limit publicSearchIp,
         @Valid @NotNull Limit commentAccount,
         @Valid @NotNull Limit reportAccount

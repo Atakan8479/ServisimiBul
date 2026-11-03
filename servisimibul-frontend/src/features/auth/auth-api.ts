@@ -12,6 +12,7 @@ export const authUserSchema = z.object({
   approvalStatus: z
     .enum(['DRAFT', 'PENDING', 'CHANGES_REQUESTED', 'APPROVED'])
     .nullable(),
+  emailChangeAvailable: z.boolean().optional(),
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>
@@ -117,6 +118,23 @@ export async function logoutAllDevices(): Promise<void> {
   await apiRequest('/auth/logout-all', {
     method: 'POST',
     requiresSession: true,
+  })
+  resetCsrfToken()
+  clearKnownAuthRole()
+}
+
+export function requestEmailChange(email: string): Promise<void> {
+  return apiRequest('/auth/email-change', {
+    method: 'POST',
+    json: { email },
+    requiresSession: true,
+  })
+}
+
+export async function confirmEmailChange(token: string): Promise<void> {
+  await apiRequest('/auth/email-change/confirm', {
+    method: 'POST',
+    json: { token },
   })
   resetCsrfToken()
   clearKnownAuthRole()
