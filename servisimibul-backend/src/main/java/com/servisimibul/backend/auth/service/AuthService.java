@@ -1,15 +1,18 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
+import com.servisimibul.backend.auth.config.EmailChangeProperties;
 import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
 import com.servisimibul.backend.auth.config.ParentRegistrationProperties;
 import com.servisimibul.backend.auth.dto.ChangePasswordRequest;
 import com.servisimibul.backend.auth.dto.EmailRequest;
+import com.servisimibul.backend.auth.dto.EmailChangeRequest;
 import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
 import com.servisimibul.backend.auth.exception.EmailUnavailableException;
+import com.servisimibul.backend.auth.exception.InvalidAuthTokenException;
 import com.servisimibul.backend.auth.exception.ParentRegistrationUnavailableException;
 import com.servisimibul.backend.security.SessionRevoker;
 import com.servisimibul.backend.security.TokenHasher;
@@ -33,6 +36,7 @@ public class AuthService {
 
     private final AuthInputValidator validator;
     private final EmailVerificationProperties emailVerification;
+    private final EmailChangeProperties emailChange;
     private final ParentEmailVerificationProperties parentEmailVerification;
     private final ParentRegistrationProperties parentRegistration;
     private final AuthPersistenceService persistence;
@@ -158,8 +162,59 @@ public class AuthService {
         sessionRevoker.revokeAll(userId);
     }
 
+    public void requestEmailChange(EmailChangeRequest request, UUID userId, String remoteAddress) {
+        requireEmailChange();
+        String proposedEmail = validator.email(request.email());
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_CHANGE_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_CHANGE_ACCOUNT, userId.toString());
+
+        String rawToken = tokenGenerator.generate();
+        String tokenHash = tokenHasher.hash(rawToken);
+        boolean issued;
+        try {
+            issued = persistence.issueEmailChange(userId, proposedEmail, tokenHash, now());
+        } catch (DataIntegrityViolationException conflict) {
+            issued = false;
+        }
+        if (!issued) {
+            return;
+        }
+
+        try {
+            emailSender.sendEmailChangeVerification(proposedEmail, rawToken);
+        } catch (RuntimeException deliveryFailure) {
+            log.error("Email change delivery failed: {}", deliveryFailure.getClass().getSimpleName());
+            persistence.invalidateEmailChange(tokenHash, now());
+        }
+    }
+
+    public void confirmEmailChange(TokenRequest request, String remoteAddress) {
+        requireEmailChange();
+        String token = request.token().strip();
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_CHANGE_CONFIRM_IP, remoteAddress);
+        rateLimiter.requireAllowance(RateLimitRule.EMAIL_CHANGE_CONFIRM_TOKEN, token);
+        AuthPersistenceService.ConfirmedEmailChange confirmed;
+        try {
+            confirmed = persistence.confirmEmailChange(tokenHasher.hash(token), now())
+                    .orElseThrow(InvalidAuthTokenException::new);
+        } catch (DataIntegrityViolationException conflict) {
+            throw new InvalidAuthTokenException();
+        }
+        sessionRevoker.revokeAll(confirmed.oldEmail());
+    }
+
+    boolean isEmailChangeAvailable() {
+        return emailChange.enabled() && emailSender.isAvailable();
+    }
+
     private void requireEmail() {
         if (!emailSender.isAvailable()) {
+            throw new EmailUnavailableException();
+        }
+    }
+
+    private void requireEmailChange() {
+        if (!isEmailChangeAvailable()) {
             throw new EmailUnavailableException();
         }
     }

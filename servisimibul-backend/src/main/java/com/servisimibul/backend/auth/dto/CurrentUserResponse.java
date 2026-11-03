@@ -10,6 +10,7 @@ public record CurrentUserResponse(
         String email,
         UserRole role,
         boolean operatorApprovalRequired,
-        OperatorApprovalStatus approvalStatus
+        OperatorApprovalStatus approvalStatus,
+        boolean emailChangeAvailable
 ) {
 }

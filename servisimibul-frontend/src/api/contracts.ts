@@ -29,6 +29,7 @@ export interface AuthUser {
   role: UserRole
   operatorApprovalRequired: boolean
   approvalStatus: 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED' | null
+  emailChangeAvailable?: boolean
 }
 
 export interface CsrfToken {
@@ -67,6 +68,8 @@ const localizedProblems: Record<string, string> = {
   CURRENT_PASSWORD_INVALID: 'Mevcut şifre doğrulanamadı.',
   PARENT_REGISTRATION_UNAVAILABLE: 'Şu anda veli hesabı oluşturulamıyor.',
   EMAIL_UNAVAILABLE: 'Bu işlem şu anda tamamlanamıyor.',
+  TOKEN_INVALID_OR_EXPIRED:
+    'Doğrulama bağlantısı geçersiz, süresi dolmuş veya daha önce kullanılmış.',
   AUTH_SERVICE_UNAVAILABLE:
     'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
   RATE_LIMIT_EXCEEDED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',

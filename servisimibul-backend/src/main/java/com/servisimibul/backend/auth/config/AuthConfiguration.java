@@ -10,6 +10,7 @@ import java.time.Clock;
 @Configuration
 @EnableConfigurationProperties({
         AuthEmailProperties.class,
+        EmailChangeProperties.class,
         EmailVerificationProperties.class,
         ParentEmailVerificationProperties.class,
         ParentRegistrationProperties.class

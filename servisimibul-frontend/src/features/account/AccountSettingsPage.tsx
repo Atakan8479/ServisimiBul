@@ -103,10 +103,20 @@ export function AccountSettingsPage() {
           description="Giriş bilgileriniz ve oturumlarınız."
         >
           <SurfaceCard className="account-action-card">
-            <FutureAction
-              description="E-posta değişikliği henüz kullanıma açık değil."
-              title="E-posta adresini değiştir"
-            />
+            {user.emailChangeAvailable ? (
+              <EmailChangeAction
+                path={
+                  isOperator
+                    ? '/operator/account/email'
+                    : '/parent/account/email'
+                }
+              />
+            ) : (
+              <FutureAction
+                description="E-posta teslimi ve gerekli hukuki kararlar tamamlanana kadar bu işlem kullanılamaz."
+                title="E-posta adresini değiştir"
+              />
+            )}
             <PasswordAction
               path={
                 isOperator
@@ -182,6 +192,22 @@ export function AccountSettingsPage() {
         />
       )}
     </section>
+  )
+}
+
+function EmailChangeAction({ path }: { path: string }) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>E-posta adresini değiştir</h3>
+        <p>Yeni adresi doğrulamadan mevcut hesap e-postanız değişmez.</p>
+      </div>
+      <div className="account-action-state">
+        <Link className="ui-button ui-button-quiet" to={path} viewTransition>
+          Değiştir
+        </Link>
+      </div>
+    </div>
   )
 }
 

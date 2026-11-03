@@ -13,4 +13,9 @@ class NoSessionRevoker implements SessionRevoker {
     public void revokeAll(UUID userId) {
         // The one-shot non-web admin command cannot have browser sessions.
     }
+
+    @Override
+    public void revokeAll(String principalName) {
+        // The one-shot non-web admin command cannot have browser sessions.
+    }
 }

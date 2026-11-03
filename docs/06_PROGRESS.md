@@ -1,6 +1,19 @@
 # Progress ledger (update only after verification)
 
-## Current stage: APP-04 authenticated password change ready for PR review
+## Current stage: APP-03 secure email-change scaffolding ready for PR review; production activation blocked
+
+## Verified APP-03 gated secure email change — 2026-11-03
+
+- Added authenticated PARENT/OPERATOR email-change request and token-confirmation endpoints. Account ownership comes only from the session. Proposed addresses are normalized and uniqueness-checked; the current address is unchanged until a random, hash-only, single-use 24-hour token is consumed.
+- User-row locking, one pending row per account, an active-proposed-email unique index, token replacement, and transactional consumption prevent stale, replayed, and conflicting concurrent changes. Confirmation revokes all Spring Session JDBC sessions indexed under the old email. CSRF, request/account/token rate limits, generic request responses, and a shared invalid/expired token error limit enumeration and disclosure.
+- Flyway V18 creates `pending_email_change` with RLS and the established restricted-runtime privilege contract. It was applied and replay-checked only on disposable PostgreSQL 17.4; shared Supabase was not accessed.
+- Email change defaults off and is fixed off in `application-prod.properties`. Delivery failure invalidates the pending token and never claims a message was sent. The account UI and direct email route show an honest Turkish unavailable state while delivery is disabled; isolated tests use only a test sender and no production token-return path exists.
+- Added role routes, request/confirmation states, current-email preservation, localized invalid/expired handling, keyboard/accessibility coverage, and responsive checks at 1440, 768, 390, and 320 pixels without redesigning account settings.
+- Complete backend verification passed 333/333 tests and built the JAR after applying all 18 migrations. Focused account/email Vitest passed 31/31; ESLint, strict TypeScript, scoped Prettier, production build, and focused mocked Playwright 10/10 passed. The complete Vitest run passed 261/262; the unchanged demand-feedback test at `src/features/demand/demand-flow.test.tsx:866` failed again in isolation because its notification-count request has no MSW handler.
+- The real Spring Boot + disposable PostgreSQL + Vite + Playwright journey passed 1/1. With SMTP disabled it verified the unavailable UI, a 503 email-change request, and an unchanged current email; the runner removed the disposable database, tariff files, processes, and generated credentials.
+- Production activation remains blocked on an approved delivery provider/configuration, LEG-05 email wording, and explicit decisions on current-password reauthentication and old-address verification/notification. The feature is not production-ready and issue #210 must remain open.
+
+## Previous stage: APP-04 authenticated password change ready for PR review
 
 ## Verified APP-04 password change and session revocation — 2026-11-02
 

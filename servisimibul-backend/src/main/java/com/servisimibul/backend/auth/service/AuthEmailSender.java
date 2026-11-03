@@ -22,6 +22,10 @@ interface AuthEmailSender {
     void sendVerification(String email, String rawToken);
 
     void sendPasswordReset(String email, String rawToken);
+
+    default void sendEmailChangeVerification(String email, String rawToken) {
+        throw new EmailUnavailableException();
+    }
 }
 
 @Component
@@ -40,6 +44,11 @@ class DisabledAuthEmailSender implements AuthEmailSender {
 
     @Override
     public void sendPasswordReset(String email, String rawToken) {
+        throw new EmailUnavailableException();
+    }
+
+    @Override
+    public void sendEmailChangeVerification(String email, String rawToken) {
         throw new EmailUnavailableException();
     }
 }
@@ -90,17 +99,31 @@ class SmtpAuthEmailSender implements AuthEmailSender {
         );
     }
 
+    @Override
+    public void sendEmailChangeVerification(String email, String rawToken) {
+        deliver(
+                email,
+                "ServisimiBul yeni e-posta adresinizi doğrulayın",
+                "Yeni e-posta adresinizi doğrulamak için bağlantıyı açın: "
+                        + link("verify-email-change", rawToken)
+        );
+    }
+
     private void safelySend(String recipient, String subject, String body) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(properties.from());
-            message.setTo(recipient);
-            message.setSubject(subject);
-            message.setText(body);
-            mailSender.send(message);
+            deliver(recipient, subject, body);
         } catch (RuntimeException deliveryFailure) {
             log.error("Authentication email delivery failed: {}", deliveryFailure.getClass().getSimpleName());
         }
+    }
+
+    private void deliver(String recipient, String subject, String body) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(properties.from());
+        message.setTo(recipient);
+        message.setSubject(subject);
+        message.setText(body);
+        mailSender.send(message);
     }
 
     private String link(String path, String rawToken) {

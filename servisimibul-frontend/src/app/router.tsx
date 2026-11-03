@@ -80,6 +80,25 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'parent/account/email',
+        handle: { pageTitle: 'E-posta adresini değiştir' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/account/EmailChangePage'))
+            .EmailChangePage,
+        }),
+      },
+      {
+        path: 'verify-email-change',
+        handle: { pageTitle: 'E-posta değişikliğini doğrula' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/account/EmailChangePage'))
+            .EmailChangeConfirmationPage,
+        }),
+      },
+      {
         path: 'register',
         handle: { pageTitle: 'Hesap türü seçimi' },
         HydrateFallback: LoadingPage,
@@ -227,6 +246,16 @@ const applicationRoutes: RouteObject[] = [
         lazy: async () => ({
           Component: (await import('../features/account/PasswordChangePage'))
             .PasswordChangePage,
+        }),
+      },
+      {
+        path: 'account/email',
+        handle: { pageTitle: 'E-posta adresini değiştir' },
+        loader: operatorLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/account/EmailChangePage'))
+            .EmailChangePage,
         }),
       },
     ],
