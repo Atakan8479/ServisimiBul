@@ -68,6 +68,7 @@ Approval state is important: never turn a proposal into a settled decision witho
 - School CSV import, full-catalog ingestion, and automated school synchronization. Revisit only after pilot usage demonstrates a need; approve the source, duplicate rules, preview/commit behavior, and error policy before implementation.
 
 ## OPEN questions requiring explicit resolution before relevant implementation
+Items 4–10 (LEG-01 to LEG-07) stay open here until approved. Their approval status, required evidence, and release gates are tracked in one place, `docs/25_LEGAL_APPROVAL_TRACKER.md`. Merged technical records and closed LEG issues are not approvals.
 1. **Deferred by D019:** source of Istanbul school/neighborhood reference data and import duplicate/error policy. This is not a blocker for pilot admin CRUD.
 2. Whether/when operator-specific prices may be added after MVP and their legal/display policy.
 3. Whether post-approval profile moderation or re-review is needed after pilot feedback; MVP edits take effect immediately under D024.
