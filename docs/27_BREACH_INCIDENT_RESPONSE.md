@@ -4,7 +4,7 @@ Issue: [#204](https://github.com/Atakan8479/ServisimiBul/issues/204). Depends on
 
 This document is not legal advice, not an approved breach policy, and not a compliance claim. It records the legal sources checked, what the product and its runbooks provide today, and the structure that the owner and qualified Turkish counsel must fill: roles and contacts, an incident ledger, decision points, escalation, and the notification decision. It uses the same status categories as the LEG-01 record: **A** verified fact, **B** PROPOSED, **C** pending legal decision, **D** approved decision. It adds no approved decision and no template text copied from elsewhere.
 
-The consolidated tracker (`docs/25_LEGAL_APPROVAL_TRACKER.md`) covers LEG-01 to LEG-07 only. LEG-11 keeps its own issue and this record; its pending items are in section 12.
+The consolidated tracker (`docs/25_LEGAL_APPROVAL_TRACKER.md`) covers LEG-01 to LEG-07 only. LEG-11 keeps its own issue and this record; its pending items are in section 13.
 
 ## 1. Decision summary
 
@@ -56,7 +56,7 @@ Verified against `main` at `e532129` on 2026-11-03 by reading decisions D042, D0
 - **Admin notifications** cover only `CONTENT_REPORTED`; nothing notifies anyone of a security event.
 
 ### 3.3 Containment capabilities
-- **Per-user session revocation:** `SessionRevoker.revokeAll` deletes one user's Spring Session JDBC sessions; it is used for password reset, email change, and operator suspension. **There is no product feature to revoke all users' sessions at once.**
+- **Per-user session revocation:** `SessionRevoker.revokeAll` deletes one user's Spring Session JDBC sessions; it is used for password reset, password change, a user's own "log out everywhere" (`logoutAll`), email change, and operator suspension. **There is no product feature to revoke all users' sessions at once.**
 - **Account disable:** operator suspension disables the account (LEG-07). No equivalent admin action exists for parent accounts.
 - **Credential storage:** passwords use `BCryptPasswordEncoder`; one-time tokens are stored as SHA-256 hashes (`TokenHasher`). These reduce, but do not remove, the impact of a database disclosure; the assessment is `[PENDING: counsel]`.
 - **Secrets:** database, session, and mail credentials are environment variables, and the Secret scan workflow runs on pull requests (`docs/07_BACKEND_DEPLOYMENT.md`).
@@ -166,11 +166,29 @@ PROPOSED rules:
 
 The processor's duty to tell the controller without delay (section 2) depends on each vendor's role and contract terms (LEG-04 V8, VQ2).
 
-## 11. Reconciliation with AUDIT-F4 (#166)
+## 11. Tabletop drill (PROPOSED, B)
+
+A discussion exercise, run before any real-user pilot and repeated at an interval `[PENDING: owner]` (IQ9). It uses only synthetic data and invented facts, touches no production or shared Supabase system, and sends nothing to the Authority or to any user.
+
+**Scenario.** A developer working in shared-data mode (D046) notices that a database connection string with the application role's password was pasted into a public place several days ago. Logs from the backend host for that period may already have expired.
+
+| Phase | Injects (facilitator reveals) | What participants must decide or produce |
+|---|---|---|
+| 1. Discovery | The finding is reported on a Friday evening; the incident lead is unreachable | Who opens the ledger entry; which candidate times are recorded (section 6); is this a suspected breach; who is escalated today |
+| 2. Containment and evidence | Rotating the password will break the running backend; host logs older than the retention period are gone | Order of rotation and redeploy (`docs/07`, `docs/10`); which logs and snapshots are preserved first; hashes and storage of preserved items; whether all sessions must be revoked, given there is no global action (section 3.3) |
+| 3. Legal assessment | Database statistics show unexplained reads of `app_user` and demand tables | Which LEG-02 categories and groups are affected; what the legal assessor needs to decide; when the 72-hour period started; what to record if facts are still incomplete at hour 72 |
+| 4. Communications | A parent asks on the demand board whether data leaked; Supabase support has not answered | Who may reply and with what approved text; how affected users would be told while email is disabled; what goes to the Board in stages; what the vendor liaison asks V1 |
+| 5. Close | — | Ledger closure fields; follow-up tasks referenced by incident ID only |
+
+**Expected outputs:** a completed synthetic ledger entry, a timeline against the 72-hour period, a list of gaps found, and follow-up tasks. **Pass criteria** (PROPOSED): every decision point in section 6 has a named owner; the synthetic Board-notification decision is reached, with reasons, within the drill's simulated 72 hours; no real personal data or credential appears in drill notes.
+
+The drill's synthetic ledger and notes are kept with the real ledger (section 7), not in this repository. A short, data-free summary (date, participants' roles, gaps, follow-up issue numbers) may be added to `docs/06_PROGRESS.md`.
+
+## 12. Reconciliation with AUDIT-F4 (#166)
 
 #166 asked for a KVKK privacy, retention, and rights-request process, and its inventory covered audit events. It did not cover breach response or notification. No breach procedure, ledger, or notification route exists on `main` (section 3), so its closure did not provide one. This record supplies the current state and the structure needed; logs and backups are already inventoried in LEG-02 categories 17 and 18.
 
-## 12. Open questions
+## 13. Open questions
 
 | # | Question | Who answers |
 |---|---|---|
@@ -182,8 +200,9 @@ The processor's duty to tell the controller without delay (section 2) depends on
 | IQ6 | Approved data-subject notice wording, language, and channel, given that email is disabled today | Counsel drafts, owner approves |
 | IQ7 | Risk-assessment criteria for deciding whether to notify, using the LEG-02 categories in section 6 | Counsel |
 | IQ8 | Vendor incident channels and terms (section 10) | Owner supplies (LEG-04 VQ1); counsel reviews (VQ2) |
+| IQ9 | Who runs the tabletop drill (section 11), how often, and must a completed drill gate the real-user pilot? | Owner |
 
-## 13. Remaining risks
+## 14. Remaining risks
 
 1. No breach procedure, ledger, or named contact exists, so the 72-hour period could pass while roles are worked out.
 2. Log retention is unknown and logs live with an unselected host; evidence may be lost.
@@ -193,11 +212,11 @@ The processor's duty to tell the controller without delay (section 2) depends on
 6. Shared-data development (D046) widens where a breach could start.
 7. The controller is not identified (LEG-01 L1), so nobody can yet notify the Board on its behalf.
 
-## 14. How to approve
+## 15. How to approve
 
 1. **Technical draft.** The PR that adds this record may be merged after technical review. Merging is not legal approval, and the status line stays `DRAFT — NOT APPROVED, NOT LAWYER-REVIEWED`.
 2. **Owner and counsel review.**
-   - The owner answers IQ1 and supplies IQ8.
+   - The owner answers IQ1 and IQ9, and supplies IQ8.
    - Counsel answers IQ2 and IQ7, and drafts IQ6 for the owner's approval.
    - The owner and counsel answer IQ3, IQ4, and IQ5 together.
 3. **Recording decisions.** A later, reviewed change records:
@@ -206,6 +225,7 @@ The processor's duty to tell the controller without delay (section 2) depends on
    - an update to this record's status line
 
    No names, contacts, dates, or reviewers are recorded before they are actually given, and contact details go in the ledger location, not here.
-4. **Implementation gate.** Runbook updates, ledger tooling outside the product, and product containment features (for example a global session revocation) may be prepared as separate reviewed tasks. Nothing sends or schedules a regulatory or data-subject notification without the approved decision from step 3.
-5. **Launch.** LEG-11's applicable requirements must be reviewed before any real-user pilot (tracker section 5, LEG-01 L8).
-6. **Issue status.** Issue #204 stays open until its acceptance criteria are met by recorded, reviewed answers.
+4. **Drill.** The tabletop drill in section 11 is run once roles are named (IQ1). Whether a completed drill gates the real-user pilot is IQ9.
+5. **Implementation gate.** Runbook updates, ledger tooling outside the product, and product containment features (for example a global session revocation) may be prepared as separate reviewed tasks. Nothing sends or schedules a regulatory or data-subject notification without the approved decision from step 3.
+6. **Launch.** LEG-11's applicable requirements must be reviewed before any real-user pilot (tracker section 5, LEG-01 L8).
+7. **Issue status.** Issue #204 stays open until its acceptance criteria are met by recorded, reviewed answers.

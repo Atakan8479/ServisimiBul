@@ -30,6 +30,17 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
+## LEG-11 breach incident response record — 2026-11-03 (Draft PR #240, not approved)
+
+- Added `docs/27_BREACH_INCIDENT_RESPONSE.md` for issue #204 and open question 12 in `docs/01_DECISIONS.md`. This is a structured draft with no approved policy, names, or contacts, and it has not been reviewed by the owner or by counsel.
+- Legal sources checked on kvkk.gov.tr on 2026-11-03: KVKK Article 12(5) and Board decision 2019/10 (Board notice within 72 hours of learning of a breach, reasons for any delay, data-subject notice once identified, processor duty, breach records, response plan).
+- Verified by reading `main` at `e532129`:
+  - An operational incident recovery checklist exists in `docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`, but no breach assessment, ledger, contact list, or notification step exists.
+  - Per-user session revocation exists; there is no global session revocation and no admin action to disable a parent account.
+  - No security alerting exists; log retention depends on an unselected host; email is disabled, so affected users cannot be emailed.
+- Still open for the owner and counsel: IQ1–IQ9 (roles, the start of the 72-hour clock, who signs notifications, ledger scope, location and retention, notice wording and channel, risk criteria, vendor channels, drill cadence).
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #240.
+
 ## LEG-08 terms, content safety, and child-data record — 2026-11-03 (Draft PR #239, not approved)
 
 - Added `docs/26_TERMS_CONTENT_SAFETY_AND_CHILD_DATA.md` for issue #201 and open question 11 in `docs/01_DECISIONS.md`. This is a structured draft with no terms or policy text, and it has not been reviewed by the owner or by counsel.
