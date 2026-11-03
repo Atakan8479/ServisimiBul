@@ -16,7 +16,19 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-## LEG-06 data subject request process record — 2026-11-03 (Draft PR #235, not approved)
+## LEG-07 account lifecycle decision record — 2026-11-03 (Draft PR #236, not approved)
+
+- Added `docs/24_ACCOUNT_LIFECYCLE_POLICY.md` for issue #200 and open question 10 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel, and its state labels are not approved names.
+- Verified by reading `main` at `3bd2ee6`:
+  - Operators can hide their profile reversibly.
+  - Admin suspension sets `operator_profile.active=false` and `app_user.enabled=false`, records the reason, and revokes all sessions. No code path reverses it.
+  - Parents have no suspension path; moderation acts only on content.
+  - Comments by a hidden or suspended operator stay published under a generic author label.
+  - Voluntary deactivation and erasure are not implemented.
+- Still open for the owner and counsel: AQ1–AQ7 (reversing suspension, deactivation effects, parent suspension, comments after suspension, records surviving erasure, withdrawing erasure, wording).
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #236.
+
+## LEG-06 data subject request process record — 2026-11-03 (merged in PR #235; not legally approved)
 
 - Added `docs/23_DATA_SUBJECT_REQUESTS.md` for issue #199 and open question 9 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel, and it contains no template text.
 - Verified by reading `main` at `a6a3828`:
