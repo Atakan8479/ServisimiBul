@@ -16,7 +16,14 @@
 
 Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01–REQ-09, frontend design tooling, the parent/operator signup UX (PR #103), Issues #100/#104/#124, SEC-ARCH PR #127, UI-01 PR #128, UI-02 PR #130, UI copy PR #129, UKOME-01 PR #131, UKOME-02 PR #132, and the subsequent merged UI foundation through PR #187 are present on `main`. UI-FIDELITY-13 (PR #187) and APP-02 account settings (PR #226) are merged on `main`. The UI-07 rollout gate, with #191–#193, is on `feat/issue-123-ui-rollout-gate` (PR #190) and includes the latest `main`. Shared Supabase was not accessed during this work; its deployment state is tracked separately. J-05's supervised sessions have not occurred and J-04 live protection activation remains unverified.
 
-## LEG-07 account lifecycle decision record — 2026-11-03 (Draft PR #236, not approved)
+## Consolidated legal approval tracker — 2026-11-03 (Draft PR #237, not approved)
+
+- Added `docs/25_LEGAL_APPROVAL_TRACKER.md` and a pointer above open questions 4–10 in `docs/01_DECISIONS.md`. The tracker gathers every pending LEG-01 to LEG-07 decision in one place: L1–L8, B1–B4, P1–P5, R1–R8, V1–V8, VQ1–VQ5, NQ1–NQ5, RQ1–RQ7, AQ1–AQ7, unnumbered items, and the sign-off fields. Each item names who decides and the evidence needed, and every item is `PENDING`.
+- It defines the six-stage approval workflow, separates the development allowed now from per-APP production release gates, and gives a completion checklist. It replaces neither the seven records nor legal review. LEG-08 to LEG-11 are out of scope.
+- Verified on `main` at `75ca1b5`: all seven technical PRs (#227–#229, #231, #233, #235, #236) are merged; #194–#199 are closed and #200 is reopened. No issue state was changed for this work.
+- Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #237.
+
+## LEG-07 account lifecycle decision record — 2026-11-03 (merged in PR #236; not legally approved)
 
 - Added `docs/24_ACCOUNT_LIFECYCLE_POLICY.md` for issue #200 and open question 10 in `docs/01_DECISIONS.md`. This is a structured draft, not a legal decision: it has not been reviewed by the owner or by counsel, and its state labels are not approved names.
 - Verified by reading `main` at `3bd2ee6`:
