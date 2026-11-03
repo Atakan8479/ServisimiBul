@@ -179,6 +179,7 @@ class AuthPersistenceService {
                 || userRepository.findByEmail(proposedEmail).isPresent()) {
             return false;
         }
+        pendingEmailChangeRepository.invalidateExpiredByProposedEmail(proposedEmail, now);
 
         PendingEmailChange change = pendingEmailChangeRepository.findByUserId(userId)
                 .orElseGet(() -> new PendingEmailChange(

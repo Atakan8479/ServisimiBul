@@ -213,6 +213,40 @@ class EmailChangeApiTests {
     }
 
     @Test
+    void releasesAnExpiredPendingAddressForAnotherAccount() throws Exception {
+        AppUser first = createUser(UserRole.PARENT, uniqueEmail("expired-first"));
+        AppUser second = createUser(UserRole.OPERATOR, uniqueEmail("expired-second"));
+        Cookie firstSession = login(first.getEmail(), false);
+        Cookie secondSession = login(second.getEmail(), false);
+        String proposedEmail = uniqueEmail("expired-target");
+
+        requestChange(firstSession, proposedEmail).andExpect(status().isAccepted());
+        jdbcTemplate.update("""
+                update pending_email_change
+                set created_at = now() - interval '2 days',
+                    expires_at = now() - interval '1 day'
+                where user_id = ?
+                """, first.getId());
+
+        requestChange(secondSession, proposedEmail).andExpect(status().isAccepted());
+
+        assertThat(jdbcTemplate.queryForObject("""
+                select user_id
+                from pending_email_change
+                where proposed_email = ? and consumed_at is null
+                """, UUID.class, proposedEmail)).isEqualTo(second.getId());
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pending_email_change
+                where user_id = ? and consumed_at is not null
+                """, Integer.class, first.getId())).isOne();
+        assertThat(userRepository.findById(first.getId()).orElseThrow().getEmail())
+                .isEqualTo(first.getEmail());
+        assertThat(userRepository.findById(second.getId()).orElseThrow().getEmail())
+                .isEqualTo(second.getEmail());
+    }
+
+    @Test
     void serializesConflictingPendingAddressesAcrossAccounts() throws Exception {
         AppUser first = createUser(UserRole.PARENT, uniqueEmail("concurrent-first"));
         AppUser second = createUser(UserRole.OPERATOR, uniqueEmail("concurrent-second"));
