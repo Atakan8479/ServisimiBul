@@ -46,15 +46,17 @@ Verified against `main` at `e5623d1` on 2026-11-03 by reading decisions D009, D0
 
 ### 2.3 Moderation (D053)
 
-- **Reporting** never changes visibility by itself. Report reasons: `ABUSE_HARASSMENT`, `HATE_DISCRIMINATION`, `PERSONAL_DATA`, `SPAM_ADVERTISING`, `MISLEADING_SERVICE`, `OTHER` (`ReportReason.java`).
-- **Only ADMIN acts**, with a required reason and an append-only audit event. The actions are `MARK_IN_REVIEW`, `DISMISS`, `RESOLVE_NO_ACTION`, `HIDE_COMMENT`, `RESTORE_COMMENT`, `WITHDRAW_SERVICE_RESPONSE`, `SUSPEND_OPERATOR`, and `CLOSE_DEMAND` (`ModerationAction.java`).
+- **Reporting** never changes visibility by itself. Report reasons: `ABUSE_HARASSMENT`, `HATE_DISCRIMINATION`, `PERSONAL_DATA`, `SPAM_ADVERTISING`, `MISLEADING_SERVICE`, `OTHER` (`ReportReason.java`). The reporter chooses the reason.
+- **Reportable targets** are only `COMMENT`, `DEMAND`, and `SERVICE_RESPONSE` (`ModerationTargetType.java`, D053). Operator profiles, profile descriptions, and service offering descriptions **cannot be reported directly** through this workflow, although they are public operator-entered text (section 2.2).
+- **Only ADMIN acts**, with a required reason and an append-only audit event. The actions are `MARK_IN_REVIEW`, `DISMISS`, `RESOLVE_NO_ACTION`, `HIDE_COMMENT`, `RESTORE_COMMENT`, `WITHDRAW_SERVICE_RESPONSE`, `SUSPEND_OPERATOR`, and `CLOSE_DEMAND` (`ModerationAction.java`). The admin's reason is free text of 2–500 characters (`ModerationActionRequest`), recorded on the audit event separately from the reporter's `ReportReason`. No action edits or hides an operator profile or offering description; `SUSPEND_OPERATOR` reuses the existing suspension path and acts on the whole account.
 - **Nobody is told the outcome.** The only moderation notification is `CONTENT_REPORTED`, which goes to admins (`NotificationType.java`; LEG-02 category 15). The reporter and the affected author are not notified.
 - **No appeal or complaint route exists** for an author whose comment was hidden, an operator whose response was withdrawn, or a suspended operator (LEG-07 section 2).
 - **No general pre-approval and no automated detection** (D050, D053).
 
 ### 2.4 Children's data
 
-- **No structured student data.** No form asks for a student's or child's name, school class, home address, health information, or route (D015; LEG-02 section 5). Demands use only school, pickup neighborhood, academic year, morning/afternoon flags, and fixed reason codes (D048). Discovery uses school and neighborhood, never an address.
+- **No structured student identity records.** No form asks for a student's or child's name, school class, home address, health information, or route (D015; LEG-02 section 5). Demands use only school, pickup neighborhood, academic year, morning/afternoon flags, and fixed reason codes (D048). Discovery uses school and neighborhood, never an address.
+- **Residual contextual risk.** The absence of structured student fields does not remove privacy risk. A demand support links a parent account to a school and pickup neighborhood, which suggests that a child attends that school and lives near that neighborhood. Combined with free text, a small school, or other knowledge of the person, this can identify a family. LEG-02 records which of these data are personal data; D015 and D048 are unchanged by this record.
 - **Warnings exist on some surfaces:**
   - the comment form (`DemandComments.tsx`) warns against student names, phone numbers, and full addresses
   - the demand detail page and demand board add health information to that list (`DemandDetailPage.tsx`, `DemandBoardPage.tsx`)
@@ -75,20 +77,22 @@ Whether ServisimiBul is a discovery service or something more is LEG-01 L3, and 
 
 ## 4. Content policy and moderation guidance (PROPOSED, B)
 
-**Prohibited-content categories.** PROPOSED: these align with the existing report reasons, so users, reporters, and admins share one vocabulary:
-- abuse and harassment
-- hate and discrimination
-- personal data, especially children's data
-- spam and advertising
-- misleading service claims
-- other unlawful content, as counsel defines
+**Prohibited-content categories.** PROPOSED: the policy's categories line up with the existing report reasons, so users, reporters, and admins share one vocabulary:
+- abuse and harassment (`ABUSE_HARASSMENT`)
+- hate and discrimination (`HATE_DISCRIMINATION`)
+- personal data, especially children's data (`PERSONAL_DATA`)
+- spam and advertising (`SPAM_ADVERTISING`)
+- misleading service claims (`MISLEADING_SERVICE`)
+- anything else a reporter considers a problem (`OTHER`)
 
-The approved definitions are `[PENDING: counsel]`.
+`OTHER` stays the existing catch-all report reason under D053. The policy may name unlawful content as one example, but must not narrow `OTHER` to it. The approved definitions are `[PENDING: counsel]`. Report reasons are what reporters choose; they are not admin actions or admin reasons.
 
-**Admin moderation guidance.** PROPOSED internal guidance, for owner approval:
-- comments containing a child's name, address, health details, or route are hidden with reason `PERSONAL_DATA`
-- misleading operator claims are handled with `WITHDRAW_SERVICE_RESPONSE` or `SUSPEND_OPERATOR`, according to severity
-- every action records a reason, as already required by D053
+**Admin moderation guidance.** PROPOSED internal guidance, for owner approval, using only the existing D053 actions:
+- a reported comment containing a child's name, address, health details, or route is hidden with `HIDE_COMMENT`, whatever report reason the reporter chose; the admin's free-text reason records why (for example, child personal data)
+- a reported service response with misleading claims is handled with `WITHDRAW_SERVICE_RESPONSE`, or with `SUSPEND_OPERATOR` for serious or repeated cases
+- every action records an admin reason, as already required by D053
+
+**Moderation coverage gap.** Operator profile and service offering descriptions are public operator-entered text, but the D053 workflow cannot target them (section 2.3). Within the workflow, the only available response is suspending the whole operator account through a case opened on one of that operator's reportable targets, which removes the operator from public results; there is no targeted action for the description itself. Whether these surfaces need direct reporting, a targeted admin action, or another route is `[PENDING: owner]` (TQ7). This record does not propose a specific API or feature; any change needs its own approved decision and APP task.
 
 **Notice and complaint.** `[PENDING: owner + counsel]`. Options:
 - tell the affected author or operator about the action and its reason
@@ -104,9 +108,12 @@ Timelines for reviewing reports are `[PENDING: owner]`. No automated detection o
 | Safeguard | State | Next step |
 |---|---|---|
 | No structured fields for student identity, address, health, or route | Verified (D015, D048) | Keep; any new field needs a LEG-02 update first |
+| School and pickup-neighborhood context linked to identifiable parents | Residual risk, not removed by the above (section 2.4) | Keep in the LEG-02 inventory; no change to D015 or D048 proposed |
 | Warning on the comment form, demand pages, report form, and operator profile description | Verified | Wording review with LEG-05 notices `[PENDING]` |
 | Guidance on the service offering description | Missing | PROPOSED: add equivalent guidance; implementation is a separate APP task after approval |
-| Admin guidance to hide child data under `PERSONAL_DATA` | Not written | PROPOSED in section 4 |
+| User reporting of comments, demands, and service responses (D053) | Verified, supported | Keep |
+| User reporting of, or targeted admin action on, operator profile and offering descriptions | Not supported (coverage gap, section 4) | `[PENDING: owner]` (TQ7); any capability needs its own decision and APP task |
+| Admin guidance to hide comments containing child data with `HIDE_COMMENT` | Not written | PROPOSED in section 4 |
 | Removal of child data from moderation snapshots | Not decided | LEG-02 P5, LEG-03 |
 | Automated detection of names, addresses, or phone numbers | Deferred by D050 | LEG-02 P4, owner decision |
 
@@ -120,9 +127,12 @@ These are discouragement and response measures. They do not guarantee that such 
 | Admin hides a comment | ADMIN | `HIDDEN`, restorable; audit kept (D053) | No. Content moderation; data kept. |
 | Admin withdraws a response or closes a demand | ADMIN | Status change; history kept | No |
 | Admin suspends an operator | ADMIN | Account disabled; data kept (LEG-07) | No |
-| Erasure request | Data subject or representative | Rights process: review, then approved execution or a reasoned outcome (LEG-06, LEG-07 section 4.2, LEG-03) | Yes, if approved and carried out |
+| Erasure request: intake and review | Data subject or representative; reviewed by the controller | Rights-handling process (LEG-06): request received, identity and authority verified, then reviewed for legal holds, retention exceptions, and third-party records (LEG-03 R2, O4, O5; LEG-07 section 4.2). Data unchanged by receipt or review. | No. A received or reviewed request is not erasure. |
+| Approved erasure execution | Controller, after an approved outcome | The approved, foreign-key-safe sequence runs (LEG-03, LEG-07 section 4.2). Lawful retention exceptions and backups follow LEG-03, so the outcome may be completed or partially fulfilled. A request rejected or withdrawn at review never reaches this stage. | Yes, for the data actually erased, once executed |
 
-PROPOSED: the terms and every moderation screen use wording that keeps these apart. A hidden comment is never described as deleted, and an author deletion is never described as erasure of the author's data.
+The erasure workflow, retention periods, and exceptions are `[PENDING]` in LEG-03, LEG-06, and LEG-07; this record adds no decision on them.
+
+PROPOSED: the terms and every moderation screen use wording that keeps these apart. A hidden comment is never described as deleted, an author deletion is never described as erasure of the author's data, and a received erasure request is never described as completed erasure.
 
 ## 7. Reconciliation with AUDIT-F4 (#166)
 
@@ -138,14 +148,14 @@ PROPOSED: the terms and every moderation screen use wording that keeps these apa
 | TQ4 | Is a review or complaint route needed for moderation actions and suspensions, and through which channel? | Owner + counsel, with LEG-06 RQ1 and LEG-07 AQ1 |
 | TQ5 | Is a separate acceptance step needed for the terms, or is a linked notice enough? | Counsel, with LEG-05 NQ4 |
 | TQ6 | Should the offering description get child-data and personal-data guidance, and should existing hints be aligned (section 5)? | Owner |
-| TQ7 | Internal moderation guidance and report-review timelines (section 4) | Owner |
+| TQ7 | Internal moderation guidance and report-review timelines; and whether operator profile and offering descriptions, which D053 does not cover, need direct reporting, a targeted admin action, or another route (section 4) | Owner |
 
 ## 9. Remaining risks
 
 1. Users currently post without any terms or content rules.
 2. Moderated users and reporters are not told the outcome, and have no way to complain.
-3. Operator profile and offering descriptions are public and unbounded, and the offering description carries no guidance.
-4. Child data can enter free text, and moderation snapshots keep copies (LEG-02 P5).
+3. Operator profile and offering descriptions are public and unbounded, cannot be reported through D053, and the offering description carries no guidance.
+4. Child data can enter free text, and moderation snapshots keep copies (LEG-02 P5). School and pickup-neighborhood context can identify a family even without student fields.
 5. Platform responsibility cannot be stated until LEG-01 L3 and L4 are answered.
 
 ## 10. How to approve

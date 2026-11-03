@@ -35,10 +35,10 @@ Status: Gates 0–8, J-01–J-03, A-01–A-13, B-01–B-14, B-16–B-18, REQ-01�
 - Added `docs/26_TERMS_CONTENT_SAFETY_AND_CHILD_DATA.md` for issue #201 and open question 11 in `docs/01_DECISIONS.md`. This is a structured draft with no terms or policy text, and it has not been reviewed by the owner or by counsel.
 - Verified by reading `main` at `e5623d1`:
   - No terms, content policy, or appeal route exists.
-  - Moderation offers eight admin-only actions and six report reasons. The only moderation notification is `CONTENT_REPORTED` to admins.
+  - Moderation offers eight admin-only actions and six report reasons. Only comments, demands, and service responses can be reported; operator profile and offering descriptions cannot (D053). The only moderation notification is `CONTENT_REPORTED` to admins.
   - No structured student, address, health, or route field exists.
   - Child-data warnings appear on the comment form, demand pages, report form, and operator profile description, but not on the service offering description.
-- Still open for the owner and counsel: TQ1–TQ7 (terms, content policy, outcome notices, complaint route, acceptance step, offering-description guidance, moderation guidance and timelines).
+- Still open for the owner and counsel: TQ1–TQ7 (terms, content policy, outcome notices, complaint route, acceptance step, offering-description guidance, moderation guidance, timelines, and the description coverage gap).
 - Documentation only. No code, API, database, migration, shared Supabase, credential, or SMTP setting changed. Only `git diff --check` and reference checks were run; CI results for the final commit are reported on PR #239.
 
 ## Consolidated legal approval tracker — 2026-11-03 (merged in PR #237; no decision approved)
