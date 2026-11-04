@@ -40,7 +40,8 @@ export function PublicRequestEntryPage() {
         <h1>Kişisel veri başvuru yolu</h1>
         <p>
           Başvuru kanalı hukuki onay tamamlanana kadar burada yayınlanmaz.
-          Hesabınız varsa oturum açarak devam edebilirsiniz.
+          Mevcut giriş sayfalarına aşağıdan ulaşabilirsiniz; oturum açmak
+          kişisel veri başvurusu başlatmaz.
         </p>
       </header>
       <StatePanel
