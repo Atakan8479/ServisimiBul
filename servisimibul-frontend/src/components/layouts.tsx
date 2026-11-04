@@ -272,6 +272,7 @@ export function PublicLayout() {
             <NavLink to="/demands">Talep panosu</NavLink>
             <NavLink to="/parent/register">Veli kaydı</NavLink>
             <NavLink to="/operator/register">İşletmeci kaydı</NavLink>
+            <NavLink to="/privacy/notice">Gizlilik ve kişisel veriler</NavLink>
           </nav>
         </div>
       </footer>
