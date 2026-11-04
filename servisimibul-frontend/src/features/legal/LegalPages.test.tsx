@@ -158,7 +158,7 @@ describe('TermsPage', () => {
 })
 
 describe('public footer navigation', () => {
-  it('exposes the privacy notice and request-entry links from every public page', () => {
+  it('exposes the legal and request-entry links from every public page', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <Routes>
@@ -176,6 +176,12 @@ describe('public footer navigation', () => {
         hidden: true,
       }),
     ).toHaveAttribute('href', '/privacy/notice')
+    expect(
+      within(footer).getByRole('link', {
+        name: 'Kullanım koşulları',
+        hidden: true,
+      }),
+    ).toHaveAttribute('href', '/terms')
     expect(
       within(footer).getByRole('link', {
         name: 'Kişisel veri başvuru yolu',

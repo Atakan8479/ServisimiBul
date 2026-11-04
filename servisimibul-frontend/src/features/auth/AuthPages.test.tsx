@@ -31,18 +31,24 @@ describe('parent account onboarding', () => {
     ).toHaveAttribute('href', '/operator/register')
   })
 
-  it('links parent registration to the public privacy notice route', async () => {
+  it('links parent registration to the public legal routes', async () => {
     renderRoute('/parent/register')
     expect(
       await screen.findByRole('link', { name: 'Gizlilik ve kişisel veriler' }),
     ).toHaveAttribute('href', '/privacy/notice')
+    expect(
+      screen.getByRole('link', { name: 'Kullanım koşulları' }),
+    ).toHaveAttribute('href', '/terms')
   })
 
-  it('links operator registration to the public privacy notice route', async () => {
+  it('links operator registration to the public legal routes', async () => {
     renderRoute('/operator/register')
     expect(
       await screen.findByRole('link', { name: 'Gizlilik ve kişisel veriler' }),
     ).toHaveAttribute('href', '/privacy/notice')
+    expect(
+      screen.getByRole('link', { name: 'Kullanım koşulları' }),
+    ).toHaveAttribute('href', '/terms')
   })
 
   it('registers a parent with CSRF and returns through login to the intended demand page', async () => {

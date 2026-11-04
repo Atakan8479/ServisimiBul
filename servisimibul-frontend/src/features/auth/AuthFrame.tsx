@@ -42,6 +42,9 @@ export function AuthFrame({
               <Link to="/privacy/notice" viewTransition>
                 Gizlilik ve kişisel veriler
               </Link>
+              <Link to="/terms" viewTransition>
+                Kullanım koşulları
+              </Link>
               <Link to="/" viewTransition>
                 Anonim aramaya dön
               </Link>
