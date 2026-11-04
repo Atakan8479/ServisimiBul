@@ -168,6 +168,24 @@ const applicationRoutes: RouteObject[] = [
           Component: (await import('../features/auth/AuthPages')).LoginPage,
         }),
       },
+      {
+        path: 'privacy/notice',
+        handle: { pageTitle: 'Gizlilik ve kişisel veriler' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/legal/LegalPages'))
+            .PrivacyNoticePage,
+        }),
+      },
+      {
+        path: 'privacy/requests',
+        handle: { pageTitle: 'Kişisel veri başvuru yolu' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/legal/LegalPages'))
+            .PublicRequestEntryPage,
+        }),
+      },
     ],
   },
   {

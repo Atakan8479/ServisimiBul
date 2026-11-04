@@ -38,9 +38,14 @@ export function AuthFrame({
           {children}
           <footer className="auth-experience-footer">
             <span>ServisimiBul · Okul servisi keşfi</span>
-            <Link to="/" viewTransition>
-              Anonim aramaya dön
-            </Link>
+            <span className="auth-experience-footer-links">
+              <Link to="/privacy/notice" viewTransition>
+                Gizlilik ve kişisel veriler
+              </Link>
+              <Link to="/" viewTransition>
+                Anonim aramaya dön
+              </Link>
+            </span>
           </footer>
         </div>
       </section>

@@ -562,6 +562,12 @@
   font-weight: 700;
 }
 
+.auth-experience-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 @media (hover: hover) {
   .account-type-option:hover {
     border-color: var(--teal-500);
