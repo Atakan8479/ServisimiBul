@@ -5,10 +5,11 @@ Originally verified against repository commit `f2ec9ea` and the shared Supabase 
 ## Current operational baseline
 
 - The last approved evidence records the shared `ServisimiBul` project on Supabase PostgreSQL 17.11 and the organization on the Free plan; re-verify both before an operation.
-- Flyway history contains twelve successful rows, V1 through V12, after the approved 2026-10-22 migration. V13 is absent.
-- All 22 application tables have RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role have no direct privileges on it.
+- Flyway history contains twenty successful rows, V1 through V20, after the approved APP-15 V20 migration on 2026-11-04 (checksums of V1–V19 re-matched the repository first). V21 is absent.
+- All 30 application tables have RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role have no direct privileges on it.
 - `PUBLIC`, `anon`, and `authenticated` have no direct privileges on any current application table or sequence.
-- The latest verified counts are 1 province, 39 districts, 963 neighborhoods, 1 school, 3 users, and zero rows in all six V10–V12 demand tables. The encrypted pre-V9 logical export is retained outside Git pending explicit deletion approval.
+- On 2026-11-04 the shared database held 7 users, 3 `DEMAND_CREATED` notifications, and 0 `notification_preference` rows immediately after V20. An encrypted pre-V20 logical export (Flyway 19, DPAPI CurrentUser, archive SHA-256 `49028c48…efcc2c`) is retained outside Git next to the pre-V19 export.
+- The 2026-10-22 counts were 1 province, 39 districts, 963 neighborhoods, 1 school, 3 users, and zero rows in all six V10–V12 demand tables. The encrypted pre-V9 logical export is retained outside Git pending explicit deletion approval.
 
 ### Historical A-09 pre-V8 baseline
 
