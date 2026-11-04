@@ -1,5 +1,12 @@
 # Progress ledger (update only after verification)
 
+## Verified frontend CI performance optimization — 2026-11-04
+
+- The required `Frontend` job still runs on every pull request with the same check name. It now skips Node installation and frontend commands only when every changed path ends in `.md`; empty or unclassifiable diffs, workflow changes, code, configuration, and mixed changes fail open to the full job. Push behavior is unchanged.
+- CI keeps file-level isolation (`fullyParallel: false`) and uses two Playwright workers; local runs remain at one. Three two-worker runs passed 232/232 without retries. A matched recorded run took 5m16s versus 8m01s with one worker, a 34% reduction.
+- Per-test profiling found the 23.4-second 13-journey test and 12–20-second multi-route accessibility checks at the top. Their time is real coverage rather than avoidable fixed waits, so no tests, assertions, viewports, security checks, retries, or timeouts were removed or relaxed.
+- Scoped Prettier, ESLint, strict TypeScript, the production build, the documentation-only classifier self-check, and `git diff --check` passed. The complete Vitest run remains at the documented 261/262 baseline due to the unchanged missing notification-count handler in `demand-flow.test.tsx:866`. Real full-stack CI and its path filters are unchanged.
+
 ## Current stage: APP-03 secure email-change scaffolding ready for PR review; production activation blocked
 
 ## Verified APP-03 gated secure email change — 2026-11-03
