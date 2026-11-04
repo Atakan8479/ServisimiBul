@@ -1,5 +1,13 @@
 # Progress ledger (update only after verification)
 
+## UX-01 account/privacy design acceptance reconciliation — 2026-11-04 (Draft PR #250; maintainer acceptance pending)
+
+- Reconciled `docs/22_UX_01_ACCOUNT_PRIVACY_DESIGN_ACCEPTANCE.md` with `main` at `0a873c1`. The earlier UX-01 record merged in PR #242 before APP-01 added the public `/privacy/notice` and `/privacy/requests` scaffolds in PR #245, so its route matrix and deviation summary were stale.
+- Verified the existing navigation without redesigning it: authenticated parents reach `/parent/account` through `PublicLayout`; operators reach `/operator/account` through `WorkspaceShell`; the public footer exposes both `/privacy/*` information routes. No parent dashboard or separate account shell is introduced.
+- The public routes are scaffolds, not enabled legal workflows. `APPROVED_NOTICE` remains `null`; the request-entry page contains no form, email, KEP address, or submission claim; and the authenticated "Kişisel veri başvuruları" action remains disabled. Closed LEG-05/06/07 issues are technical-record completion only: every applicable approval-tracker item remains `PENDING`.
+- Confirmed the Manus APP labels against production: email change is APP-03, password change APP-04, and sign-out-all APP-05. The exact existing components and route guards remain documented; no prototype logic or unapproved legal copy was imported.
+- Documentation only. No frontend/backend behavior, API, database, migration, Supabase, email, dependency, lockfile, production setting, or legal approval changed. Targeted route/component/navigation and legal-gate reference checks plus `git diff --check` passed locally. On the final PR head, Backend and Secret scan passed; Frontend passed through the intentional Markdown-only skip, so frontend tests were not executed. Issue #205 remains open and Draft PR #250 remains the maintainer acceptance gate.
+
 ## LEG-09 cookie, tracking, and marketing consent record — 2026-11-04 (Draft PR #249, not approved)
 
 - Added `docs/30_COOKIE_TRACKING_AND_MARKETING_CONSENT.md` for issue #202 and appended open question 15 in `docs/01_DECISIONS.md` without renumbering existing questions. It is a technical decision draft, not legal advice, a cookie notice, a marketing permission, an İYS filing, or legal approval.
