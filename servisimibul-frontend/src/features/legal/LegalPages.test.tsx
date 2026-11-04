@@ -105,6 +105,25 @@ describe('PublicRequestEntryPage', () => {
     ).toHaveAttribute('href', '/operator/login')
   })
 
+  it('renders a fail-closed form that cannot collect or submit personal data', () => {
+    renderRequestEntry()
+
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'Kişisel veri başvuru formu',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Başvuru konusu')).toBeDisabled()
+    expect(screen.getByLabelText('Başvurunuzu açıklayın')).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Başvuruyu gönder' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText('Form şu anda bilgi göndermez veya kaydetmez.'),
+    ).toBeInTheDocument()
+  })
+
   it('never implies that signing in starts or continues a personal data request', () => {
     renderRequestEntry()
 

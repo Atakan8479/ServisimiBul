@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom'
-import { StatePanel } from '../../components/design-system'
+import {
+  Button,
+  FormField,
+  StatePanel,
+  SurfaceCard,
+} from '../../components/design-system'
 import {
   noticeAvailable,
   termsAvailable,
@@ -74,9 +79,46 @@ export function PublicRequestEntryPage() {
       </header>
       <StatePanel
         title="Başvuru kanalı henüz onaylanmadı"
-        detail="Bu sayfa bir e-posta veya KEP adresi içermez; kanal kararı tamamlandığında burada yayınlanacaktır."
+        detail="Bu sayfa bir e-posta veya KEP adresi içermez. Aşağıdaki form veri toplamaz; kanal ve kimlik doğrulama kararları tamamlanınca kullanıma açılacaktır."
         tone="neutral"
       />
+      <SurfaceCard className="legal-request-form-card">
+        <div className="legal-request-form-heading">
+          <h2>Kişisel veri başvuru formu</h2>
+          <p>
+            Bu taslak yalnızca başvuru konusu ve açıklama alanlarını gösterir;
+            gereksiz kimlik veya hassas veri istemez.
+          </p>
+        </div>
+        <form
+          aria-describedby="request-form-unavailable"
+          className="legal-request-form"
+          onSubmit={(event) => event.preventDefault()}
+        >
+          <FormField
+            hint="Başvuru türleri hukuki onaydan sonra burada listelenecek."
+            htmlFor="request-category"
+            label="Başvuru konusu"
+          >
+            <select disabled name="category">
+              <option>Hukuki onay bekleniyor</option>
+            </select>
+          </FormField>
+          <FormField
+            hint="T.C. kimlik numarası, sağlık bilgisi veya öğrenci bilgisi yazmayın."
+            htmlFor="request-description"
+            label="Başvurunuzu açıklayın"
+          >
+            <textarea disabled maxLength={2000} name="description" rows={6} />
+          </FormField>
+          <p className="legal-request-form-guard" id="request-form-unavailable">
+            Form şu anda bilgi göndermez veya kaydetmez.
+          </p>
+          <Button disabled type="submit">
+            Başvuruyu gönder
+          </Button>
+        </form>
+      </SurfaceCard>
       <div className="legal-page-actions">
         <Link
           className="ui-button ui-button-secondary"
