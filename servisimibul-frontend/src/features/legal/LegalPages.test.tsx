@@ -2,7 +2,11 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PublicLayout } from '../../components/layouts'
-import { PrivacyNoticePage, PublicRequestEntryPage } from './LegalPages'
+import {
+  PrivacyNoticePage,
+  PublicRequestEntryPage,
+  TermsPage,
+} from './LegalPages'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -31,6 +35,16 @@ function renderRequestEntry() {
         <Route path="/parent/login" element={<h1>Veli girişi</h1>} />
         <Route path="/operator/login" element={<h1>İşletmeci girişi</h1>} />
         <Route path="/privacy/requests" element={<PublicRequestEntryPage />} />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
+function renderTerms() {
+  render(
+    <MemoryRouter initialEntries={['/terms']}>
+      <Routes>
+        <Route path="/terms" element={<TermsPage />} />
       </Routes>
     </MemoryRouter>,
   )
@@ -118,6 +132,28 @@ describe('PublicRequestEntryPage', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'İşletmeci girişi' }),
     ).toBeInTheDocument()
+  })
+})
+
+describe('TermsPage', () => {
+  it('shows a clearly pending state instead of terms text by default', () => {
+    renderTerms()
+
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Kullanım koşulları' }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Kullanım koşulları henüz yayında değil',
+    )
+  })
+
+  it('stays pending when publication is enabled without approved terms', () => {
+    vi.stubEnv('VITE_LEGAL_NOTICES_PUBLISHED', 'true')
+    renderTerms()
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Kullanım koşulları henüz yayında değil',
+    )
   })
 })
 
