@@ -169,8 +169,13 @@ public class AuthService {
         if (!accountDeactivation.enabled()) {
             throw new AccountDeactivationUnavailableException();
         }
-        persistence.deactivateAccount(userId, now());
+        // Revoke sessions before persisting the restriction: if the session store fails, the
+        // account must never end up deactivated with a still-usable stale session (see the
+        // session-revocation-failure cases in AccountDeactivationApiTests). A later persistence
+        // failure instead leaves sessions revoked but the account not marked deactivated, which
+        // is the same safe direction logout-all already fails in.
         sessionRevoker.revokeAll(userId);
+        persistence.deactivateAccount(userId, now());
     }
 
     public boolean isAccountDeactivationAvailable() {

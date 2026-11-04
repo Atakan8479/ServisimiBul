@@ -441,9 +441,9 @@ function DeactivateAccountDialog({
       <div className="account-confirm-body">
         <p>
           Bu işlem bu cihaz dahil, hesabınızla açık olan tüm oturumları
-          sonlandırır ve hesabınıza yeniden giriş yapılamaz. Hesap
-          verilerinizin silinmesi değildir ve şu an kendi kendine yeniden
-          etkinleştirme seçeneği yoktur.
+          sonlandırır ve hesabınıza yeniden giriş yapılamaz. Hesap verilerinizin
+          silinmesi değildir ve şu an kendi kendine yeniden etkinleştirme
+          seçeneği yoktur.
         </p>
         {error && (
           <p className="account-confirm-error" role="alert">

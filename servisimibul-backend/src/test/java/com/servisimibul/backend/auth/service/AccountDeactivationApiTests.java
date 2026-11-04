@@ -2,16 +2,25 @@ package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
+import com.servisimibul.backend.identity.OperatorApprovalStatus;
+import com.servisimibul.backend.identity.OperatorProfile;
+import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.identity.UserRole;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import com.servisimibul.backend.security.SessionRevoker;
 import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.session.FindByIndexNameSessionRepository;
 import org.springframework.test.annotation.DirtiesContext;
@@ -37,7 +46,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "app.auth.account-deactivation.enabled=true")
+@TestPropertySource(properties = {
+        "app.auth.account-deactivation.enabled=true",
+        // This context's non-default properties already force a Spring context distinct from
+        // the shared default one; keep its own connection footprint minimal so it fits inside
+        // the CI Postgres connection budget alongside every other already-cached context.
+        "spring.datasource.hikari.maximum-pool-size=2"
+})
+@Import(AccountDeactivationApiTests.TestBeans.class)
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class AccountDeactivationApiTests {
 
@@ -48,6 +64,8 @@ class AccountDeactivationApiTests {
     @Autowired
     private AppUserRepository userRepository;
     @Autowired
+    private OperatorProfileRepository profileRepository;
+    @Autowired
     private PasswordEncoder passwordEncoder;
     @Autowired
     private FindByIndexNameSessionRepository<?> sessionRepository;
@@ -55,6 +73,11 @@ class AccountDeactivationApiTests {
     private AuthPersistenceService persistence;
     @Autowired
     private SessionRevoker sessionRevoker;
+
+    @BeforeEach
+    void resetSessionRevokerFailure() {
+        controllableSessionRevoker().failNextCall(false);
+    }
 
     @ParameterizedTest
     @EnumSource(value = UserRole.class, names = {"PARENT", "OPERATOR"})
@@ -139,6 +162,74 @@ class AccountDeactivationApiTests {
     }
 
     @Test
+    void sessionStoreFailureDuringDeactivationNeverReturnsSuccessAndLeavesTheStaleSessionUsable()
+            throws Exception {
+        AppUser account = createUser(UserRole.PARENT, uniqueEmail("deactivate-store-failure"));
+        Cookie session = login(account.getEmail(), false);
+        controllableSessionRevoker().failNextCall(true);
+
+        mockMvc.perform(post("/api/v1/auth/deactivate").cookie(session).with(csrf()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("AUTH_SERVICE_UNAVAILABLE"));
+
+        // Sessions are revoked before the restriction is persisted, so a session-store failure
+        // must never leave the account deactivated with a still-usable stale session.
+        assertThat(userRepository.findById(account.getId()).orElseThrow().isDeactivated()).isFalse();
+        mockMvc.perform(get("/api/v1/auth/me").cookie(session))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void retryingAfterASessionStoreFailureSucceedsOnceTheStoreRecovers() throws Exception {
+        AppUser account = createUser(UserRole.PARENT, uniqueEmail("deactivate-store-retry"));
+        Cookie session = login(account.getEmail(), false);
+        controllableSessionRevoker().failNextCall(true);
+
+        mockMvc.perform(post("/api/v1/auth/deactivate").cookie(session).with(csrf()))
+                .andExpect(status().isServiceUnavailable());
+        assertThat(userRepository.findById(account.getId()).orElseThrow().isDeactivated()).isFalse();
+
+        controllableSessionRevoker().failNextCall(false);
+        mockMvc.perform(post("/api/v1/auth/deactivate").cookie(session).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        assertThat(userRepository.findById(account.getId()).orElseThrow().isDeactivated()).isTrue();
+        mockMvc.perform(get("/api/v1/auth/me").cookie(session))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deactivationLeavesTheOperatorsPublishedProfileAndApprovalStateUntouched() throws Exception {
+        AppUser account = createUser(UserRole.OPERATOR, uniqueEmail("deactivate-no-exposure"));
+        OperatorProfile profile = profileRepository.saveAndFlush(
+                new OperatorProfile(account, "Test Service", "+905321234567")
+        );
+        profile.submit();
+        profile.approve();
+        profileRepository.saveAndFlush(profile);
+        Cookie session = login(account.getEmail(), false);
+
+        mockMvc.perform(post("/api/v1/auth/deactivate").cookie(session).with(csrf()))
+                .andExpect(status().isNoContent());
+
+        // Deactivation must not change discovery/publication-relevant state it has no approved
+        // policy for (LEG-07 section 5 marks these record effects [PENDING]): it only restricts
+        // login and revokes sessions, never the operator's profile, visibility, or approval.
+        OperatorProfile reloaded = profileRepository.findByUserId(account.getId()).orElseThrow();
+        try {
+            assertThat(reloaded.isActive()).isTrue();
+            assertThat(reloaded.isPubliclyVisible()).isTrue();
+            assertThat(reloaded.getApprovalStatus()).isEqualTo(OperatorApprovalStatus.APPROVED);
+        } finally {
+            // This test is the only one in the class that creates an OperatorProfile; clean it
+            // up so the shared, non-transactional test database never carries an APPROVED
+            // operator row into unrelated listing/ordering assertions elsewhere in the suite.
+            profileRepository.delete(reloaded);
+            userRepository.delete(account);
+        }
+    }
+
+    @Test
     void repeatedDeactivationIsIdempotentAndKeepsTheFirstTimestamp() {
         AppUser account = createUser(UserRole.PARENT, uniqueEmail("deactivate-idempotent"));
         OffsetDateTime first = OffsetDateTime.now();
@@ -185,5 +276,59 @@ class AccountDeactivationApiTests {
 
     private String uniqueEmail(String prefix) {
         return prefix + "-" + UUID.randomUUID() + "@example.com";
+    }
+
+    private ControllableSessionRevoker controllableSessionRevoker() {
+        return (ControllableSessionRevoker) sessionRevoker;
+    }
+
+    @TestConfiguration
+    static class TestBeans {
+
+        // Wraps whichever real SessionRevoker bean is auto-configured, so every other test in
+        // this class keeps exercising real session revocation; only the two failure-injection
+        // tests above toggle it to fail.
+        @Bean
+        static BeanPostProcessor controllableSessionRevokerPostProcessor() {
+            return new BeanPostProcessor() {
+                @Override
+                public Object postProcessAfterInitialization(Object bean, String beanName) {
+                    if (bean instanceof SessionRevoker revoker && !(bean instanceof ControllableSessionRevoker)) {
+                        return new ControllableSessionRevoker(revoker);
+                    }
+                    return bean;
+                }
+            };
+        }
+    }
+
+    static final class ControllableSessionRevoker implements SessionRevoker {
+
+        private final SessionRevoker delegate;
+        private volatile boolean failNextCall;
+
+        ControllableSessionRevoker(SessionRevoker delegate) {
+            this.delegate = delegate;
+        }
+
+        @Override
+        public void revokeAll(UUID userId) {
+            if (failNextCall) {
+                throw new DataAccessResourceFailureException("Simulated session store outage");
+            }
+            delegate.revokeAll(userId);
+        }
+
+        @Override
+        public void revokeAll(String principalName) {
+            if (failNextCall) {
+                throw new DataAccessResourceFailureException("Simulated session store outage");
+            }
+            delegate.revokeAll(principalName);
+        }
+
+        void failNextCall(boolean fail) {
+            this.failNextCall = fail;
+        }
     }
 }
