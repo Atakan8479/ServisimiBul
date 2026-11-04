@@ -1,5 +1,14 @@
 # Progress ledger (update only after verification)
 
+## LEG-09 cookie, tracking, and marketing consent record — 2026-11-04 (Draft PR #249, not approved)
+
+- Added `docs/30_COOKIE_TRACKING_AND_MARKETING_CONSENT.md` for issue #202 and appended open question 15 in `docs/01_DECISIONS.md` without renumbering existing questions. It is a technical decision draft, not legal advice, a cookie notice, a marketing permission, an İYS filing, or legal approval.
+- Verified against `main` at `ff21867`: the browser uses one first-party `SBSESSION` cookie and one tab-scoped `sessionStorage` role hint. The CSRF token is returned as JSON and kept in SPA memory, not a separate cookie. No analytics, advertising, fingerprinting, third-party script/font, marketing email/SMS/call, push, or consent-management integration was found.
+- The draft recommends no decorative banner and no İYS integration for the current product because there is no optional tracker or commercial-message path to accept. These remain PROPOSED product rules. C1–C4 remain pending: C4 supplies the legal classification of account/security messages as an input, while the final İYS applicability decision remains exclusively LEG-10 T3.
+- Current official guidance was checked through the KVKK Authority's cookie guide and 2022/1358 and 2023/1645 decision summaries, plus the Ministry of Trade's İYS page and 20 February 2025 announcement. The sources frame the pending questions and do not decide ServisimiBul's facts.
+- LEG-10 now consumes the draft technical inventory while keeping T3 blocked on counsel. APP-14 remains inactive unless an approved change introduces nonessential tracking or commercial messaging. AUDIT-F4 #166 is reconciled as prior triage, not implementation or approval.
+- Documentation only. No frontend/backend behavior, API, database, migration, dependency, lockfile, production setting, SMTP, tracker, consent UI, shared Supabase state, credential, or vendor configuration changed. `git diff --check` and targeted decision/dependency reference checks passed. For commit `63ab354`, Backend and Secret scan passed; the Frontend check passed through the intentional Markdown-only skip, so frontend tests were not executed on that commit.
+
 ## Verified frontend CI performance optimization — 2026-11-04
 
 - The required `Frontend` job still runs on every pull request with the same check name. It now skips Node installation and frontend commands only when every changed path ends in `.md`; empty or unclassifiable diffs, workflow changes, code, configuration, and mixed changes fail open to the full job. Push behavior is unchanged.
