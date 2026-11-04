@@ -24,6 +24,55 @@
   gap: var(--space-4);
 }
 
+.legal-request-form-card {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 46rem;
+  padding: clamp(var(--space-5), 4vw, var(--space-8));
+}
+
+.legal-request-form-heading h2 {
+  margin: 0 0 var(--space-2);
+  color: var(--navy-900);
+  font-size: 1.25rem;
+}
+
+.legal-request-form-heading p,
+.legal-request-form-guard {
+  margin: 0;
+  color: var(--color-muted);
+  line-height: 1.6;
+}
+
+.legal-request-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.legal-request-form textarea {
+  resize: vertical;
+}
+
+.legal-request-form .ui-button {
+  justify-self: start;
+}
+
+.legal-request-authenticated-page {
+  width: min(100%, 56rem);
+}
+
+.legal-page-back-link {
+  justify-self: start;
+  color: var(--color-muted);
+  font-weight: 750;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.legal-page-back-link:hover {
+  color: var(--navy-900);
+}
+
 .legal-page-note {
   color: var(--color-muted);
   line-height: 1.6;

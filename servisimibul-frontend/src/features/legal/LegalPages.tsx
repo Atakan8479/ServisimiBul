@@ -1,5 +1,10 @@
 import { Link } from 'react-router-dom'
-import { StatePanel } from '../../components/design-system'
+import {
+  Button,
+  FormField,
+  StatePanel,
+  SurfaceCard,
+} from '../../components/design-system'
 import {
   noticeAvailable,
   termsAvailable,
@@ -74,9 +79,10 @@ export function PublicRequestEntryPage() {
       </header>
       <StatePanel
         title="Başvuru kanalı henüz onaylanmadı"
-        detail="Bu sayfa bir e-posta veya KEP adresi içermez; kanal kararı tamamlandığında burada yayınlanacaktır."
+        detail="Bu sayfa bir e-posta veya KEP adresi içermez. Aşağıdaki form veri toplamaz; kanal ve kimlik doğrulama kararları tamamlanmadan kullanıma açılamaz."
         tone="neutral"
       />
+      <RequestFormScaffold />
       <div className="legal-page-actions">
         <Link
           className="ui-button ui-button-secondary"
@@ -94,5 +100,82 @@ export function PublicRequestEntryPage() {
         </Link>
       </div>
     </div>
+  )
+}
+
+export function ParentRequestFormPage() {
+  return <AuthenticatedRequestFormPage accountPath="/parent/account" />
+}
+
+export function OperatorRequestFormPage() {
+  return <AuthenticatedRequestFormPage accountPath="/operator/account" />
+}
+
+function AuthenticatedRequestFormPage({
+  accountPath,
+}: {
+  accountPath: string
+}) {
+  return (
+    <section className="legal-page legal-request-authenticated-page">
+      <header className="legal-page-header">
+        <h1>Kişisel veri başvurusu</h1>
+        <p>
+          Oturumunuz hesap erişimini doğrular; kişisel veri başvurusu
+          gönderildiği veya alındığı anlamına gelmez.
+        </p>
+      </header>
+      <StatePanel
+        title="Başvuru gönderimi henüz kullanılamıyor"
+        detail="Başvuru kanalı, kapsamı ve kimlik doğrulama kuralları hukuki onay tamamlanmadan etkinleştirilemez."
+        tone="neutral"
+      />
+      <RequestFormScaffold />
+      <Link className="legal-page-back-link" to={accountPath} viewTransition>
+        Hesap ve gizlilik sayfasına dön
+      </Link>
+    </section>
+  )
+}
+
+function RequestFormScaffold() {
+  return (
+    <SurfaceCard className="legal-request-form-card">
+      <div className="legal-request-form-heading">
+        <h2>Kişisel veri başvuru formu</h2>
+        <p>
+          Bu taslak yalnızca başvuru konusu ve açıklama alanlarını gösterir;
+          gereksiz kimlik veya hassas veri istemez.
+        </p>
+      </div>
+      <form
+        aria-describedby="request-form-unavailable"
+        className="legal-request-form"
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <FormField
+          hint="Başvuru türleri hukuki onaydan sonra burada listelenecek."
+          htmlFor="request-category"
+          label="Başvuru konusu"
+        >
+          <select disabled name="category">
+            <option>Hukuki onay bekleniyor</option>
+          </select>
+        </FormField>
+        <FormField
+          hint="T.C. kimlik numarası, sağlık bilgisi veya öğrenci bilgisi yazmayın."
+          htmlFor="request-description"
+          label="Başvurunuzu açıklayın"
+        >
+          <textarea disabled maxLength={2000} name="description" rows={6} />
+        </FormField>
+        <p className="legal-request-form-guard" id="request-form-unavailable">
+          Form şu anda bilgi göndermez veya kaydetmez.
+        </p>
+        <Button disabled type="submit">
+          Başvuruyu gönder
+        </Button>
+      </form>
+    </SurfaceCard>
   )
 }

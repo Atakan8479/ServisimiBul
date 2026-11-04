@@ -167,9 +167,12 @@ export function AccountSettingsPage() {
           description="Kişisel veri ve hesap yaşam döngüsü işlemleri."
         >
           <SurfaceCard className="account-action-card">
-            <FutureAction
-              description="Başvuru kanalı ve hukuki metinler onaylandıktan sonra kullanıma açılacak."
-              title="Kişisel veri başvuruları"
+            <PrivacyRequestAction
+              path={
+                isOperator
+                  ? '/operator/privacy/requests/new'
+                  : '/parent/privacy/requests/new'
+              }
             />
             {user.accountDeactivationAvailable ? (
               <DeactivateAccountAction
@@ -271,6 +274,25 @@ function PasswordAction({ path }: { path: string }) {
       <div className="account-action-state">
         <Link className="ui-button ui-button-quiet" to={path} viewTransition>
           Değiştir
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function PrivacyRequestAction({ path }: { path: string }) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>Kişisel veri başvuruları</h3>
+        <p>
+          Başvuru formunu görüntüleyin. Hukuki onay tamamlanana kadar bilgi
+          gönderilemez.
+        </p>
+      </div>
+      <div className="account-action-state">
+        <Link className="ui-button ui-button-quiet" to={path} viewTransition>
+          Formu görüntüle
         </Link>
       </div>
     </div>

@@ -3,6 +3,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PublicLayout } from '../../components/layouts'
 import {
+  OperatorRequestFormPage,
+  ParentRequestFormPage,
   PrivacyNoticePage,
   PublicRequestEntryPage,
   TermsPage,
@@ -105,6 +107,25 @@ describe('PublicRequestEntryPage', () => {
     ).toHaveAttribute('href', '/operator/login')
   })
 
+  it('renders a fail-closed form that cannot collect or submit personal data', () => {
+    renderRequestEntry()
+
+    expect(
+      screen.getByRole('heading', {
+        level: 2,
+        name: 'Kişisel veri başvuru formu',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Başvuru konusu')).toBeDisabled()
+    expect(screen.getByLabelText('Başvurunuzu açıklayın')).toBeDisabled()
+    expect(
+      screen.getByRole('button', { name: 'Başvuruyu gönder' }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText('Form şu anda bilgi göndermez veya kaydetmez.'),
+    ).toBeInTheDocument()
+  })
+
   it('never implies that signing in starts or continues a personal data request', () => {
     renderRequestEntry()
 
@@ -133,6 +154,37 @@ describe('PublicRequestEntryPage', () => {
       screen.getByRole('heading', { level: 1, name: 'İşletmeci girişi' }),
     ).toBeInTheDocument()
   })
+})
+
+describe('authenticated request form routes', () => {
+  it.each([
+    ['parent', ParentRequestFormPage, '/parent/account'],
+    ['operator', OperatorRequestFormPage, '/operator/account'],
+  ])(
+    'keeps the %s form fail closed and links back to its account page',
+    (_, Page, accountPath) => {
+      render(
+        <MemoryRouter>
+          <Page />
+        </MemoryRouter>,
+      )
+
+      expect(
+        screen.getByRole('heading', {
+          level: 1,
+          name: 'Kişisel veri başvurusu',
+        }),
+      ).toBeInTheDocument()
+      expect(screen.getByLabelText('Başvuru konusu')).toBeDisabled()
+      expect(screen.getByLabelText('Başvurunuzu açıklayın')).toBeDisabled()
+      expect(
+        screen.getByRole('button', { name: 'Başvuruyu gönder' }),
+      ).toBeDisabled()
+      expect(
+        screen.getByRole('link', { name: 'Hesap ve gizlilik sayfasına dön' }),
+      ).toHaveAttribute('href', accountPath)
+    },
+  )
 })
 
 describe('TermsPage', () => {
