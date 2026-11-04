@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { resetCsrfToken } from '../../api/client'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
+import type { DemandFeedbackList } from './demand-api'
 
 afterEach(() => resetCsrfToken())
 beforeEach(() => server.use(emptyCommentsHandler()))
@@ -793,7 +794,7 @@ describe('parent service feedback', () => {
       },
     })
     let openEvents = 0
-    const awaitingFeedback = {
+    const awaitingFeedback: DemandFeedbackList = {
       demandId,
       disclaimer:
         'İşletmeci bildirimleri uygunluk beyanıdır; rezervasyon veya hizmet garantisi değildir.',
@@ -815,6 +816,8 @@ describe('parent service feedback', () => {
         },
       ],
     }
+    // The panel remounts when the page reloads the demand, so reopening must return the saved decision.
+    let currentFeedback = awaitingFeedback
     server.use(
       parentHandler(),
       csrfHandler(),
@@ -822,7 +825,7 @@ describe('parent service feedback', () => {
       http.get(`/api/v1/demands/${demandId}`, () => HttpResponse.json(current)),
       http.post(`/api/v1/demands/${demandId}/feedback/open`, () => {
         openEvents += 1
-        return HttpResponse.json(awaitingFeedback)
+        return HttpResponse.json(currentFeedback)
       }),
       http.put(
         `/api/v1/demands/${demandId}/feedback/${publicationEventId}`,
@@ -837,7 +840,7 @@ describe('parent service feedback', () => {
               status: 'SATISFIED',
             },
           })
-          return HttpResponse.json({
+          currentFeedback = {
             ...awaitingFeedback,
             feedback: [
               {
@@ -847,7 +850,8 @@ describe('parent service feedback', () => {
                 canEvaluate: false,
               },
             ],
-          })
+          }
+          return HttpResponse.json(currentFeedback)
         },
       ),
     )
