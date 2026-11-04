@@ -44,7 +44,7 @@ for (const role of roles) {
       )
       await expect(
         page.getByRole('button', { name: 'Kullanılamıyor' }),
-      ).toHaveCount(4)
+      ).toHaveCount(3)
       await expect(page.getByRole('link', { name: 'Değiştir' })).toBeVisible()
       await expect(
         page.getByRole('button', { name: 'Oturumları sonlandır' }),

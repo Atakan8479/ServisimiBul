@@ -176,12 +176,15 @@ describe('account settings', () => {
     const unavailable = screen.getAllByRole('button', {
       name: 'Kullanılamıyor',
     })
-    expect(unavailable).toHaveLength(4)
+    expect(unavailable).toHaveLength(3)
     unavailable.forEach((button) => expect(button).toBeDisabled())
     expect(screen.getByRole('link', { name: 'Değiştir' })).toHaveAttribute(
       'href',
       '/parent/account/password',
     )
+    expect(
+      screen.getByRole('link', { name: 'Formu görüntüle' }),
+    ).toHaveAttribute('href', '/parent/privacy/requests/new')
     expect(
       screen.getByRole('button', { name: 'Oturumları sonlandır' }),
     ).toBeInTheDocument()
@@ -203,6 +206,38 @@ describe('account settings', () => {
     expect(
       screen.getByRole('link', { name: 'Profil ve başvuru' }),
     ).toHaveAttribute('href', '/operator/profile')
+    expect(
+      screen.getByRole('link', { name: 'Formu görüntüle' }),
+    ).toHaveAttribute('href', '/operator/privacy/requests/new')
+  })
+
+  it('renders the gated request form in each authenticated role shell', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/privacy/requests/new')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Kişisel veri başvurusu' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'Ana menü' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Hesap ve gizlilik sayfasına dön' }),
+    ).toHaveAttribute('href', '/parent/account')
+
+    cleanup()
+    useAuthenticatedUser(operatorUser)
+    renderRoute('/operator/privacy/requests/new')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Kişisel veri başvurusu' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('navigation', { name: 'İşletmeci alanı menüsü' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Hesap ve gizlilik sayfasına dön' }),
+    ).toHaveAttribute('href', '/operator/account')
   })
 })
 
@@ -651,7 +686,7 @@ describe('sign out of all devices', () => {
     await screen.findByRole('button', { name: 'Oturumları sonlandır' })
     expect(
       screen.getAllByRole('button', { name: 'Kullanılamıyor' }),
-    ).toHaveLength(4)
+    ).toHaveLength(3)
     expect(screen.getByRole('link', { name: 'Değiştir' })).toHaveAttribute(
       'href',
       '/parent/account/password',
@@ -679,7 +714,7 @@ describe('voluntary account deactivation', () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getAllByRole('button', { name: 'Kullanılamıyor' }),
-    ).toHaveLength(4)
+    ).toHaveLength(3)
   })
 
   it('opens a confirmation dialog without calling the backend', async () => {

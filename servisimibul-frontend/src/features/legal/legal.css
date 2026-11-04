@@ -28,7 +28,7 @@
   display: grid;
   gap: var(--space-5);
   max-width: 46rem;
-  padding: clamp(var(--space-5), 4vw, var(--space-7));
+  padding: clamp(var(--space-5), 4vw, var(--space-8));
 }
 
 .legal-request-form-heading h2 {
@@ -55,6 +55,22 @@
 
 .legal-request-form .ui-button {
   justify-self: start;
+}
+
+.legal-request-authenticated-page {
+  width: min(100%, 56rem);
+}
+
+.legal-page-back-link {
+  justify-self: start;
+  color: var(--color-muted);
+  font-weight: 750;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.legal-page-back-link:hover {
+  color: var(--navy-900);
 }
 
 .legal-page-note {

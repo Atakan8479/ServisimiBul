@@ -90,6 +90,16 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'parent/privacy/requests/new',
+        handle: { pageTitle: 'Kişisel veri başvurusu' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/legal/LegalPages'))
+            .ParentRequestFormPage,
+        }),
+      },
+      {
         path: 'verify-email-change',
         handle: { pageTitle: 'E-posta değişikliğini doğrula' },
         HydrateFallback: LoadingPage,
@@ -282,6 +292,14 @@ const applicationRoutes: RouteObject[] = [
         lazy: async () => ({
           Component: (await import('../features/account/EmailChangePage'))
             .EmailChangePage,
+        }),
+      },
+      {
+        path: 'privacy/requests/new',
+        handle: { pageTitle: 'Kişisel veri başvurusu' },
+        lazy: async () => ({
+          Component: (await import('../features/legal/LegalPages'))
+            .OperatorRequestFormPage,
         }),
       },
     ],
