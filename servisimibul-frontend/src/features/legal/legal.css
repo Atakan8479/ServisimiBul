@@ -1,0 +1,30 @@
+.legal-page {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.legal-page-header h1 {
+  margin: 0 0 var(--space-3);
+  color: var(--navy-900);
+  font-size: clamp(1.65rem, 4vw, 2.4rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+}
+
+.legal-page-header p {
+  margin: 0;
+  max-width: 68ch;
+  color: var(--color-muted);
+  line-height: 1.65;
+}
+
+.legal-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.legal-page-note {
+  color: var(--color-muted);
+  line-height: 1.6;
+}
