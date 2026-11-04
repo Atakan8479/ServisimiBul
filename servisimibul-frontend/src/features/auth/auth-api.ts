@@ -13,6 +13,7 @@ export const authUserSchema = z.object({
     .enum(['DRAFT', 'PENDING', 'CHANGES_REQUESTED', 'APPROVED'])
     .nullable(),
   emailChangeAvailable: z.boolean().optional(),
+  accountDeactivationAvailable: z.boolean().optional(),
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>
@@ -116,6 +117,15 @@ export async function logout(): Promise<void> {
 
 export async function logoutAllDevices(): Promise<void> {
   await apiRequest('/auth/logout-all', {
+    method: 'POST',
+    requiresSession: true,
+  })
+  resetCsrfToken()
+  clearKnownAuthRole()
+}
+
+export async function deactivateAccount(): Promise<void> {
+  await apiRequest('/auth/deactivate', {
     method: 'POST',
     requiresSession: true,
   })

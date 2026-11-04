@@ -152,6 +152,12 @@ class AuthPersistenceService {
         return userId;
     }
 
+    void deactivateAccount(UUID userId, OffsetDateTime now) {
+        userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalStateException("Authenticated user " + userId + " not found"))
+                .deactivate(now);
+    }
+
     void changePassword(UUID userId, String currentPassword, String newPassword) {
         AppUser user = userRepository.findByIdForUpdate(userId)
                 .orElseThrow(InvalidCurrentPasswordException::new);

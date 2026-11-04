@@ -118,6 +118,8 @@ public class SecurityConfiguration {
                         .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/email-change")
                         .hasAnyRole("PARENT", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/deactivate")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/notifications/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/v1/reports")
                         .hasAnyRole("PARENT", "OPERATOR")

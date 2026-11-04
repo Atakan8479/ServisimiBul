@@ -242,6 +242,23 @@ class SessionAuthenticationApiTests {
     }
 
     @Test
+    void accountDeactivationIsUnavailableByDefaultAndChangesNothing() throws Exception {
+        AppUser user = createVerifiedUser("deactivation-disabled@example.com");
+        LoginResult login = login(user.getEmail(), false);
+
+        mockMvc.perform(post("/api/v1/auth/deactivate")
+                        .cookie(login.cookie())
+                        .header(login.csrfHeader(), login.csrfToken()))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("ACCOUNT_DEACTIVATION_UNAVAILABLE"));
+
+        assertThat(userRepository.findById(user.getId()).orElseThrow().isDeactivated()).isFalse();
+        mockMvc.perform(get("/api/v1/auth/me").cookie(login.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accountDeactivationAvailable").value(false));
+    }
+
+    @Test
     void authenticationSecretsNeverAppearInCapturedLogs(CapturedOutput output) throws Exception {
         String secretPassword = "log-sentinel-password-12345";
         CsrfSession csrf = csrfSession();

@@ -18,6 +18,7 @@ const createdAt = '2026-10-18T10:00:00Z'
 export interface MockApiState {
   operatorApprovalRequired?: boolean
   emailChangeAvailable?: boolean
+  accountDeactivationAvailable?: boolean
   registered: boolean
   parentRegistered: boolean
   verified: boolean
@@ -825,6 +826,7 @@ function authUser(role: Role, state: MockApiState) {
     operatorApprovalRequired: state.operatorApprovalRequired ?? true,
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
     emailChangeAvailable: state.emailChangeAvailable ?? false,
+    accountDeactivationAvailable: state.accountDeactivationAvailable ?? false,
   }
 }
 

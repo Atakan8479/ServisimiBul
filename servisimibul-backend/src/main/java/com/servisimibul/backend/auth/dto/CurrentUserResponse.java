@@ -11,6 +11,7 @@ public record CurrentUserResponse(
         UserRole role,
         boolean operatorApprovalRequired,
         OperatorApprovalStatus approvalStatus,
-        boolean emailChangeAvailable
+        boolean emailChangeAvailable,
+        boolean accountDeactivationAvailable
 ) {
 }

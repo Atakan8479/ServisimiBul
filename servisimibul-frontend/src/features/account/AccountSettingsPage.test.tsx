@@ -659,6 +659,158 @@ describe('sign out of all devices', () => {
   })
 })
 
+describe('voluntary account deactivation', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  const deactivatableParent = {
+    ...parentUser,
+    accountDeactivationAvailable: true,
+  }
+
+  it('stays unavailable by default, matching the other unfinished actions', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/account')
+
+    await screen.findByText('parent@example.com')
+    expect(
+      screen.queryByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getAllByRole('button', { name: 'Kullanılamıyor' }),
+    ).toHaveLength(4)
+  })
+
+  it('opens a confirmation dialog without calling the backend', async () => {
+    useAuthenticatedUser(deactivatableParent)
+    renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    )
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: 'Hesabı devre dışı bırak',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Vazgeç' })).toBeInTheDocument()
+  })
+
+  it('cancelling leaves the current session unchanged and sends no request', async () => {
+    let requests = 0
+    useAuthenticatedUser(deactivatableParent)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/deactivate', () => {
+        requests += 1
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+    renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    )
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'Hesabı devre dışı bırak',
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Vazgeç' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(requests).toBe(0)
+    expect(knownAuthRole()).toBe('PARENT')
+  })
+
+  it('confirms, clears client auth state and redirects to the role login', async () => {
+    useAuthenticatedUser(deactivatableParent)
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/deactivate',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    )
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'Hesabı devre dışı bırak',
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Evet, devre dışı bırak' }),
+    )
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/parent/login'),
+    )
+    expect(router.state.location.search).toContain('accountDeactivated=true')
+    expect(knownAuthRole()).toBeUndefined()
+  })
+
+  it('shows a retryable error and keeps the session when the backend reports failure', async () => {
+    useAuthenticatedUser(deactivatableParent)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/deactivate', () =>
+        HttpResponse.json(problem(503), { status: 503 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    )
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'Hesabı devre dışı bırak',
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Evet, devre dışı bırak' }),
+    )
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Hesap bilgileri şu anda yüklenemiyor.',
+    )
+    expect(router.state.location.pathname).toBe('/parent/account')
+    expect(knownAuthRole()).toBe('PARENT')
+  })
+
+  it('treats an already-expired session through the existing login flow', async () => {
+    useAuthenticatedUser(deactivatableParent)
+    server.use(
+      csrfHandler(),
+      http.post('/api/v1/auth/deactivate', () =>
+        HttpResponse.json(problem(401), { status: 401 }),
+      ),
+    )
+    const router = renderRoute('/parent/account')
+
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Hesabı devre dışı bırak' }),
+    )
+    await screen.findByRole('heading', {
+      level: 2,
+      name: 'Hesabı devre dışı bırak',
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Evet, devre dışı bırak' }),
+    )
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/parent/login'),
+    )
+    expect(router.state.location.search).toBe('?reason=session')
+    expect(knownAuthRole()).toBeUndefined()
+  })
+})
+
 function renderRoute(path: string) {
   const router = createMemoryRouter(routes, { initialEntries: [path] })
   render(<RouterProvider router={router} />)

@@ -30,7 +30,7 @@ class DatabaseUserDetailsService implements UserDetailsService {
                 user.getEmail(),
                 user.passwordHash(),
                 user.getRole(),
-                user.isEnabled() && emailVerificationSatisfied,
+                user.isEnabled() && !user.isDeactivated() && emailVerificationSatisfied,
                 user.isEmailVerified()
         );
     }

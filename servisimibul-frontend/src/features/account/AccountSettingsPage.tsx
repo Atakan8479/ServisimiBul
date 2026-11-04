@@ -18,6 +18,7 @@ import {
 } from '../../components/design-system'
 import {
   clearKnownAuthRole,
+  deactivateAccount,
   logoutAllDevices,
   type AuthUser,
 } from '../auth/auth-api'
@@ -31,6 +32,9 @@ export function AccountSettingsPage() {
   const [signOutAllOpen, setSignOutAllOpen] = useState(false)
   const [signOutAllPending, setSignOutAllPending] = useState(false)
   const [signOutAllError, setSignOutAllError] = useState<string>()
+  const [deactivateOpen, setDeactivateOpen] = useState(false)
+  const [deactivatePending, setDeactivatePending] = useState(false)
+  const [deactivateError, setDeactivateError] = useState<string>()
 
   async function confirmSignOutAll() {
     setSignOutAllPending(true)
@@ -54,6 +58,33 @@ export function AccountSettingsPage() {
         return
       }
       setSignOutAllError(
+        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+      )
+    }
+  }
+
+  async function confirmDeactivate() {
+    setDeactivatePending(true)
+    setDeactivateError(undefined)
+    try {
+      await deactivateAccount()
+      void navigate(`${loginPath}?accountDeactivated=true`, { replace: true })
+    } catch (error) {
+      if (error instanceof ApiError && error.sessionExpired) {
+        clearKnownAuthRole()
+        void navigate(`${loginPath}?reason=session`, { replace: true })
+        return
+      }
+      setDeactivatePending(false)
+      if (error instanceof ApiError) {
+        setDeactivateError(
+          error.problem.code === 'RATE_LIMITED'
+            ? 'Çok sık denediniz. Biraz sonra tekrar deneyin.'
+            : error.problem.detail,
+        )
+        return
+      }
+      setDeactivateError(
         'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
       )
     }
@@ -140,10 +171,16 @@ export function AccountSettingsPage() {
               description="Başvuru kanalı ve hukuki metinler onaylandıktan sonra kullanıma açılacak."
               title="Kişisel veri başvuruları"
             />
-            <FutureAction
-              description="Hesap devre dışı bırakma politikası henüz onaylanmadı."
-              title="Hesabı devre dışı bırak"
-            />
+            {user.accountDeactivationAvailable ? (
+              <DeactivateAccountAction
+                onRequestConfirm={() => setDeactivateOpen(true)}
+              />
+            ) : (
+              <FutureAction
+                description="Hesap devre dışı bırakma politikası henüz onaylanmadı."
+                title="Hesabı devre dışı bırak"
+              />
+            )}
             <FutureAction
               description="Hesap ve veri silme başvurusu henüz kullanıma açık değil."
               title="Hesap silme başvurusu"
@@ -189,6 +226,19 @@ export function AccountSettingsPage() {
           }}
           onConfirm={confirmSignOutAll}
           pending={signOutAllPending}
+        />
+      )}
+
+      {deactivateOpen && (
+        <DeactivateAccountDialog
+          error={deactivateError}
+          onCancel={() => {
+            if (deactivatePending) return
+            setDeactivateOpen(false)
+            setDeactivateError(undefined)
+          }}
+          onConfirm={confirmDeactivate}
+          pending={deactivatePending}
         />
       )}
     </section>
@@ -319,6 +369,108 @@ function SignOutAllAction({
         </Button>
       </div>
     </div>
+  )
+}
+
+function DeactivateAccountAction({
+  onRequestConfirm,
+}: {
+  onRequestConfirm: () => void
+}) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>Hesabı devre dışı bırak</h3>
+        <p>
+          Hesabınıza erişimi durdurur ve tüm oturumları sonlandırır. Hesap
+          verilerinizin silinmesi değildir.
+        </p>
+      </div>
+      <div className="account-action-state">
+        <Button onClick={onRequestConfirm} tone="danger" type="button">
+          Hesabı devre dışı bırak
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function DeactivateAccountDialog({
+  error,
+  onCancel,
+  onConfirm,
+  pending,
+}: {
+  error?: string
+  onCancel: () => void
+  onConfirm: () => void
+  pending: boolean
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const cancelRef = useRef<HTMLButtonElement>(null)
+  const titleId = useId()
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const opener = document.activeElement
+    dialog?.showModal()
+    cancelRef.current?.focus()
+    return () => {
+      dialog?.close()
+      if (opener instanceof HTMLElement) opener.focus()
+    }
+  }, [])
+
+  return (
+    <dialog
+      aria-labelledby={titleId}
+      className="account-confirm-dialog"
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!pending) onCancel()
+      }}
+      onClose={(event) => {
+        const dialog = event.currentTarget
+        if (dialog.open) return
+        if (pending) dialog.showModal()
+        else onCancel()
+      }}
+      ref={dialogRef}
+    >
+      <h2 id={titleId}>Hesabı devre dışı bırak</h2>
+      <div className="account-confirm-body">
+        <p>
+          Bu işlem bu cihaz dahil, hesabınızla açık olan tüm oturumları
+          sonlandırır ve hesabınıza yeniden giriş yapılamaz. Hesap
+          verilerinizin silinmesi değildir ve şu an kendi kendine yeniden
+          etkinleştirme seçeneği yoktur.
+        </p>
+        {error && (
+          <p className="account-confirm-error" role="alert">
+            {error}
+          </p>
+        )}
+      </div>
+      <div className="account-confirm-actions">
+        <button
+          className="ui-button ui-button-secondary"
+          disabled={pending}
+          onClick={onCancel}
+          ref={cancelRef}
+          type="button"
+        >
+          Vazgeç
+        </button>
+        <Button
+          disabled={pending}
+          onClick={onConfirm}
+          tone="danger"
+          type="button"
+        >
+          {pending ? 'Devre dışı bırakılıyor…' : 'Evet, devre dışı bırak'}
+        </Button>
+      </div>
+    </dialog>
   )
 }
 
