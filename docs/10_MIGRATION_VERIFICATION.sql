@@ -235,7 +235,7 @@ checks(sort_order, check_name, passed, detail) as (
                join expected_sequences expected on expected.sequence_name = object_info.relname
                cross join lateral aclexplode(coalesce(
                    object_info.relacl,
-                   acldefault('S'::"char", object_info.relowner)
+                   acldefault('s'::"char", object_info.relowner)
                )) privilege
                where schema_info.nspname = 'public'
                  and privilege.grantee = 0
