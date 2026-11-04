@@ -78,18 +78,25 @@ jobs:
         id: playwright
         if: steps.changes.outputs.run_frontend == 'true'
         run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-      # Browser binaries are cached per Playwright version; OS packages are
-      # still installed every run so a cache hit cannot hide a missing dependency.
-      - name: Cache Playwright browsers
-        id: playwright-cache
+      # The slow part is apt downloading Playwright's OS packages from the
+      # Ubuntu mirror, not the browser. Cache the browsers and the downloaded
+      # .deb files; the full install still runs every time, so apt verifies and
+      # installs every package and fetches only versions missing from the cache.
+      - name: Cache Playwright browsers and OS packages
         if: steps.changes.outputs.run_frontend == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-ubuntu-24.04-${{ steps.playwright.outputs.version }}-chromium
-      - if: steps.changes.outputs.run_frontend == 'true' && steps.playwright-cache.outputs.cache-hit != 'true'
-        run: npx playwright install --with-deps chromium
-      - if: steps.changes.outputs.run_frontend == 'true' && steps.playwright-cache.outputs.cache-hit == 'true'
-        run: npx playwright install-deps chromium
+          path: |
+            ~/.cache/ms-playwright
+            ~/.cache/playwright-debs
+          key: playwright-${{ runner.os }}-ubuntu-24.04-${{ steps.playwright.outputs.version }}-chromium-debs-v1
+      - name: Install Playwright Chromium with OS dependencies
+        if: steps.changes.outputs.run_frontend == 'true'
+        run: |
+          mkdir -p ~/.cache/playwright-debs
+          echo 'APT::Keep-Downloaded-Packages "true";' | sudo tee /etc/apt/apt.conf.d/99keep-debs >/dev/null
+          sudo cp ~/.cache/playwright-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
+          npx playwright install --with-deps chromium
+          cp /var/cache/apt/archives/*.deb ~/.cache/playwright-debs/ 2>/dev/null || true
       - if: steps.changes.outputs.run_frontend == 'true'
         run: npm run test:e2e
