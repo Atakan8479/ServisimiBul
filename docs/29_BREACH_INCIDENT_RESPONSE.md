@@ -36,8 +36,14 @@ Checked on 2026-11-03 against the KVKK Authority's breach-notification page (`kv
   - the controller records each breach, its effects, and the measures taken, and keeps the records available for the Board;
   - the controller prepares a breach response plan that names who reports internally and who is responsible, and reviews it periodically.
 - **Board notification route:** the Personal Data Breach Notification Form, through the Authority's online system or the published Word form. Information that is not yet available may be supplied in stages. Complaints to the Authority use a separate route.
+- **Board decision 2019/271 (18 September 2019)**, verified directly at `kvkk.gov.tr/Icerik/5547/2019-271`, on the minimum elements of a data-subject breach notice: the notice must use clear, plain language and state, at minimum:
+  1. when the breach occurred;
+  2. the categories of personal data affected, distinguishing ordinary personal data from special-category personal data;
+  3. the breach's possible consequences for the affected people;
+  4. the measures taken, or recommended, to reduce the breach's negative effects; and
+  5. a liaison person's name and contact details, or the controller's full website address, call center, or other channel, so the affected person can get further information.
 
-This record does not restate the form's fields as approved content, and does not decide whether any particular event is a reportable breach.
+This record does not restate the form's fields as approved content, and does not decide whether any particular event is a reportable breach. 2019/271 sets the minimum content of a data-subject notice; it does not itself decide when a notice is required — that remains the Article 12(5)/2019/10 assessment in sections 5, 6, and 9.
 
 ## 3. What exists today (verified)
 
@@ -88,31 +94,40 @@ PROPOSED (B):
 
 ## 5. Incident classification (PROPOSED, B)
 
-Working labels only, not legal categories:
+Working labels only, not legal categories. Four stages are distinguished because confirming that personal data was affected is a separate question from whether that confirmed event triggers a statutory notification duty:
 
 | Label | Meaning | Examples |
 |---|---|---|
 | Security event | Something unusual, not yet shown to affect personal data | Failed-login burst, Secret scan finding in a branch with no real secret, health-check failures |
 | Suspected personal data breach | Personal data may have been accessed, disclosed, altered, lost, or made unavailable without authority | Exposed database credential, an API returning another user's data, a lost device in shared-data mode (D046), a vendor incident report |
 | Confirmed personal data breach | The legal assessor confirms personal data was affected | Any of the above once confirmed |
+| Legally reportable breach | The legal assessor concludes the confirmed breach triggers the Article 12(5)/2019/10 notification duty | `[PENDING: counsel]` criteria (section 6, IQ7) |
 
-PROPOSED escalation: any suspected breach is escalated to the legal assessor and the notification decision-maker **on the same day it is recorded**, without waiting for the technical scope to be complete. Whether a security event that later proves harmless still needs a ledger entry is `[PENDING: owner]` (IQ4).
+A confirmed personal data breach is not automatically a legally reportable one, and the reverse error is also possible; both determinations belong to the legal assessor, not to the incident lead or technical lead. **Risk severity alone is not a basis to waive a notification obligation that Article 12(5) or Board decision 2019/10 otherwise imposes** (C); 2019/10 ties the Board-notification duty to the controller learning of the breach, not to a severity threshold the controller sets for itself. Whether any risk-based exception exists is `[PENDING: counsel]` (IQ7) and is not assumed here. Unresolved interpretations of Article 12(5) and 2019/10 — including what "unlawfully obtained by others" covers and whether a near-miss with no actual disclosure can still require notice — are left for counsel and are not decided by this record.
+
+PROPOSED escalation: any suspected breach is escalated to the legal assessor and the notification decision-maker **promptly, without undue delay**, without waiting for the technical scope to be complete. Whether a security event that later proves harmless still needs a ledger entry is `[PENDING: owner]` (IQ4).
 
 ## 6. Procedure and decision points (PROPOSED, B; legal points C)
 
 | Stage | Actions | Decision point |
 |---|---|---|
 | 1. Detect and record | Open a ledger entry with the detection time, reporter, and first facts | Is it a suspected personal data breach? Escalate if in doubt |
-| 2. Contain | Follow `docs/10` incident recovery steps 1–2: stop deployments, rotate exposed credentials, revoke affected sessions (`revokeAll`), disable affected accounts, take a host or vendor service offline if needed | Containment approved by the incident lead; destructive actions need the approvals in `docs/10` |
+| 2. Contain | Follow `docs/10` incident recovery steps 1–2: stop deployments, rotate exposed credentials, revoke the affected user's sessions (`revokeAll`, per-user only), suspend an affected operator account, take a host or vendor service offline if needed | Containment approved by the incident lead; destructive actions need the approvals in `docs/10` |
 | 3. Preserve evidence | Section 8 | — |
 | 4. Assess scope | Which systems (section 3.5), which LEG-02 categories, which groups of people, roughly how many, since when | Scope is a technical fact-finding step; it does not decide the legal outcome |
-| 5. Legal assessment | Is it a breach under Article 12(5)? What is the likely effect on the people concerned? | `[PENDING: counsel]` criteria; recorded with reasons in the ledger |
-| 6. Notification decision | Board notification within 72 hours of learning; data-subject notification once they are identified; reasons for any delay | Signed by the notification decision-maker (section 9) |
+| 5. Legal assessment | Is it a confirmed personal data breach under Article 12(5)? Is it legally reportable under Article 12(5)/2019/10 (section 5)? What is the likely effect on the people concerned? | `[PENDING: counsel]` criteria; recorded with reasons in the ledger |
+| 6. Notification decision | Board notification without undue delay and within 72 hours of learning at the latest; data-subject notification once they are identified; reasons for any delay | Signed by the notification decision-maker (section 9); staged/partial Board notification is used rather than delaying past 72 hours (below) |
 | 7. Notify | Manually, through the Authority's route; data-subject notices through the approved channel | Section 9 |
 | 8. Recover | `docs/10` steps 3–10 | Recovery owner signs off |
 | 9. Close and review | Root cause, follow-up tasks, update of this record or the runbooks | Incident lead closes the ledger entry |
 
-**The 72-hour clock** (C): the Board decision counts from when the controller learns of the breach. What counts as "learning" — for example, a processor's report, a developer's discovery, or the legal assessor's confirmation — is `[PENDING: counsel]` (IQ2). PROPOSED (B) until then: the ledger records every candidate time (detection, escalation, confirmation), and planning assumes the earliest.
+**Containment is bounded by what the product can actually do today** (A, section 3.3): per-user session revocation (`revokeAll`) and operator suspension are implemented and available to the incident lead now. **There is no global session-revocation action and no admin action to disable a parent account** — these are missing capabilities, not steps the containment stage can perform; treat them as future product requirements (`[PENDING: owner]`, section 14 risk 4), not as something stage 2 already does. Current operational runbooks (`docs/10`, `docs/07`) stay in force unchanged for the containment actions they do cover.
+
+**Escalation is prompt, without undue delay** (B): the incident lead or their named deputy (section 4) escalates a suspected breach to the legal assessor and notification decision-maker as soon as it is recorded, not "same day" as a fixed deadline and not held back while the technical scope is completed. A deputy exists for the incident lead and the notification decision-maker specifically so that escalation and the notification decision do not stall on one person's unavailability (section 4). The ledger records who made each escalation and discovery/escalation candidate timestamp, including when a deputy acted instead of the primary role holder.
+
+**The 72-hour clock** (C): the Board decision counts from when the controller learns of the breach, without undue delay and within 72 hours at the latest. What counts as "learning" — for example, a processor's report, a developer's discovery, or the legal assessor's confirmation — is `[PENDING: counsel]` (IQ2). PROPOSED (B) until then: the ledger records every candidate time (detection, escalation, confirmation), and planning assumes the earliest.
+
+**Staged Board notification** (B, consistent with section 2): when facts are not yet complete at the 72-hour point, 2019/10 allows information to be supplied in stages rather than withholding notification until the investigation is finished. PROPOSED: the notification decision-maker submits what is known within 72 hours, states which fields are still pending, and supplies the remainder as it becomes available; the reasons for any delay are recorded with the notification (section 9). **No applicable statutory notification is delayed while waiting for the investigation to finish, for counsel's availability, or for a single approver** — the deputy coverage above exists for this reason, and a staged, incomplete notification is preferred over a late or missing one.
 
 **Data in scope**, for the assessment (A, from LEG-02): credentials and one-time tokens (categories 3, 4), sessions (5), account email and phone (2, 6), parent demand and support linking a parent to a school and pickup neighborhood (9, 9a), public comments and reports that may contain children's data (12, 13), moderation records (14), logs (17), and backups (18). How these affect the risk assessment is `[PENDING: counsel]`.
 
@@ -148,8 +163,9 @@ PROPOSED rules:
 ## 9. Notification decision (C)
 
 - **No automation.** No code, scheduled job, or email template sends a notification to the Board or to data subjects. Any future tooling may only help prepare drafts or the ledger, and needs a reviewed decision first.
-- **Board:** submitted by the controller (LEG-01 L1) through the Authority's route (section 2), by the person authorised in section 4. Who that is, and how authority is evidenced, is `[PENDING: owner + counsel]` (IQ3).
-- **Data subjects:** wording, language, and channel are `[PENDING: counsel drafts, owner approves]` (IQ6). Email is disabled today (section 3.4), so the channel may be in-app notice, a website notice, or email once V3 is resolved; this is a decision, not an assumption.
+- **Board:** submitted by the controller (LEG-01 L1) through the Authority's route (section 2), by the person authorised in section 4. Who that is, and how authority is evidenced, is `[PENDING: owner + counsel]` (IQ3). When facts are incomplete at the 72-hour point, the notification decision-maker submits a staged notice with what is known and supplies the rest as it becomes available, rather than delaying the whole notification (section 6).
+- **Legally reportable breach only.** A notification is prepared once the legal assessor classifies the confirmed breach as legally reportable (section 5); risk severity alone never substitutes for that assessment as a reason to skip notification, and an unresolved legal interpretation of Article 12(5)/2019/10 is referred to counsel rather than decided by the incident team.
+- **Data subjects:** wording, language, and channel are `[PENDING: counsel drafts, owner approves]` (IQ6). Any drafted notice must cover the five minimum elements of Board decision 2019/271 (section 2): when the breach occurred, the affected data categories with special-category data distinguished, the possible consequences, the mitigation measures taken or recommended, and the contact channel for further information. Email is disabled today (section 3.4), so the channel may be in-app notice, a website notice, or email once V3 is resolved; this is a decision, not an assumption.
 - **No public statement** about an incident is made before the notification decision-maker approves it.
 - If counsel concludes no notification is required, the reasons are recorded in the ledger.
 
