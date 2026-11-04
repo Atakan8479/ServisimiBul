@@ -1,6 +1,6 @@
 # UX-02 — personal data rights request design acceptance (issue #206)
 
-Technical review of the pinned Manus account/privacy references (screen inventory, flows and interactions, component map, legal placeholders — commit `aaf711c`) against the existing React router and production components, following the merged UX-01 review (`docs/22_UX_01_ACCOUNT_PRIVACY_DESIGN_ACCEPTANCE.md`, PR #242). This is a design-acceptance and integration-review record, not a new design, not production code, and not a legal or human design approval. No KVKK request route, API, or mock backend exists on `main` today; every screen below is **proposed** against existing infrastructure, not already built.
+Technical review of the pinned Manus account/privacy references (screen inventory, flows and interactions, component map, legal placeholders — commit `aaf711c`) against the existing React router and production components, following the merged UX-01 review (`docs/22_UX_01_ACCOUNT_PRIVACY_DESIGN_ACCEPTANCE.md`, PR #242). This is a design-acceptance and integration-review record, not a new design, not production code, and not a legal or human design approval. Since this record was first merged (PR #243), the public unauthenticated entry point was built separately under APP-01 (#208, PR #245: `PrivacyNoticePage`/`PublicRequestEntryPage` in `servisimibul-frontend/src/features/legal/LegalPages.tsx`), matching what row "Public request entry" below already specified; every other screen remains **proposed** against existing infrastructure, not already built, and no KVKK request route, API, or mock backend exists on `main` for them.
 
 **A submitted request is never a completed erasure.** UX02-07 ("received") is an acknowledgement of intake only; UX02-10 ("completed") is a reviewed, human-approved outcome. Neither state may claim data was deleted, nor may "received" claim the request was granted.
 
@@ -20,7 +20,7 @@ Technical review of the pinned Manus account/privacy references (screen inventor
 | UX02-10 completed | `/parent/privacy/requests/status/completed` | same shared status route | `StatusBadge` ("completed" tone) | Not built. Copy must not assert that all data was erased; outcome text is `[APPROVED_RESPONSE_PENDING]`. |
 | UX02-11 rejected | `/parent/privacy/requests/status/rejected` | same shared status route | `StatusBadge` ("rejected" tone), `StatePanel` (reason + next-step text) | Not built. Rejection must not be framed as a permanent ban; it shows a rejection reason only. Any resubmission or appeal path, and its copy, is undecided and must not be promised in this screen until LEG-06/07 approve one. |
 | UX02-12 partially fulfilled | `/parent/privacy/requests/status/partially-fulfilled` | same shared status route | `StatusBadge` ("partially fulfilled" tone), `StatePanel` | Not built. Distinct tone/copy from both "completed" and "rejected" — partial outcomes must not collapse into either. |
-| Public request entry | `/privacy/requests` | `/privacy/requests` | `PublicLayout`, existing `/parent/login`, `/operator/login` | Not built. No account required to view; redirects to existing login routes rather than inventing a request form or contact channel for anonymous users, per the Manus flow and issue acceptance criteria. |
+| Public request entry | `/privacy/requests` | `/privacy/requests` | `PublicLayout`, `StatePanel`, existing `/parent/login`, `/operator/login` | **Built** (#208, PR #245: `PublicRequestEntryPage`). No account required to view; links to the existing login routes rather than inventing a request form or contact channel for anonymous users, and its copy states that signing in does not start or continue a request. |
 | Populated multi-request list | (not in Manus inventory) | `/parent\|operator/privacy/requests` (data state) | `SurfaceCard` list items, `StatusBadge` per row | Not built. Per the issue's acceptance criteria, this reuses the empty/loading/error `StatePanel` pattern plus one `SurfaceCard` row per request — no new list/table component is proposed. |
 
 No new dashboard, table view, or standalone layout is introduced at any breakpoint, consistent with the UX-01 precedent and the Manus guidance against adding a tabular view.
@@ -40,13 +40,13 @@ This is a carried-forward expectation, not a verified implementation — flagged
 - Form errors follow the shipped `FormField` pattern: `aria-invalid` + `aria-describedby`, focus moved to the first invalid field on submit (matches `PasswordChangePage`).
 - List loading/empty/error and status announcements use `StatePanel`: error states as `role="alert"`, status/progress updates as `role="status"`, matching the UX-01 precedent rather than introducing a new live-region convention.
 - `StatusBadge` carries a text label alongside color for every outcome (received/under review/additional verification/completed/rejected/partially fulfilled) — color is never the sole signal.
-- The public `/privacy/requests` entry point needs no account; it must remain reachable and operable without JavaScript-dependent redirects breaking keyboard/screen-reader navigation to the two login routes.
+- The public `/privacy/requests` entry point needs no account; as built (PR #245) it uses plain `NavLink`/`Link` elements to the two login routes, not a JavaScript-dependent redirect, so keyboard and screen-reader navigation reaches them directly.
 
 ## Role-specific behavior
 
 - Parent and operator each get their own `/parent/privacy/requests...` and `/operator/privacy/requests...` route family inside their existing `WorkspaceShell`, matching the UX-01 precedent of one shell, two role-scoped route trees.
 - UX02-06 (operator erasure form) is operator-only and must be visibly distinct from the general request form — it is the start of a request, not an erasure guarantee, and remains cross-referenced with the UX-03 lifecycle review (out of scope here).
-- Anonymous/public visitors only reach the entry redirect (`/privacy/requests` → existing login); they never see the list, form, or status routes, consistent with the "no account, no in-product status tracking" boundary already set by UX-01.
+- Anonymous/public visitors only reach the entry page (`/privacy/requests`, linking to the existing login routes); they never see the list, form, or status routes, consistent with the "no account, no in-product status tracking" boundary already set by UX-01.
 
 ## Legal and product dependencies (not approved)
 
@@ -59,7 +59,7 @@ Carried forward from the Manus legal-placeholders doc; none of the following are
 - `[IDENTITY_VERIFICATION_METHOD_PENDING]` — UX02-09 method text (APP-07/LEG-06).
 - `[APPROVED_RESPONSE_PENDING]` — UX02-10/11/12 outcome and rejection-reason text. Rejection must not be framed as a permanent ban, but whether a correction/resubmission path exists, and what it looks like, is undecided and requires LEG-06/07 approval before this screen can show one.
 
-UX-02 additionally depends on UX-01 (#205, merged) for the shared account shell and on APP-06/APP-07 (request submission/response backend, not yet built) before any of the routes above can be wired to real data.
+UX-02 additionally depends on UX-01 (#205, review doc merged as PR #242, issue itself still open pending maintainer confirmation) for the shared account shell, and on APP-06/APP-07 (request submission/response backend, not yet built) before any of the routes above can be wired to real data.
 
 The proposed `/{role}/privacy/requests/status/:status` route only varies `status`, matching the Manus route, and cannot by itself identify which request it shows — a real implementation needs a way to select one of a user's (possibly several) requests, such as a request-ID segment or query parameter, which this document does not specify. How that identifier is looked up, the ownership check that a parent/operator can only load their own request, and IDOR protection on that lookup are backend/APP-07 design decisions not yet made. Production must not ship this route without resolving request-specific lookup and authorization first.
 
@@ -71,6 +71,6 @@ The proposed `/{role}/privacy/requests/status/:status` route only varies `status
 
 ## Open questions / not verified
 
-- No UX-02 route, component, or CSS exists on `main` to verify against; this document is a target matrix for implementation, not a confirmation of shipped behavior (contrast with UX-01, which reviewed already-merged code).
-- Responsive breakpoints above are inferred from the UX-01 precedent, not measured against UX-02-specific markup.
+- Only the public entry point (`/privacy/requests`, `/privacy/notice`) exists on `main`; this document remains a target matrix for the list/form/status routes, not a confirmation of their shipped behavior (contrast with UX-01, which reviewed already-merged code for every row).
+- Responsive breakpoints for the unbuilt rows above are inferred from the UX-01 precedent, not measured against UX-02-specific markup. The built entry point uses fluid typography (`clamp()`) and a wrapping flex action row (`legal.css`) rather than fixed breakpoints, so it needs no separate 1440/768/390/320 check.
 - APP-06/APP-07 backend contracts (submission, status transitions, verification) are undefined; this review does not propose an API shape, per the issue's constraints.
