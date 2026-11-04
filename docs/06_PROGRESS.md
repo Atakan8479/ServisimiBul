@@ -1,5 +1,13 @@
 # Progress ledger (update only after verification)
 
+## UX-03 lifecycle design acceptance reconciliation — 2026-11-04 (Draft PR #252; maintainer acceptance pending)
+
+- Reconciled `docs/28_UX_03_LIFECYCLE_DESIGN_ACCEPTANCE.md` with `main` at `6f7424f`. The original UX-03 record merged in PR #244 before APP-09's gated deactivation scaffold merged in PR #248, so its statement that no lifecycle API/component existed and its UX03-01–07 state map were stale.
+- Mapped the Manus lifecycle references to the existing production boundaries: parent entry points remain in `/parent/account` under `PublicLayout`; operator entry points remain in `/operator/account` under `WorkspaceShell`; both reuse `AccountSettingsPage`. No standalone lifecycle dashboard or copied Manus shell is proposed.
+- APP-09's `POST /api/v1/auth/deactivate`, feature availability field, danger action, native confirmation dialog, pending/error states, session clearing, and role-login redirect are documented as built but gated off. The feature flag defaults false and is fixed false in production; the login page currently renders no completion message for `accountDeactivated=true`.
+- Erasure submission/execution, suspension-status delivery, and reactivation remain unbuilt. LEG-03/LEG-07 technical issues are closed, but their applicable approval-tracker rows remain `PENDING`; operator public visibility and already-published content effects still block deactivation activation.
+- Documentation only. No frontend/backend behavior, API, database, migration, Supabase, dependency, lockfile, production setting, or legal approval changed. Targeted route/component/config/legal-gate checks and `git diff --check` passed; no application test suite or browser capture was run for this Markdown-only reconciliation. Issue #207 remains open and Draft PR #252 remains the maintainer acceptance gate.
+
 ## UX-01 account/privacy design acceptance reconciliation — 2026-11-04 (Draft PR #250; maintainer acceptance pending)
 
 - Reconciled `docs/22_UX_01_ACCOUNT_PRIVACY_DESIGN_ACCEPTANCE.md` with `main` at `0a873c1`. The earlier UX-01 record merged in PR #242 before APP-01 added the public `/privacy/notice` and `/privacy/requests` scaffolds in PR #245, so its route matrix and deviation summary were stale.
