@@ -69,7 +69,7 @@ Verified against `main` at `e532129` on 2026-11-03 by reading decisions D042, D0
 
 ### 3.4 Contact and notification capability
 - **Email is disabled** for the controlled pilot (`SB_MAIL_ENABLED=false`, `docs/03_SECURITY_AND_API.md`; LEG-04 V3). The product cannot email affected users today.
-- No public controller contact or website notice page exists (LEG-01 L2; LEG-05).
+- APP-01 (#208) added a `/privacy/notice` route (`servisimibul-frontend/src/features/legal/LegalPages.tsx`), but it renders no approved content: `APPROVED_NOTICE` is `null` and the page is gated behind `VITE_LEGAL_NOTICES_PUBLISHED` (`legal-notices.ts`). **It contains no approved controller contact and no breach-notification channel** — it is UI scaffolding, not the notice page or contact point section 9 would use. No public controller contact otherwise exists (LEG-01 L2; LEG-05).
 - No code sends any notification to the Board or to data subjects about a breach, and none is proposed (section 9).
 
 ### 3.5 Where personal data sits
@@ -165,6 +165,7 @@ PROPOSED rules:
 - **No automation.** No code, scheduled job, or email template sends a notification to the Board or to data subjects. Any future tooling may only help prepare drafts or the ledger, and needs a reviewed decision first.
 - **Board:** submitted by the controller (LEG-01 L1) through the Authority's route (section 2), by the person authorised in section 4. Who that is, and how authority is evidenced, is `[PENDING: owner + counsel]` (IQ3). When facts are incomplete at the 72-hour point, the notification decision-maker submits a staged notice with what is known and supplies the rest as it becomes available, rather than delaying the whole notification (section 6).
 - **Legally reportable breach only.** A notification is prepared once the legal assessor classifies the confirmed breach as legally reportable (section 5); risk severity alone never substitutes for that assessment as a reason to skip notification, and an unresolved legal interpretation of Article 12(5)/2019/10 is referred to counsel rather than decided by the incident team.
+- **The legal assessment itself is urgent, not a reason to wait.** It runs as soon as a confirmed breach exists (section 6, stage 5) and does not pause the 72-hour Board clock: if the assessment is not finished when 72 hours is reached, the notification decision-maker still submits the staged notice above rather than holding it for the assessment to complete. Counsel's review and the decision owner named in section 4 remain the ones who make and sign that call — urgency changes the timeline, not who decides.
 - **Data subjects:** wording, language, and channel are `[PENDING: counsel drafts, owner approves]` (IQ6). Any drafted notice must cover the five minimum elements of Board decision 2019/271 (section 2): when the breach occurred, the affected data categories with special-category data distinguished, the possible consequences, the mitigation measures taken or recommended, and the contact channel for further information. Email is disabled today (section 3.4), so the channel may be in-app notice, a website notice, or email once V3 is resolved; this is a decision, not an assumption.
 - **No public statement** about an incident is made before the notification decision-maker approves it.
 - If counsel concludes no notification is required, the reasons are recorded in the ledger.
@@ -190,7 +191,7 @@ A discussion exercise, run before any real-user pilot and repeated at an interva
 
 | Phase | Injects (facilitator reveals) | What participants must decide or produce |
 |---|---|---|
-| 1. Discovery | The finding is reported on a Friday evening; the incident lead is unreachable | Who opens the ledger entry; which candidate times are recorded (section 6); is this a suspected breach; who is escalated today |
+| 1. Discovery | The finding is reported on a Friday evening; the incident lead is unreachable | Who opens the ledger entry; which candidate times are recorded (section 6); is this a suspected breach; who is escalated without undue delay |
 | 2. Containment and evidence | Rotating the password will break the running backend; host logs older than the retention period are gone | Order of rotation and redeploy (`docs/07`, `docs/10`); which logs and snapshots are preserved first; hashes and storage of preserved items; whether all sessions must be revoked, given there is no global action (section 3.3) |
 | 3. Legal assessment | Database statistics show unexplained reads of `app_user` and demand tables | Which LEG-02 categories and groups are affected; what the legal assessor needs to decide; when the 72-hour period started; what to record if facts are still incomplete at hour 72 |
 | 4. Communications | A parent asks on the demand board whether data leaked; Supabase support has not answered | Who may reply and with what approved text; how affected users would be told while email is disabled; what goes to the Board in stages; what the vendor liaison asks V1 |
