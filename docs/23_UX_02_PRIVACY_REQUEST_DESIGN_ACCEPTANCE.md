@@ -57,11 +57,11 @@ Carried forward from the Manus legal-placeholders doc; none of the following are
 - `[CONTACT_CHANNEL_PENDING]` — no working intake/support channel exists; the public entry route must not imply one.
 - `[REQUEST_RESPONSE_POLICY_PENDING]` — response-time text shown at UX02-07 through UX02-12 (LEG-06).
 - `[IDENTITY_VERIFICATION_METHOD_PENDING]` — UX02-09 method text (APP-07/LEG-06).
-- `[APPROVED_RESPONSE_PENDING]` — UX02-10/11/12 outcome and rejection-reason text; rejection must preserve a correction/resubmission path per the roadmap's non-final-state rule, not a permanent-ban framing.
+- `[APPROVED_RESPONSE_PENDING]` — UX02-10/11/12 outcome and rejection-reason text. Rejection must not be framed as a permanent ban, but whether a correction/resubmission path exists, and what it looks like, is undecided and requires LEG-06/07 approval before this screen can show one.
 
 UX-02 additionally depends on UX-01 (#205, merged) for the shared account shell and on APP-06/APP-07 (request submission/response backend, not yet built) before any of the routes above can be wired to real data.
 
-The shared `/{role}/privacy/requests/status/:status` route resolves a specific request by ID (not shown in the Manus route, which only varies `status`); per-request navigation, the ownership check that a parent/operator can only load their own request, and IDOR protection on that lookup are backend/APP-07 design decisions not yet made. This document does not assume a request-ID URL shape or an authorization mechanism, and production must not ship the status route without one.
+The proposed `/{role}/privacy/requests/status/:status` route only varies `status`, matching the Manus route, and cannot by itself identify which request it shows — a real implementation needs a way to select one of a user's (possibly several) requests, such as a request-ID segment or query parameter, which this document does not specify. How that identifier is looked up, the ownership check that a parent/operator can only load their own request, and IDOR protection on that lookup are backend/APP-07 design decisions not yet made. Production must not ship this route without resolving request-specific lookup and authorization first.
 
 ## Deliberate deviations from Manus
 
