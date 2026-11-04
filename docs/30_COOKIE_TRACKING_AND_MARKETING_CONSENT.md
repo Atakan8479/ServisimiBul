@@ -1,0 +1,118 @@
+# LEG-09 — Cookie, tracking, and marketing consent requirements (decision record)
+
+Issue: [#202](https://github.com/Atakan8479/ServisimiBul/issues/202). Depends on LEG-02 (`docs/19_PERSONAL_DATA_PROCESSING_MAP.md`) and LEG-04 (`docs/22_VENDORS_AND_TRANSFERS.md`). Feeds LEG-10 (`docs/27_VERBIS_ETBIS_IYS_APPLICABILITY.md`) and conditional APP-14 ([#221](https://github.com/Atakan8479/ServisimiBul/issues/221)). Status: **DRAFT — NOT APPROVED, NOT LAWYER-REVIEWED.**
+
+This document is not legal advice, a cookie notice, a marketing permission, an İYS filing, or a compliance claim. It records what the current product actually places in the browser and which messages the current code can send. Legal classifications and bases remain for qualified Turkish counsel. It uses the LEG-01 status categories: **A** verified fact, **B** PROPOSED safeguard, **C** pending legal decision, and **D** approved decision (`docs/01_DECISIONS.md` only). It adds no approved decision.
+
+## 1. Current technical outcome
+
+| Question | Evidence-backed outcome | Status |
+|---|---|---|
+| Does the current product use a browser cookie? | Yes. `SBSESSION` is a first-party, opaque identifier for the server-side session. | A |
+| Does it use a separate CSRF cookie? | No. `GET /api/v1/auth/csrf` returns the token in JSON; the SPA keeps it only in module memory and sends it as the named request header. The token is stored server-side inside the session. | A |
+| Does it use other browser storage? | Yes. `sessionStorage["servisimibul.auth-role"]` holds only `ADMIN`, `OPERATOR`, or `PARENT` as a tab-scoped navigation hint. It is not an authentication credential and is checked against `/auth/me`. | A |
+| Does it use analytics, advertising, fingerprinting, pixels, third-party scripts, or third-party fonts? | No integration was found in the frontend entry point, source, or production dependencies. IP-derived rate-limit keys stay in backend memory and are not browser trackers. | A |
+| Does it send marketing email, SMS, or calls? | No. There is no marketing or SMS/calling path. SMTP is disabled by default and, if separately enabled, is wired only for account verification, password recovery, and email-change verification. | A |
+| Is a consent banner needed for the product as it exists? | **PROPOSED: no.** There is no optional browser processing to accept or refuse. A decorative banner would create a false choice. The first-party session remains subject to an accurate notice and counsel's legal-basis review. | B, pending C1–C3 |
+| Are marketing permissions or İYS records needed for the product as it exists? | No marketing permission or İYS record is implemented or collected because no commercial electronic message is sent. Whether the account messages are outside the commercial-message regime, and whether İYS is legally inapplicable to the current operation, remain counsel decisions in C4 and LEG-10 T3. | A + C |
+
+The safe current product boundary is therefore **essential session/security only, no nonessential tracking, and no commercial messaging**. APP-14 stays inactive unless a trigger in section 6 is approved first.
+
+## 2. Browser cookie and storage inventory
+
+### 2.1 Active records
+
+| Record | Mechanism and party | Purpose | When created / used | Lifetime | Data and access | Classification | Consent assessment | Vendor |
+|---|---|---|---|---|---|---|---|---|
+| `SBSESSION` | First-party HTTP cookie issued by the Spring Boot backend; no `Domain`; path `/`; `HttpOnly`; `SameSite=Lax`; `Secure` except explicit local HTTP development | Locate the server-side Spring Session used for authentication, CSRF protection, expiry, concurrent-session limits, and revocation | A session may start when the SPA requests a CSRF token before a state-changing authentication request; login rotates the session identifier; authenticated API requests send it automatically | Normal mode: browser-session cookie with 30-minute server inactivity timeout. Remember-me mode: persistent cookie and non-sliding 90-day absolute server deadline | Browser holds only an opaque random identifier and scripts cannot read it. Server-side session data can include the security context, CSRF token, principal email, and remember-me deadline. | Technically strictly necessary for requested account/security functions; it is not used to measure, profile, or advertise | **[PENDING: counsel C1]**. Technical recommendation: do not gate it behind opt-in because account and CSRF functions cannot work without it; disclose it accurately | ServisimiBul first party. The selected application host or TLS intermediary may process it in transit; provider is `[PENDING: LEG-04 V2/V4]` |
+| `servisimibul.auth-role` | First-party Web Storage (`sessionStorage`), not a cookie; written by the SPA | Choose role-appropriate navigation while the current tab is open | Set after a successful login or `/auth/me`; removed on logout, session rejection, password/email changes, and explicit session resets | Current browser tab/session only | One enum value: `ADMIN`, `OPERATOR`, or `PARENT`. Readable by same-origin JavaScript; never accepted by the backend as authority | Functional preference/security-adjacent hint; no cross-site or cross-session tracking | **[PENDING: counsel C1]**. Technical recommendation: describe with the storage inventory; no opt-in UI while it remains necessary only for the requested signed-in navigation | ServisimiBul first party; static host `[PENDING: LEG-04 V2]` |
+
+### 2.2 Related records that are not browser trackers
+
+| Record | Where it exists | Why it is not another cookie/tracker | Evidence |
+|---|---|---|---|
+| CSRF token | JSON response from `/api/v1/auth/csrf`, SPA module memory, and server-side session attributes | No CSRF cookie and no persistent browser-storage entry exists. The token protects state-changing same-origin requests and is reset after session-changing actions. | `AuthController`, `src/api/client.ts`, `SecurityConfiguration` |
+| Rate-limit identity | Bounded backend memory | The limiter uses salted SHA-256 fingerprints of request IP/account/token inputs, stores no browser identifier, and resets on process restart. | D041; `InMemoryRateLimiter` |
+| Authentication and application data | PostgreSQL and Spring Session JDBC | Server records are not browser tracking technologies. Their purposes, recipients, bases, and retention are covered by LEG-02 and LEG-03. | `docs/19_PERSONAL_DATA_PROCESSING_MAP.md`; `docs/20_RETENTION_AND_ERASURE.md` |
+
+### 2.3 Absent categories
+
+No evidence was found for analytics/performance cookies, advertising or retargeting cookies, social-media pixels, A/B testing, heatmaps, device fingerprinting, cross-site identifiers, browser notification subscriptions, service workers, `localStorage`, IndexedDB, third-party embeds, or a consent-management vendor. Their vendor and consent columns are therefore **not applicable to the current code**, not silently approved for future use.
+
+## 3. Messaging inventory
+
+| Message or channel | Current capability | Purpose and trigger | Marketing? | Permission / İYS record in product | Vendor |
+|---|---|---|---|---|---|
+| Account verification email | Implemented, SMTP disabled by default | User registration or resend request; single-use verification link | No promotional content exists in the implementation; final legal classification `[PENDING: counsel C4]` | None | SMTP provider not selected; activation blocked by LEG-04 V3 and APP-03 gates |
+| Password recovery email | Implemented, SMTP disabled by default | User-initiated recovery; single-use reset link | No promotional content exists; final legal classification `[PENDING: counsel C4]` | None | Same as above |
+| Email-change verification | Implemented but independently disabled in production | Authenticated user requests a primary-email change | No promotional content exists; final legal classification `[PENDING: counsel C4]` | None | Same as above |
+| In-app notifications | Active for authenticated recipients | Demand, feedback, moderation, and account-related product events | No commercial email/SMS/call; delivered only inside the signed-in product | None | ServisimiBul first party |
+| Marketing email | Not implemented | — | — | None | None |
+| Marketing SMS or call | Not implemented | — | — | None | None |
+| Push or browser notification | Not implemented | — | — | None | None |
+
+Account/security messages must remain separate from promotional content. Adding an offer, campaign, cross-sell, sponsored placement, or unrelated engagement content to an account message is a section 6 trigger; it must not inherit the account message's delivery path without review.
+
+## 4. Official guidance used for the questions
+
+These sources frame the pending legal decisions; they do not decide ServisimiBul's facts by themselves.
+
+1. The KVKK Authority's [Çerez Uygulamaları Hakkında Rehber](https://www.kvkk.gov.tr/Icerik/7353/Cerez-Uygulamalari-Hakkinda-Rehber) distinguishes cookies necessary for the communications/service requested by the user from processing that relies on explicit consent, and describes specific, informed, freely given, withdrawable consent before placement.
+2. KVKK Board decision summary [2022/1358](https://www.kvkk.gov.tr/Icerik/7595/2022-1358) states that strictly necessary cookies can operate without explicit consent when an applicable processing condition exists, while nonessential analytics, performance, advertising, or marketing processing defaults off and needs opt-in where no other condition applies.
+3. KVKK Board decision summary [2023/1645](https://www.kvkk.gov.tr/Icerik/7765/2023-1645) describes active opt-in and equally presented accept, reject, and preference controls as good practice where consent-requiring cookies actually exist, and requires accurate name, purpose, duration, and first/third-party information.
+4. The Ministry of Trade's [İleti Yönetim Sistemi page](https://ticaret.gov.tr/ic-ticaret/ticari-elektronik-iletiler/ileti-yonetim-sistemi-iys) describes İYS as the central system for commercial-message approvals and refusals. The Ministry's [20 February 2025 announcement](https://ticaret.gov.tr/haberler/entegratorluk-yetkisi-basin-aciklamasi) states that commercial email/phone messages require prior approval and records of approvals/refusals in İYS. Counsel must still classify the current account messages under the governing regulation.
+
+Sources checked on 2026-11-04. Legal instruments and official guidance can change; counsel must confirm the current text when deciding C1–C4 or LEG-10 T3.
+
+## 5. PROPOSED product and engineering rules
+
+These rules are category B until the owner approves them and records a D0xx decision. They are not legal conclusions.
+
+- **B1 — No decorative banner.** Do not add a cookie banner while the inventory contains only essential first-party session/security storage. Publish accurate notice information through LEG-05/APP-01 when its text is approved.
+- **B2 — No silent tracker.** Do not add analytics, advertising, pixels, third-party embeds that store/read identifiers, fingerprinting, or a consent-management vendor without first updating this inventory and LEG-04.
+- **B3 — Prior control when required.** If counsel determines a proposed nonessential technology requires consent, block it before consent; make refusal as easy and prominent as acceptance; offer purpose-level choices; preserve essential service after refusal; and provide an always-reachable withdrawal control. Record only the minimum preference evidence and define its retention before release.
+- **B4 — No commercial messaging by default.** Do not send marketing email, SMS, calls, or push, and do not blend promotions into account/security messages, until the owner approves the channel and purpose and counsel resolves the permission, proof, refusal, İYS, notice, vendor, and retention requirements.
+- **B5 — Inventory in the same change.** A PR that introduces a browser storage mechanism, tracker, third-party client script/embed, or outbound message type must update sections 2–3 before the feature is enabled. A dependency alone is not permission to activate it.
+
+## 6. Reassessment triggers and conditional implementation
+
+Any of the following reopens LEG-09 before implementation or activation:
+
+- analytics, performance measurement, advertising, retargeting, personalization, A/B testing, heatmaps, fingerprinting, social pixels, third-party media/widgets, or a consent-management platform;
+- `localStorage`, IndexedDB, a service worker, browser push subscription, a new cookie, or a changed purpose/lifetime/party for an existing record;
+- marketing email, SMS, calls, push, promotional content inside account messages, sponsored or featured placement, commissions, bookings, payments, or another commercial model;
+- selection or change of the frontend/backend host, TLS intermediary, SMTP provider, or any browser-side vendor where the data flow changes;
+- an owner/counsel decision that changes C1–C4 or LEG-10 T3.
+
+APP-14 is conditional implementation, not part of this documentation task. If a trigger is approved, APP-14 must implement only the reviewed requirements and test prior blocking, refusal, withdrawal, persistence, accessibility, and responsive behavior. If no trigger is planned, APP-14 should remain inactive rather than adding unused preference UI.
+
+## 7. Pending decisions
+
+| # | Decision | Who answers | Blocks |
+|---|---|---|---|
+| C1 | Confirm the legal classification and KVKK Article 5 basis for `SBSESSION` and the tab-scoped role hint, including whether each meets the necessary-service criteria in the Authority's guide. | Qualified Turkish counsel | Approved cookie/storage notice; current no-opt-in conclusion |
+| C2 | Adopt or reject B1–B5 as product/engineering rules. | Owner | Binding no-tracking/no-marketing default and change control |
+| C3 | Approve the Turkish notice content and placement for the current inventory, including controller identity, purpose, basis, duration, party, recipients/transfers, and rights channel. | Owner + counsel, through LEG-01, LEG-04, LEG-05, and APP-01 | User-facing notice; real-user launch |
+| C4 | Confirm whether each account/security email is outside the commercial electronic message permission and İYS duties, and decide T3 for an operation with no commercial messages. | Qualified Turkish counsel, with LEG-10 | İYS applicability conclusion; SMTP activation wording |
+
+Decision owner: `[PENDING]` — PROPOSED: repository owner `Atakan8479`. Reviewer: `[PENDING]` — qualified Turkish counsel, not identified in the repository. Decision date and evidence: `[PENDING]`. No pending value is permission.
+
+## 8. Reconciliation with AUDIT-F4 (#166) and dependencies
+
+AUDIT-F4 [#166](https://github.com/Atakan8479/ServisimiBul/issues/166) requested a KVKK inventory, reviewed notice, legal bases, retention, rights handling, and owner sign-off. It was closed with no comment or implementation artifact. Its closure did not inventory browser storage, approve a cookie basis or notice, authorize marketing, or decide İYS.
+
+- LEG-02's browser row is expanded here into record-level name, purpose, duration, party, and vendor evidence.
+- LEG-04's `Analytics, advertising, chat, support tools: NOT USED` row is confirmed; adding one triggers both records.
+- LEG-05 remains responsible for approved notice content; this file must not be copied into the UI as legal text.
+- LEG-10 T3 can now consume sections 1–4, but only counsel can record an applicability outcome.
+- APP-14 remains conditional and no production feature is authorized by this record.
+
+## 9. Verification and approval workflow
+
+1. **Technical review.** Verify the inventory against the exact release candidate, including response cookies, browser storage, dependency changes, deployed HTML headers/scripts, proxy/CDN behavior, and enabled message configuration. Repository inspection cannot prove that an unrecorded deployment intermediary injects no cookie or script.
+2. **Owner decision.** The owner answers C2 and supplies the controller/deployment facts needed by C3.
+3. **Counsel review.** Qualified Turkish counsel answers C1, C3, and C4 against the current official texts and LEG-10 T3.
+4. **Record approval.** A later reviewed commit fills the owner, reviewer, evidence, and date fields, updates LEG-10, and adds an approved D0xx entry to `docs/01_DECISIONS.md`. Merging this draft alone is not approval.
+5. **Release check.** Re-run step 1 against the deployed candidate before any real-user pilot. Any section 6 trigger returns this record to review.
+
+Inventory verified against `main` commit `ff21867` on 2026-11-04 by reading `SecurityConfiguration`, `AuthController`, `src/api/client.ts`, `src/features/auth/auth-api.ts`, frontend `index.html` and `package.json`, email sender wiring/configuration, and the LEG-02/LEG-04/LEG-10 records. No production environment or vendor dashboard was accessed.
