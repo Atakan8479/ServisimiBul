@@ -7,7 +7,7 @@ import {
 } from '@testing-library/react'
 import { delay, http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, onTestFinished, vi } from 'vitest'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
 
@@ -45,11 +45,25 @@ describe('public operator discovery', () => {
       }),
     )
 
+    // Fake setTimeout so the 500ms production retry backoff does not consume the findBy wait budget.
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout'],
+      shouldAdvanceTime: true,
+    })
+    onTestFinished(() => {
+      vi.useRealTimers()
+    })
+
     renderHome()
+    await waitFor(() => expect(attempts).toBe(1))
+    await waitFor(async () => {
+      await vi.advanceTimersByTimeAsync(500)
+      expect(attempts).toBe(2)
+    })
 
     const istanbul = await screen.findByRole('option', { name: 'İstanbul' })
     expect(istanbul).toBeInTheDocument()
-    expect(attempts).toBeGreaterThanOrEqual(2)
+    expect(attempts).toBe(2)
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
