@@ -186,6 +186,14 @@ const applicationRoutes: RouteObject[] = [
             .PublicRequestEntryPage,
         }),
       },
+      {
+        path: 'terms',
+        handle: { pageTitle: 'Kullanım koşulları' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/legal/LegalPages')).TermsPage,
+        }),
+      },
     ],
   },
   {

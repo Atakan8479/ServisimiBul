@@ -1199,3 +1199,10 @@ Never mark tasks done because code was generated: verification and review requir
 - The repository-wide Prettier check still reports its existing 79-file formatting baseline. The complete Vitest run passed 169/170; only the pre-existing demand-feedback assertion failed after the known unhandled notification-count request, while all focused demand/moderation and D02 browser checks passed.
 - The real Spring Boot/Vite/Playwright journey passed 1/1 against disposable PostgreSQL 17.4 after Flyway V1–V17 and Hibernate validation. The harness removed the disposable database, tariff volume, and generated credentials.
 - No backend source, API contract, shared shell, authentication page, migration, dependency, lockfile, Supabase state, credential, or production configuration changed.
+
+## Verified APP-01 public legal-page scaffolding evidence — 2026-11-04
+
+- Branch: `codex/issue-208-public-legal-pages`; Draft PR #254; GitHub issue #208. The public shell now includes `/terms` beside the existing privacy notice and personal-data request entry points, and the shared parent/operator registration frame exposes both public legal routes.
+- Terms content remains fail-closed: `APPROVED_TERMS` is `null`, and enabling `VITE_LEGAL_NOTICES_PUBLISHED` alone cannot render unapproved text. No terms, controller/contact claim, consent checkbox, or acceptance state was invented; LEG-05 and LEG-08 approvals and issue #208 remain open.
+- Focused Vitest passed 42/42 assertions. ESLint, strict TypeScript, the Vite production build, scoped Prettier, `git diff --check`, and the Impeccable deterministic scan passed. Playwright discovered the five focused APP-01 checks for 1440, 768, 390, and 320 pixels plus both registration routes, but the local runner stalled before executing any test and was stopped; browser assertions remain for CI and are not claimed as locally passed.
+- No backend source, API contract, session/CSRF behavior, database, Supabase, SMTP, migration, dependency, lockfile, credential, legal publication setting, or production configuration changed.

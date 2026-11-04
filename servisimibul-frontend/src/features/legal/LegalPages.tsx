@@ -1,6 +1,11 @@
 import { Link } from 'react-router-dom'
 import { StatePanel } from '../../components/design-system'
-import { noticeAvailable, APPROVED_NOTICE } from './legal-notices'
+import {
+  noticeAvailable,
+  termsAvailable,
+  APPROVED_NOTICE,
+  APPROVED_TERMS,
+} from './legal-notices'
 import './legal.css'
 
 export function PrivacyNoticePage() {
@@ -29,6 +34,29 @@ export function PrivacyNoticePage() {
         </Link>
         .
       </p>
+    </div>
+  )
+}
+
+export function TermsPage() {
+  return (
+    <div className="legal-page">
+      <header className="legal-page-header">
+        <h1>Kullanım koşulları</h1>
+        <p>
+          Bu sayfa, hukuki onayı tamamlanan kullanım koşullarının yayınlanacağı
+          herkese açık yerdir.
+        </p>
+      </header>
+      {termsAvailable() ? (
+        <p>{APPROVED_TERMS?.body}</p>
+      ) : (
+        <StatePanel
+          title="Kullanım koşulları henüz yayında değil"
+          detail="Platform sorumlulukları ve kullanıcı içeriklerine ilişkin koşullar hukuki inceleme tamamlanmadan burada yayınlanmaz."
+          tone="neutral"
+        />
+      )}
     </div>
   )
 }
