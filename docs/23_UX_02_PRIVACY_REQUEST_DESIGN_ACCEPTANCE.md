@@ -27,13 +27,13 @@ No new dashboard, table view, or standalone layout is introduced at any breakpoi
 
 ## Responsive behavior (1440 / 768 / 390 / 320)
 
-No UX-02 CSS exists yet to verify against (unlike UX-01, which had shipped `account-settings.css`). Based on the Manus flows doc and the shipped UX-01 breakpoints in `account-settings.css`, production should carry the same rules forward rather than defining new ones:
+The only UX-02 CSS on `main` is `legal.css`, covering the built public entry point (row above); it is not analogous to the list/form/status rows below, which have no CSS yet. Based on the Manus flows doc and the shipped UX-01 breakpoints in `account-settings.css`, production should carry the same rules forward for those rows rather than defining new ones:
 - **1440px**: request list and status cards may sit in the existing two-column `SectionShell` pattern.
 - **768px**: columns collapse to one, as `AccountSettingsPage` already does.
 - **390/320px**: action order verticalizes, buttons reach the existing ≥46px mobile tap height, long placeholder text wraps rather than truncating.
 - No table layout at any width.
 
-This is a carried-forward expectation, not a verified implementation — flagged as an open item below.
+This is a carried-forward expectation for the unbuilt rows, not a verified implementation — flagged as an open item below. The built entry point (`legal.css`) uses fluid type (`clamp()`) and a wrapping flex action row by design, which is expected to avoid layout breakage at 1440/768/390/320 without fixed breakpoints, but that expectation has not been checked against those viewport widths in a browser — flagged as unverified below, not confirmed responsive behavior.
 
 ## Accessibility
 
@@ -53,7 +53,7 @@ This is a carried-forward expectation, not a verified implementation — flagged
 Carried forward from the Manus legal-placeholders doc; none of the following are resolved, and this review does not resolve or approve any of them:
 
 - `[LEGAL_COPY_PENDING]` — notice/decision/request-outcome copy (LEG-05/06 owner).
-- `[RETENTION_POLICY_PENDING]` — retention/erasure effect on list and status copy (LEG-03, #197, merged as a decision record but not legally approved per `docs/06_PROGRESS.md`).
+- `[RETENTION_POLICY_PENDING]` — retention/erasure effect on list and status copy (LEG-03, #196, merged as a decision record but not legally approved per `docs/06_PROGRESS.md`).
 - `[CONTACT_CHANNEL_PENDING]` — no working intake/support channel exists; the public entry route must not imply one.
 - `[REQUEST_RESPONSE_POLICY_PENDING]` — response-time text shown at UX02-07 through UX02-12 (LEG-06).
 - `[IDENTITY_VERIFICATION_METHOD_PENDING]` — UX02-09 method text (APP-07/LEG-06).
@@ -72,5 +72,5 @@ The proposed `/{role}/privacy/requests/status/:status` route only varies `status
 ## Open questions / not verified
 
 - Only the public entry point (`/privacy/requests`, `/privacy/notice`) exists on `main`; this document remains a target matrix for the list/form/status routes, not a confirmation of their shipped behavior (contrast with UX-01, which reviewed already-merged code for every row).
-- Responsive breakpoints for the unbuilt rows above are inferred from the UX-01 precedent, not measured against UX-02-specific markup. The built entry point uses fluid typography (`clamp()`) and a wrapping flex action row (`legal.css`) rather than fixed breakpoints, so it needs no separate 1440/768/390/320 check.
+- Responsive breakpoints for the unbuilt rows above are inferred from the UX-01 precedent, not measured against UX-02-specific markup. The built entry point uses fluid typography (`clamp()`) and a wrapping flex action row (`legal.css`) by design, which should avoid breakage at 1440/768/390/320 without fixed breakpoints — but this is a CSS-based expectation, not a browser-verified result; it has not actually been checked at those viewport widths.
 - APP-06/APP-07 backend contracts (submission, status transitions, verification) are undefined; this review does not propose an API shape, per the issue's constraints.
