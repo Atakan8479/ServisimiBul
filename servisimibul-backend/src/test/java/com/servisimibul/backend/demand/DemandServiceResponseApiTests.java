@@ -443,6 +443,29 @@ class DemandServiceResponseApiTests {
     }
 
     @Test
+    void voluntaryDeactivationDoesNotHideAnAlreadyPublishedPublicResponse() throws Exception {
+        // Same APP-09 activation blocker as
+        // PublicOperatorDiscoveryApiTests.voluntaryDeactivationDoesNotRemoveTheOperatorFromPublicDiscovery:
+        // LEG-07 (#200) leaves the effect of voluntary deactivation on a published demand
+        // response [PENDING] (docs/24_ACCOUNT_LIFECYCLE_POLICY.md section 5). Deactivation only
+        // sets deactivated_at and revokes sessions, never is_enabled, so this query's
+        // "user.enabled = true" condition still passes and the response stays public. Not
+        // approved or intended behavior; app.auth.account-deactivation.enabled stays false in
+        // every real environment.
+        Fixture fixture = fixture("deactivated-response@example.com", true);
+        publish(fixture);
+
+        AppUser operatorUser = userRepository.findById(fixture.operatorUser().getId()).orElseThrow();
+        operatorUser.deactivate(OffsetDateTime.now());
+        userRepository.saveAndFlush(operatorUser);
+
+        mockMvc.perform(get(publicPath(fixture.demand())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].businessName").value("Response Operator"));
+    }
+
+    @Test
     void expiredSupportDoesNotVetoFulfillmentConfirmedByRemainingParents() throws Exception {
         Fixture fixture = fixture("feedback-mixed@example.com", true);
         AppUser second = verifiedParent("feedback-second@example.com");

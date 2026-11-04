@@ -1,5 +1,6 @@
 package com.servisimibul.backend.auth.service;
 
+import com.servisimibul.backend.auth.config.AccountDeactivationProperties;
 import com.servisimibul.backend.auth.config.EmailVerificationProperties;
 import com.servisimibul.backend.auth.config.EmailChangeProperties;
 import com.servisimibul.backend.auth.config.ParentEmailVerificationProperties;
@@ -11,6 +12,7 @@ import com.servisimibul.backend.auth.dto.ParentRegisterRequest;
 import com.servisimibul.backend.auth.dto.RegisterRequest;
 import com.servisimibul.backend.auth.dto.ResetPasswordRequest;
 import com.servisimibul.backend.auth.dto.TokenRequest;
+import com.servisimibul.backend.auth.exception.AccountDeactivationUnavailableException;
 import com.servisimibul.backend.auth.exception.EmailUnavailableException;
 import com.servisimibul.backend.auth.exception.InvalidAuthTokenException;
 import com.servisimibul.backend.auth.exception.ParentRegistrationUnavailableException;
@@ -39,6 +41,7 @@ public class AuthService {
     private final EmailChangeProperties emailChange;
     private final ParentEmailVerificationProperties parentEmailVerification;
     private final ParentRegistrationProperties parentRegistration;
+    private final AccountDeactivationProperties accountDeactivation;
     private final AuthPersistenceService persistence;
     private final AuthEmailSender emailSender;
     private final InMemoryRateLimiter rateLimiter;
@@ -160,6 +163,23 @@ public class AuthService {
 
     public void logoutAll(UUID userId) {
         sessionRevoker.revokeAll(userId);
+    }
+
+    public void deactivateAccount(UUID userId) {
+        if (!accountDeactivation.enabled()) {
+            throw new AccountDeactivationUnavailableException();
+        }
+        // Revoke sessions before persisting the restriction: if the session store fails, the
+        // account must never end up deactivated with a still-usable stale session (see the
+        // session-revocation-failure cases in AccountDeactivationApiTests). A later persistence
+        // failure instead leaves sessions revoked but the account not marked deactivated, which
+        // is the same safe direction logout-all already fails in.
+        sessionRevoker.revokeAll(userId);
+        persistence.deactivateAccount(userId, now());
+    }
+
+    public boolean isAccountDeactivationAvailable() {
+        return accountDeactivation.enabled();
     }
 
     public void requestEmailChange(EmailChangeRequest request, UUID userId, String remoteAddress) {

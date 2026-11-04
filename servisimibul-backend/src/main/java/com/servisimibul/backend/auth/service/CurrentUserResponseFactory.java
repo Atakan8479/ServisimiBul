@@ -29,7 +29,8 @@ public class CurrentUserResponseFactory {
                 user.role(),
                 approvalPolicy.isRequired(),
                 approvalStatus,
-                authService.isEmailChangeAvailable()
+                authService.isEmailChangeAvailable(),
+                authService.isAccountDeactivationAvailable()
         );
     }
 }

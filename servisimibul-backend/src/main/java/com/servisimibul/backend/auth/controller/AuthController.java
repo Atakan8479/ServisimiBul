@@ -159,6 +159,19 @@ public class AuthController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/deactivate")
+    ResponseEntity<Void> deactivateAccount(
+            @AuthenticationPrincipal AuthenticatedUser user,
+            HttpServletRequest httpRequest
+    ) {
+        authService.deactivateAccount(user.id());
+        if (httpRequest.getSession(false) != null) {
+            httpRequest.getSession(false).invalidate();
+        }
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/email-change")
     ResponseEntity<Void> requestEmailChange(
             @Valid @RequestBody EmailChangeRequest request,

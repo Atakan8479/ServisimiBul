@@ -49,6 +49,9 @@ public class AppUser {
     @Column(name = "email_verified_at")
     private OffsetDateTime emailVerifiedAt;
 
+    @Column(name = "deactivated_at")
+    private OffsetDateTime deactivatedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
@@ -89,6 +92,17 @@ public class AppUser {
 
     public void disable() {
         enabled = false;
+    }
+
+    public boolean isDeactivated() {
+        return deactivatedAt != null;
+    }
+
+    public void deactivate(OffsetDateTime at) {
+        // Independent of admin suspension (is_enabled); idempotent because no reactivation path exists yet.
+        if (deactivatedAt == null) {
+            deactivatedAt = Objects.requireNonNull(at);
+        }
     }
 
     public void changePasswordHash(String passwordHash) {

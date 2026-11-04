@@ -129,6 +129,20 @@ class ApiExceptionHandler {
         ));
     }
 
+    @ExceptionHandler(AccountDeactivationUnavailableException.class)
+    ResponseEntity<ProblemDetail> handleAccountDeactivationUnavailable(
+            AccountDeactivationUnavailableException exception,
+            HttpServletRequest request
+    ) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(problem(
+                HttpStatus.SERVICE_UNAVAILABLE,
+                "Account deactivation unavailable",
+                exception.getMessage(),
+                "ACCOUNT_DEACTIVATION_UNAVAILABLE",
+                request
+        ));
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     ResponseEntity<ProblemDetail> handleInvalidCredentials(
             InvalidCredentialsException exception,

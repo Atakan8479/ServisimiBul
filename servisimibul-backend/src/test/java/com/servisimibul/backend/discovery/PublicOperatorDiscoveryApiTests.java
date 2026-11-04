@@ -382,6 +382,31 @@ class PublicOperatorDiscoveryApiTests {
     }
 
     @Test
+    void voluntaryDeactivationDoesNotRemoveTheOperatorFromPublicDiscovery() throws Exception {
+        // APP-09 activation blocker, not approved behavior: LEG-07 (#200) leaves the effect of
+        // voluntary deactivation on operator visibility and demand responses [PENDING]
+        // (docs/24_ACCOUNT_LIFECYCLE_POLICY.md section 5). AppUser.deactivate() therefore only
+        // sets deactivated_at and revokes sessions; it never touches is_enabled,
+        // OperatorProfile.active, or publiclyVisible, which this query still requires to be
+        // true. Until that decision is recorded, a deactivated operator who can no longer log
+        // in remains fully discoverable here. app.auth.account-deactivation.enabled stays false
+        // in every real environment, so this gap cannot affect real users yet.
+        SearchContext context = createSearchContext();
+        String email = "deactivated-visible@example.com";
+        createMatchingOperator(context, email, "Still Visible", State.PUBLISHED);
+        AppUser operatorUser = userRepository.findByEmail(email).orElseThrow();
+        operatorUser.deactivate(OffsetDateTime.now());
+        userRepository.saveAndFlush(operatorUser);
+
+        mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", context.school().getId().toString())
+                        .param("neighborhoodId", context.coverageNeighborhood().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].businessName").value("Still Visible"));
+    }
+
+    @Test
     void duplicateRelatedRowsDoNotDuplicateOperatorsAndPaginationIsStable() throws Exception {
         SearchContext context = createSearchContext();
         OperatorFixture alpha = createMatchingOperator(
