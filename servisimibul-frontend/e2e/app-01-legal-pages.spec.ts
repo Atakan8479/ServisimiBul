@@ -38,12 +38,13 @@ test('parent and operator registration expose both public legal routes', async (
 }) => {
   for (const path of ['/parent/register', '/operator/register']) {
     await page.goto(path)
+    const registration = page.locator('#main-content')
 
     await expect(
-      page.getByRole('link', { name: 'Gizlilik ve kişisel veriler' }),
+      registration.getByRole('link', { name: 'Gizlilik ve kişisel veriler' }),
     ).toHaveAttribute('href', '/privacy/notice')
     await expect(
-      page.getByRole('link', { name: 'Kullanım koşulları' }),
+      registration.getByRole('link', { name: 'Kullanım koşulları' }),
     ).toHaveAttribute('href', '/terms')
   }
 })
