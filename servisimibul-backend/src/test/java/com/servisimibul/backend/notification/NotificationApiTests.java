@@ -197,6 +197,67 @@ class NotificationApiTests {
                 .andExpect(jsonPath("$.totalElements").value(1));
     }
 
+    @Test
+    void preferencesAreRoleScopedOwnedAndRequireCsrf() throws Exception {
+        AppUser operator = operator("preference-operator@example.com");
+        AppUser otherOperator = operator("preference-other@example.com");
+        AppUser parent = parent("preference-parent@example.com");
+        String disable = "{\"enabled\":false}";
+
+        mockMvc.perform(get("/api/v1/notifications/preferences"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/notifications/preferences").with(as(operator)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].type").value("DEMAND_CREATED"))
+                .andExpect(jsonPath("$[0].enabled").value(true));
+        mockMvc.perform(get("/api/v1/notifications/preferences").with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content(disable).with(as(operator)))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content(disable).with(csrf()))
+                .andExpect(status().isUnauthorized());
+        // Essential, unknown, or other-role types can never be disabled.
+        for (String type : new String[]{"SERVICE_PUBLISHED", "CONTENT_REPORTED", "FEEDBACK_REMINDER", "NOPE"}) {
+            mockMvc.perform(put("/api/v1/notifications/preferences/{type}", type)
+                            .contentType("application/json").content(disable)
+                            .with(as(operator)).with(csrf()))
+                    .andExpect(status().isNotFound());
+        }
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content(disable)
+                        .with(as(parent)).with(csrf()))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content("{}")
+                        .with(as(operator)).with(csrf()))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content(disable)
+                        .with(as(operator)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(false));
+        mockMvc.perform(get("/api/v1/notifications/preferences").with(as(operator)))
+                .andExpect(jsonPath("$[0].enabled").value(false));
+        mockMvc.perform(get("/api/v1/notifications/preferences").with(as(otherOperator)))
+                .andExpect(jsonPath("$[0].enabled").value(true));
+
+        mockMvc.perform(put("/api/v1/notifications/preferences/DEMAND_CREATED")
+                        .contentType("application/json").content("{\"enabled\":true}")
+                        .with(as(operator)).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.enabled").value(true));
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from notification_preference where user_id = ?",
+                Long.class, operator.getId()
+        )).isOne();
+    }
+
     private NotificationWrite notification(UUID recipientId, UUID demandId, String suffix) {
         return new NotificationWrite(
                 recipientId,
@@ -230,6 +291,12 @@ class NotificationApiTests {
         AppUser parent = AppUser.newParent(email, "test-password-hash");
         parent.verifyEmail(OffsetDateTime.now());
         return userRepository.saveAndFlush(parent);
+    }
+
+    private AppUser operator(String email) {
+        AppUser operator = AppUser.newOperator(email, "test-password-hash");
+        operator.verifyEmail(OffsetDateTime.now());
+        return userRepository.saveAndFlush(operator);
     }
 
     private RequestPostProcessor as(AppUser value) {

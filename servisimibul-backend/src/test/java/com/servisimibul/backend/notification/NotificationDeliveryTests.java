@@ -14,6 +14,7 @@ import com.servisimibul.backend.identity.AppUser;
 import com.servisimibul.backend.identity.AppUserRepository;
 import com.servisimibul.backend.identity.OperatorProfile;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
+import com.servisimibul.backend.identity.UserRole;
 import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
@@ -21,6 +22,8 @@ import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
@@ -28,6 +31,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest
 @Transactional
@@ -44,6 +48,8 @@ class NotificationDeliveryTests {
     @Autowired private OperatorSchoolRepository operatorSchoolRepository;
     @Autowired private OperatorSchoolCoverageRepository coverageRepository;
     @Autowired private DemandRepository demandRepository;
+    @Autowired private NotificationPreferenceService preferenceService;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     @Test
     void demandCreationTargetsExactAndPickupDistrictCoverageOnce() {
@@ -76,6 +82,11 @@ class NotificationDeliveryTests {
         AppUser outside = operator("outside", school, List.of(outsideDistrict), true, true);
         AppUser hidden = operator("hidden", school, List.of(pickup), false, true);
         AppUser unapproved = operator("unapproved", school, List.of(pickup), true, false);
+        AppUser optedOut = operator("opted-out", school, List.of(pickup), true, true);
+        AppUser optedBackIn = operator("opted-back-in", school, List.of(pickup), true, true);
+        preferenceService.update(optedOut.getId(), UserRole.OPERATOR, "DEMAND_CREATED", false);
+        preferenceService.update(optedBackIn.getId(), UserRole.OPERATOR, "DEMAND_CREATED", false);
+        preferenceService.update(optedBackIn.getId(), UserRole.OPERATOR, "DEMAND_CREATED", true);
 
         deliveryService.demandCreated(demand);
         deliveryService.demandCreated(demand);
@@ -85,6 +96,17 @@ class NotificationDeliveryTests {
         assertThat(count(outside)).isZero();
         assertThat(count(hidden)).isZero();
         assertThat(count(unapproved)).isZero();
+        assertThat(count(optedOut)).isZero();
+        assertThat(count(optedBackIn)).isOne();
+    }
+
+    @Test
+    void essentialNotificationTypesCannotBeStoredAsPreferences() {
+        AppUser parent = parent();
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "insert into notification_preference (user_id, type, enabled, updated_at) values (?, ?, false, now())",
+                parent.getId(), "SERVICE_PUBLISHED"
+        )).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     private long count(AppUser user) {

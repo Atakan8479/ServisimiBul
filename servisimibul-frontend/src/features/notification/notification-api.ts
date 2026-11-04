@@ -82,3 +82,31 @@ export function markNotificationRead(id: string) {
     schema: notificationSchema,
   })
 }
+
+const preferenceSchema = z.object({
+  type: z.enum(notificationTypes),
+  enabled: z.boolean(),
+})
+
+export type NotificationPreference = z.infer<typeof preferenceSchema>
+
+// The backend lists only the optional types the current role may control.
+export function listNotificationPreferences(signal?: AbortSignal) {
+  return apiRequest('/notifications/preferences', {
+    requiresSession: true,
+    signal,
+    schema: z.array(preferenceSchema),
+  })
+}
+
+export function updateNotificationPreference(
+  type: NotificationPreference['type'],
+  enabled: boolean,
+) {
+  return apiRequest(`/notifications/preferences/${type}`, {
+    method: 'PUT',
+    requiresSession: true,
+    json: { enabled },
+    schema: preferenceSchema,
+  })
+}

@@ -16,6 +16,12 @@
 - Confirmed the Manus APP labels against production: email change is APP-03, password change APP-04, and sign-out-all APP-05. The exact existing components and route guards remain documented; no prototype logic or unapproved legal copy was imported.
 - Documentation only. No frontend/backend behavior, API, database, migration, Supabase, email, dependency, lockfile, production setting, or legal approval changed. Targeted route/component/navigation and legal-gate reference checks plus `git diff --check` passed locally. On the final PR head, Backend and Secret scan passed; Frontend passed through the intentional Markdown-only skip, so frontend tests were not executed. Issue #205 remains open and Draft PR #250 remains the maintainer acceptance gate.
 
+## APP-15 optional in-app notification preferences — 2026-11-04 (PR pending review, not approved)
+
+- Classified the six existing in-app types: only OPERATOR `DEMAND_CREATED` is optional (a new-demand alert; the demand board stays reachable). `SERVICE_PUBLISHED`, `FEEDBACK_REMINDER`, `SUPPORT_EXPIRED`, `SERVICE_WITHDRAWN` (parent transactional notices tied to their own support and feedback deadlines) and `CONTENT_REPORTED` (admin moderation duty) remain mandatory. No new category, SMTP, push, or marketing path.
+- Flyway V20 adds `notification_preference` (RLS, restricted runtime grants, cascade with `app_user`, optional-type check). Applied only to disposable local PostgreSQL; it needs separate review before any live/shared deployment.
+- Operators get a "Bildirimler" switch in account settings; parents see no section. Verified locally: focused backend notification, demand, moderation, and schema tests (45 + 5) on disposable PostgreSQL 17; frontend account/notification Vitest (67), typecheck, lint; account Playwright spec with axe at 320/390/768/1440 plus keyboard toggle (10).
+
 ## LEG-09 cookie, tracking, and marketing consent record — 2026-11-04 (Draft PR #249, not approved)
 
 - Added `docs/30_COOKIE_TRACKING_AND_MARKETING_CONSENT.md` for issue #202 and appended open question 15 in `docs/01_DECISIONS.md` without renumbering existing questions. It is a technical decision draft, not legal advice, a cookie notice, a marketing permission, an İYS filing, or legal approval.

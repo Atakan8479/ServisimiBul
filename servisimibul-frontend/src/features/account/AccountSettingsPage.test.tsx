@@ -67,6 +67,71 @@ describe('account settings', () => {
     ).toHaveTextContent('Hesap ve gizlilik')
   })
 
+  it('lets operators turn the optional new-demand notification off and on', async () => {
+    useAuthenticatedUser(operatorUser)
+    const updates: unknown[] = []
+    server.use(
+      csrfHandler(),
+      http.put(
+        '/api/v1/notifications/preferences/DEMAND_CREATED',
+        async ({ request }) => {
+          expect(request.headers.get('X-CSRF-TOKEN')).toBe('csrf-token')
+          const body = (await request.json()) as { enabled: boolean }
+          updates.push(body)
+          return HttpResponse.json({ type: 'DEMAND_CREATED', ...body })
+        },
+      ),
+    )
+    renderRoute('/operator/account')
+
+    const toggle = await screen.findByRole('switch', {
+      name: 'Yeni servis talepleri',
+    })
+    expect(toggle).toBeChecked()
+    expect(
+      screen.getByRole('heading', { name: 'Bildirimler' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(toggle)
+    await waitFor(() => expect(toggle).not.toBeChecked())
+    await waitFor(() => expect(toggle).toBeEnabled())
+    fireEvent.click(toggle)
+    await waitFor(() => expect(toggle).toBeChecked())
+    expect(updates).toEqual([{ enabled: false }, { enabled: true }])
+  })
+
+  it('keeps the preference unchanged and announces a failed save', async () => {
+    useAuthenticatedUser(operatorUser)
+    server.use(
+      csrfHandler(),
+      http.put('/api/v1/notifications/preferences/DEMAND_CREATED', () =>
+        HttpResponse.json(problem(503), { status: 503 }),
+      ),
+    )
+    renderRoute('/operator/account')
+
+    const toggle = await screen.findByRole('switch', {
+      name: 'Yeni servis talepleri',
+    })
+    fireEvent.click(toggle)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Hesap bilgileri şu anda yüklenemiyor.',
+    )
+    expect(toggle).toBeChecked()
+  })
+
+  it('shows no notification preferences to parents', async () => {
+    useAuthenticatedUser(parentUser)
+    renderRoute('/parent/account')
+
+    expect(
+      await screen.findByRole('heading', { name: 'Hesap ve gizlilik' }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Bildirimler' })).toBeNull()
+    expect(screen.queryByRole('switch')).toBeNull()
+  })
+
   it('renders the operator account without duplicating profile editing', async () => {
     useAuthenticatedUser(operatorUser)
     renderRoute('/operator/account')
@@ -823,6 +888,13 @@ function useAuthenticatedUser(
   server.use(
     http.get('/api/v1/auth/me', () => HttpResponse.json(user)),
     unreadCountHandler(),
+    http.get('/api/v1/notifications/preferences', () =>
+      HttpResponse.json(
+        user.role === 'OPERATOR'
+          ? [{ type: 'DEMAND_CREATED', enabled: true }]
+          : [],
+      ),
+    ),
   )
 }
 

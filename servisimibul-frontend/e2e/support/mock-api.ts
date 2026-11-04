@@ -64,6 +64,8 @@ export interface MockApiState {
   tariff: ReturnType<typeof tariff>
   // Notifications the signed-in account owns; read state follows readAt.
   notifications?: MockNotification[]
+  // Operator opt-out for the only optional notification type (APP-15).
+  demandCreatedNotificationsDisabled?: boolean
   // A closed demand reports its closure reason; undefined keeps it OPEN.
   demandClosure?: 'FULFILLED' | 'INACTIVE'
   demandCreated: boolean
@@ -188,6 +190,32 @@ export async function installMockApi(page: Page, state: MockApiState) {
       return empty(route)
     }
 
+    if (path === '/notifications/preferences' && method === 'GET') {
+      return requireAuthenticated(route, role, () =>
+        json(
+          route,
+          role === 'OPERATOR'
+            ? [
+                {
+                  type: 'DEMAND_CREATED',
+                  enabled: !state.demandCreatedNotificationsDisabled,
+                },
+              ]
+            : [],
+        ),
+      )
+    }
+    if (
+      path === '/notifications/preferences/DEMAND_CREATED' &&
+      method === 'PUT'
+    ) {
+      return requireAuthenticated(route, role, () => {
+        if (role !== 'OPERATOR') return problem(route, 404, 'not_found')
+        const { enabled } = request.postDataJSON() as { enabled: boolean }
+        state.demandCreatedNotificationsDisabled = !enabled
+        return json(route, { type: 'DEMAND_CREATED', enabled })
+      })
+    }
     if (path === '/notifications/unread-count' && method === 'GET') {
       return requireAuthenticated(route, role, () =>
         json(route, {

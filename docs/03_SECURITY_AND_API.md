@@ -110,6 +110,8 @@ Creating a report never changes target visibility or lifecycle. Only an explicit
 - Delivery is part of the originating business transaction and uses a unique deterministic event key with conflict-safe insertion. Repeated demand, publication, lifecycle, or report handling therefore cannot create duplicate recipient/event rows.
 - Notification links are backend-generated local application paths. The frontend validates that every link begins with `/`, polls the unread count only while visible at a bounded interval, and cancels obsolete requests during navigation or unmount.
 
+- APP-15 (#222, PROPOSED until approved): `GET /api/v1/notifications/preferences` returns only the optional types the current principal's role may control, each with `enabled`; `PUT /api/v1/notifications/preferences/{type}` with `{enabled}` requires the same authentication plus CSRF and is idempotent. Only OPERATOR `DEMAND_CREATED` (new demand in coverage) is optional. Essential, unknown, or other-role types return 404, and the Flyway V20 `notification_preference` type check rejects them at the database level. A missing row means enabled. Delivery skips the insert for a recipient who disabled that type; parent feedback, reminder, expiry, withdrawal, and admin report notices are always delivered.
+
 Notifications never change demand, response, feedback, report, moderation, or account state. REQ-07 activates no SMTP, SMS, push, WebSocket, or inference service.
 
 ## Auth endpoints (draft)
