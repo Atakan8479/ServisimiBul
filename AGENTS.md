@@ -1,7 +1,15 @@
 # AGENTS.md — ServisimiBul coding agent operating rules
 
-## Required reading before ANY task
-Read `docs/00_PROJECT_BRIEF.md`, `docs/01_DECISIONS.md`, `docs/02_DOMAIN_AND_DATA.md`, `docs/03_SECURITY_AND_API.md`, `docs/04_ROADMAP.md`, `docs/05_REPO_STATE.md`, and `docs/06_PROGRESS.md`. Review existing source files, particularly `servisimibul-backend/pom.xml`, before proposing changes. These files are repository-shared context, not prior chat memory.
+## Communication and token efficiency (Codex and Claude Code)
+- Always communicate with developers in English, including questions, progress updates, code reviews, PR descriptions, and final reports. Never reply in Turkish. Preserve Turkish application UI text, translations, and product requirements unless the task explicitly changes them.
+- Minimize narration: for complex or risky work, give only a brief plan; report meaningful milestones or blockers rather than every routine command. Avoid repeated summaries, pasted logs, and code dumps unless requested.
+- Keep final responses to at most six short lines: result, essential tests/checks, commit or PR, and remaining blockers or risks. Include extra detail when needed to communicate material safety or failure information.
+- Inspect only task-relevant files and documentation; prefer targeted searches and avoid rereading unchanged context, redundant tool calls, or needless subagents.
+- Invoke optional tools or plugins (including Ponytail and Impeccable) only when explicitly requested or materially needed for the task; do not run them automatically on every task.
+- Prefer focused tests while iterating, but always run the required security, regression, full-stack, and CI gates when applicable. Never hide failures, skip mandatory safeguards, or claim unexecuted checks passed.
+
+## Task-scoped context loading
+Consult the relevant source-of-truth documents before changing behavior: `docs/00_PROJECT_BRIEF.md` and `docs/04_ROADMAP.md` for scope/planning; `docs/01_DECISIONS.md` and `docs/02_DOMAIN_AND_DATA.md` for affected decisions and domain rules; `docs/03_SECURITY_AND_API.md` for security, authentication, APIs, or migrations; `docs/05_REPO_STATE.md` and `docs/06_PROGRESS.md` when current implementation or deployment status matters. Read only the pertinent sections and affected code. Inspect `servisimibul-backend/pom.xml` for relevant backend/dependency work, not automatically for unrelated tasks. These files are repository-shared context, not prior chat memory.
 
 ## Source of truth and precedence
 1. Latest explicitly approved human instruction and decisions logged in `docs/01_DECISIONS.md`.
@@ -11,12 +19,12 @@ Read `docs/00_PROJECT_BRIEF.md`, `docs/01_DECISIONS.md`, `docs/02_DOMAIN_AND_DAT
 When sources conflict: stop, explain the conflict, and request a decision. Do not silently assume.
 
 ## Working method — one gated task at a time
-- At the start, show current stage, inspected files, a proposed implementation plan, touched paths, tests, open questions, and risks.
+- For substantial tasks, briefly state the objective and any essential plan, tests, decision points, and risks. Skip ceremonial plans for small changes; give detailed file inventories only when needed for review or approval.
 - For the initial onboarding task: READ ONLY, NO WRITES. Ask for approval before code or remote operations.
 - Implement only the explicitly approved task. Do not build unrelated modules or skip stages.
 - Before changing remote databases, destructive SQL, schema migrations, or production settings: request explicit human approval and verify current state. Never reset/drop existing Supabase tables by default.
 - Do not claim tests passed without executing them; state blockers and actual results.
-- Finish with changed files, commands run, tests and outcomes, important decisions, proposed next task. Update `docs/06_PROGRESS.md` only with verified results after approval.
+- Finish with a compact result, affected scope, actual test outcomes, commit/PR reference, and any blockers; include command details only when necessary. Update `docs/06_PROGRESS.md` only with verified results after approval.
 - Use feature branches and pull requests; never push directly to `main` without explicit permission. Code review is required before merge.
 
 ## Java and Lombok conventions
