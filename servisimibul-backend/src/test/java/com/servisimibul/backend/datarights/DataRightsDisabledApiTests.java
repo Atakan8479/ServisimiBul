@@ -58,6 +58,10 @@ class DataRightsDisabledApiTests {
             mockMvc.perform(get("/api/v1/admin/data-rights-requests").with(admin))
                     .andExpect(status().isServiceUnavailable())
                     .andExpect(jsonPath("$.code").value("data_rights_unavailable"));
+            mockMvc.perform(get("/api/v1/admin/data-rights-requests/" + UUID.randomUUID()
+                            + "/access-response").with(admin))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.code").value("data_rights_unavailable"));
         } finally {
             jdbc.update("delete from data_rights_handler where user_id = ?", parent.getId());
             userRepository.deleteById(parent.getId());

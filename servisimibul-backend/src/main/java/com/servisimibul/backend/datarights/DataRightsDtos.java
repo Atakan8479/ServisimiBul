@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class DataRightsDtos {
@@ -96,5 +97,25 @@ public final class DataRightsDtos {
     }
 
     public record PageResponse<T>(List<T> content, int page, int size, long totalElements, int totalPages) {
+    }
+
+    /** Handler-only worksheet for a verified manual ACCESS response; never a public download. */
+    public record AccessResponse(
+            UUID requestId,
+            UUID subjectId,
+            OffsetDateTime generatedAt,
+            List<PersonalDataSection> sections,
+            List<ExcludedDataCategory> exclusions
+    ) {
+        @Override
+        public String toString() {
+            return "AccessResponse[requestId=" + requestId + "]";
+        }
+    }
+
+    public record PersonalDataSection(String category, List<Map<String, Object>> records) {
+    }
+
+    public record ExcludedDataCategory(String category, String reason) {
     }
 }
