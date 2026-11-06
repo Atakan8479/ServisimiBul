@@ -255,7 +255,8 @@ class SessionAuthenticationApiTests {
         assertThat(userRepository.findById(user.getId()).orElseThrow().isDeactivated()).isFalse();
         mockMvc.perform(get("/api/v1/auth/me").cookie(login.cookie()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accountDeactivationAvailable").value(false));
+                .andExpect(jsonPath("$.accountDeactivationAvailable").value(false))
+                .andExpect(jsonPath("$.dataRightsRequestsAvailable").value(false));
     }
 
     @Test

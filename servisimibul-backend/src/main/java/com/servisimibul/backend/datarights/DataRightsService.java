@@ -62,15 +62,22 @@ public class DataRightsService {
     private final Clock clock;
 
     @Transactional
-    public RequesterView submit(SubmitRequest submission, UUID requesterId) {
+    public SubmissionResult submit(SubmitRequest submission, UUID requesterId) {
         requireEnabled();
-        AppUser requester = eligibleRequester(requesterId);
+        AppUser requester = eligibleRequesterForUpdate(requesterId);
         String details = submission.details().strip();
         if (NATIONAL_ID_SHAPE.matcher(details).find()) {
             throw DataRightsApiException.validation("details", "must not contain an identity number");
         }
-        if (requestRepository.existsByRequesterIdAndTypeAndStatusIn(
-                requesterId, submission.type(), DataRightsRequestStatus.OPEN)) {
+        var existing = submission.type() == DataRightsRequestType.ERASURE
+                ? requestRepository.findFirstByRequesterIdAndTypeAndResponseDeliveredAtIsNullOrderByReceivedAtDesc(
+                        requesterId, submission.type())
+                : requestRepository.findFirstByRequesterIdAndTypeAndStatusInOrderByReceivedAtDesc(
+                        requesterId, submission.type(), DataRightsRequestStatus.OPEN);
+        if (existing.isPresent()) {
+            if (submission.type() == DataRightsRequestType.ERASURE) {
+                return new SubmissionResult(false, requesterView(existing.get()));
+            }
             throw duplicate();
         }
         OffsetDateTime now = now();
@@ -81,14 +88,17 @@ public class DataRightsService {
             throw duplicate();
         }
         eventRepository.save(new DataRightsRequestEvent(request, requester, DataRightsAction.RECEIVE, null, now));
-        return requesterView(request);
+        return new SubmissionResult(true, requesterView(request));
     }
 
     @Transactional(readOnly = true)
-    public List<RequesterView> ownRequests(UUID requesterId) {
+    public List<RequesterView> ownRequests(UUID requesterId, DataRightsRequestType type) {
         requireEnabled();
         eligibleRequester(requesterId);
-        return requestRepository.findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(requesterId).stream()
+        var requests = type == null
+                ? requestRepository.findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(requesterId)
+                : requestRepository.findTop50ByRequesterIdAndTypeOrderByReceivedAtDescIdDesc(requesterId, type);
+        return requests.stream()
                 .map(DataRightsService::requesterView)
                 .toList();
     }
@@ -251,6 +261,14 @@ public class DataRightsService {
                         "requester_ineligible", "An active parent or operator account is required"));
     }
 
+    private AppUser eligibleRequesterForUpdate(UUID requesterId) {
+        return userRepository.findByIdForUpdate(requesterId)
+                .filter(user -> user.isEnabled() && !user.isDeactivated())
+                .filter(user -> user.getRole() == UserRole.PARENT || user.getRole() == UserRole.OPERATOR)
+                .orElseThrow(() -> DataRightsApiException.forbidden(
+                        "requester_ineligible", "An active parent or operator account is required"));
+    }
+
     private AppUser requireHandler(UUID handlerId) {
         return userRepository.findById(handlerId)
                 .filter(this::isAuthorizedHandler)
@@ -283,6 +301,9 @@ public class DataRightsService {
         );
     }
 
+    public record SubmissionResult(boolean created, RequesterView request) {
+    }
+
     private static Specification<DataRightsRequest> queueSpecification(
             DataRightsRequestStatus status,
             Boolean overdue,
@@ -310,7 +331,8 @@ public class DataRightsService {
                 request.getType(),
                 request.getStatus(),
                 request.getReceivedAt(),
-                request.getClosedAt()
+                request.getClosedAt(),
+                request.getResponseDeliveredAt() != null
         );
     }
 

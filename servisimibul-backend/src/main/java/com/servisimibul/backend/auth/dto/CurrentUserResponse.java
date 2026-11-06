@@ -12,6 +12,7 @@ public record CurrentUserResponse(
         boolean operatorApprovalRequired,
         OperatorApprovalStatus approvalStatus,
         boolean emailChangeAvailable,
-        boolean accountDeactivationAvailable
+        boolean accountDeactivationAvailable,
+        boolean dataRightsRequestsAvailable
 ) {
 }

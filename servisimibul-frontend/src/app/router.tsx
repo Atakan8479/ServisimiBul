@@ -100,6 +100,16 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'parent/privacy/erasure',
+        handle: { pageTitle: 'Hesap silme başvurusu' },
+        loader: parentLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/privacy/ErasureRequestPage'))
+            .ErasureRequestPage,
+        }),
+      },
+      {
         path: 'verify-email-change',
         handle: { pageTitle: 'E-posta değişikliğini doğrula' },
         HydrateFallback: LoadingPage,
@@ -300,6 +310,16 @@ const applicationRoutes: RouteObject[] = [
         lazy: async () => ({
           Component: (await import('../features/legal/LegalPages'))
             .OperatorRequestFormPage,
+        }),
+      },
+      {
+        path: 'privacy/erasure',
+        handle: { pageTitle: 'Hesap silme başvurusu' },
+        loader: operatorLoader,
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/privacy/ErasureRequestPage'))
+            .ErasureRequestPage,
         }),
       },
     ],
