@@ -1,5 +1,12 @@
 # Progress ledger (update only after verification)
 
+## APP-10 verified account erasure request scaffold — 2026-11-06 (Draft PR #260; activation blocked)
+
+- Branch: `codex/app-10-erasure-requests`; GitHub issue #217. Parents and operators now have separate role-scoped erasure routes with data-minimizing intake, receipt ids, and requester-safe status history. Repeated open `ERASURE` submissions are idempotent and return the existing request; other duplicate request types retain the APP-07 conflict behavior.
+- The experience is derived from APP-07's `app.data-rights.enabled` capability and remains unavailable by default and pinned off in production. It records an inspection request only: no account data is erased, anonymized, cascaded, exported, emailed, or represented as completed. LEG-03, LEG-06, and LEG-07 approvals remain activation and real-erasure blockers.
+- The complete backend suite passed 368/368 on disposable PostgreSQL 17. The complete frontend Vitest suite passed 289/289; ESLint, strict TypeScript, and the Vite production build passed. Focused APP-06/10 Chromium passed 9/9 after the corrected exact locator, including WCAG 2.2 AA and overflow checks at 1440, 390, and 320 pixels. Repository-wide Prettier still reports the existing 110-file baseline; all changed frontend files were formatted directly.
+- No migration, live Supabase access, shared data, production setting, dependency, lockfile, SMTP, background job, or credential changed.
+
 ## APP-08 verified manual personal-data response scaffold — 2026-11-06 (Draft PR #259; activation blocked)
 
 - Branch: `codex/app-08-personal-data-access`; GitHub issue #215. The existing APP-07 handler workflow now provides an authenticated `GET /api/v1/admin/data-rights-requests/{requestId}/access-response` worksheet for a manual `ACCESS` response. It requires a designated assigned handler and recorded identity verification, sends `Cache-Control: no-store`, and expires immediately after recorded delivery.

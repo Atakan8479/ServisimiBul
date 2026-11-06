@@ -14,6 +14,7 @@ export const authUserSchema = z.object({
     .nullable(),
   emailChangeAvailable: z.boolean().optional(),
   accountDeactivationAvailable: z.boolean().optional(),
+  dataRightsRequestsAvailable: z.boolean().optional(),
 })
 
 export type AuthUser = z.infer<typeof authUserSchema>

@@ -10,7 +10,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { routes } from '../../app/router'
 import { server } from '../../test/server'
-import { knownAuthRole } from '../auth/auth-api'
+import { knownAuthRole, type AuthUser } from '../auth/auth-api'
 
 beforeAll(() => {
   HTMLDialogElement.prototype.showModal = function showModal() {
@@ -21,7 +21,7 @@ beforeAll(() => {
   }
 })
 
-const parentUser = {
+const parentUser: AuthUser = {
   id: 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd',
   email: 'parent@example.com',
   role: 'PARENT',
@@ -29,7 +29,7 @@ const parentUser = {
   approvalStatus: null,
 }
 
-const operatorUser = {
+const operatorUser: AuthUser = {
   id: '6e2973ac-0302-49a8-b519-563ec9861272',
   email: 'operator@example.com',
   role: 'OPERATOR',
@@ -37,7 +37,7 @@ const operatorUser = {
   approvalStatus: 'APPROVED',
 }
 
-const adminUser = {
+const adminUser: AuthUser = {
   id: 'd28cc858-ed74-479a-b346-8b9cdccaaab8',
   email: 'admin@example.com',
   role: 'ADMIN',
@@ -303,6 +303,59 @@ describe('account settings', () => {
     expect(
       screen.getByRole('link', { name: 'Hesap ve gizlilik sayfasına dön' }),
     ).toHaveAttribute('href', '/operator/account')
+  })
+
+  it('submits and tracks an enabled erasure request without claiming deletion', async () => {
+    useAuthenticatedUser({ ...parentUser, dataRightsRequestsAvailable: true })
+    const id = '3a83c5aa-acde-4f7e-a191-b4fd2c792397'
+    server.use(
+      csrfHandler(),
+      http.get('/api/v1/data-rights-requests', () => HttpResponse.json([])),
+      http.post('/api/v1/data-rights-requests', async ({ request }) => {
+        expect(request.headers.get('X-CSRF-TOKEN')).toBe('csrf-token')
+        expect(await request.json()).toEqual({
+          type: 'ERASURE',
+          details: 'Hesabım ve ilişkili kayıtlar incelensin.',
+        })
+        return HttpResponse.json(
+          {
+            id,
+            type: 'ERASURE',
+            status: 'RECEIVED',
+            receivedAt: '2026-11-06T12:30:00Z',
+            closedAt: null,
+          },
+          { status: 201 },
+        )
+      }),
+    )
+    renderRoute('/parent/privacy/erasure')
+
+    fireEvent.change(await screen.findByLabelText('Başvuru açıklaması'), {
+      target: { value: 'Hesabım ve ilişkili kayıtlar incelensin.' },
+    })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'İnceleme talebi gönder' }),
+    )
+
+    expect(await screen.findByText('Başvurunuz kaydedildi')).toBeInTheDocument()
+    expect(screen.getByText(id)).toBeInTheDocument()
+    expect(screen.getByText(`Başvuru numaranız: ${id}`)).toBeInTheDocument()
+    expect(screen.getByText('Alındı')).toBeInTheDocument()
+    expect(screen.queryByText(/verileriniz silindi/i)).toBeNull()
+    expect(screen.queryByLabelText('Başvuru açıklaması')).toBeNull()
+  })
+
+  it('links enabled accounts to erasure request tracking', async () => {
+    useAuthenticatedUser({
+      ...operatorUser,
+      dataRightsRequestsAvailable: true,
+    })
+    renderRoute('/operator/account')
+
+    expect(
+      await screen.findByRole('link', { name: 'Başvuruları yönet' }),
+    ).toHaveAttribute('href', '/operator/privacy/erasure')
   })
 })
 
@@ -917,9 +970,7 @@ function renderRoute(path: string) {
   return router
 }
 
-function useAuthenticatedUser(
-  user: typeof parentUser | typeof operatorUser | typeof adminUser,
-) {
+function useAuthenticatedUser(user: AuthUser) {
   server.use(
     http.get('/api/v1/auth/me', () => HttpResponse.json(user)),
     unreadCountHandler(),

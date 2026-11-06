@@ -189,10 +189,20 @@ export function AccountSettingsPage() {
                 title="Hesabı devre dışı bırak"
               />
             )}
-            <FutureAction
-              description="Hesap ve veri silme başvurusu henüz kullanıma açık değil."
-              title="Hesap silme başvurusu"
-            />
+            {user.dataRightsRequestsAvailable ? (
+              <ErasureRequestAction
+                path={
+                  isOperator
+                    ? '/operator/privacy/erasure'
+                    : '/parent/privacy/erasure'
+                }
+              />
+            ) : (
+              <FutureAction
+                description="Hesap ve veri silme başvurusu henüz kullanıma açık değil."
+                title="Hesap silme başvurusu"
+              />
+            )}
           </SurfaceCard>
         </SectionShell>
       </div>
@@ -300,6 +310,22 @@ function PrivacyRequestAction({ path }: { path: string }) {
       <div className="account-action-state">
         <Link className="ui-button ui-button-quiet" to={path} viewTransition>
           Formu görüntüle
+        </Link>
+      </div>
+    </div>
+  )
+}
+
+function ErasureRequestAction({ path }: { path: string }) {
+  return (
+    <div className="account-action-row">
+      <div>
+        <h3>Hesap silme başvurusu</h3>
+        <p>İnceleme talebi gönderin ve güncel durumunu takip edin.</p>
+      </div>
+      <div className="account-action-state">
+        <Link className="ui-button ui-button-danger" to={path} viewTransition>
+          Başvuruları yönet
         </Link>
       </div>
     </div>

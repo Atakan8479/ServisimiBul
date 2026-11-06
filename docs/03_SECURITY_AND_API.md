@@ -119,7 +119,7 @@ Notifications never change demand, response, feedback, report, moderation, or ac
 Every endpoint below returns 503 `data_rights_unavailable` and stores nothing while `app.data-rights.enabled` is false. Flyway V21 must still be applied before a backend containing this module starts, because Hibernate `validate` checks the mapped tables even when the switch is off (`docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`). V21 was applied to shared Supabase on 2026-11-06 after owner approval. That is the default, and `application-prod.properties` pins it to false. It stays off until LEG-06 (#199) approves the channel, request types (RQ2), identity method (RQ4), period rules (RQ3), templates (RQ5) and retention (RQ7). The APP-06 form stays disabled and is not wired to these endpoints.
 
 - Requester (enabled, non-deactivated PARENT or OPERATOR; CSRF on POST):
-  - `POST /api/v1/data-rights-requests` accepts `{type, details}`. `type` is one of the PROPOSED placeholders `ACCESS|CORRECTION|ERASURE|OBJECTION|OTHER` pending RQ2. `details` holds at most 2000 characters, and text containing an 11-digit T.C.-identity-shaped number is rejected without echoing it. The endpoint returns 201 with `{id, type, status, receivedAt, closedAt}`. A second open request of the same type returns 409 `duplicate_open_request`; this is enforced by a partial unique index.
+  - `POST /api/v1/data-rights-requests` accepts `{type, details}`. `type` is one of the PROPOSED placeholders `ACCESS|CORRECTION|ERASURE|OBJECTION|OTHER` pending RQ2. `details` holds at most 2000 characters, and text containing an 11-digit T.C.-identity-shaped number is rejected without echoing it. The endpoint returns 201 with `{id, type, status, receivedAt, closedAt}`. Repeating an open `ERASURE` request is idempotent and returns the existing requester view with 200; a second open request of any other type returns 409 `duplicate_open_request`. The partial unique index remains the database backstop, and an account-row lock serializes submissions for one requester.
   - `GET /api/v1/data-rights-requests` returns the caller's 50 most recent requests. `GET /api/v1/data-rights-requests/{id}` returns one of them; another account's request returns 404. The requester view never includes the handler, the internal note, or a deadline.
 - Authorized handling (`/api/v1/admin/data-rights-requests`):
   - Access requires the ADMIN role and a row in `data_rights_handler`. Ordinary administrators get 403 `handler_required`, and OPERATOR accounts can never act as handlers. No endpoint designates handlers; a reviewed operational SQL change adds or removes the row.
@@ -143,6 +143,12 @@ Every endpoint below returns 503 `data_rights_unavailable` and stores nothing wh
   - The module writes no logs, and error bodies never echo submitted values.
   - Recording an `ERASURE` request performs no erasure or anonymization.
   - Retention of request rows is pending LEG-03/RQ7, and requester rows are kept by a restricting foreign key.
+
+### Account erasure request experience (APP-10, #217 — scaffold, disabled)
+
+`GET /api/v1/auth/me` exposes `dataRightsRequestsAvailable`, derived from the same backend-only `app.data-rights.enabled` switch. The parent `/parent/privacy/erasure` and operator `/operator/privacy/erasure` routes render no active form while it is false. When enabled outside production, they submit only `ERASURE`, list only the signed-in account's erasure requests, and show the requester-safe status, receipt id, receipt time, and whether the request is closed. They never receive the request text back, handler identity, internal reason, deadline, verification evidence, or delivery metadata.
+
+The UI calls the operation an inspection request, states that no immediate deletion or outcome is guaranteed, prevents a second form while an open request is visible, and handles server idempotency if a submission is repeated. Status values remain APP-07's working placeholders pending approved LEG-06 wording. APP-10 adds no erasure/anonymization method, background worker, cascade, migration, e-mail, or production activation; LEG-03, LEG-06, and LEG-07 approvals still block real erasure and activation.
 
 ### Verified manual personal-data response (APP-08, #215 — scaffold, disabled)
 

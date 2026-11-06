@@ -19,6 +19,20 @@ export interface MockApiState {
   operatorApprovalRequired?: boolean
   emailChangeAvailable?: boolean
   accountDeactivationAvailable?: boolean
+  dataRightsRequestsAvailable?: boolean
+  dataRightsRequests?: Array<{
+    id: string
+    type: 'ERASURE'
+    status:
+      | 'RECEIVED'
+      | 'UNDER_REVIEW'
+      | 'AWAITING_VERIFICATION'
+      | 'RESPONDED'
+      | 'PARTIALLY_RESPONDED'
+      | 'REJECTED'
+    receivedAt: string
+    closedAt: string | null
+  }>
   registered: boolean
   parentRegistered: boolean
   verified: boolean
@@ -120,6 +134,7 @@ export function createMockApiState(): MockApiState {
     parentSupport: null,
     demandComments: [],
     serviceResponse: null,
+    dataRightsRequests: [],
   }
 }
 
@@ -171,6 +186,31 @@ export async function installMockApi(page: Page, state: MockApiState) {
         return problem(route, 401, 'authentication_required')
       }
       return json(route, authUser(role, state))
+    }
+    if (path === '/data-rights-requests' && method === 'GET') {
+      return requireAuthenticated(route, role, () =>
+        json(route, state.dataRightsRequests ?? []),
+      )
+    }
+    if (path === '/data-rights-requests' && method === 'POST') {
+      return requireAuthenticated(route, role, async () => {
+        const existing = state.dataRightsRequests?.find(
+          (item) => item.type === 'ERASURE' && item.closedAt === null,
+        )
+        if (existing) return json(route, existing)
+        const request = {
+          id: '3a83c5aa-acde-4f7e-a191-b4fd2c792397',
+          type: 'ERASURE' as const,
+          status: 'RECEIVED' as const,
+          receivedAt: '2026-11-06T12:30:00Z',
+          closedAt: null,
+        }
+        state.dataRightsRequests = [
+          request,
+          ...(state.dataRightsRequests ?? []),
+        ]
+        return json(route, request, 201)
+      })
     }
     if (path === '/auth/logout' && method === 'POST') {
       role = undefined
@@ -855,6 +895,7 @@ function authUser(role: Role, state: MockApiState) {
     approvalStatus: role === 'OPERATOR' ? state.approvalStatus : null,
     emailChangeAvailable: state.emailChangeAvailable ?? false,
     accountDeactivationAvailable: state.accountDeactivationAvailable ?? false,
+    dataRightsRequestsAvailable: state.dataRightsRequestsAvailable ?? false,
   }
 }
 
