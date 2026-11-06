@@ -19,9 +19,16 @@ public class NotificationWriteStore {
                 INSERT INTO in_app_notification (
                     id, recipient_user_id, type, event_key, demand_id, service_response_id,
                     publication_event_id, feedback_id, moderation_case_id, created_at
-                ) VALUES (
-                    :id, :recipientUserId, :type, :eventKey, :demandId, :serviceResponseId,
-                    :publicationEventId, :feedbackId, :moderationCaseId, :createdAt
+                )
+                SELECT :id, :recipientUserId, :type, :eventKey, CAST(:demandId AS UUID),
+                    CAST(:serviceResponseId AS UUID), CAST(:publicationEventId AS UUID),
+                    CAST(:feedbackId AS UUID), CAST(:moderationCaseId AS UUID), :createdAt
+                -- Opt-outs exist only for optional types (V20 type check), so essential notices always pass.
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM notification_preference preference
+                    WHERE preference.user_id = :recipientUserId
+                      AND preference.type = :type
+                      AND NOT preference.enabled
                 )
                 ON CONFLICT (event_key) DO NOTHING
                 """, new MapSqlParameterSource()

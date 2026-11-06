@@ -22,6 +22,11 @@ import {
   logoutAllDevices,
   type AuthUser,
 } from '../auth/auth-api'
+import {
+  listNotificationPreferences,
+  updateNotificationPreference,
+  type NotificationPreference,
+} from '../notification/notification-api'
 import './account-settings.css'
 
 export function AccountSettingsPage() {
@@ -192,6 +197,8 @@ export function AccountSettingsPage() {
         </SectionShell>
       </div>
 
+      {isOperator && <NotificationPreferencesSection />}
+
       {isOperator && (
         <SurfaceCard className="account-profile-note">
           <div>
@@ -346,6 +353,106 @@ export function AccountSettingsRouteError() {
         tone="error"
       />
     </div>
+  )
+}
+
+const preferenceCopy: Partial<
+  Record<NotificationPreference['type'], { title: string; description: string }>
+> = {
+  DEMAND_CREATED: {
+    title: 'Yeni servis talepleri',
+    description:
+      'Hizmet verdiğiniz okul ve bölgelerde yeni bir talep açıldığında uygulama içi bildirim alın.',
+  },
+}
+
+function NotificationPreferencesSection() {
+  const [preferences, setPreferences] = useState<NotificationPreference[]>()
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [pendingType, setPendingType] = useState<string>()
+  const [error, setError] = useState<string>()
+
+  useEffect(() => {
+    const controller = new AbortController()
+    listNotificationPreferences(controller.signal)
+      .then(setPreferences)
+      .catch(() => {
+        if (!controller.signal.aborted) setLoadFailed(true)
+      })
+    return () => controller.abort()
+  }, [])
+
+  async function toggle(preference: NotificationPreference) {
+    setPendingType(preference.type)
+    setError(undefined)
+    try {
+      const saved = await updateNotificationPreference(
+        preference.type,
+        !preference.enabled,
+      )
+      setPreferences((current) =>
+        current?.map((item) => (item.type === saved.type ? saved : item)),
+      )
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.problem.detail
+          : 'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+      )
+    } finally {
+      setPendingType(undefined)
+    }
+  }
+
+  if (preferences?.length === 0) return null
+
+  return (
+    <SectionShell
+      className="account-settings-section"
+      title="Bildirimler"
+      description="Hesap, güvenlik ve işlem bildirimleri her zaman gönderilir; yalnızca isteğe bağlı bildirimleri kapatabilirsiniz."
+    >
+      <SurfaceCard className="account-action-card">
+        {loadFailed && (
+          <p className="account-confirm-error" role="alert">
+            Bildirim tercihleri yüklenemedi.
+          </p>
+        )}
+        {!preferences && !loadFailed && <p>Yükleniyor…</p>}
+        {preferences?.map((preference) => {
+          const copy = preferenceCopy[preference.type]
+          if (!copy) return null
+          const inputId = `notification-preference-${preference.type}`
+          return (
+            <div className="account-action-row" key={preference.type}>
+              <div>
+                <h3>
+                  <label htmlFor={inputId}>{copy.title}</label>
+                </h3>
+                <p id={`${inputId}-description`}>{copy.description}</p>
+              </div>
+              <div className="account-action-state">
+                <input
+                  aria-describedby={`${inputId}-description`}
+                  checked={preference.enabled}
+                  className="account-preference-toggle"
+                  disabled={pendingType === preference.type}
+                  id={inputId}
+                  onChange={() => void toggle(preference)}
+                  role="switch"
+                  type="checkbox"
+                />
+              </div>
+            </div>
+          )
+        })}
+        {error && (
+          <p className="account-confirm-error" role="alert">
+            {error}
+          </p>
+        )}
+      </SurfaceCard>
+    </SectionShell>
   )
 }
 

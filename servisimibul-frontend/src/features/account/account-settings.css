@@ -399,3 +399,14 @@
 .account-confirm-actions .ui-button {
   justify-content: center;
 }
+
+.account-preference-toggle {
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--navy-900);
+  cursor: pointer;
+}
+
+.account-preference-toggle:disabled {
+  cursor: progress;
+}

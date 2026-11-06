@@ -49,6 +49,9 @@ for (const role of roles) {
       await expect(
         page.getByRole('button', { name: 'Oturumları sonlandır' }),
       ).toBeVisible()
+      await expect(
+        page.getByRole('switch', { name: 'Yeni servis talepleri' }),
+      ).toHaveCount(role.roleLabel === 'İşletmeci' ? 1 : 0)
       await assertAccessibleAndContained(page)
       if (
         process.env.APP_02_CAPTURE &&
@@ -62,6 +65,25 @@ for (const role of roles) {
     })
   }
 }
+
+test('operator toggles the optional new-demand notification by keyboard', async ({
+  page,
+}) => {
+  await signIn(page, roles[1])
+  await page.goto('/operator/account')
+
+  const toggle = page.getByRole('switch', { name: 'Yeni servis talepleri' })
+  await expect(toggle).toBeChecked()
+  await toggle.focus()
+  await page.keyboard.press('Space')
+  await expect(toggle).not.toBeChecked()
+  await page.reload()
+  await expect(toggle).not.toBeChecked()
+  await expect(toggle).toBeEnabled()
+  await toggle.focus()
+  await page.keyboard.press('Space')
+  await expect(toggle).toBeChecked()
+})
 
 test('operator account keeps public profile management separate', async ({
   page,
