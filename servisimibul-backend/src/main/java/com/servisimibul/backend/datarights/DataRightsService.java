@@ -1,5 +1,6 @@
 package com.servisimibul.backend.datarights;
 
+import com.servisimibul.backend.datarights.DataRightsDtos.AccessResponse;
 import com.servisimibul.backend.datarights.DataRightsDtos.ActionRequest;
 import com.servisimibul.backend.datarights.DataRightsDtos.EventView;
 import com.servisimibul.backend.datarights.DataRightsDtos.HandlerDetail;
@@ -57,6 +58,7 @@ public class DataRightsService {
     private final DataRightsRequestRepository requestRepository;
     private final DataRightsRequestEventRepository eventRepository;
     private final AppUserRepository userRepository;
+    private final PersonalDataAccessAssembler accessAssembler;
     private final Clock clock;
 
     @Transactional
@@ -135,6 +137,35 @@ public class DataRightsService {
         requireEnabled();
         requireHandler(handlerId);
         return handlerDetail(requestRepository.findById(requestId).orElseThrow(DataRightsApiException::notFound));
+    }
+
+    @Transactional(readOnly = true)
+    public AccessResponse accessResponse(UUID requestId, UUID handlerId) {
+        requireEnabled();
+        requireHandler(handlerId);
+        DataRightsRequest request = requestRepository.findById(requestId)
+                .orElseThrow(DataRightsApiException::notFound);
+        if (!request.isAssignedTo(handlerId)) {
+            throw DataRightsApiException.forbidden(
+                    "handler_not_assigned", "Only the assigned handler may access response data");
+        }
+        if (request.getType() != DataRightsRequestType.ACCESS) {
+            throw DataRightsApiException.conflict(
+                    "access_request_required", "A personal data response requires an ACCESS request");
+        }
+        if (request.getIdentityVerifiedAt() == null) {
+            throw DataRightsApiException.conflict(
+                    "identity_verification_required", "Identity must be verified before personal data is accessed");
+        }
+        if (request.getResponseDeliveredAt() != null) {
+            throw DataRightsApiException.conflict(
+                    "access_response_expired", "Personal data access ends when response delivery is recorded");
+        }
+        if (request.getStatus() == DataRightsRequestStatus.REJECTED) {
+            throw DataRightsApiException.conflict(
+                    "access_response_unavailable", "No personal data response is available for this outcome");
+        }
+        return accessAssembler.assemble(requestId, request.getRequester().getId());
     }
 
     @Transactional

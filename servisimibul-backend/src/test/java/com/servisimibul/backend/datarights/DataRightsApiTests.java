@@ -36,6 +36,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -288,6 +289,86 @@ class DataRightsApiTests {
         mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
                 .andExpect(jsonPath("$.status").value("PARTIALLY_RESPONDED"))
                 .andExpect(jsonPath("$.closedAt").exists());
+    }
+
+    @Test
+    void accessResponseRequiresVerifiedIdentityAndExpiresAfterRecordedDelivery() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser otherParent = account(UserRole.PARENT);
+        AppUser handler = handler();
+        AppUser colleague = handler();
+        UUID id = UUID.fromString(submit(parent, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
+
+        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+
+        mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("identity_verification_required"));
+        mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(colleague)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("handler_not_assigned"));
+
+        detail = act(handler, id, action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null),
+                HttpStatus.OK);
+        String response = mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(handler)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(jsonPath("$.requestId").value(id.toString()))
+                .andExpect(jsonPath("$.subjectId").value(parent.getId().toString()))
+                .andExpect(jsonPath("$.sections[?(@.category == 'ACCOUNT')].records[0].email")
+                        .value(parent.getEmail()))
+                .andExpect(jsonPath("$.sections[?(@.category == 'DATA_RIGHTS_REQUESTS')].records[0].details")
+                        .value(DETAILS))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(response)
+                .doesNotContain(otherParent.getEmail())
+                .doesNotContain("password_hash")
+                .doesNotContain("passwordHash")
+                .doesNotContain("token_hash")
+                .doesNotContain("event_key")
+                .doesNotContain("target_snapshot")
+                .doesNotContain("decision_reason");
+
+        detail = act(handler, id, action(DataRightsAction.RESPOND, version(detail), null, null), HttpStatus.OK);
+        mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(handler)))
+                .andExpect(status().isOk());
+        detail = act(handler, id, action(DataRightsAction.RECORD_DELIVERY, version(detail), null, null),
+                HttpStatus.OK);
+        mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("access_response_expired"));
+    }
+
+    @Test
+    void accessResponseRejectsNonAccessAndRejectedRequests() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser handler = handler();
+        UUID correction = UUID.fromString(
+                submit(parent, "CORRECTION", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, correction,
+                action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, correction,
+                action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        act(handler, correction,
+                action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null), HttpStatus.OK);
+
+        mockMvc.perform(get(ADMIN_BASE + "/" + correction + "/access-response").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("access_request_required"));
+
+        UUID rejected = UUID.fromString(submit(parent, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
+        detail = act(handler, rejected, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, rejected,
+                action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        detail = act(handler, rejected,
+                action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null), HttpStatus.OK);
+        act(handler, rejected, action(DataRightsAction.REJECT, version(detail), null, "Kapsam dışı"), HttpStatus.OK);
+
+        mockMvc.perform(get(ADMIN_BASE + "/" + rejected + "/access-response").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("access_response_unavailable"));
     }
 
     @Test
