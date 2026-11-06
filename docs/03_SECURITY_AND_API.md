@@ -144,6 +144,16 @@ Every endpoint below returns 503 `data_rights_unavailable` and stores nothing wh
   - Recording an `ERASURE` request performs no erasure or anonymization.
   - Retention of request rows is pending LEG-03/RQ7, and requester rows are kept by a restricting foreign key.
 
+### Verified manual personal-data response (APP-08, #215 — scaffold, disabled)
+
+APP-08 deliberately uses the manual-response option allowed by the issue; it does not create a downloadable archive, object-storage file, e-mail attachment, bearer token, or public/requester download endpoint. It shares APP-07's `app.data-rights.enabled` gate, which defaults to false and is pinned false in production. The gate and LEG-06 approval requirements above therefore apply unchanged.
+
+- `GET /api/v1/admin/data-rights-requests/{requestId}/access-response` is an authenticated, `Cache-Control: no-store` handler worksheet. It is available only for an `ACCESS` request, only to its assigned designated handler, and only after `RECORD_IDENTITY_VERIFIED`. A row lock keeps `RECORD_DELIVERY` from expiring access while the response is being assembled.
+- The response uses an explicit subject-scoped SQL allow-list. It covers account identity and pending e-mail-change metadata without its token hash; the subject's operator profile, review decision metadata, schools, coverage, vehicles and offerings; created demands, own support/reasons/feedback; own service responses and publication events; own comments and submitted reports; own notifications/preferences; and own data-rights requests.
+- It cannot select password or token hashes, session/CSRF values, another account's rows, notification event keys, moderation snapshots, reviewer/handler identities, or internal review/decision notes. The response lists these exclusions so the handler cannot mistake the worksheet for an unreviewed complete legal determination. Host logs and backup copies remain outside the application database response.
+- The assigned handler reviews the worksheet for third-party or otherwise protected material, records `RESPOND`, `RESPOND_PARTIALLY`, or `REJECT` under APP-07, and uses only the separately approved LEG-06 delivery channel. `RECORD_DELIVERY` immediately expires the worksheet with `409 access_response_expired`; an outcome without recorded delivery remains accessible so a failed delivery can be retried.
+- No package content is persisted or logged by APP-08, and no new table or migration is required. APP-07's existing audit history remains the trace of assignment, verification, outcome, and delivery. Production activation, the identity method, response wording, delivery channel, retention, and whether excluded operational material must be supplied remain owner/counsel decisions.
+
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
 - `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`

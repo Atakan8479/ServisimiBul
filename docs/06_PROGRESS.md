@@ -1,5 +1,13 @@
 # Progress ledger (update only after verification)
 
+## APP-08 verified manual personal-data response scaffold — 2026-11-06 (Draft PR #259; activation blocked)
+
+- Branch: `codex/app-08-personal-data-access`; GitHub issue #215. The existing APP-07 handler workflow now provides an authenticated `GET /api/v1/admin/data-rights-requests/{requestId}/access-response` worksheet for a manual `ACCESS` response. It requires a designated assigned handler and recorded identity verification, sends `Cache-Control: no-store`, and expires immediately after recorded delivery.
+- The worksheet uses explicit subject-scoped queries for the current account and its parent/operator records. Password/token hashes, sessions and CSRF values, other accounts, notification event keys, moderation snapshots, reviewer/handler identities, and internal decision notes are not selected. A row lock prevents delivery from expiring access part-way through assembly; no worksheet content is persisted or logged.
+- The feature remains fail-closed behind APP-07's existing `app.data-rights.enabled=false` default and production pin. It adds no requester download, file/archive, bearer token, object storage, e-mail delivery, migration, or new dependency. The LEG-06 channel, identity method, response wording, delivery and retention decisions remain activation blockers.
+- Focused APP-07/08 tests passed 14/14 on disposable PostgreSQL 17, covering default-off behavior, role/assignment/identity gates, cross-user and protected-note exclusion, wrong/rejected request types, no-store handling, response retry before delivery, and post-delivery expiry. The complete backend verification passed 368/368 on a fresh disposable PostgreSQL 17 instance; compile and `git diff --check` also passed.
+- No live Supabase data or settings, shared schema, production flag, SMTP, frontend, credential, dependency, or lockfile changed.
+
 ## UX-03 lifecycle design acceptance reconciliation — 2026-11-04 (Draft PR #252; maintainer acceptance pending)
 
 - Reconciled `docs/28_UX_03_LIFECYCLE_DESIGN_ACCEPTANCE.md` with `main` at `6f7424f`. The original UX-03 record merged in PR #244 before APP-09's gated deactivation scaffold merged in PR #248, so its statement that no lifecycle API/component existed and its UX03-01–07 state map were stale.

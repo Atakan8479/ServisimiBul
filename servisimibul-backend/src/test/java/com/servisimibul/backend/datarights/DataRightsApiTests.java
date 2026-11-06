@@ -76,6 +76,10 @@ class DataRightsApiTests {
         jdbc.update("delete from data_rights_request_event where actor_id = any (?)", (Object) ids);
         jdbc.update("delete from data_rights_request where requester_id = any (?)", (Object) ids);
         jdbc.update("delete from data_rights_handler where user_id = any (?)", (Object) ids);
+        jdbc.update("delete from pending_email_change where user_id = any (?)", (Object) ids);
+        jdbc.update("delete from operator_application_review where operator_id in "
+                + "(select id from operator_profile where user_id = any (?))", (Object) ids);
+        jdbc.update("delete from operator_profile where user_id = any (?)", (Object) ids);
         jdbc.update("delete from app_user where id = any (?)", (Object) ids);
         users.clear();
     }
@@ -297,6 +301,12 @@ class DataRightsApiTests {
         AppUser otherParent = account(UserRole.PARENT);
         AppUser handler = handler();
         AppUser colleague = handler();
+        String tokenHash = "a".repeat(64);
+        jdbc.update("""
+                insert into pending_email_change
+                    (id, user_id, proposed_email, token_hash, expires_at, created_at)
+                values (?, ?, ?, ?, now() + interval '1 day', now())
+                """, UUID.randomUUID(), parent.getId(), "new-parent@example.com", tokenHash);
         UUID id = UUID.fromString(submit(parent, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
 
         JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
@@ -318,6 +328,8 @@ class DataRightsApiTests {
                 .andExpect(jsonPath("$.subjectId").value(parent.getId().toString()))
                 .andExpect(jsonPath("$.sections[?(@.category == 'ACCOUNT')].records[0].email")
                         .value(parent.getEmail()))
+                .andExpect(jsonPath("$.sections[?(@.category == 'PENDING_EMAIL_CHANGE')].records[0].proposedEmail")
+                        .value("new-parent@example.com"))
                 .andExpect(jsonPath("$.sections[?(@.category == 'DATA_RIGHTS_REQUESTS')].records[0].details")
                         .value(DETAILS))
                 .andReturn().getResponse().getContentAsString();
@@ -327,6 +339,7 @@ class DataRightsApiTests {
                 .doesNotContain("password_hash")
                 .doesNotContain("passwordHash")
                 .doesNotContain("token_hash")
+                .doesNotContain(tokenHash)
                 .doesNotContain("event_key")
                 .doesNotContain("target_snapshot")
                 .doesNotContain("decision_reason");
@@ -369,6 +382,50 @@ class DataRightsApiTests {
         mockMvc.perform(get(ADMIN_BASE + "/" + rejected + "/access-response").with(as(handler)))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("access_response_unavailable"));
+    }
+
+    @Test
+    void accessResponseIncludesOnlyTheOperatorsOwnProfileAndOmitsProtectedReviewNotes() throws Exception {
+        AppUser operator = account(UserRole.OPERATOR);
+        AppUser otherOperator = account(UserRole.OPERATOR);
+        AppUser handler = handler();
+        UUID profileId = UUID.randomUUID();
+        UUID otherProfileId = UUID.randomUUID();
+        jdbc.update("""
+                insert into operator_profile
+                    (id, user_id, business_name, contact_phone, description, approval_status,
+                     is_active, is_publicly_visible, created_at, updated_at)
+                values (?, ?, ?, ?, ?, 'DRAFT', true, true, now(), now()),
+                       (?, ?, ?, ?, ?, 'DRAFT', true, true, now(), now())
+                """,
+                profileId, operator.getId(), "Own Service", "+905551111111", "Own description",
+                otherProfileId, otherOperator.getId(), "Other Service", "+905552222222", "Other description");
+        jdbc.update("""
+                insert into operator_application_review
+                    (id, operator_id, reviewed_by, decision, reason, reviewed_at)
+                values (?, ?, ?, 'CHANGES_REQUESTED', ?, now())
+                """, UUID.randomUUID(), profileId, handler.getId(), "Protected internal review note");
+
+        UUID id = UUID.fromString(submit(operator, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        act(handler, id, action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null),
+                HttpStatus.OK);
+
+        String response = mockMvc.perform(get(ADMIN_BASE + "/" + id + "/access-response").with(as(handler)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sections[?(@.category == 'OPERATOR_PROFILE')].records[0].contactPhone")
+                        .value("+905551111111"))
+                .andExpect(jsonPath("$.sections[?(@.category == 'OPERATOR_APPLICATION_REVIEWS')].records[0].decision")
+                        .value("CHANGES_REQUESTED"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(response)
+                .contains("Own description")
+                .doesNotContain("+905552222222")
+                .doesNotContain("Other description")
+                .doesNotContain("Protected internal review note")
+                .doesNotContain(handler.getId().toString());
     }
 
     @Test

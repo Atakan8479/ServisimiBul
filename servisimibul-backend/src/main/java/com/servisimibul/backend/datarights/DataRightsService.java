@@ -139,11 +139,12 @@ public class DataRightsService {
         return handlerDetail(requestRepository.findById(requestId).orElseThrow(DataRightsApiException::notFound));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AccessResponse accessResponse(UUID requestId, UUID handlerId) {
         requireEnabled();
         requireHandler(handlerId);
-        DataRightsRequest request = requestRepository.findById(requestId)
+        // Hold the request row until assembly completes so delivery cannot expire access mid-response.
+        DataRightsRequest request = requestRepository.findForUpdateById(requestId)
                 .orElseThrow(DataRightsApiException::notFound);
         if (!request.isAssignedTo(handlerId)) {
             throw DataRightsApiException.forbidden(

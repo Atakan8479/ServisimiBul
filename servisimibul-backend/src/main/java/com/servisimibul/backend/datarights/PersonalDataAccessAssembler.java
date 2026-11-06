@@ -30,8 +30,13 @@ class PersonalDataAccessAssembler {
             section("ACCOUNT", """
                     select id, email, role, is_enabled as "enabled",
                            email_verified_at as "emailVerifiedAt", created_at as "createdAt",
-                           updated_at as "updatedAt"
+                           updated_at as "updatedAt", deactivated_at as "deactivatedAt"
                     from app_user where id = :subjectId
+                    """),
+            section("PENDING_EMAIL_CHANGE", """
+                    select id, proposed_email as "proposedEmail", expires_at as "expiresAt",
+                           consumed_at as "consumedAt", created_at as "createdAt"
+                    from pending_email_change where user_id = :subjectId
                     """),
             section("OPERATOR_PROFILE", """
                     select id, business_name as "businessName", contact_phone as "contactPhone",
