@@ -114,16 +114,22 @@ class DataRightsApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].id").value(id.toString()));
+        mockMvc.perform(get("/api/v1/auth/me").with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.dataRightsRequestsAvailable").value(true));
     }
 
     @Test
-    void operatorsMaySubmitButDuplicateOpenRequestsOfTheSameTypeConflict() throws Exception {
+    void repeatedErasureSubmissionReturnsTheSameOpenRequest() throws Exception {
         AppUser operator = account(UserRole.OPERATOR);
-        submit(operator, "ERASURE", DETAILS, HttpStatus.CREATED);
+        JsonNode first = submit(operator, "ERASURE", DETAILS, HttpStatus.CREATED);
 
-        JsonNode duplicate = submit(operator, "ERASURE", "Tekrar", HttpStatus.CONFLICT);
-        assertThat(duplicate.get("code").asText()).isEqualTo("duplicate_open_request");
+        JsonNode duplicate = submit(operator, "ERASURE", "Tekrar", HttpStatus.OK);
+        assertThat(duplicate.get("id").asText()).isEqualTo(first.get("id").asText());
+        assertThat(duplicate.get("status").asText()).isEqualTo("RECEIVED");
         submit(operator, "CORRECTION", DETAILS, HttpStatus.CREATED);
+        JsonNode otherDuplicate = submit(operator, "CORRECTION", "Tekrar", HttpStatus.CONFLICT);
+        assertThat(otherDuplicate.get("code").asText()).isEqualTo("duplicate_open_request");
 
         assertThat(count(operator)).isEqualTo(2);
     }
@@ -517,7 +523,7 @@ class DataRightsApiTests {
                 () -> service.submit(submission, parent.getId())
         );
 
-        assertThat(outcomes).filteredOn(o -> o instanceof DataRightsDtos.RequesterView).hasSize(1);
+        assertThat(outcomes).filteredOn(o -> o instanceof DataRightsService.SubmissionResult).hasSize(1);
         assertThat(outcomes).filteredOn(o -> o instanceof DataRightsApiException e
                 && e.code().equals("duplicate_open_request")).hasSize(1);
         assertThat(count(parent)).isOne();
@@ -527,7 +533,7 @@ class DataRightsApiTests {
     void concurrentHandlerActionsOnTheSameVersionApplyOnlyOnce() throws Exception {
         AppUser parent = account(UserRole.PARENT);
         AppUser handler = handler();
-        UUID id = service.submit(new SubmitRequest(DataRightsRequestType.ACCESS, DETAILS), parent.getId()).id();
+        UUID id = service.submit(new SubmitRequest(DataRightsRequestType.ACCESS, DETAILS), parent.getId()).request().id();
         long version = service.act(id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), handler.getId())
                 .version();
 

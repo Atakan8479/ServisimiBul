@@ -1,6 +1,7 @@
 package com.servisimibul.backend.auth.service;
 
 import com.servisimibul.backend.auth.dto.CurrentUserResponse;
+import com.servisimibul.backend.datarights.DataRightsProperties;
 import com.servisimibul.backend.identity.OperatorApprovalStatus;
 import com.servisimibul.backend.identity.OperatorProfileRepository;
 import com.servisimibul.backend.identity.UserRole;
@@ -16,6 +17,7 @@ public class CurrentUserResponseFactory {
     private final OperatorApprovalPolicy approvalPolicy;
     private final OperatorProfileRepository profileRepository;
     private final AuthService authService;
+    private final DataRightsProperties dataRightsProperties;
 
     public CurrentUserResponse create(AuthenticatedUser user) {
         OperatorApprovalStatus approvalStatus = user.role() == UserRole.OPERATOR
@@ -30,7 +32,8 @@ public class CurrentUserResponseFactory {
                 approvalPolicy.isRequired(),
                 approvalStatus,
                 authService.isEmailChangeAvailable(),
-                authService.isAccountDeactivationAvailable()
+                authService.isAccountDeactivationAvailable(),
+                dataRightsProperties.enabled()
         );
     }
 }

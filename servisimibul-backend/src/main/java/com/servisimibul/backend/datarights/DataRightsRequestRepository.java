@@ -21,6 +21,12 @@ public interface DataRightsRequestRepository extends JpaRepository<DataRightsReq
             Collection<DataRightsRequestStatus> statuses
     );
 
+    Optional<DataRightsRequest> findFirstByRequesterIdAndTypeAndStatusInOrderByReceivedAtDesc(
+            UUID requesterId,
+            DataRightsRequestType type,
+            Collection<DataRightsRequestStatus> statuses
+    );
+
     List<DataRightsRequest> findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(UUID requesterId);
 
     Optional<DataRightsRequest> findByIdAndRequesterId(UUID id, UUID requesterId);
