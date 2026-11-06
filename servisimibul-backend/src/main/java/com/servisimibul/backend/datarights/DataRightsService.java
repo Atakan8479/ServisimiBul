@@ -69,8 +69,11 @@ public class DataRightsService {
         if (NATIONAL_ID_SHAPE.matcher(details).find()) {
             throw DataRightsApiException.validation("details", "must not contain an identity number");
         }
-        var existing = requestRepository.findFirstByRequesterIdAndTypeAndStatusInOrderByReceivedAtDesc(
-                requesterId, submission.type(), DataRightsRequestStatus.OPEN);
+        var existing = submission.type() == DataRightsRequestType.ERASURE
+                ? requestRepository.findFirstByRequesterIdAndTypeAndResponseDeliveredAtIsNullOrderByReceivedAtDesc(
+                        requesterId, submission.type())
+                : requestRepository.findFirstByRequesterIdAndTypeAndStatusInOrderByReceivedAtDesc(
+                        requesterId, submission.type(), DataRightsRequestStatus.OPEN);
         if (existing.isPresent()) {
             if (submission.type() == DataRightsRequestType.ERASURE) {
                 return new SubmissionResult(false, requesterView(existing.get()));
@@ -89,10 +92,13 @@ public class DataRightsService {
     }
 
     @Transactional(readOnly = true)
-    public List<RequesterView> ownRequests(UUID requesterId) {
+    public List<RequesterView> ownRequests(UUID requesterId, DataRightsRequestType type) {
         requireEnabled();
         eligibleRequester(requesterId);
-        return requestRepository.findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(requesterId).stream()
+        var requests = type == null
+                ? requestRepository.findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(requesterId)
+                : requestRepository.findTop50ByRequesterIdAndTypeOrderByReceivedAtDescIdDesc(requesterId, type);
+        return requests.stream()
                 .map(DataRightsService::requesterView)
                 .toList();
     }
@@ -325,7 +331,8 @@ public class DataRightsService {
                 request.getType(),
                 request.getStatus(),
                 request.getReceivedAt(),
-                request.getClosedAt()
+                request.getClosedAt(),
+                request.getResponseDeliveredAt() != null
         );
     }
 

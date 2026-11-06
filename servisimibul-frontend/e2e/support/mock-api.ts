@@ -32,6 +32,7 @@ export interface MockApiState {
       | 'REJECTED'
     receivedAt: string
     closedAt: string | null
+    responseDelivered: boolean
   }>
   registered: boolean
   parentRegistered: boolean
@@ -189,13 +190,20 @@ export async function installMockApi(page: Page, state: MockApiState) {
     }
     if (path === '/data-rights-requests' && method === 'GET') {
       return requireAuthenticated(route, role, () =>
-        json(route, state.dataRightsRequests ?? []),
+        json(
+          route,
+          url.searchParams.get('type') === 'ERASURE'
+            ? (state.dataRightsRequests ?? []).filter(
+                (item) => item.type === 'ERASURE',
+              )
+            : (state.dataRightsRequests ?? []),
+        ),
       )
     }
     if (path === '/data-rights-requests' && method === 'POST') {
       return requireAuthenticated(route, role, async () => {
         const existing = state.dataRightsRequests?.find(
-          (item) => item.type === 'ERASURE' && item.closedAt === null,
+          (item) => item.type === 'ERASURE' && !item.responseDelivered,
         )
         if (existing) return json(route, existing)
         const request = {
@@ -204,6 +212,7 @@ export async function installMockApi(page: Page, state: MockApiState) {
           status: 'RECEIVED' as const,
           receivedAt: '2026-11-06T12:30:00Z',
           closedAt: null,
+          responseDelivered: false,
         }
         state.dataRightsRequests = [
           request,

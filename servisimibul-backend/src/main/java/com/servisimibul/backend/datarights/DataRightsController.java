@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -34,8 +35,8 @@ public class DataRightsController {
     }
 
     @GetMapping
-    public List<RequesterView> list() {
-        return service.ownRequests(currentUser.id());
+    public List<RequesterView> list(@RequestParam(required = false) DataRightsRequestType type) {
+        return service.ownRequests(currentUser.id(), type);
     }
 
     @GetMapping("/{requestId}")

@@ -32,7 +32,8 @@ public final class DataRightsDtos {
             DataRightsRequestType type,
             DataRightsRequestStatus status,
             OffsetDateTime receivedAt,
-            OffsetDateTime closedAt
+            OffsetDateTime closedAt,
+            boolean responseDelivered
     ) {
     }
 

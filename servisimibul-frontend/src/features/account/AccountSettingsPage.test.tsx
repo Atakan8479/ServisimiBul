@@ -310,7 +310,10 @@ describe('account settings', () => {
     const id = '3a83c5aa-acde-4f7e-a191-b4fd2c792397'
     server.use(
       csrfHandler(),
-      http.get('/api/v1/data-rights-requests', () => HttpResponse.json([])),
+      http.get('/api/v1/data-rights-requests', ({ request }) => {
+        expect(new URL(request.url).searchParams.get('type')).toBe('ERASURE')
+        return HttpResponse.json([])
+      }),
       http.post('/api/v1/data-rights-requests', async ({ request }) => {
         expect(request.headers.get('X-CSRF-TOKEN')).toBe('csrf-token')
         expect(await request.json()).toEqual({
@@ -324,6 +327,7 @@ describe('account settings', () => {
             status: 'RECEIVED',
             receivedAt: '2026-11-06T12:30:00Z',
             closedAt: null,
+            responseDelivered: false,
           },
           { status: 201 },
         )
@@ -344,6 +348,43 @@ describe('account settings', () => {
     expect(screen.getByText('Alındı')).toBeInTheDocument()
     expect(screen.queryByText(/verileriniz silindi/i)).toBeNull()
     expect(screen.queryByLabelText('Başvuru açıklaması')).toBeNull()
+  })
+
+  it('distinguishes a prepared outcome from confirmed delivery', async () => {
+    const outcome = {
+      id: '3a83c5aa-acde-4f7e-a191-b4fd2c792397',
+      type: 'ERASURE',
+      status: 'RESPONDED',
+      receivedAt: '2026-11-06T12:30:00Z',
+      closedAt: '2026-11-07T12:30:00Z',
+    }
+    useAuthenticatedUser({ ...parentUser, dataRightsRequestsAvailable: true })
+    server.use(
+      http.get('/api/v1/data-rights-requests', () =>
+        HttpResponse.json([{ ...outcome, responseDelivered: false }]),
+      ),
+    )
+    renderRoute('/parent/privacy/erasure')
+
+    expect(
+      await screen.findByText('Yanıt hazırlandı', { exact: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/teslimat henüz doğrulanmadı/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText('Başvuru açıklaması')).toBeNull()
+
+    cleanup()
+    useAuthenticatedUser({ ...parentUser, dataRightsRequestsAvailable: true })
+    server.use(
+      http.get('/api/v1/data-rights-requests', () =>
+        HttpResponse.json([{ ...outcome, responseDelivered: true }]),
+      ),
+    )
+    renderRoute('/parent/privacy/erasure')
+
+    expect(
+      await screen.findByText('Yanıt teslim edildi', { exact: true }),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Başvuru açıklaması')).toBeInTheDocument()
   })
 
   it('links enabled accounts to erasure request tracking', async () => {

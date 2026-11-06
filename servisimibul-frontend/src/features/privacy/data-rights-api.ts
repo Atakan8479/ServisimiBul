@@ -16,6 +16,7 @@ const dataRightsRequestSchema = z.object({
   status: requestStatusSchema,
   receivedAt: z.iso.datetime({ offset: true }),
   closedAt: z.iso.datetime({ offset: true }).nullable(),
+  responseDelivered: z.boolean(),
 })
 
 const dataRightsRequestsSchema = z.array(dataRightsRequestSchema)
@@ -23,8 +24,8 @@ const dataRightsRequestsSchema = z.array(dataRightsRequestSchema)
 export type DataRightsRequest = z.infer<typeof dataRightsRequestSchema>
 export type DataRightsRequestStatus = z.infer<typeof requestStatusSchema>
 
-export function listDataRightsRequests(signal?: AbortSignal) {
-  return apiRequest('/data-rights-requests', {
+export function listErasureRequests(signal?: AbortSignal) {
+  return apiRequest('/data-rights-requests?type=ERASURE', {
     requiresSession: true,
     schema: dataRightsRequestsSchema,
     signal,

@@ -15,19 +15,23 @@ import java.util.UUID;
 public interface DataRightsRequestRepository extends JpaRepository<DataRightsRequest, UUID>,
         JpaSpecificationExecutor<DataRightsRequest> {
 
-    boolean existsByRequesterIdAndTypeAndStatusIn(
-            UUID requesterId,
-            DataRightsRequestType type,
-            Collection<DataRightsRequestStatus> statuses
-    );
-
     Optional<DataRightsRequest> findFirstByRequesterIdAndTypeAndStatusInOrderByReceivedAtDesc(
             UUID requesterId,
             DataRightsRequestType type,
             Collection<DataRightsRequestStatus> statuses
     );
 
+    Optional<DataRightsRequest> findFirstByRequesterIdAndTypeAndResponseDeliveredAtIsNullOrderByReceivedAtDesc(
+            UUID requesterId,
+            DataRightsRequestType type
+    );
+
     List<DataRightsRequest> findTop50ByRequesterIdOrderByReceivedAtDescIdDesc(UUID requesterId);
+
+    List<DataRightsRequest> findTop50ByRequesterIdAndTypeOrderByReceivedAtDescIdDesc(
+            UUID requesterId,
+            DataRightsRequestType type
+    );
 
     Optional<DataRightsRequest> findByIdAndRequesterId(UUID id, UUID requesterId);
 

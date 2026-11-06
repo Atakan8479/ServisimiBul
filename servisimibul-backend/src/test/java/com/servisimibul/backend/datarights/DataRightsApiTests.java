@@ -96,6 +96,7 @@ class DataRightsApiTests {
         assertThat(view.has("handlerNote")).isFalse();
         assertThat(view.has("assignedHandlerId")).isFalse();
         assertThat(view.has("responseDueAt")).isFalse();
+        assertThat(view.get("responseDelivered").asBoolean()).isFalse();
         UUID id = UUID.fromString(view.get("id").asText());
         var row = jdbc.queryForMap(
                 "select received_at, response_due_at, requester_id, details from data_rights_request where id = ?", id);
@@ -132,6 +133,73 @@ class DataRightsApiTests {
         assertThat(otherDuplicate.get("code").asText()).isEqualTo("duplicate_open_request");
 
         assertThat(count(operator)).isEqualTo(2);
+    }
+
+    @Test
+    void erasureRemainsIdempotentUntilOutcomeDeliveryAndThenAllowsANewRequest() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser handler = handler();
+        UUID id = UUID.fromString(submit(parent, "ERASURE", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.RESPOND, version(detail), null, null), HttpStatus.OK);
+
+        mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("RESPONDED"))
+                .andExpect(jsonPath("$.responseDelivered").value(false));
+
+        SubmitRequest repeated = new SubmitRequest(DataRightsRequestType.ERASURE, "Tekrar");
+        List<Object> outcomes = race(
+                () -> service.submit(repeated, parent.getId()),
+                () -> service.submit(repeated, parent.getId())
+        );
+        assertThat(outcomes).allSatisfy(outcome -> {
+            assertThat(outcome).isInstanceOf(DataRightsService.SubmissionResult.class);
+            var result = (DataRightsService.SubmissionResult) outcome;
+            assertThat(result.created()).isFalse();
+            assertThat(result.request().id()).isEqualTo(id);
+            assertThat(result.request().responseDelivered()).isFalse();
+        });
+        assertThat(count(parent)).isOne();
+
+        act(handler, id, action(DataRightsAction.RECORD_DELIVERY, version(detail), null, null), HttpStatus.OK);
+        mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.responseDelivered").value(true));
+
+        DataRightsService.SubmissionResult next = service.submit(repeated, parent.getId());
+        assertThat(next.created()).isTrue();
+        assertThat(next.request().id()).isNotEqualTo(id);
+        assertThat(count(parent)).isEqualTo(2);
+    }
+
+    @Test
+    void requesterHistoryCanFilterByTypeBeforeApplyingTheFiftyRequestLimit() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        UUID erasureId = UUID.fromString(submit(parent, "ERASURE", DETAILS, HttpStatus.CREATED).get("id").asText());
+        OffsetDateTime receivedAt = OffsetDateTime.now().plusMinutes(1).truncatedTo(ChronoUnit.MICROS);
+        for (int index = 0; index < 51; index++) {
+            OffsetDateTime timestamp = receivedAt.plusMinutes(index);
+            jdbc.update("""
+                    insert into data_rights_request
+                        (id, requester_id, request_type, details, status, received_at, response_due_at,
+                         closed_at, response_delivered_at, version, updated_at)
+                    values (?, ?, 'OTHER', 'Geçmiş talep', 'RESPONDED', ?, ?, ?, ?, 0, ?)
+                    """, UUID.randomUUID(), parent.getId(), timestamp, timestamp.plusDays(30),
+                    timestamp, timestamp, timestamp);
+        }
+
+        JsonNode mixed = read(mockMvc.perform(get(BASE).with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(50)));
+        assertThat(mixed.findValuesAsString("id")).doesNotContain(erasureId.toString());
+        mockMvc.perform(get(BASE).param("type", "ERASURE").with(as(parent)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(erasureId.toString()));
+        mockMvc.perform(get(BASE).param("type", "UNKNOWN").with(as(parent)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test

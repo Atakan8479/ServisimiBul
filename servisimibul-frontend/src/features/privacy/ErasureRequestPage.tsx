@@ -9,7 +9,7 @@ import {
 } from '../../components/design-system'
 import { clearKnownAuthRole, type AuthUser } from '../auth/auth-api'
 import {
-  listDataRightsRequests,
+  listErasureRequests,
   submitErasureRequest,
   type DataRightsRequest,
   type DataRightsRequestStatus,
@@ -42,19 +42,18 @@ const statusCopy: Record<
     tone: 'warning',
   },
   RESPONDED: {
-    label: 'Yanıtlandı',
-    detail: 'İnceleme sonucu kayıt altına alındı.',
+    label: 'Yanıt teslim edildi',
+    detail: 'İnceleme sonucunun teslim edildiği kaydedildi.',
     tone: 'success',
   },
   PARTIALLY_RESPONDED: {
-    label: 'Kısmen yanıtlandı',
-    detail:
-      'Talebin bir bölümü sonuçlandırıldı; bazı kayıtlar kapsam dışında kaldı.',
+    label: 'Kısmi yanıt teslim edildi',
+    detail: 'Kısmi inceleme sonucunun teslim edildiği kaydedildi.',
     tone: 'warning',
   },
   REJECTED: {
-    label: 'Reddedildi',
-    detail: 'Talep inceleme sonucunda kabul edilmedi.',
+    label: 'Ret yanıtı teslim edildi',
+    detail: 'Ret sonucunun teslim edildiği kaydedildi.',
     tone: 'danger',
   },
 }
@@ -77,10 +76,8 @@ export function ErasureRequestPage() {
   useEffect(() => {
     if (!user.dataRightsRequestsAvailable) return
     const controller = new AbortController()
-    listDataRightsRequests(controller.signal)
-      .then((items) =>
-        setRequests(items.filter((item) => item.type === 'ERASURE')),
-      )
+    listErasureRequests(controller.signal)
+      .then(setRequests)
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
         setLoadError(
@@ -109,7 +106,7 @@ export function ErasureRequestPage() {
     )
   }
 
-  const openRequest = requests?.find((request) => !request.closedAt)
+  const openRequest = requests?.find((request) => !request.responseDelivered)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -242,7 +239,7 @@ export function ErasureRequestPage() {
 }
 
 function RequestStatus({ request }: { request: DataRightsRequest }) {
-  const copy = statusCopy[request.status]
+  const copy = requesterStatus(request)
   const received = new Intl.DateTimeFormat('tr-TR', {
     dateStyle: 'long',
     timeStyle: 'short',
@@ -262,6 +259,34 @@ function RequestStatus({ request }: { request: DataRightsRequest }) {
       </dl>
     </SurfaceCard>
   )
+}
+
+function requesterStatus(request: DataRightsRequest) {
+  if (!request.responseDelivered) {
+    if (request.status === 'RESPONDED') {
+      return {
+        label: 'Yanıt hazırlandı',
+        detail: 'İnceleme sonucu hazırlandı; teslimat henüz doğrulanmadı.',
+        tone: 'warning' as const,
+      }
+    }
+    if (request.status === 'PARTIALLY_RESPONDED') {
+      return {
+        label: 'Kısmi yanıt hazırlandı',
+        detail:
+          'Kısmi inceleme sonucu hazırlandı; teslimat henüz doğrulanmadı.',
+        tone: 'warning' as const,
+      }
+    }
+    if (request.status === 'REJECTED') {
+      return {
+        label: 'Ret yanıtı hazırlandı',
+        detail: 'Ret sonucu hazırlandı; teslimat henüz doğrulanmadı.',
+        tone: 'warning' as const,
+      }
+    }
+  }
+  return statusCopy[request.status]
 }
 
 function BackLink({ path }: { path: string }) {
