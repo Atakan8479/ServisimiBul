@@ -121,6 +121,12 @@ public class SecurityConfiguration {
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/deactivate")
                         .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers("/api/v1/notifications/**").authenticated()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/data-rights-requests",
+                                "/api/v1/data-rights-requests/*"
+                        ).hasAnyRole("PARENT", "OPERATOR")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/data-rights-requests")
+                        .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers(HttpMethod.POST, "/api/v1/reports")
                         .hasAnyRole("PARENT", "OPERATOR")
                         .requestMatchers(HttpMethod.POST,
