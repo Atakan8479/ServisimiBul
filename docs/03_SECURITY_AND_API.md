@@ -116,7 +116,7 @@ Notifications never change demand, response, feedback, report, moderation, or ac
 
 ### KVKK data-subject request tracking (APP-07, #214 — scaffold, disabled)
 
-Every endpoint below returns 503 `data_rights_unavailable` and stores nothing while `app.data-rights.enabled` is false. That is the default, and `application-prod.properties` pins it to false. It stays off until LEG-06 (#199) approves the channel, request types (RQ2), identity method (RQ4), period rules (RQ3), templates (RQ5) and retention (RQ7). The APP-06 form stays disabled and is not wired to these endpoints.
+Every endpoint below returns 503 `data_rights_unavailable` and stores nothing while `app.data-rights.enabled` is false. Flyway V21 must still be applied before a backend containing this module starts, because Hibernate `validate` checks the mapped tables even when the switch is off (`docs/10_DATABASE_AND_BACKUP_OPERATIONS.md`). That is the default, and `application-prod.properties` pins it to false. It stays off until LEG-06 (#199) approves the channel, request types (RQ2), identity method (RQ4), period rules (RQ3), templates (RQ5) and retention (RQ7). The APP-06 form stays disabled and is not wired to these endpoints.
 
 - Requester (enabled, non-deactivated PARENT or OPERATOR; CSRF on POST):
   - `POST /api/v1/data-rights-requests` accepts `{type, details}`. `type` is one of the PROPOSED placeholders `ACCESS|CORRECTION|ERASURE|OBJECTION|OTHER` pending RQ2. `details` holds at most 2000 characters, and text containing an 11-digit T.C.-identity-shaped number is rejected without echoing it. The endpoint returns 201 with `{id, type, status, receivedAt, closedAt}`. A second open request of the same type returns 409 `duplicate_open_request`; this is enforced by a partial unique index.
@@ -136,10 +136,10 @@ Every endpoint below returns 503 `data_rights_unavailable` and stores nothing wh
       - `REJECT` (note required): any open status → REJECTED
       - `RECORD_DELIVERY`: once, after an outcome
     - Any other transition returns 409 `invalid_transition`.
-- Deadline: `receivedAt` is server time at the commit of a real intake; there is no draft state. `responseDueAt` = `receivedAt` + 30 days, the verified statutory maximum. It is never paused or extended, because pause and restart rules are pending counsel (RQ3). `overdue` means the request is still open after `responseDueAt`.
+- Deadline: `receivedAt` is server time at the commit of a real intake; there is no draft state. `responseDueAt` = `receivedAt` + 30 days, the verified statutory maximum. It is never paused or extended, because pause and restart rules are pending counsel (RQ3). `overdue` means `responseDeliveredAt` is still empty after `responseDueAt`. A recorded RESPONDED, PARTIALLY_RESPONDED, or REJECTED outcome alone does not complete the obligation; only `RECORD_DELIVERY` does. A late delivery can be read from `responseDeliveredAt` > `responseDueAt`.
 - Data minimization:
   - There are no columns for a T.C. identity number, identity document, address, or extra contact data.
-  - Audit events (`data_rights_request_event`) record only actor, action, and the status change.
+  - Audit events (`data_rights_request_event`) record only the actor, the action, and the status change. `ASSIGN` events also keep `previousAssigneeId` (null on first assignment) and `newAssigneeId`. These are account ids only, and a database check allows them only on `ASSIGN` rows.
   - The module writes no logs, and error bodies never echo submitted values.
   - Recording an `ERASURE` request performs no erasure or anonymization.
   - Retention of request rows is pending LEG-03/RQ7, and requester rows are kept by a restricting foreign key.

@@ -113,8 +113,12 @@ public class DataRightsRequest {
         return handlerNote;
     }
 
+    /**
+     * The obligation is met only when a response actually reached the requester. A recorded
+     * outcome without {@code responseDeliveredAt} still counts against the deadline.
+     */
     public boolean isOverdue(OffsetDateTime now) {
-        return status.isOpen() && now.isAfter(responseDueAt);
+        return responseDeliveredAt == null && now.isAfter(responseDueAt);
     }
 
     public boolean isAssignedTo(UUID handlerId) {

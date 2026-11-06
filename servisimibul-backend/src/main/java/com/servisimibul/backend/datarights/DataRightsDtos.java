@@ -77,6 +77,8 @@ public final class DataRightsDtos {
             DataRightsRequestStatus fromStatus,
             DataRightsRequestStatus toStatus,
             UUID actorId,
+            UUID previousAssigneeId,
+            UUID newAssigneeId,
             OffsetDateTime createdAt
     ) {
     }

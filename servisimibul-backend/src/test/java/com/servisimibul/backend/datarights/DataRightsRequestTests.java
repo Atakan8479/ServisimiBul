@@ -30,13 +30,14 @@ class DataRightsRequestTests {
     }
 
     @Test
-    void closedRequestsAreNeverOverdueAndAcceptOnlyDeliveryOnce() {
+    void closedRequestsStayOverdueUntilDeliveryAndAcceptOnlyDeliveryOnce() {
         DataRightsRequest request = newRequest();
         request.startReview(RECEIVED);
         request.respond(null, RECEIVED.plusDays(2));
 
         assertThat(request.getClosedAt()).isEqualTo(RECEIVED.plusDays(2));
-        assertThat(request.isOverdue(RECEIVED.plusDays(60))).isFalse();
+        assertThat(request.isOverdue(RECEIVED.plusDays(29))).isFalse();
+        assertThat(request.isOverdue(RECEIVED.plusDays(31))).isTrue();
         assertInvalid(() -> request.reject("late", RECEIVED.plusDays(3)));
         assertInvalid(() -> request.startReview(RECEIVED.plusDays(3)));
         assertInvalid(() -> request.recordIdentityVerified(handler, RECEIVED.plusDays(3)));
@@ -44,7 +45,23 @@ class DataRightsRequestTests {
 
         request.recordDelivery(RECEIVED.plusDays(3));
         assertThat(request.getResponseDeliveredAt()).isEqualTo(RECEIVED.plusDays(3));
+        assertThat(request.isOverdue(RECEIVED.plusDays(60))).isFalse();
         assertInvalid(() -> request.recordDelivery(RECEIVED.plusDays(4)));
+    }
+
+    @Test
+    void everyUndeliveredOutcomeStillCountsAgainstTheDeadline() {
+        DataRightsRequest partial = newRequest();
+        partial.startReview(RECEIVED);
+        partial.respondPartially("Bir kısmı", RECEIVED.plusDays(1));
+        DataRightsRequest rejected = newRequest();
+        rejected.reject("Kapsam dışı", RECEIVED.plusDays(1));
+
+        assertThat(partial.isOverdue(RECEIVED.plusDays(31))).isTrue();
+        assertThat(rejected.isOverdue(RECEIVED.plusDays(31))).isTrue();
+
+        rejected.recordDelivery(RECEIVED.plusDays(40));
+        assertThat(rejected.isOverdue(RECEIVED.plusDays(41))).isFalse();
     }
 
     @Test

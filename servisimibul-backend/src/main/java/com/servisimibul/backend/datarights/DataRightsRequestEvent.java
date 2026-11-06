@@ -20,7 +20,10 @@ import java.time.OffsetDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Minimal audit entry: actor, action and status change. Never copies request text. */
+/**
+ * Minimal audit entry: actor, action and status change, plus the previous and new assignee
+ * account ids for ASSIGN. Never copies request text, notes or contact data.
+ */
 @Entity
 @Table(name = "data_rights_request_event")
 @Getter
@@ -51,8 +54,27 @@ public class DataRightsRequestEvent {
     @Column(name = "to_status", nullable = false, length = 32, updatable = false)
     private DataRightsRequestStatus toStatus;
 
+    @Column(name = "previous_assignee_id", updatable = false)
+    private UUID previousAssigneeId;
+
+    @Column(name = "new_assignee_id", updatable = false)
+    private UUID newAssigneeId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public static DataRightsRequestEvent assignment(
+            DataRightsRequest request,
+            AppUser actor,
+            UUID previousAssigneeId,
+            OffsetDateTime createdAt
+    ) {
+        DataRightsRequestEvent event = new DataRightsRequestEvent(
+                request, actor, DataRightsAction.ASSIGN, request.getStatus(), createdAt);
+        event.previousAssigneeId = previousAssigneeId;
+        event.newAssigneeId = Objects.requireNonNull(request.getAssignedHandler().getId());
+        return event;
+    }
 
     public DataRightsRequestEvent(
             DataRightsRequest request,

@@ -14,7 +14,9 @@ CREATE TABLE data_rights_handler (
 );
 
 -- received_at is written only by the server when an intake actually commits; there is no
--- draft state. response_due_at is the verified 30-day statutory maximum from received_at and
+-- draft state. A request stays overdue past response_due_at until response_delivered_at is
+-- recorded; an outcome alone does not complete the obligation. response_due_at is the verified
+-- 30-day statutory maximum from received_at and
 -- is never paused or extended: how incomplete submissions or extra proof affect the period
 -- is pending counsel (LEG-06 RQ3).
 CREATE TABLE data_rights_request (
@@ -75,6 +77,7 @@ CREATE INDEX data_rights_request_verifier_idx
     ON data_rights_request (identity_verified_by) WHERE identity_verified_by IS NOT NULL;
 
 -- Minimal audit history: who did what and the status change, without copying request text.
+-- ASSIGN rows also keep the previous and new handler account ids so responsibility is traceable.
 CREATE TABLE data_rights_request_event (
     id UUID NOT NULL,
     request_id UUID NOT NULL,
@@ -82,12 +85,24 @@ CREATE TABLE data_rights_request_event (
     action VARCHAR(32) NOT NULL,
     from_status VARCHAR(32) NULL,
     to_status VARCHAR(32) NOT NULL,
+    previous_assignee_id UUID NULL,
+    new_assignee_id UUID NULL,
     created_at TIMESTAMPTZ NOT NULL,
     CONSTRAINT data_rights_request_event_pk PRIMARY KEY (id),
     CONSTRAINT data_rights_request_event_request_fk
         FOREIGN KEY (request_id) REFERENCES data_rights_request (id),
     CONSTRAINT data_rights_request_event_actor_fk
         FOREIGN KEY (actor_id) REFERENCES app_user (id),
+    CONSTRAINT data_rights_request_event_previous_assignee_fk
+        FOREIGN KEY (previous_assignee_id) REFERENCES app_user (id),
+    CONSTRAINT data_rights_request_event_new_assignee_fk
+        FOREIGN KEY (new_assignee_id) REFERENCES app_user (id),
+    CONSTRAINT data_rights_request_event_assignment_check
+        CHECK (
+            (action = 'ASSIGN' AND new_assignee_id IS NOT NULL
+                AND new_assignee_id IS DISTINCT FROM previous_assignee_id)
+            OR (action <> 'ASSIGN' AND new_assignee_id IS NULL AND previous_assignee_id IS NULL)
+        ),
     CONSTRAINT data_rights_request_event_action_check
         CHECK (action IN (
             'RECEIVE', 'ASSIGN', 'START_REVIEW', 'REQUEST_VERIFICATION',
@@ -100,6 +115,10 @@ CREATE INDEX data_rights_request_event_request_idx
     ON data_rights_request_event (request_id, created_at, id);
 CREATE INDEX data_rights_request_event_actor_idx
     ON data_rights_request_event (actor_id);
+CREATE INDEX data_rights_request_event_previous_assignee_idx
+    ON data_rights_request_event (previous_assignee_id) WHERE previous_assignee_id IS NOT NULL;
+CREATE INDEX data_rights_request_event_new_assignee_idx
+    ON data_rights_request_event (new_assignee_id) WHERE new_assignee_id IS NOT NULL;
 
 ALTER TABLE data_rights_handler ENABLE ROW LEVEL SECURITY;
 ALTER TABLE data_rights_request ENABLE ROW LEVEL SECURITY;

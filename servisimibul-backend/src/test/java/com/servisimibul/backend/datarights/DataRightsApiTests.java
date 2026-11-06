@@ -54,7 +54,7 @@ class DataRightsApiTests {
 
     private static final String BASE = "/api/v1/data-rights-requests";
     private static final String ADMIN_BASE = "/api/v1/admin/data-rights-requests";
-    private static final String DETAILS = "HakkÄ±mda tutulan verileri gÃ¶rmek istiyorum.";
+    private static final String DETAILS = "Hakkımda tutulan verileri görmek istiyorum.";
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
@@ -256,7 +256,7 @@ class DataRightsApiTests {
         assertThat(stale.get("code").asText()).isEqualTo("stale_request_version");
 
         detail = act(handler, id, action(DataRightsAction.REQUEST_VERIFICATION, version(detail), null,
-                "Hesap sahipliÄŸi teyidi gerekli"), HttpStatus.OK);
+                "Hesap sahipliği teyidi gerekli"), HttpStatus.OK);
         assertThat(detail.get("status").asText()).isEqualTo("AWAITING_VERIFICATION");
         mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
                 .andExpect(jsonPath("$.status").value("AWAITING_VERIFICATION"))
@@ -268,7 +268,7 @@ class DataRightsApiTests {
         act(handler, id, action(DataRightsAction.RESPOND_PARTIALLY, version(detail), null, null),
                 HttpStatus.BAD_REQUEST);
         detail = act(handler, id, action(DataRightsAction.RESPOND_PARTIALLY, version(detail), null,
-                "Bir kÄ±smÄ± dÃ¼zeltildi"), HttpStatus.OK);
+                "Bir kısmı düzeltildi"), HttpStatus.OK);
         assertThat(detail.get("status").asText()).isEqualTo("PARTIALLY_RESPONDED");
         assertThat(detail.get("closedAt").isNull()).isFalse();
         assertThat(detail.get("responseDeliveredAt").isNull()).isTrue();
@@ -284,7 +284,7 @@ class DataRightsApiTests {
         assertThat(detail.get("events").findValuesAsString("action")).containsExactly(
                 "RECEIVE", "ASSIGN", "START_REVIEW", "REQUEST_VERIFICATION", "RECORD_IDENTITY_VERIFIED",
                 "RESPOND_PARTIALLY", "RECORD_DELIVERY");
-        assertThat(detail.get("events").toString()).doesNotContain(DETAILS).doesNotContain("Bir kÄ±smÄ±");
+        assertThat(detail.get("events").toString()).doesNotContain(DETAILS).doesNotContain("Bir kısmı");
         mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
                 .andExpect(jsonPath("$.status").value("PARTIALLY_RESPONDED"))
                 .andExpect(jsonPath("$.closedAt").exists());
@@ -295,12 +295,34 @@ class DataRightsApiTests {
         AppUser parent = account(UserRole.PARENT);
         AppUser handler = handler();
         UUID id = UUID.fromString(submit(parent, "OBJECTION", DETAILS, HttpStatus.CREATED).get("id").asText());
-        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        AppUser colleague = handler();
+        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, colleague.getId(), null), HttpStatus.OK);
+        detail = act(colleague, id, action(DataRightsAction.ASSIGN, version(detail), handler.getId(), null),
+                HttpStatus.OK);
+
+        // Responsibility changes are traceable by account id only.
+        JsonNode events = detail.get("events");
+        assertThat(events.get(0).get("action").asText()).isEqualTo("RECEIVE");
+        assertThat(events.get(0).get("newAssigneeId").isNull()).isTrue();
+        assertThat(events.get(1).get("previousAssigneeId").isNull()).isTrue();
+        assertThat(events.get(1).get("newAssigneeId").asText()).isEqualTo(colleague.getId().toString());
+        assertThat(events.get(1).get("actorId").asText()).isEqualTo(handler.getId().toString());
+        assertThat(events.get(2).get("previousAssigneeId").asText()).isEqualTo(colleague.getId().toString());
+        assertThat(events.get(2).get("newAssigneeId").asText()).isEqualTo(handler.getId().toString());
+        assertThat(events.get(2).get("actorId").asText()).isEqualTo(colleague.getId().toString());
+        assertThat(events.toString()).doesNotContain("@example.com");
 
         act(handler, id, action(DataRightsAction.REJECT, version(detail), null, " "), HttpStatus.BAD_REQUEST);
-        detail = act(handler, id, action(DataRightsAction.REJECT, version(detail), null, "Kapsam dÄ±ÅŸÄ±"),
+        detail = act(handler, id, action(DataRightsAction.REJECT, version(detail), null, "Kapsam dışı"),
                 HttpStatus.OK);
         assertThat(detail.get("status").asText()).isEqualTo("REJECTED");
+        JsonNode rejected = detail.get("events").get(3);
+        assertThat(rejected.get("previousAssigneeId").isNull()).isTrue();
+        assertThat(rejected.get("newAssigneeId").isNull()).isTrue();
+        assertThat(jdbc.queryForObject("""
+                select count(*) from data_rights_request_event
+                where request_id = ? and action = 'ASSIGN' and new_assignee_id is not null
+                """, Integer.class, id)).isEqualTo(2);
 
         submit(parent, "OBJECTION", DETAILS, HttpStatus.CREATED);
     }
@@ -324,6 +346,21 @@ class DataRightsApiTests {
         JsonNode onTime = read(mockMvc.perform(get(ADMIN_BASE).param("overdue", "false").param("size", "50")
                 .with(as(handler))).andExpect(status().isOk())).get("content");
         assertThat(onTime.findValuesAsString("id")).contains(fresh.toString()).doesNotContain(late.toString());
+
+        // An outcome without a recorded delivery does not complete the obligation.
+        JsonNode detail = act(handler, late, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, late, action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        detail = act(handler, late, action(DataRightsAction.RESPOND, version(detail), null, null), HttpStatus.OK);
+        assertThat(detail.get("status").asText()).isEqualTo("RESPONDED");
+        assertThat(detail.get("overdue").asBoolean()).isTrue();
+        assertThat(overdueIds(handler, true)).contains(late.toString());
+        assertThat(overdueIds(handler, false)).doesNotContain(late.toString());
+
+        detail = act(handler, late, action(DataRightsAction.RECORD_DELIVERY, version(detail), null, null),
+                HttpStatus.OK);
+        assertThat(detail.get("overdue").asBoolean()).isFalse();
+        assertThat(overdueIds(handler, true)).doesNotContain(late.toString());
+        assertThat(overdueIds(handler, false)).contains(late.toString());
 
         mockMvc.perform(get(ADMIN_BASE).param("size", "51").with(as(handler))).andExpect(status().isBadRequest());
         mockMvc.perform(get(ADMIN_BASE).param("status", "DRAFT").with(as(handler)))
@@ -358,7 +395,7 @@ class DataRightsApiTests {
 
         List<Object> outcomes = race(
                 () -> service.act(id, action(DataRightsAction.START_REVIEW, version, null, null), handler.getId()),
-                () -> service.act(id, action(DataRightsAction.REJECT, version, null, "Kapsam dÄ±ÅŸÄ±"), handler.getId())
+                () -> service.act(id, action(DataRightsAction.REJECT, version, null, "Kapsam dışı"), handler.getId())
         );
 
         assertThat(outcomes).filteredOn(o -> o instanceof DataRightsDtos.HandlerDetail).hasSize(1);
@@ -407,6 +444,11 @@ class DataRightsApiTests {
                         .contentType("application/json")
                         .content(json(action)))
                 .andExpect(status().is(expected.value())));
+    }
+
+    private List<String> overdueIds(AppUser handler, boolean overdue) throws Exception {
+        return read(mockMvc.perform(get(ADMIN_BASE).param("overdue", String.valueOf(overdue)).param("size", "50")
+                .with(as(handler))).andExpect(status().isOk())).get("content").findValuesAsString("id");
     }
 
     private static ActionRequest action(DataRightsAction action, long version, UUID assignee, String note) {

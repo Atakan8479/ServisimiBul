@@ -160,6 +160,7 @@ public class DataRightsService {
             );
         }
         DataRightsRequestStatus fromStatus = request.getStatus();
+        UUID previousAssigneeId = request.getAssignedHandler() == null ? null : request.getAssignedHandler().getId();
         OffsetDateTime now = now();
         try {
             switch (action.action()) {
@@ -177,7 +178,9 @@ public class DataRightsService {
             throw DataRightsApiException.conflict("invalid_transition", invalid.getMessage());
         }
         requestRepository.saveAndFlush(request);
-        eventRepository.save(new DataRightsRequestEvent(request, handler, action.action(), fromStatus, now));
+        eventRepository.save(action.action() == DataRightsAction.ASSIGN
+                ? DataRightsRequestEvent.assignment(request, handler, previousAssigneeId, now)
+                : new DataRightsRequestEvent(request, handler, action.action(), fromStatus, now));
         return handlerDetail(request);
     }
 
@@ -259,9 +262,11 @@ public class DataRightsService {
                 predicates.add(builder.equal(root.get("status"), status));
             }
             if (overdue != null) {
-                var open = root.get("status").in(DataRightsRequestStatus.OPEN);
+                var undelivered = builder.isNull(root.get("responseDeliveredAt"));
                 var late = builder.lessThan(root.<OffsetDateTime>get("responseDueAt"), now);
-                predicates.add(overdue ? builder.and(open, late) : builder.not(builder.and(open, late)));
+                predicates.add(overdue
+                        ? builder.and(undelivered, late)
+                        : builder.not(builder.and(undelivered, late)));
             }
             return builder.and(predicates.toArray(Predicate[]::new));
         };
@@ -298,6 +303,8 @@ public class DataRightsService {
                         event.getFromStatus(),
                         event.getToStatus(),
                         event.getActor().getId(),
+                        event.getPreviousAssigneeId(),
+                        event.getNewAssigneeId(),
                         event.getCreatedAt()
                 ))
                 .toList();
