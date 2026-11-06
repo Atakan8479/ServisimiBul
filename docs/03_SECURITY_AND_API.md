@@ -114,6 +114,36 @@ Creating a report never changes target visibility or lifecycle. Only an explicit
 
 Notifications never change demand, response, feedback, report, moderation, or account state. REQ-07 activates no SMTP, SMS, push, WebSocket, or inference service.
 
+### KVKK data-subject request tracking (APP-07, #214 — scaffold, disabled)
+
+Every endpoint below returns 503 `data_rights_unavailable` and stores nothing while `app.data-rights.enabled` is false. That is the default, and `application-prod.properties` pins it to false. It stays off until LEG-06 (#199) approves the channel, request types (RQ2), identity method (RQ4), period rules (RQ3), templates (RQ5) and retention (RQ7). The APP-06 form stays disabled and is not wired to these endpoints.
+
+- Requester (enabled, non-deactivated PARENT or OPERATOR; CSRF on POST):
+  - `POST /api/v1/data-rights-requests` accepts `{type, details}`. `type` is one of the PROPOSED placeholders `ACCESS|CORRECTION|ERASURE|OBJECTION|OTHER` pending RQ2. `details` holds at most 2000 characters, and text containing an 11-digit T.C.-identity-shaped number is rejected without echoing it. The endpoint returns 201 with `{id, type, status, receivedAt, closedAt}`. A second open request of the same type returns 409 `duplicate_open_request`; this is enforced by a partial unique index.
+  - `GET /api/v1/data-rights-requests` returns the caller's 50 most recent requests. `GET /api/v1/data-rights-requests/{id}` returns one of them; another account's request returns 404. The requester view never includes the handler, the internal note, or a deadline.
+- Authorized handling (`/api/v1/admin/data-rights-requests`):
+  - Access requires the ADMIN role and a row in `data_rights_handler`. Ordinary administrators get 403 `handler_required`, and OPERATOR accounts can never act as handlers. No endpoint designates handlers; a reviewed operational SQL change adds or removes the row.
+  - `GET` supports optional `status` and `overdue` filters with zero-based pagination (at most 50 per page), ordered by `responseDueAt`.
+  - `GET /{id}` returns the request text, the requester id and role (no email), the deadline, identity verification time, internal note, delivery time, `version`, and the audit events.
+  - `POST /{id}/actions` accepts `{action, expectedVersion, assigneeId?, note?}`, requires CSRF, takes a row lock, and returns 409 `stale_request_version` when `expectedVersion` does not match.
+    - `ASSIGN` may be used by any handler and accepts only a designated handler as `assigneeId`. All other actions are limited to the assigned handler (403 `handler_not_assigned`).
+    - Transitions:
+      - `START_REVIEW`: RECEIVED → UNDER_REVIEW
+      - `REQUEST_VERIFICATION` (note required): RECEIVED or UNDER_REVIEW → AWAITING_VERIFICATION
+      - `RECORD_IDENTITY_VERIFIED`: any open status → UNDER_REVIEW (at most once)
+      - `RESPOND`: UNDER_REVIEW → RESPONDED
+      - `RESPOND_PARTIALLY` (note required): UNDER_REVIEW → PARTIALLY_RESPONDED
+      - `REJECT` (note required): any open status → REJECTED
+      - `RECORD_DELIVERY`: once, after an outcome
+    - Any other transition returns 409 `invalid_transition`.
+- Deadline: `receivedAt` is server time at the commit of a real intake; there is no draft state. `responseDueAt` = `receivedAt` + 30 days, the verified statutory maximum. It is never paused or extended, because pause and restart rules are pending counsel (RQ3). `overdue` means the request is still open after `responseDueAt`.
+- Data minimization:
+  - There are no columns for a T.C. identity number, identity document, address, or extra contact data.
+  - Audit events (`data_rights_request_event`) record only actor, action, and the status change.
+  - The module writes no logs, and error bodies never echo submitted values.
+  - Recording an `ERASURE` request performs no erasure or anonymization.
+  - Retention of request rows is pending LEG-03/RQ7, and requester rows are kept by a restricting foreign key.
+
 ## Auth endpoints (draft)
 - `GET /api/v1/auth/csrf`
 - `POST /api/v1/auth/register` — `{email,password,businessName?,contactPhone}`; generic `202 Accepted`
