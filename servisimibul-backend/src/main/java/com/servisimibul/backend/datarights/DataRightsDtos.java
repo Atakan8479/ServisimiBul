@@ -119,4 +119,29 @@ public final class DataRightsDtos {
 
     public record ExcludedDataCategory(String category, String reason) {
     }
+
+    /** Count-only technical plan. It deliberately contains no subject data and cannot be executed. */
+    public record ErasureSafetyPlan(
+            UUID requestId,
+            OffsetDateTime generatedAt,
+            boolean executionAvailable,
+            List<String> blockers,
+            List<ErasureReference> references
+    ) {
+        @Override
+        public String toString() {
+            return "ErasureSafetyPlan[requestId=" + requestId + "]";
+        }
+    }
+
+    public record ErasureReference(
+            String constraint,
+            String table,
+            String column,
+            String deleteRule,
+            String classification,
+            String handling,
+            long rowCount
+    ) {
+    }
 }
