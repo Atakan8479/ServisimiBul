@@ -8,6 +8,13 @@
 - Review follow-up: a demand whose creator deactivated is not closed, hidden, or blocked for new supporters (it is the unique per school/neighborhood/year record and `created_by` grants no rights); operator comments are rejected with the existing `active_support_required` code while no eligible supporter remains. Whether a creator-only demand should close or be hidden stays AQ2.
 - Legal release gates remain open: LEG-07 AQ1/AQ2/AQ4/AQ7, LEG-03/APP-12 retention, LEG-06 locked-out rights channel. #216 stays open.
 
+## APP-11 foreign-key and third-party erasure safety scaffold — 2026-11-07 (Draft PR #262; execution blocked)
+
+- Branch: `codex/app-11-erasure-safety`; GitHub issue #218. An assigned data-rights handler can prepare a count-only technical plan after identity verification for an undelivered `ERASURE` request. The response contains no subject records, is `no-store`, and has no execution path.
+- The plan classifies all 20 foreign keys that reference `app_user.id` directly, marks shared demand/comment/report relationships for preservation and subject-link review, and fails closed when the Flyway-managed constraint name, table, column, or delete rule differs from the reviewed registry. Indirect descendants and session attributes remain outside this inventory and require future review.
+- Disposable PostgreSQL 17 coverage proves equivalent repeated/concurrent read-only snapshots while rows are unchanged, role/assignment/identity gates, `ON DELETE RESTRICT` rollback, recovery after the rejected delete, preservation of another parent's support, and fail-closed handling of missing, renamed, and modified foreign keys with restoration after every case. Focused APP-11 coverage passed 20/20; the complete backend gate passed 375/375.
+- No migration, account deletion, anonymization, reassignment, cascade, live Supabase access, production setting, dependency, session/CSRF behavior, or frontend changed. `executionAvailable` remains false with LEG-03 and LEG-07 blockers.
+
 ## APP-10 verified account erasure request scaffold — 2026-11-06 (Draft PR #260; activation blocked)
 
 - Branch: `codex/app-10-erasure-requests`; GitHub issue #217. Parents and operators now have separate role-scoped erasure routes with data-minimizing intake, receipt ids, and requester-safe status history. Repeated undelivered `ERASURE` submissions are idempotent and return the existing request; other duplicate request types retain the APP-07 conflict behavior.

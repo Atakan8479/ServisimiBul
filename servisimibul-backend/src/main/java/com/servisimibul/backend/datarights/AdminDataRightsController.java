@@ -4,6 +4,7 @@ import com.servisimibul.backend.datarights.DataRightsDtos.AccessResponse;
 import com.servisimibul.backend.datarights.DataRightsDtos.ActionRequest;
 import com.servisimibul.backend.datarights.DataRightsDtos.HandlerDetail;
 import com.servisimibul.backend.datarights.DataRightsDtos.HandlerSummary;
+import com.servisimibul.backend.datarights.DataRightsDtos.ErasureSafetyPlan;
 import com.servisimibul.backend.datarights.DataRightsDtos.PageResponse;
 import com.servisimibul.backend.security.CurrentUser;
 import jakarta.validation.Valid;
@@ -49,6 +50,13 @@ public class AdminDataRightsController {
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(service.accessResponse(requestId, currentUser.id()));
+    }
+
+    @GetMapping("/{requestId}/erasure-safety-plan")
+    public ResponseEntity<ErasureSafetyPlan> erasureSafetyPlan(@PathVariable UUID requestId) {
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(service.erasureSafetyPlan(requestId, currentUser.id()));
     }
 
     @PostMapping("/{requestId}/actions")

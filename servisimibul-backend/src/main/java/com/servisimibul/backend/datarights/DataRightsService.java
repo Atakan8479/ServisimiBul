@@ -3,6 +3,7 @@ package com.servisimibul.backend.datarights;
 import com.servisimibul.backend.datarights.DataRightsDtos.AccessResponse;
 import com.servisimibul.backend.datarights.DataRightsDtos.ActionRequest;
 import com.servisimibul.backend.datarights.DataRightsDtos.EventView;
+import com.servisimibul.backend.datarights.DataRightsDtos.ErasureSafetyPlan;
 import com.servisimibul.backend.datarights.DataRightsDtos.HandlerDetail;
 import com.servisimibul.backend.datarights.DataRightsDtos.HandlerSummary;
 import com.servisimibul.backend.datarights.DataRightsDtos.PageResponse;
@@ -59,6 +60,7 @@ public class DataRightsService {
     private final DataRightsRequestEventRepository eventRepository;
     private final AppUserRepository userRepository;
     private final PersonalDataAccessAssembler accessAssembler;
+    private final ErasureSafetyPlanAssembler erasureSafetyPlanAssembler;
     private final Clock clock;
 
     @Transactional
@@ -177,6 +179,31 @@ public class DataRightsService {
                     "access_response_unavailable", "No personal data response is available for this outcome");
         }
         return accessAssembler.assemble(requestId, request.getRequester().getId());
+    }
+
+    @Transactional
+    public ErasureSafetyPlan erasureSafetyPlan(UUID requestId, UUID handlerId) {
+        requireEnabled();
+        requireHandler(handlerId);
+        DataRightsRequest request = requestRepository.findForUpdateById(requestId)
+                .orElseThrow(DataRightsApiException::notFound);
+        if (!request.isAssignedTo(handlerId)) {
+            throw DataRightsApiException.forbidden(
+                    "handler_not_assigned", "Only the assigned handler may prepare an erasure safety plan");
+        }
+        if (request.getType() != DataRightsRequestType.ERASURE) {
+            throw DataRightsApiException.conflict(
+                    "erasure_request_required", "An erasure safety plan requires an ERASURE request");
+        }
+        if (request.getIdentityVerifiedAt() == null) {
+            throw DataRightsApiException.conflict(
+                    "identity_verification_required", "Identity must be verified before an erasure plan is prepared");
+        }
+        if (request.getResponseDeliveredAt() != null) {
+            throw DataRightsApiException.conflict(
+                    "erasure_plan_expired", "Erasure planning ends when response delivery is recorded");
+        }
+        return erasureSafetyPlanAssembler.assemble(requestId, request.getRequester().getId());
     }
 
     @Transactional

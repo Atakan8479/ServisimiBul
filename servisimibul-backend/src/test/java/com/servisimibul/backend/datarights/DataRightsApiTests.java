@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -64,6 +65,10 @@ class DataRightsApiTests {
     @Autowired private DataRightsService service;
 
     private final List<UUID> users = new ArrayList<>();
+    private final List<UUID> schools = new ArrayList<>();
+    private final List<Long> neighborhoods = new ArrayList<>();
+    private final List<Long> districts = new ArrayList<>();
+    private final List<Long> provinces = new ArrayList<>();
 
     @AfterEach
     void cleanUp() {
@@ -77,11 +82,22 @@ class DataRightsApiTests {
         jdbc.update("delete from data_rights_request where requester_id = any (?)", (Object) ids);
         jdbc.update("delete from data_rights_handler where user_id = any (?)", (Object) ids);
         jdbc.update("delete from pending_email_change where user_id = any (?)", (Object) ids);
+        jdbc.update("delete from demand where created_by = any (?)", (Object) ids);
         jdbc.update("delete from operator_application_review where operator_id in "
                 + "(select id from operator_profile where user_id = any (?))", (Object) ids);
         jdbc.update("delete from operator_profile where user_id = any (?)", (Object) ids);
         jdbc.update("delete from app_user where id = any (?)", (Object) ids);
         users.clear();
+        if (!schools.isEmpty()) {
+            jdbc.update("delete from school where id = any (?)", (Object) schools.toArray(UUID[]::new));
+            jdbc.update("delete from neighborhood where id = any (?)", (Object) neighborhoods.toArray(Long[]::new));
+            jdbc.update("delete from district where id = any (?)", (Object) districts.toArray(Long[]::new));
+            jdbc.update("delete from province where id = any (?)", (Object) provinces.toArray(Long[]::new));
+            schools.clear();
+            neighborhoods.clear();
+            districts.clear();
+            provinces.clear();
+        }
     }
 
     @Test
@@ -459,6 +475,118 @@ class DataRightsApiTests {
     }
 
     @Test
+    void erasureSafetyPlanIsCountOnlyIdempotentAndPreservesSharedRecordsAfterDeleteRollback() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser supporter = account(UserRole.PARENT);
+        AppUser handler = handler();
+        UUID demandId = UUID.randomUUID();
+        UUID supportId = UUID.randomUUID();
+        String geographyKey = UUID.randomUUID().toString();
+        Long provinceId = jdbc.queryForObject(
+                "insert into province (code, name) values (?, ?) returning id",
+                Long.class, geographyKey.substring(0, 2), "Province " + geographyKey);
+        Long districtId = jdbc.queryForObject(
+                "insert into district (province_id, name) values (?, ?) returning id",
+                Long.class, provinceId, "District " + geographyKey);
+        Long neighborhoodId = jdbc.queryForObject(
+                "insert into neighborhood (district_id, name) values (?, ?) returning id",
+                Long.class, districtId, "Neighborhood " + geographyKey);
+        UUID schoolId = UUID.randomUUID();
+        jdbc.update("insert into school (id, neighborhood_id, name) values (?, ?, ?)",
+                schoolId, neighborhoodId, "School " + geographyKey);
+        provinces.add(provinceId);
+        districts.add(districtId);
+        neighborhoods.add(neighborhoodId);
+        schools.add(schoolId);
+        jdbc.update("""
+                insert into demand
+                    (id, school_id, neighborhood_id, academic_year, created_by, status, created_at, updated_at)
+                values (?, ?, ?, '2026-2027', ?, 'OPEN', now(), now())
+                """, demandId, schoolId, neighborhoodId, parent.getId());
+        jdbc.update("""
+                insert into demand_support
+                    (id, demand_id, parent_id, needs_morning, needs_afternoon, status, created_at, updated_at)
+                values (?, ?, ?, true, false, 'ACTIVE', now(), now())
+                """, supportId, demandId, supporter.getId());
+
+        UUID requestId = UUID.fromString(submit(parent, "ERASURE", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, requestId,
+                action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, requestId,
+                action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+
+        mockMvc.perform(get(ADMIN_BASE + "/" + requestId + "/erasure-safety-plan").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("identity_verification_required"));
+        detail = act(handler, requestId,
+                action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null), HttpStatus.OK);
+
+        JsonNode first = read(mockMvc.perform(
+                        get(ADMIN_BASE + "/" + requestId + "/erasure-safety-plan").with(as(handler)))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-store")))
+                .andExpect(jsonPath("$.executionAvailable").value(false))
+                .andExpect(jsonPath("$.blockers[0]").value("LEG-03"))
+                .andExpect(jsonPath("$.blockers[1]").value("LEG-07")));
+        JsonNode second = read(mockMvc.perform(
+                        get(ADMIN_BASE + "/" + requestId + "/erasure-safety-plan").with(as(handler)))
+                .andExpect(status().isOk()));
+
+        assertThat(first.get("references")).isEqualTo(second.get("references"));
+        JsonNode demandReference = reference(first, "demand_created_by_fk");
+        assertThat(demandReference.get("classification").asText()).isEqualTo("SHARED_THIRD_PARTY");
+        assertThat(demandReference.get("handling").asText()).isEqualTo("PRESERVE_RECORD_REVIEW_SUBJECT_LINK");
+        assertThat(demandReference.get("rowCount").asLong()).isOne();
+
+        assertThatThrownBy(() -> jdbc.update("delete from app_user where id = ?", parent.getId()))
+                .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+        assertThat(jdbc.queryForObject("select count(*) from demand where id = ?", Integer.class, demandId)).isOne();
+        assertThat(jdbc.queryForObject(
+                "select count(*) from demand_support where id = ? and parent_id = ?",
+                Integer.class, supportId, supporter.getId())).isOne();
+
+        List<Object> recovered = race(
+                () -> service.erasureSafetyPlan(requestId, handler.getId()),
+                () -> service.erasureSafetyPlan(requestId, handler.getId())
+        );
+        assertThat(recovered).allMatch(DataRightsDtos.ErasureSafetyPlan.class::isInstance);
+        List<DataRightsDtos.ErasureSafetyPlan> concurrentPlans = recovered.stream()
+                .map(DataRightsDtos.ErasureSafetyPlan.class::cast)
+                .toList();
+        assertThat(concurrentPlans).extracting(DataRightsDtos.ErasureSafetyPlan::requestId)
+                .containsOnly(requestId);
+        assertThat(concurrentPlans).extracting(DataRightsDtos.ErasureSafetyPlan::executionAvailable)
+                .containsOnly(false);
+        assertThat(concurrentPlans.get(0).blockers()).isEqualTo(concurrentPlans.get(1).blockers());
+        assertThat(concurrentPlans.get(0).references()).isEqualTo(concurrentPlans.get(1).references());
+        assertThat(jdbc.queryForObject("select count(*) from demand where id = ?", Integer.class, demandId)).isOne();
+        assertThat(jdbc.queryForObject(
+                "select count(*) from demand_support where id = ? and parent_id = ?",
+                Integer.class, supportId, supporter.getId())).isOne();
+    }
+
+    @Test
+    void erasureSafetyPlanRejectsWrongTypeAndUnassignedHandler() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser handler = handler();
+        AppUser colleague = handler();
+        UUID requestId = UUID.fromString(submit(parent, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, requestId,
+                action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, requestId,
+                action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        act(handler, requestId,
+                action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null), HttpStatus.OK);
+
+        mockMvc.perform(get(ADMIN_BASE + "/" + requestId + "/erasure-safety-plan").with(as(colleague)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("handler_not_assigned"));
+        mockMvc.perform(get(ADMIN_BASE + "/" + requestId + "/erasure-safety-plan").with(as(handler)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("erasure_request_required"));
+    }
+
+    @Test
     void accessResponseIncludesOnlyTheOperatorsOwnProfileAndOmitsProtectedReviewNotes() throws Exception {
         AppUser operator = account(UserRole.OPERATOR);
         AppUser otherOperator = account(UserRole.OPERATOR);
@@ -669,6 +797,15 @@ class DataRightsApiTests {
 
     private static long version(JsonNode detail) {
         return detail.get("version").asLong();
+    }
+
+    private static JsonNode reference(JsonNode plan, String constraint) {
+        for (JsonNode reference : plan.get("references")) {
+            if (reference.get("constraint").asText().equals(constraint)) {
+                return reference;
+            }
+        }
+        throw new AssertionError("Missing erasure reference " + constraint);
     }
 
     private JsonNode read(org.springframework.test.web.servlet.ResultActions result) throws Exception {

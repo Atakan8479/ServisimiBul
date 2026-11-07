@@ -144,6 +144,17 @@ Every endpoint below returns 503 `data_rights_unavailable` and stores nothing wh
   - Recording an `ERASURE` request performs no erasure or anonymization.
   - Retention of request rows is pending LEG-03/RQ7, and requester rows are kept by a restricting foreign key.
 
+APP-11 adds an assigned-handler-only `GET /api/v1/admin/data-rights-requests/{requestId}/erasure-safety-plan`
+preflight for an identity-verified, undelivered `ERASURE` request. It inventories only foreign keys that reference
+`app_user.id` directly and returns only per-constraint row counts and
+technical classifications, uses `Cache-Control: no-store`, and fails closed if the live Flyway-managed foreign-key
+shape differs from the reviewed registry. Shared and third-party records are marked for preservation and subject-link
+review. The response always reports `executionAvailable=false` with `LEG-03` and `LEG-07` blockers; there is no
+erasure, anonymization, reassignment, cascade, or production activation endpoint.
+Indirect descendants through operator profiles, demands, supports, comments, responses, moderation cases, and
+data-rights requests, plus non-relational session attributes, remain outside this plan and require separate review.
+Each call is a fresh read-only snapshot; counts may legitimately change when application rows change concurrently.
+
 ### Account erasure request experience (APP-10, #217 — scaffold, disabled)
 
 `GET /api/v1/auth/me` exposes `dataRightsRequestsAvailable`, derived from the same backend-only `app.data-rights.enabled` switch. The parent `/parent/privacy/erasure` and operator `/operator/privacy/erasure` routes render no active form while it is false. When enabled outside production, they submit only `ERASURE`, request server-filtered erasure history, and show the requester-safe workflow status, receipt id, receipt time, and confirmed-delivery state. They never receive the request text back, handler identity, internal reason, deadline, verification evidence, or delivery timestamp.
