@@ -27,6 +27,10 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
   await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
+  // The URL updates before the view transition swaps out the login form's same-labelled fields.
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Veli hesabı oluşturun' }),
+  ).toBeVisible()
 
   await page.getByLabel('E-posta').fill('parent@example.com')
   await page
