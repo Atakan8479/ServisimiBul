@@ -550,6 +550,19 @@ class DataRightsApiTests {
                 () -> service.erasureSafetyPlan(requestId, handler.getId())
         );
         assertThat(recovered).allMatch(DataRightsDtos.ErasureSafetyPlan.class::isInstance);
+        List<DataRightsDtos.ErasureSafetyPlan> concurrentPlans = recovered.stream()
+                .map(DataRightsDtos.ErasureSafetyPlan.class::cast)
+                .toList();
+        assertThat(concurrentPlans).extracting(DataRightsDtos.ErasureSafetyPlan::requestId)
+                .containsOnly(requestId);
+        assertThat(concurrentPlans).extracting(DataRightsDtos.ErasureSafetyPlan::executionAvailable)
+                .containsOnly(false);
+        assertThat(concurrentPlans.get(0).blockers()).isEqualTo(concurrentPlans.get(1).blockers());
+        assertThat(concurrentPlans.get(0).references()).isEqualTo(concurrentPlans.get(1).references());
+        assertThat(jdbc.queryForObject("select count(*) from demand where id = ?", Integer.class, demandId)).isOne();
+        assertThat(jdbc.queryForObject(
+                "select count(*) from demand_support where id = ? and parent_id = ?",
+                Integer.class, supportId, supporter.getId())).isOne();
     }
 
     @Test
