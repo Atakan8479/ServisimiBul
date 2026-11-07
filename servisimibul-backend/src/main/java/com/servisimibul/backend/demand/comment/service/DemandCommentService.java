@@ -191,6 +191,13 @@ public class DemandCommentService {
                         "Administrative approval is required to comment"
                 );
             }
+            // APP-09: e.g. only a deactivated creator still backs it; counts exclude ineligible parents.
+            if (supportRepository.countEligibleByDemandId(demandId, parentEmailVerification.required()) == 0) {
+                throw DemandCommentApiException.forbidden(
+                        "active_support_required",
+                        "The demand needs at least one active supporter to receive comments"
+                );
+            }
             return author;
         }
         throw DemandCommentApiException.forbidden(

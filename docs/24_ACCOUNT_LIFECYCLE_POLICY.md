@@ -102,7 +102,7 @@ Whether a parent account can be suspended at all is `[PENDING: owner]`. Today on
 | Operator public profile | Not listed | Not listed | Not listed | Removed or anonymized |
 | Operator demand responses | Hidden, rows kept | Hidden, rows kept | Hidden, rows kept | Detached from the person; history kept only if counsel allows |
 | Comments by the person | Published with a generic public label; stored author link kept | Published with a generic public label; stored author link kept | `[PENDING]`: keep with a generic label, or hide | Deleted or detached; moderation snapshots per LEG-02 P5 |
-| Parent demands created | — | — | Demand stays for other supporters | Creator detached; demand kept for other supporters |
+| Parent demands created | — | — | Demand stays for other supporters. Built (APP-09): `created_by` grants no rights and a demand is the single shared record per school, neighborhood and academic year, so new parents may still support it; operator comments require at least one eligible supporter. Whether a creator-only demand should close or be hidden is `[PENDING: owner + counsel]` (AQ2) | Creator detached; demand kept for other supporters |
 | Parent supports | — | — | `[PENDING]`: stop counting, as when disabled (D048) | Removed; counts recalculated |
 | Reports made by the person | Kept, private | Kept, private | Kept, private | Reporter detached; case kept (D053) |
 | Moderation and suspension records about the person | Kept | Kept (reason, admin, time) | Kept | `[PENDING: counsel]`; may be a legal-hold or retention exception (LEG-03 R2) |

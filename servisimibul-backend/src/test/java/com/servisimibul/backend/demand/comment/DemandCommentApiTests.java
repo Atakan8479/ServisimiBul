@@ -4,6 +4,7 @@ import com.servisimibul.backend.demand.Demand;
 import com.servisimibul.backend.demand.DemandRepository;
 import com.servisimibul.backend.demand.DemandSupport;
 import com.servisimibul.backend.demand.DemandSupportRepository;
+import com.servisimibul.backend.demand.DemandSupportStatus;
 import com.servisimibul.backend.demand.SupportReason;
 import com.servisimibul.backend.geography.District;
 import com.servisimibul.backend.geography.DistrictRepository;
@@ -249,6 +250,75 @@ class DemandCommentApiTests {
                 .andExpect(jsonPath("$.content[1].author.operatorProfileId").doesNotExist());
         assertThat(commentRepository.findById(operatorCommentId).orElseThrow().getAuthor().getId())
                 .isEqualTo(operator.user().getId());
+    }
+
+    @Test
+    void demandBackedOnlyByADeactivatedCreatorRejectsOperatorCommentsButAcceptsNewSupport() throws Exception {
+        Fixture fixture = fixture("deactivated-creator-alone");
+        AppUser creator = parent("deactivated-creator-alone@example.com");
+        Demand demand = demand(fixture, creator);
+        UUID creatorCommentId = commentId(postComment(demand, creator, "Servis arıyoruz.")
+                .andExpect(status().isCreated())
+                .andReturn());
+        Operator operator = operator("creator-alone-operator@example.com", "Mavi Servis", true);
+        deactivate(creator);
+
+        postComment(demand, operator.user(), "Hizmet verebiliriz.")
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("active_support_required"));
+
+        AppUser newcomer = parent("creator-alone-newcomer@example.com");
+        mockMvc.perform(post("/api/v1/demands/{id}/support", demand.getId())
+                        .with(as(newcomer))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"needsMorning\":true,\"needsAfternoon\":false,\"reasons\":[\"OTHER\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("OPEN"))
+                .andExpect(jsonPath("$.supporterCount").value(1));
+        postComment(demand, operator.user(), "Hizmet verebiliriz.").andExpect(status().isCreated());
+
+        assertThat(supportRepository.findOwned(demand.getId(), creator.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandSupportStatus.ACTIVE);
+        assertThat(commentRepository.findById(creatorCommentId).orElseThrow().getStatus())
+                .isEqualTo(DemandCommentStatus.PUBLISHED);
+        assertThat(demandRepository.findById(demand.getId()).orElseThrow().getCreatedBy().getId())
+                .isEqualTo(creator.getId());
+    }
+
+    @Test
+    void sharedDemandStaysOpenToInteractionAfterItsCreatorDeactivates() throws Exception {
+        Fixture fixture = fixture("deactivated-creator-shared");
+        AppUser creator = parent("deactivated-creator-shared@example.com");
+        AppUser other = parent("deactivated-creator-other@example.com");
+        Demand demand = demand(fixture, creator);
+        supportRepository.saveAndFlush(new DemandSupport(demand, other, true, false, Set.of(SupportReason.OTHER)));
+        UUID otherCommentId = commentId(postComment(demand, other, "Biz de bekliyoruz.")
+                .andExpect(status().isCreated())
+                .andReturn());
+        Operator operator = operator("creator-shared-operator@example.com", "Mavi Servis", true);
+        deactivate(creator);
+
+        postComment(demand, other, "Hâlâ ihtiyacımız var.").andExpect(status().isCreated());
+        postComment(demand, operator.user(), "Hizmet verebiliriz.").andExpect(status().isCreated());
+        mockMvc.perform(post("/api/v1/demands/{id}/support", demand.getId())
+                        .with(as(parent("deactivated-creator-third@example.com")))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"needsMorning\":true,\"needsAfternoon\":false,\"reasons\":[\"OTHER\"]}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.supporterCount").value(2));
+
+        assertThat(supportRepository.findOwned(demand.getId(), other.getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandSupportStatus.ACTIVE);
+        assertThat(commentRepository.findById(otherCommentId).orElseThrow().getStatus())
+                .isEqualTo(DemandCommentStatus.PUBLISHED);
+    }
+
+    private void deactivate(AppUser user) {
+        AppUser stored = userRepository.findById(user.getId()).orElseThrow();
+        stored.deactivate(OffsetDateTime.now());
+        userRepository.saveAndFlush(stored);
     }
 
     @Test
