@@ -75,6 +75,7 @@ public interface DemandServiceResponseRepository
                       and response.status = com.servisimibul.backend.demand.DemandServiceResponseStatus.ACTIVE
                       and user.emailVerifiedAt is not null
                       and user.enabled = true
+                      and user.deactivatedAt is null
                       and user.role = com.servisimibul.backend.identity.UserRole.OPERATOR
                       and (:approvalRequired = false
                            or operator.approvalStatus = com.servisimibul.backend.identity.OperatorApprovalStatus.APPROVED)
@@ -105,6 +106,7 @@ public interface DemandServiceResponseRepository
                       and response.status = com.servisimibul.backend.demand.DemandServiceResponseStatus.ACTIVE
                       and user.emailVerifiedAt is not null
                       and user.enabled = true
+                      and user.deactivatedAt is null
                       and user.role = com.servisimibul.backend.identity.UserRole.OPERATOR
                       and (:approvalRequired = false
                            or operator.approvalStatus = com.servisimibul.backend.identity.OperatorApprovalStatus.APPROVED)

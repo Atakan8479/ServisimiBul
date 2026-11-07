@@ -55,6 +55,7 @@ public interface DemandSupportRepository extends JpaRepository<DemandSupport, UU
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
+              and support.parent.deactivatedAt is null
               and (:parentVerificationRequired = false
                    or support.parent.emailVerifiedAt is not null)
               and ((:offersMorning = true and support.needsMorning = true)
@@ -77,6 +78,7 @@ public interface DemandSupportRepository extends JpaRepository<DemandSupport, UU
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
+              and support.parent.deactivatedAt is null
               and (:parentVerificationRequired = false
                    or support.parent.emailVerifiedAt is not null)
             """)

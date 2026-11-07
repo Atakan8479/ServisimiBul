@@ -48,6 +48,7 @@ public class DemandCommentService {
     private static final int MAX_PAGE_SIZE = 50;
     private static final int MIN_BODY_LENGTH = 2;
     private static final int MAX_BODY_LENGTH = 1_000;
+    private static final String DEACTIVATED_AUTHOR_LABEL = "Devre dışı bırakılmış hesap";
     private static final Duration DUPLICATE_WINDOW = Duration.ofMinutes(10);
     private static final Sort NEWEST_FIRST = Sort.by(
             Sort.Order.desc("createdAt"),
@@ -190,6 +191,13 @@ public class DemandCommentService {
                         "Administrative approval is required to comment"
                 );
             }
+            // APP-09: e.g. only a deactivated creator still backs it; counts exclude ineligible parents.
+            if (supportRepository.countEligibleByDemandId(demandId, parentEmailVerification.required()) == 0) {
+                throw DemandCommentApiException.forbidden(
+                        "active_support_required",
+                        "The demand needs at least one active supporter to receive comments"
+                );
+            }
             return author;
         }
         throw DemandCommentApiException.forbidden(
@@ -227,7 +235,10 @@ public class DemandCommentService {
             UUID currentUserId
     ) {
         AuthorResponse author;
-        if (comment.getAuthorRole() == UserRole.PARENT) {
+        if (comment.getAuthor().isDeactivated()) {
+            // Display-only label; stored authorship is unchanged and this is not anonymization.
+            author = new AuthorResponse(comment.getAuthorRole(), DEACTIVATED_AUTHOR_LABEL, null);
+        } else if (comment.getAuthorRole() == UserRole.PARENT) {
             author = new AuthorResponse(UserRole.PARENT, "Veli", null);
         } else {
             OperatorProfile profile = publicOperators.get(comment.getAuthor().getId());

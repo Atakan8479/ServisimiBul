@@ -29,6 +29,7 @@ public interface OperatorSchoolCoverageRepository extends JpaRepository<Operator
               and profile.active = true
               and profile.publiclyVisible = true
               and user.enabled = true
+              and user.deactivatedAt is null
               and user.emailVerifiedAt is not null
               and user.role = com.servisimibul.backend.identity.UserRole.OPERATOR
               and (:approvalRequired = false

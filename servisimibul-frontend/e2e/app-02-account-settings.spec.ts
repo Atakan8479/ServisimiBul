@@ -126,3 +126,41 @@ async function assertAccessibleAndContained(page: Page) {
     ),
   ).toBeLessThanOrEqual(1)
 }
+
+for (const viewport of viewports) {
+  test(`parent deactivates the account by keyboard on ${viewport.name}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport)
+    const state = createMockApiState()
+    state.verified = true
+    state.accountDeactivationAvailable = true
+    await installMockApi(page, state)
+    await page.goto(roles[0].login)
+    await page.getByLabel('E-posta').fill(roles[0].email)
+    await page
+      .getByRole('textbox', { name: 'Şifre', exact: true })
+      .fill('Password123!')
+    await page.getByRole('button', { name: 'Giriş yap' }).click()
+    await expect(page).toHaveURL(roles[0].landing)
+    await page.goto(roles[0].path)
+
+    await page.getByRole('button', { name: 'Hesabı devre dışı bırak' }).focus()
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Hesabı devre dışı bırak' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Vazgeç' })).toBeFocused()
+    await assertAccessibleAndContained(page)
+    await page.keyboard.press('Tab')
+    await expect(
+      dialog.getByRole('button', { name: 'Evet, devre dışı bırak' }),
+    ).toBeFocused()
+    await page.keyboard.press('Enter')
+
+    await expect(page).toHaveURL(/\/parent\/login\?accountDeactivated=true$/)
+    await expect(page.getByRole('status')).toHaveText(
+      'Hesabınız devre dışı bırakıldı ve açık oturumlarınız sonlandırıldı.',
+    )
+    await assertAccessibleAndContained(page)
+  })
+}

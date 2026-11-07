@@ -35,6 +35,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                     join fetch profile.user user
                     where user.emailVerifiedAt is not null
                       and user.enabled = true
+                      and user.deactivatedAt is null
                       and user.role = :userRole
                       and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
                       and profile.active = true
@@ -59,6 +60,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
                     join profile.user user
                     where user.emailVerifiedAt is not null
                       and user.enabled = true
+                      and user.deactivatedAt is null
                       and user.role = :userRole
                       and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
                       and profile.active = true
@@ -96,6 +98,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             join profile.user user
             where user.emailVerifiedAt is not null
               and user.enabled = true
+              and user.deactivatedAt is null
               and user.role = :userRole
               and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
               and profile.active = true
@@ -124,6 +127,7 @@ public interface PublicOperatorDiscoveryRepository extends Repository<OperatorPr
             where user.id in :userIds
               and user.emailVerifiedAt is not null
               and user.enabled = true
+              and user.deactivatedAt is null
               and user.role = :userRole
               and (:approvalRequired = false or profile.approvalStatus = :approvalStatus)
               and profile.active = true

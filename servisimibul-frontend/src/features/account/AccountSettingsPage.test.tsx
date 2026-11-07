@@ -946,6 +946,11 @@ describe('voluntary account deactivation', () => {
     )
     expect(router.state.location.search).toContain('accountDeactivated=true')
     expect(knownAuthRole()).toBeUndefined()
+    expect(
+      await screen.findByText(
+        'Hesabınız devre dışı bırakıldı ve açık oturumlarınız sonlandırıldı.',
+      ),
+    ).toBeVisible()
   })
 
   it('shows a retryable error and keeps the session when the backend reports failure', async () => {
