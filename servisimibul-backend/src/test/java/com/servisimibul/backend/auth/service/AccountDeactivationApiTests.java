@@ -212,9 +212,8 @@ class AccountDeactivationApiTests {
         mockMvc.perform(post("/api/v1/auth/deactivate").cookie(session).with(csrf()))
                 .andExpect(status().isNoContent());
 
-        // Deactivation must not change discovery/publication-relevant state it has no approved
-        // policy for (LEG-07 section 5 marks these record effects [PENDING]): it only restricts
-        // login and revokes sessions, never the operator's profile, visibility, or approval.
+        // Deactivation never mutates the operator's profile, visibility, or approval: public
+        // hiding is derived from deactivated_at in the eligibility queries (APP-09, #216).
         OperatorProfile reloaded = profileRepository.findByUserId(account.getId()).orElseThrow();
         try {
             assertThat(reloaded.isActive()).isTrue();

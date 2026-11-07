@@ -59,6 +59,7 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
                      )
                      and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
                      and support.parent.enabled = true
+                     and support.parent.deactivatedAt is null
                      and (:parentVerificationRequired = false
                           or support.parent.emailVerifiedAt is not null)
                     where (
@@ -141,6 +142,7 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
              )
              and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
              and support.parent.enabled = true
+             and support.parent.deactivatedAt is null
              and (:parentVerificationRequired = false
                   or support.parent.emailVerifiedAt is not null)
             where demand.id = :id
@@ -164,6 +166,7 @@ public interface DemandRepository extends JpaRepository<Demand, UUID> {
               )
               and support.parent.role = com.servisimibul.backend.identity.UserRole.PARENT
               and support.parent.enabled = true
+              and support.parent.deactivatedAt is null
               and (:parentVerificationRequired = false
                    or support.parent.emailVerifiedAt is not null)
             group by support.demand.id, reason

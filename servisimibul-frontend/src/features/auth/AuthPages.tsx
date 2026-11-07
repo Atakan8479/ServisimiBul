@@ -713,6 +713,11 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
           şifrenizle yeniden giriş yapın.
         </div>
       )}
+      {searchParams.get('accountDeactivated') === 'true' && (
+        <div className="status-banner success" role="status">
+          Hesabınız devre dışı bırakıldı ve açık oturumlarınız sonlandırıldı.
+        </div>
+      )}
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"

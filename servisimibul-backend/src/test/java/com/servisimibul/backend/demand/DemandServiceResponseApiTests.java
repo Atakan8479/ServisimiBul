@@ -443,15 +443,8 @@ class DemandServiceResponseApiTests {
     }
 
     @Test
-    void voluntaryDeactivationDoesNotHideAnAlreadyPublishedPublicResponse() throws Exception {
-        // Same APP-09 activation blocker as
-        // PublicOperatorDiscoveryApiTests.voluntaryDeactivationDoesNotRemoveTheOperatorFromPublicDiscovery:
-        // LEG-07 (#200) leaves the effect of voluntary deactivation on a published demand
-        // response [PENDING] (docs/24_ACCOUNT_LIFECYCLE_POLICY.md section 5). Deactivation only
-        // sets deactivated_at and revokes sessions, never is_enabled, so this query's
-        // "user.enabled = true" condition still passes and the response stays public. Not
-        // approved or intended behavior; app.auth.account-deactivation.enabled stays false in
-        // every real environment.
+    void voluntaryDeactivationHidesAPublishedPublicResponseButKeepsTheRow() throws Exception {
+        // APP-09 (#216): hidden through the deactivated_at eligibility predicate, not by withdrawal.
         Fixture fixture = fixture("deactivated-response@example.com", true);
         publish(fixture);
 
@@ -461,8 +454,40 @@ class DemandServiceResponseApiTests {
 
         mockMvc.perform(get(publicPath(fixture.demand())))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.totalElements").value(1))
-                .andExpect(jsonPath("$.content[0].businessName").value("Response Operator"));
+                .andExpect(jsonPath("$.totalElements").value(0));
+        assertThat(responseRepository.findAll())
+                .singleElement()
+                .extracting(DemandServiceResponse::getStatus)
+                .isEqualTo(DemandServiceResponseStatus.ACTIVE);
+    }
+
+    @Test
+    void deactivatedParentsSupportStopsCountingAndReceivesNoNewPublicationFeedback() throws Exception {
+        Fixture fixture = fixture("deactivated-parent-support@example.com", true);
+        AppUser other = verifiedParent("deactivated-parent-other@example.com");
+        supportRepository.saveAndFlush(new DemandSupport(
+                fixture.demand(), other, true, false,
+                java.util.Set.of(SupportReason.NO_SUITABLE_SERVICE)
+        ));
+        AppUser parent = userRepository.findById(fixture.parent().getId()).orElseThrow();
+        parent.deactivate(OffsetDateTime.now());
+        userRepository.saveAndFlush(parent);
+
+        mockMvc.perform(get("/api/v1/demands/" + fixture.demand().getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.supporterCount").value(1));
+
+        publish(fixture);
+
+        DemandSupport deactivatedSupport = supportRepository.findOwned(
+                fixture.demand().getId(), parent.getId()).orElseThrow();
+        assertThat(deactivatedSupport.getStatus()).isEqualTo(DemandSupportStatus.ACTIVE);
+        assertThat(feedbackRepository.findDetailedBySupportId(deactivatedSupport.getId())).isEmpty();
+        DemandSupport otherSupport = supportRepository.findOwned(
+                fixture.demand().getId(), other.getId()).orElseThrow();
+        assertThat(otherSupport.getStatus()).isEqualTo(DemandSupportStatus.AWAITING_FEEDBACK);
+        assertThat(demandRepository.findById(fixture.demand().getId()).orElseThrow().getStatus())
+                .isEqualTo(DemandStatus.OPEN);
     }
 
     @Test

@@ -382,18 +382,28 @@ class PublicOperatorDiscoveryApiTests {
     }
 
     @Test
-    void voluntaryDeactivationDoesNotRemoveTheOperatorFromPublicDiscovery() throws Exception {
-        // APP-09 activation blocker, not approved behavior: LEG-07 (#200) leaves the effect of
-        // voluntary deactivation on operator visibility and demand responses [PENDING]
-        // (docs/24_ACCOUNT_LIFECYCLE_POLICY.md section 5). AppUser.deactivate() therefore only
-        // sets deactivated_at and revokes sessions; it never touches is_enabled,
-        // OperatorProfile.active, or publiclyVisible, which this query still requires to be
-        // true. Until that decision is recorded, a deactivated operator who can no longer log
-        // in remains fully discoverable here. app.auth.account-deactivation.enabled stays false
-        // in every real environment, so this gap cannot affect real users yet.
+    void voluntaryDeactivationHidesTheOperatorAndOfferingsWithoutChangingStoredRecords() throws Exception {
+        // APP-09 (#216): eligibility is derived from deactivated_at; publication flags are untouched.
         SearchContext context = createSearchContext();
-        String email = "deactivated-visible@example.com";
-        createMatchingOperator(context, email, "Still Visible", State.PUBLISHED);
+        String email = "deactivated-hidden@example.com";
+        OperatorFixture hidden = createMatchingOperator(context, email, "Hidden", State.PUBLISHED);
+        createMatchingOperator(context, "still-visible@example.com", "Visible", State.PUBLISHED);
+        Vehicle vehicle = vehicleRepository.saveAndFlush(new Vehicle(hidden.profile(), "34DEA001", 10));
+        ServiceOffering offering = offeringRepository.saveAndFlush(
+                new ServiceOffering(hidden.operatorSchool(), vehicle, null, "Kept offering"));
+        offeringCoverageRepository.saveAndFlush(new ServiceOfferingCoverage(
+                offering,
+                coverageRepository.findAll().stream()
+                        .filter(coverage -> coverage.getOperatorSchool().equals(hidden.operatorSchool()))
+                        .findFirst().orElseThrow()));
+        offering.publish();
+        offeringRepository.saveAndFlush(offering);
+        mockMvc.perform(get("/api/v1/operators")
+                        .param("schoolId", context.school().getId().toString())
+                        .param("neighborhoodId", context.coverageNeighborhood().getId().toString()))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].businessName").value("Hidden"))
+                .andExpect(jsonPath("$.content[0].publishedOfferings.length()").value(1));
         AppUser operatorUser = userRepository.findByEmail(email).orElseThrow();
         operatorUser.deactivate(OffsetDateTime.now());
         userRepository.saveAndFlush(operatorUser);
@@ -402,8 +412,14 @@ class PublicOperatorDiscoveryApiTests {
                         .param("schoolId", context.school().getId().toString())
                         .param("neighborhoodId", context.coverageNeighborhood().getId().toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content.length()").value(1))
-                .andExpect(jsonPath("$.content[0].businessName").value("Still Visible"));
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].businessName").value("Visible"));
+
+        OperatorProfile stored = profileRepository.findById(hidden.profile().getId()).orElseThrow();
+        assertThat(stored.isActive()).isTrue();
+        assertThat(stored.isPubliclyVisible()).isTrue();
+        assertThat(offeringRepository.findById(offering.getId()).orElseThrow().isPublished()).isTrue();
+        assertThat(userRepository.findById(operatorUser.getId()).orElseThrow().isEnabled()).isTrue();
     }
 
     @Test

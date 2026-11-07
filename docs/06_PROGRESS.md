@@ -1,5 +1,12 @@
 # Progress ledger (update only after verification)
 
+## APP-09 deactivation visibility effects — 2026-11-07 (PR pending review; activation blocked)
+
+- Branch: `feat/app-09-deactivation-visibility`; issue #216. Public discovery, published offerings, published demand responses, operator new-demand notification recipients, parent support counts/reason counts, publication feedback recipients, and demand-exhaustion counts now also require `deactivated_at is null`. No row, publication flag, approval, `is_enabled`, or `active` value is mutated, so nothing is republished or restored automatically.
+- Comments by a deactivated author stay in the thread with the display label `Devre dışı bırakılmış hesap` and no `operatorProfileId`; stored authorship is unchanged and this is not anonymization. Moderation/report flows are untouched.
+- The role login now shows a completion banner for `accountDeactivated=true`. No self-reactivation, migration, dependency, SMTP, Supabase or production setting changed; the flag stays false by default and pinned false in production.
+- Legal release gates remain open: LEG-07 AQ1/AQ2/AQ4/AQ7, LEG-03/APP-12 retention, LEG-06 locked-out rights channel. #216 stays open.
+
 ## APP-10 verified account erasure request scaffold — 2026-11-06 (Draft PR #260; activation blocked)
 
 - Branch: `codex/app-10-erasure-requests`; GitHub issue #217. Parents and operators now have separate role-scoped erasure routes with data-minimizing intake, receipt ids, and requester-safe status history. Repeated undelivered `ERASURE` submissions are idempotent and return the existing request; other duplicate request types retain the APP-07 conflict behavior.

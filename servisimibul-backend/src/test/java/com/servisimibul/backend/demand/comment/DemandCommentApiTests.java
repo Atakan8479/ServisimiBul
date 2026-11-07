@@ -221,6 +221,37 @@ class DemandCommentApiTests {
     }
 
     @Test
+    void deactivatedAuthorsGetAGenericLabelWhileThreadAndStoredAuthorshipArePreserved() throws Exception {
+        Fixture fixture = fixture("deactivated-author");
+        AppUser parent = parent("deactivated-author-parent@example.com");
+        Demand demand = demand(fixture, parent);
+        Operator operator = operator("deactivated-author-operator@example.com", "Mavi Servis", true);
+        OperatorSchool relationship = operatorSchoolRepository.saveAndFlush(
+                new OperatorSchool(operator.profile(), fixture.school(), true)
+        );
+        coverageRepository.saveAndFlush(new OperatorSchoolCoverage(relationship, fixture.pickup()));
+        UUID operatorCommentId = commentId(postComment(demand, operator.user(), "Bu bölgede hizmet veriyoruz.")
+                .andExpect(status().isCreated())
+                .andReturn());
+        postComment(demand, parent, "Teşekkürler, iletişime geçeceğim.").andExpect(status().isCreated());
+
+        AppUser operatorUser = userRepository.findById(operator.user().getId()).orElseThrow();
+        operatorUser.deactivate(OffsetDateTime.now());
+        userRepository.saveAndFlush(operatorUser);
+
+        mockMvc.perform(get("/api/v1/demands/{id}/comments", demand.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.content[0].author.displayName").value("Veli"))
+                .andExpect(jsonPath("$.content[1].body").value("Bu bölgede hizmet veriyoruz."))
+                .andExpect(jsonPath("$.content[1].author.displayName")
+                        .value("Devre dışı bırakılmış hesap"))
+                .andExpect(jsonPath("$.content[1].author.operatorProfileId").doesNotExist());
+        assertThat(commentRepository.findById(operatorCommentId).orElseThrow().getAuthor().getId())
+                .isEqualTo(operator.user().getId());
+    }
+
+    @Test
     void duplicateAndAccountRateControlsRejectSpam() throws Exception {
         Fixture fixture = fixture("spam");
         AppUser parent = parent("spam-parent@example.com");
