@@ -92,8 +92,11 @@ class ErasureSafetySchemaDriftTests {
         }
     }
 
-    private static void requireDisposableDatabase() {
+    private void requireDisposableDatabase() {
         assertThat(System.getenv("SB_TEST_DB_DISPOSABLE")).isEqualToIgnoringCase("true");
-        assertThat(System.getenv("SB_TEST_DATABASE_NAME")).isEqualTo("servisimibul_a12");
+        String declaredDatabase = System.getenv("SB_TEST_DATABASE_NAME");
+        assertThat(declaredDatabase).startsWith("servisimibul_");
+        String connectedDatabase = adminUrl.substring(adminUrl.lastIndexOf('/') + 1).split("\\?", 2)[0];
+        assertThat(connectedDatabase).isEqualTo(declaredDatabase);
     }
 }
