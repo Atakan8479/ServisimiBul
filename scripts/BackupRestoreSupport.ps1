@@ -117,23 +117,59 @@ function Read-SbRestoreReconciliationManifest {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
         throw "Restore reconciliation manifest is missing: $Path"
     }
+    $sha256Pattern = '^[0-9a-f]{64}$'
+    $expectedManifestHash = $ExpectedManifestSha256.ToLowerInvariant()
+    $expectedArchiveHash = $ExpectedArchiveSha256.ToLowerInvariant()
+    if ($expectedManifestHash -notmatch $sha256Pattern -or
+        $expectedArchiveHash -notmatch $sha256Pattern) {
+        throw 'Restore reconciliation expected checksums must be SHA-256 values.'
+    }
     $actualManifestHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
-    if ($actualManifestHash -ne $ExpectedManifestSha256.ToLowerInvariant()) {
+    if ($actualManifestHash -ne $expectedManifestHash) {
         throw 'Restore reconciliation manifest checksum mismatch.'
     }
 
     try {
-        $manifest = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json -ErrorAction Stop
+        $manifest = Get-Content -Raw -LiteralPath $Path |
+            ConvertFrom-Json -NoEnumerate -ErrorAction Stop
     } catch {
         throw "Restore reconciliation manifest is invalid JSON: $($_.Exception.Message)"
     }
-    if ($manifest.schemaVersion -ne 1) {
+    if ($manifest -is [array] -or $manifest -isnot [pscustomobject]) {
+        throw 'Restore reconciliation manifest must be one JSON object.'
+    }
+    $manifestProperties = @($manifest.PSObject.Properties.Name | Sort-Object)
+    $expectedManifestProperties = @('backupArchiveSha256', 'createdAtUtc', 'entries', 'schemaVersion')
+    if (@(Compare-Object $expectedManifestProperties $manifestProperties -CaseSensitive).Count -ne 0) {
+        throw 'Restore reconciliation manifest has missing or unsupported fields.'
+    }
+    if (($manifest.schemaVersion -isnot [int] -and $manifest.schemaVersion -isnot [long]) -or
+        $manifest.schemaVersion -ne 1) {
         throw "Unsupported restore reconciliation schema version: $($manifest.schemaVersion)"
     }
-    if ($manifest.backupArchiveSha256 -ne $ExpectedArchiveSha256.ToLowerInvariant()) {
+    if ($manifest.backupArchiveSha256 -isnot [string] -or
+        $manifest.backupArchiveSha256 -notmatch $sha256Pattern -or
+        $manifest.backupArchiveSha256 -ne $expectedArchiveHash) {
         throw 'Restore reconciliation manifest does not belong to the selected backup.'
     }
 
+    $createdAt = [DateTimeOffset]::MinValue
+    $createdAtValid = if ($manifest.createdAtUtc -is [datetime]) {
+        $createdAt = [DateTimeOffset]$manifest.createdAtUtc.ToUniversalTime()
+        $true
+    } elseif ($manifest.createdAtUtc -is [string]) {
+        [DateTimeOffset]::TryParse([string]$manifest.createdAtUtc, [ref]$createdAt) -and
+            $createdAt.Offset -eq [TimeSpan]::Zero
+    } else {
+        $false
+    }
+    if (-not $createdAtValid) {
+        throw 'Restore reconciliation manifest createdAtUtc must be a UTC timestamp.'
+    }
+
+    if ($manifest.entries -isnot [array]) {
+        throw 'Restore reconciliation manifest entries must be a JSON array.'
+    }
     $entries = @($manifest.entries)
     if ($entries.Count -eq 0) {
         throw 'Restore reconciliation manifest contains no entries.'
@@ -141,16 +177,68 @@ function Read-SbRestoreReconciliationManifest {
     $operationIds = [System.Collections.Generic.HashSet[string]]::new(
         [System.StringComparer]::Ordinal
     )
+    $disposalTargets = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    $validatedEntries = @()
     foreach ($entry in $entries) {
+        if ($entry -isnot [pscustomobject]) {
+            throw 'Restore reconciliation manifest contains a malformed entry.'
+        }
+        $entryProperties = @($entry.PSObject.Properties.Name | Sort-Object)
+        $expectedEntryProperties = @('action', 'category', 'operationId', 'recordId', 'recordType')
+        if (@(Compare-Object $expectedEntryProperties $entryProperties -CaseSensitive).Count -ne 0) {
+            throw 'Restore reconciliation entry has missing or unsupported fields.'
+        }
         $recordId = [guid]::Empty
-        if ([string]::IsNullOrWhiteSpace($entry.operationId) -or
+        if ($entry.operationId -isnot [string] -or
+            $entry.operationId -cnotmatch '^[a-z0-9][a-z0-9._-]{0,63}$' -or
             -not $operationIds.Add([string]$entry.operationId) -or
-            $entry.category -ne '4' -or
-            $entry.recordType -ne 'email_verification_token' -or
-            $entry.action -ne 'DELETE' -or
-            -not [guid]::TryParse([string]$entry.recordId, [ref]$recordId)) {
-            throw 'Restore reconciliation manifest contains an unsupported or duplicate entry.'
+            $entry.category -isnot [string] -or
+            $entry.category -cne '4' -or
+            $entry.recordType -isnot [string] -or
+            $entry.recordType -cne 'email_verification_token' -or
+            $entry.action -isnot [string] -or
+            $entry.action -cne 'DELETE' -or
+            $entry.recordId -isnot [string] -or
+            -not [guid]::TryParseExact([string]$entry.recordId, 'D', [ref]$recordId)) {
+            throw 'Restore reconciliation manifest contains a malformed, unsupported, or duplicate operation.'
+        }
+        $canonicalRecordId = $recordId.ToString('D').ToLowerInvariant()
+        $target = "$($entry.recordType)|$canonicalRecordId"
+        if (-not $disposalTargets.Add($target)) {
+            throw 'Restore reconciliation manifest contains a duplicate disposal target.'
+        }
+        $validatedEntries += [pscustomobject]@{
+            operationId = [string]$entry.operationId
+            category = [string]$entry.category
+            recordType = [string]$entry.recordType
+            recordId = $canonicalRecordId
+            action = [string]$entry.action
         }
     }
-    return $manifest
+    return [pscustomobject]@{
+        schemaVersion = 1
+        backupArchiveSha256 = $expectedArchiveHash
+        createdAtUtc = $createdAt.ToUniversalTime().ToString('o')
+        entries = $validatedEntries
+    }
+}
+
+function Assert-SbRestoreReconciliationComplete {
+    param(
+        [Parameter(Mandatory = $true)][int]$ExpectedEntries,
+        [Parameter(Mandatory = $true)][int]$RestoredRowsDetected,
+        [Parameter(Mandatory = $true)][int]$FirstPassDeleted,
+        [Parameter(Mandatory = $true)][int]$RetryDeleted,
+        [Parameter(Mandatory = $true)][int]$RemainingRows
+    )
+
+    if ($ExpectedEntries -le 0 -or
+        $RestoredRowsDetected -ne $ExpectedEntries -or
+        $FirstPassDeleted -ne $ExpectedEntries -or
+        $RetryDeleted -ne 0 -or
+        $RemainingRows -ne 0) {
+        throw 'Restore reconciliation did not complete safely; restored backend startup is blocked.'
+    }
 }
