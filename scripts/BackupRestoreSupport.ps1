@@ -106,3 +106,51 @@ function Assert-SbFileManifest {
         }
     }
 }
+
+function Read-SbRestoreReconciliationManifest {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$ExpectedManifestSha256,
+        [Parameter(Mandatory = $true)][string]$ExpectedArchiveSha256
+    )
+
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        throw "Restore reconciliation manifest is missing: $Path"
+    }
+    $actualManifestHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant()
+    if ($actualManifestHash -ne $ExpectedManifestSha256.ToLowerInvariant()) {
+        throw 'Restore reconciliation manifest checksum mismatch.'
+    }
+
+    try {
+        $manifest = Get-Content -Raw -LiteralPath $Path | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        throw "Restore reconciliation manifest is invalid JSON: $($_.Exception.Message)"
+    }
+    if ($manifest.schemaVersion -ne 1) {
+        throw "Unsupported restore reconciliation schema version: $($manifest.schemaVersion)"
+    }
+    if ($manifest.backupArchiveSha256 -ne $ExpectedArchiveSha256.ToLowerInvariant()) {
+        throw 'Restore reconciliation manifest does not belong to the selected backup.'
+    }
+
+    $entries = @($manifest.entries)
+    if ($entries.Count -eq 0) {
+        throw 'Restore reconciliation manifest contains no entries.'
+    }
+    $operationIds = [System.Collections.Generic.HashSet[string]]::new(
+        [System.StringComparer]::Ordinal
+    )
+    foreach ($entry in $entries) {
+        $recordId = [guid]::Empty
+        if ([string]::IsNullOrWhiteSpace($entry.operationId) -or
+            -not $operationIds.Add([string]$entry.operationId) -or
+            $entry.category -ne '4' -or
+            $entry.recordType -ne 'email_verification_token' -or
+            $entry.action -ne 'DELETE' -or
+            -not [guid]::TryParse([string]$entry.recordId, [ref]$recordId)) {
+            throw 'Restore reconciliation manifest contains an unsupported or duplicate entry.'
+        }
+    }
+    return $manifest
+}

@@ -83,6 +83,57 @@ try {
         $tamperRejected = $_.Exception.Message -match 'manifest mismatch'
     }
     Assert-Condition $tamperRejected 'A modified tariff file was not rejected by its manifest.'
+
+    $reconciliationPath = Join-Path $workspace 'restore-reconciliation.json'
+    $archiveHash = 'a' * 64
+    [System.IO.File]::WriteAllText($reconciliationPath, (@{
+        schemaVersion = 1
+        backupArchiveSha256 = $archiveHash
+        entries = @(@{
+            operationId = 'app12-test-operation'
+            category = '4'
+            recordType = 'email_verification_token'
+            recordId = '00000000-0000-0000-0000-000000000701'
+            action = 'DELETE'
+        })
+    } | ConvertTo-Json -Depth 5))
+    $reconciliationHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $reconciliationPath).Hash
+    $manifest = Read-SbRestoreReconciliationManifest -Path $reconciliationPath `
+        -ExpectedManifestSha256 $reconciliationHash -ExpectedArchiveSha256 $archiveHash
+    Assert-Condition (@($manifest.entries).Count -eq 1) `
+        'A valid restore reconciliation manifest was not accepted.'
+
+    $wrongArchiveRejected = $false
+    try {
+        $null = Read-SbRestoreReconciliationManifest -Path $reconciliationPath `
+            -ExpectedManifestSha256 $reconciliationHash -ExpectedArchiveSha256 ('b' * 64)
+    } catch {
+        $wrongArchiveRejected = $_.Exception.Message -match 'selected backup'
+    }
+    Assert-Condition $wrongArchiveRejected `
+        'A reconciliation manifest for another backup was not rejected.'
+
+    $missingReconciliationRejected = $false
+    try {
+        $null = Read-SbRestoreReconciliationManifest `
+            -Path (Join-Path $workspace 'missing-reconciliation.json') `
+            -ExpectedManifestSha256 $reconciliationHash -ExpectedArchiveSha256 $archiveHash
+    } catch {
+        $missingReconciliationRejected = $_.Exception.Message -match 'is missing'
+    }
+    Assert-Condition $missingReconciliationRejected `
+        'A missing restore reconciliation manifest was not rejected.'
+
+    [System.IO.File]::AppendAllText($reconciliationPath, ' ')
+    $tamperedReconciliationRejected = $false
+    try {
+        $null = Read-SbRestoreReconciliationManifest -Path $reconciliationPath `
+            -ExpectedManifestSha256 $reconciliationHash -ExpectedArchiveSha256 $archiveHash
+    } catch {
+        $tamperedReconciliationRejected = $_.Exception.Message -match 'checksum mismatch'
+    }
+    Assert-Condition $tamperedReconciliationRejected `
+        'A tampered restore reconciliation manifest was not rejected.'
 } finally {
     Remove-SbA13WorkspaceDirectory -Path $workspace
 }

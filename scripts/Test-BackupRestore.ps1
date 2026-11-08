@@ -287,7 +287,7 @@ try {
     Assert-SbDisposableClusterIdentity -Cluster $sourceCluster
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
 
-    Write-Host 'Applying Flyway V1-V14 to the isolated source...'
+    Write-Host 'Applying Flyway V1-V21 to the isolated source...'
     Invoke-A13Migration -Cluster $sourceCluster -JavaRuntime $javaRuntime `
         -TariffDirectory $tariffSourceDirectory
 
@@ -310,6 +310,10 @@ values
      'OPERATOR', true, now()),
     ('00000000-0000-0000-0000-000000000202', 'admin-a13@example.invalid', 'not-used-in-a13',
      'ADMIN', true, now());
+insert into email_verification_token (id, user_id, token_hash, expires_at)
+values
+    ('00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000201',
+     repeat('a', 64), now() + interval '1 day');
 insert into operator_profile
     (id, user_id, business_name, contact_phone, description, approval_status, is_active, is_publicly_visible)
 values
@@ -364,6 +368,29 @@ values
         throw 'The database archive does not contain the expected V8 table data entry.'
     }
 
+    Write-Host 'Recording a synthetic post-backup disposal obligation outside the archive...'
+    $reconciliationTokenId = '00000000-0000-0000-0000-000000000701'
+    $reconciliationManifestPath = Join-Path $workspace 'restore-reconciliation.json'
+    [System.IO.File]::WriteAllText($reconciliationManifestPath, ([ordered]@{
+        schemaVersion = 1
+        backupArchiveSha256 = $archiveHash
+        createdAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        entries = @([ordered]@{
+            operationId = 'app12-synthetic-token-disposal'
+            category = '4'
+            recordType = 'email_verification_token'
+            recordId = $reconciliationTokenId
+            action = 'DELETE'
+        })
+    } | ConvertTo-Json -Depth 5))
+    $reconciliationManifestHash = (Get-FileHash -Algorithm SHA256 `
+        -LiteralPath $reconciliationManifestPath).Hash.ToLowerInvariant()
+    $null = Read-SbRestoreReconciliationManifest -Path $reconciliationManifestPath `
+        -ExpectedManifestSha256 $reconciliationManifestHash -ExpectedArchiveSha256 $archiveHash
+    $null = Invoke-SbPsql -Cluster $sourceCluster -Database $sourceCluster.Database `
+        -Username $sourceCluster.RuntimeUser -Password $sourceCluster.RuntimePassword `
+        -Sql "delete from email_verification_token where id = '$reconciliationTokenId';"
+
     Write-Host 'Backing up and validating the independent tariff volume...'
     $sourceTariffManifest = @(Get-SbFileManifest -Root $tariffSourceDirectory)
     Copy-A13DirectoryContents -Source $tariffSourceDirectory -Destination $tariffBackupDirectory
@@ -401,6 +428,41 @@ values
         -Arguments $restoreArguments -Password $targetCluster.AdminPassword `
         -FailureMessage 'pg_restore failed for the disposable target.'
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
+
+    Write-Host 'Reapplying and verifying the synthetic post-backup disposal obligation...'
+    $reconciliationManifest = Read-SbRestoreReconciliationManifest `
+        -Path $reconciliationManifestPath `
+        -ExpectedManifestSha256 $reconciliationManifestHash `
+        -ExpectedArchiveSha256 $archiveHash
+    $restoredObligationRows = @(
+        @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
+            -Username $targetCluster.RuntimeUser -Password $targetCluster.RuntimePassword `
+            -Sql "select count(*) from email_verification_token where id = '$reconciliationTokenId';") |
+            ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ }
+    )[-1]
+    if ($restoredObligationRows -ne '1') {
+        throw "The restored synthetic disposal obligation was not present: $restoredObligationRows"
+    }
+    foreach ($entry in @($reconciliationManifest.entries)) {
+        $null = Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
+            -Username $targetCluster.RuntimeUser -Password $targetCluster.RuntimePassword `
+            -Sql "delete from email_verification_token where id = '$($entry.recordId)';"
+    }
+    # A second application must be harmless so an interrupted restore can retry safely.
+    foreach ($entry in @($reconciliationManifest.entries)) {
+        $null = Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
+            -Username $targetCluster.RuntimeUser -Password $targetCluster.RuntimePassword `
+            -Sql "delete from email_verification_token where id = '$($entry.recordId)';"
+    }
+    $remainingObligationRows = @(
+        @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
+            -Username $targetCluster.RuntimeUser -Password $targetCluster.RuntimePassword `
+            -Sql "select count(*) from email_verification_token where id = '$reconciliationTokenId';") |
+            ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ }
+    )[-1]
+    if ($remainingObligationRows -ne '0') {
+        throw "Restore reconciliation left synthetic disposed data present: $remainingObligationRows"
+    }
 
     Write-Host 'Verifying Flyway history, inventory, RLS, grants, and restored relationships...'
     $verificationOutput = @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
@@ -506,6 +568,10 @@ join service_offering_coverage offering_coverage
         durationSeconds = [math]::Round(($finishedAt - $startedAt).TotalSeconds, 3)
         postgresMajor = 17
         archiveSha256 = $archiveHash
+        restoreReconciliationManifestSha256 = $reconciliationManifestHash
+        restoreReconciliationEntries = @($reconciliationManifest.entries).Count
+        restoreReconciliationRetried = $true
+        restoredDisposedRowsRemaining = [int]$remainingObligationRows
         migrationChecksPassed = $passCount
         relationalFixture = $relationalEvidence
         runtimeFlywayAccessRejected = $flywayAccessRejected
