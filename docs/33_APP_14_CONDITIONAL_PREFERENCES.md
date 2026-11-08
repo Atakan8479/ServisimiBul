@@ -27,10 +27,12 @@ Any implementation must be limited to those approved requirements. A new depende
 
 Only repository inventory and fail-closed regression checks are in scope while the gate is closed. They may detect a trigger, but must not infer legal applicability, enable tracking, send messages, create consent records, or touch a live environment.
 
+The static checks are early-warning safeguards, not a complete legal review, browser/runtime privacy audit, network inspection, dependency-behavior analysis, or deployment verification. They detect reviewed high-signal source and manifest patterns and intentionally fail closed when those patterns change. They cannot prove the absence of dynamically generated behavior, obfuscated or novel APIs, transitive dependency behavior, proxy/CDN injection, changed vendor configuration, or processing outside this repository.
+
 Issue #221 remains open for an owner decision: close it as not planned while the current boundary holds, or reactivate it after the activation contract is satisfied. Merging this record does not complete or approve APP-14.
 
 ## Evidence boundary
 
-This inventory was reconfirmed against the feature branch on 2026-11-08 from production source and dependency manifests. Repository inspection cannot prove that an unrecorded deployment intermediary injects no cookie or script; the exact release deployment must be checked if APP-14 is activated.
+This inventory was reconfirmed against the feature branch on 2026-11-08 from production source and dependency manifests. The exact release must still be reviewed with runtime browser storage, response headers, network traffic, built assets, enabled configuration, dependencies, and deployment intermediaries if APP-14 is activated.
 
 Source records: `docs/30_COOKIE_TRACKING_AND_MARKETING_CONSENT.md` (LEG-09) and `docs/27_VERBIS_ETBIS_IYS_APPLICABILITY.md` (LEG-10).

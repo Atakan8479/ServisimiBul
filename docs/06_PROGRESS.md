@@ -4,8 +4,8 @@
 
 - Issue #221 has no approved product trigger: the repository still has only the essential `SBSESSION` server-session cookie, the tab-scoped auth-role navigation hint, and account/security email operations. No banner, preference center, consent record, İYS integration, tracking, commercial messaging, migration, production flag, or live-environment change was introduced.
 - `docs/33_APP_14_CONDITIONAL_PREFERENCES.md` records the two-part activation contract: an approved concrete product trigger plus reviewed LEG-09 C1–C4 and LEG-10 T3 decisions. Until then, work is limited to inventory and fail-closed detection; issue #221 remains open for an owner close-as-not-planned or future reactivation decision.
-- The CI inventory guard detects new browser storage/tracking APIs, remote scripts/iframes, production analytics/consent dependencies, additional backend cookie APIs, unexpected session-storage use, and commercial-message operations. Fixture coverage proves the safe baseline and six independent trigger classes fail closed.
-- The seven-case PowerShell suite, the guard against the real repository, and `git diff --check` passed locally. Repository inspection cannot verify an unrecorded deployment intermediary; an exact release deployment review remains required if APP-14 is activated.
+- The CI inventory guard detects new browser storage/tracking APIs, HTML/TSX/dynamic embeds, production analytics/consent dependencies (including aliases), additional backend cookie APIs and direct `Set-Cookie` header writes, unexpected session-storage use, and commercial-message operations. Static matching is only an early-warning safeguard, not a legal or runtime privacy audit.
+- The 17-case PowerShell suite, the guard against the real repository, and `git diff --check` passed locally. Repository inspection cannot verify dynamic/transitive behavior, built assets, network traffic, enabled deployment configuration, or an intermediary; exact-release runtime review remains required if APP-14 is activated.
 
 ## APP-12 retention/disposal and restore-reconciliation scaffold — 2026-11-08 (Draft PR #263; execution blocked)
 

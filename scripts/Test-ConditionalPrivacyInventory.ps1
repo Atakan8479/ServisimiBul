@@ -46,17 +46,29 @@ if ($productionFrontendFiles.Count -eq 0) {
 }
 
 $browserSignals = [ordered]@{
-    'script-readable cookies' = '\bdocument\s*\.\s*cookie\b'
-    'persistent local storage' = '\blocalStorage\b'
+    'script-readable cookies' = '(?:\bdocument\s*\.\s*cookie\b|\bdocument\s*\[\s*[''"]cookie[''"]\s*\]|\bcookieStore\b)'
+    'persistent local storage' = '(?:\blocalStorage\b|\bwindow\s*\[\s*[''"]localStorage[''"]\s*\])'
     'IndexedDB' = '\bindexedDB\b'
-    'service workers' = '\bnavigator\s*\.\s*serviceWorker\b'
+    'service workers' = '(?:\bnavigator\s*\.\s*serviceWorker\b|\bnavigator\s*\[\s*[''"]serviceWorker[''"]\s*\])'
     'browser notification permission' = '\bNotification\s*\.\s*requestPermission\s*\('
-    'analytics, advertising, or consent vendor integration' = '(?i)(gtag\s*\(|google-analytics|googletagmanager|mixpanel|amplitude|hotjar|posthog|cookiebot|onetrust)'
+    'analytics, advertising, or consent vendor integration' = '(?i)(gtag\s*\(|google-analytics|googletagmanager|segment|mixpanel|amplitude|hotjar|posthog|matomo|plausible|fullstory|cookiebot|onetrust)'
+}
+$frontendEmbedSignals = [ordered]@{
+    'external script element' = '(?is)<script\b[^>]*\bsrc\s*=\s*{?\s*["''`]?\s*(?:https?:)?//'
+    'script element with a nonliteral source' = '(?is)<script\b[^>]*\bsrc\s*=\s*{\s*(?!["''`]\s*(?:/|\./|\.\./))'
+    'iframe element' = '(?is)<iframe\b'
+    'dynamic script or iframe creation' = '(?i)\b(?:(?:document|React)\s*\.\s*)?createElement\s*\(\s*["''](?:script|iframe)["'']'
+    'raw HTML injection' = '(?i)(?:\bdangerouslySetInnerHTML\s*=|\.\s*innerHTML\s*=|\.\s*insertAdjacentHTML\s*\()'
 }
 
 foreach ($file in $productionFrontendFiles) {
     $content = Get-Content -Raw -LiteralPath $file.FullName
     foreach ($signal in $browserSignals.GetEnumerator()) {
+        if ($content -match $signal.Value) {
+            Stop-InventoryCheck "Detected $($signal.Key) in $($file.FullName)."
+        }
+    }
+    foreach ($signal in $frontendEmbedSignals.GetEnumerator()) {
         if ($content -match $signal.Value) {
             Stop-InventoryCheck "Detected $($signal.Key) in $($file.FullName)."
         }
@@ -96,19 +108,25 @@ try {
 } catch {
     Stop-InventoryCheck "The frontend package manifest is invalid: $($_.Exception.Message)"
 }
-$productionDependencyNames = @(
-    if ($null -ne $packageManifest.dependencies) {
-        $packageManifest.dependencies.PSObject.Properties.Name
+$dependenciesProperty = $packageManifest.PSObject.Properties['dependencies']
+$productionDependencies = @(
+    if ($null -ne $dependenciesProperty -and $null -ne $dependenciesProperty.Value) {
+        $dependenciesProperty.Value.PSObject.Properties
     }
 )
-$vendorDependencyPattern = '(?i)(analytics|tracking|pixel|mixpanel|amplitude|hotjar|posthog|cookiebot|onetrust|consent|gtag|tag-manager)'
-$triggerDependencies = @($productionDependencyNames | Where-Object { $_ -match $vendorDependencyPattern })
+$vendorDependencyPattern = '(?i)(analytics|tracking|pixel|segment|mixpanel|amplitude|hotjar|posthog|matomo|plausible|fullstory|cookiebot|onetrust|consent|gtag|tag-manager)'
+$triggerDependencies = @(
+    $productionDependencies |
+        Where-Object { $_.Name -match $vendorDependencyPattern -or [string]$_.Value -match $vendorDependencyPattern } |
+        ForEach-Object { $_.Name }
+)
 if ($triggerDependencies.Count -gt 0) {
     Stop-InventoryCheck "Detected a review-triggering production dependency: $($triggerDependencies -join ', ')."
 }
 
 $commercialMessagePattern = '\b(?:sendMarketing|sendPromotional|sendPromotion|sendCampaign|sendSms|sendPush)\s*\('
 $additionalCookiePattern = '(?i)(?:\bResponseCookie\b|\bnew\s+(?:jakarta\.servlet\.http\.)?Cookie\s*\(|\.addCookie\s*\(|\bCookieGenerator\b)'
+$setCookieHeaderPattern = '(?i)\.\s*(?:setHeader|addHeader|header|set|add)\s*\(\s*(?:["'']Set-Cookie["'']|HttpHeaders\s*\.\s*SET_COOKIE)'
 $authSender = Get-RequiredContent $authSenderPath
 if ($authSender -match $commercialMessagePattern) {
     Stop-InventoryCheck 'A commercial or non-email message operation was added to AuthEmailSender.'
@@ -120,6 +138,9 @@ foreach ($file in Get-ChildItem -LiteralPath $backendSource -Recurse -File -Filt
     }
     if ($content -match $additionalCookiePattern) {
         Stop-InventoryCheck "Detected an additional backend cookie API in $($file.FullName)."
+    }
+    if ($content -match $setCookieHeaderPattern) {
+        Stop-InventoryCheck "Detected a Set-Cookie header write in $($file.FullName)."
     }
 }
 

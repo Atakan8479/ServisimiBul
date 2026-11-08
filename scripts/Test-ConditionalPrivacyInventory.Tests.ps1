@@ -61,6 +61,11 @@ try {
     $safe = New-SafeFixture 'safe'
     Invoke-FixtureCheck $safe $true 'Safe baseline'
 
+    $safeHeadersAndScript = New-SafeFixture 'safe-headers-and-script'
+    Set-FixtureContent $safeHeadersAndScript 'servisimibul-frontend/src/local-script.tsx' '<script src={"/assets/runtime.js"} />'
+    Set-FixtureContent $safeHeadersAndScript 'servisimibul-backend/src/main/java/com/servisimibul/backend/SecurityHeaders.java' 'class SecurityHeaders { void apply(HttpServletResponse response) { response.setHeader("X-Content-Type-Options", "nosniff"); } }'
+    Invoke-FixtureCheck $safeHeadersAndScript $true 'Same-origin script and unrelated response header'
+
     $localStorage = New-SafeFixture 'local-storage'
     Set-FixtureContent $localStorage 'servisimibul-frontend/src/tracking.ts' "localStorage.setItem('visitor', '1')"
     Invoke-FixtureCheck $localStorage $false 'localStorage trigger'
@@ -69,9 +74,33 @@ try {
     Set-FixtureContent $remoteScript 'servisimibul-frontend/index.html' '<script src="https://example.test/tracker.js"></script>'
     Invoke-FixtureCheck $remoteScript $false 'Remote script trigger'
 
+    $tsxRemoteScript = New-SafeFixture 'tsx-remote-script'
+    Set-FixtureContent $tsxRemoteScript 'servisimibul-frontend/src/remote-script.tsx' '<script src={"https://example.test/tracker.js"} />'
+    Invoke-FixtureCheck $tsxRemoteScript $false 'TSX remote script trigger'
+
+    $tsxIframe = New-SafeFixture 'tsx-iframe'
+    Set-FixtureContent $tsxIframe 'servisimibul-frontend/src/embed.tsx' '<iframe src="https://example.test/content" />'
+    Invoke-FixtureCheck $tsxIframe $false 'TSX iframe trigger'
+
+    $dynamicScript = New-SafeFixture 'dynamic-script'
+    Set-FixtureContent $dynamicScript 'servisimibul-frontend/src/script-loader.ts' "document.createElement('script')"
+    Invoke-FixtureCheck $dynamicScript $false 'Dynamic script creation trigger'
+
+    $variableScript = New-SafeFixture 'variable-script'
+    Set-FixtureContent $variableScript 'servisimibul-frontend/src/variable-script.tsx' '<script src={vendorScriptUrl} />'
+    Invoke-FixtureCheck $variableScript $false 'Nonliteral script source trigger'
+
+    $rawHtml = New-SafeFixture 'raw-html'
+    Set-FixtureContent $rawHtml 'servisimibul-frontend/src/raw-html.ts' 'container.innerHTML = vendorMarkup'
+    Invoke-FixtureCheck $rawHtml $false 'Raw HTML injection trigger'
+
     $dependency = New-SafeFixture 'dependency'
     Set-FixtureContent $dependency 'servisimibul-frontend/package.json' '{"dependencies":{"@segment/analytics-next":"1.0.0"}}'
     Invoke-FixtureCheck $dependency $false 'Analytics dependency trigger'
+
+    $aliasedDependency = New-SafeFixture 'aliased-dependency'
+    Set-FixtureContent $aliasedDependency 'servisimibul-frontend/package.json' '{"dependencies":{"metrics":"npm:@segment/analytics-next@1.0.0"}}'
+    Invoke-FixtureCheck $aliasedDependency $false 'Aliased analytics dependency trigger'
 
     $extraSessionStorage = New-SafeFixture 'extra-session-storage'
     Set-FixtureContent $extraSessionStorage 'servisimibul-frontend/src/preferences.ts' "sessionStorage.setItem('marketing', 'yes')"
@@ -85,7 +114,19 @@ try {
     Set-FixtureContent $additionalCookie 'servisimibul-backend/src/main/java/com/servisimibul/backend/TrackingCookie.java' 'class TrackingCookie { Object value() { return ResponseCookie.from("visitor", "1"); } }'
     Invoke-FixtureCheck $additionalCookie $false 'Additional backend cookie trigger'
 
-    Write-Output 'Conditional privacy inventory tests passed (7 cases).'
+    $setCookieHeader = New-SafeFixture 'set-cookie-header'
+    Set-FixtureContent $setCookieHeader 'servisimibul-backend/src/main/java/com/servisimibul/backend/CookieHeader.java' 'class CookieHeader { void write(HttpServletResponse response) { response.setHeader("Set-Cookie", "visitor=1"); } }'
+    Invoke-FixtureCheck $setCookieHeader $false 'HttpServletResponse setHeader cookie trigger'
+
+    $addCookieHeader = New-SafeFixture 'add-cookie-header'
+    Set-FixtureContent $addCookieHeader 'servisimibul-backend/src/main/java/com/servisimibul/backend/CookieHeader.java' 'class CookieHeader { void write(HttpServletResponse response) { response.addHeader(HttpHeaders.SET_COOKIE, "visitor=1"); } }'
+    Invoke-FixtureCheck $addCookieHeader $false 'HttpServletResponse addHeader cookie trigger'
+
+    $cookieStore = New-SafeFixture 'cookie-store'
+    Set-FixtureContent $cookieStore 'servisimibul-frontend/src/cookie-store.ts' "cookieStore.set({ name: 'visitor', value: '1' })"
+    Invoke-FixtureCheck $cookieStore $false 'Cookie Store API trigger'
+
+    Write-Output 'Conditional privacy inventory tests passed (17 cases).'
 } finally {
     if (Test-Path -LiteralPath $testRoot) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
