@@ -1,0 +1,28 @@
+name: Privacy inventory
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - "servisimibul-frontend/**"
+      - "servisimibul-backend/src/main/**"
+      - "scripts/Test-ConditionalPrivacyInventory*.ps1"
+      - ".github/workflows/privacy-inventory.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  inventory:
+    name: Conditional privacy inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - name: Test fail-closed inventory guard
+        shell: pwsh
+        run: ./scripts/Test-ConditionalPrivacyInventory.Tests.ps1
+      - name: Verify repository inventory
+        shell: pwsh
+        run: ./scripts/Test-ConditionalPrivacyInventory.ps1
