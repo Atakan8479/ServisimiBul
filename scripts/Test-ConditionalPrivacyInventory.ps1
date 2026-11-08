@@ -53,10 +53,10 @@ $browserSignals = [ordered]@{
     'browser notification permission' = '\bNotification\s*\.\s*requestPermission\s*\('
     'analytics, advertising, or consent vendor integration' = '(?i)(gtag\s*\(|google-analytics|googletagmanager|segment|mixpanel|amplitude|hotjar|posthog|matomo|plausible|fullstory|cookiebot|onetrust)'
 }
+$externalEmbedPattern = '(?is)(?:<(?:script|iframe|embed)\b[^>]*\bsrc\s*=\s*{?\s*["''`]?\s*(?:https?:)?//|<object\b[^>]*\bdata\s*=\s*{?\s*["''`]?\s*(?:https?:)?//)'
 $frontendEmbedSignals = [ordered]@{
-    'external script element' = '(?is)<script\b[^>]*\bsrc\s*=\s*{?\s*["''`]?\s*(?:https?:)?//'
+    'external script, iframe, or embed element' = $externalEmbedPattern
     'script element with a nonliteral source' = '(?is)<script\b[^>]*\bsrc\s*=\s*{\s*(?!["''`]\s*(?:/|\./|\.\./))'
-    'iframe element' = '(?is)<iframe\b'
     'dynamic script or iframe creation' = '(?i)\b(?:(?:document|React)\s*\.\s*)?createElement\s*\(\s*["''](?:script|iframe)["'']'
     'raw HTML injection' = '(?i)(?:\bdangerouslySetInnerHTML\s*=|\.\s*innerHTML\s*=|\.\s*insertAdjacentHTML\s*\()'
 }
@@ -98,9 +98,8 @@ if ($allSessionCalls -ne 3 -or $allowedSessionCalls -ne $allSessionCalls -or
 }
 
 $indexHtml = Get-RequiredContent $indexPath
-if ($indexHtml -match '(?i)<script\b[^>]*\bsrc\s*=\s*["'']https?://' -or
-    $indexHtml -match '(?i)<iframe\b') {
-    Stop-InventoryCheck 'A remote script or iframe was added to the frontend entry document.'
+if ($indexHtml -match $externalEmbedPattern) {
+    Stop-InventoryCheck 'An external script, iframe, or embed was added to the frontend entry document.'
 }
 
 try {

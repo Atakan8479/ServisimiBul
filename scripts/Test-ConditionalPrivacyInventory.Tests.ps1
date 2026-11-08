@@ -66,6 +66,10 @@ try {
     Set-FixtureContent $safeHeadersAndScript 'servisimibul-backend/src/main/java/com/servisimibul/backend/SecurityHeaders.java' 'class SecurityHeaders { void apply(HttpServletResponse response) { response.setHeader("X-Content-Type-Options", "nosniff"); } }'
     Invoke-FixtureCheck $safeHeadersAndScript $true 'Same-origin script and unrelated response header'
 
+    $safeIndexEmbeds = New-SafeFixture 'safe-index-embeds'
+    Set-FixtureContent $safeIndexEmbeds 'servisimibul-frontend/index.html' '<script src="/assets/app.js"></script><iframe src="/help"></iframe><embed src="/guide.pdf"><object data="/terms.pdf"></object>'
+    Invoke-FixtureCheck $safeIndexEmbeds $true 'Same-origin index resources'
+
     $localStorage = New-SafeFixture 'local-storage'
     Set-FixtureContent $localStorage 'servisimibul-frontend/src/tracking.ts' "localStorage.setItem('visitor', '1')"
     Invoke-FixtureCheck $localStorage $false 'localStorage trigger'
@@ -73,6 +77,26 @@ try {
     $remoteScript = New-SafeFixture 'remote-script'
     Set-FixtureContent $remoteScript 'servisimibul-frontend/index.html' '<script src="https://example.test/tracker.js"></script>'
     Invoke-FixtureCheck $remoteScript $false 'Remote script trigger'
+
+    $httpScript = New-SafeFixture 'http-script'
+    Set-FixtureContent $httpScript 'servisimibul-frontend/index.html' '<script src="http://example.test/tracker.js"></script>'
+    Invoke-FixtureCheck $httpScript $false 'HTTP script trigger'
+
+    $protocolRelativeScript = New-SafeFixture 'protocol-relative-script'
+    Set-FixtureContent $protocolRelativeScript 'servisimibul-frontend/index.html' '<script src="//example.test/tracker.js"></script>'
+    Invoke-FixtureCheck $protocolRelativeScript $false 'Protocol-relative script trigger'
+
+    $protocolRelativeIframe = New-SafeFixture 'protocol-relative-iframe'
+    Set-FixtureContent $protocolRelativeIframe 'servisimibul-frontend/index.html' '<iframe src="//example.test/embed"></iframe>'
+    Invoke-FixtureCheck $protocolRelativeIframe $false 'Protocol-relative iframe trigger'
+
+    $protocolRelativeEmbed = New-SafeFixture 'protocol-relative-embed'
+    Set-FixtureContent $protocolRelativeEmbed 'servisimibul-frontend/index.html' '<embed src="//example.test/content">'
+    Invoke-FixtureCheck $protocolRelativeEmbed $false 'Protocol-relative embed trigger'
+
+    $protocolRelativeObject = New-SafeFixture 'protocol-relative-object'
+    Set-FixtureContent $protocolRelativeObject 'servisimibul-frontend/index.html' '<object data="//example.test/content"></object>'
+    Invoke-FixtureCheck $protocolRelativeObject $false 'Protocol-relative object trigger'
 
     $tsxRemoteScript = New-SafeFixture 'tsx-remote-script'
     Set-FixtureContent $tsxRemoteScript 'servisimibul-frontend/src/remote-script.tsx' '<script src={"https://example.test/tracker.js"} />'
@@ -126,7 +150,7 @@ try {
     Set-FixtureContent $cookieStore 'servisimibul-frontend/src/cookie-store.ts' "cookieStore.set({ name: 'visitor', value: '1' })"
     Invoke-FixtureCheck $cookieStore $false 'Cookie Store API trigger'
 
-    Write-Output 'Conditional privacy inventory tests passed (17 cases).'
+    Write-Output 'Conditional privacy inventory tests passed (23 cases).'
 } finally {
     if (Test-Path -LiteralPath $testRoot) {
         Remove-Item -LiteralPath $testRoot -Recurse -Force
