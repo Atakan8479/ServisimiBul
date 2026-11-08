@@ -124,6 +124,8 @@ From the repository root on Windows with Java 21+, PowerShell 7, and native Post
 
 The drill refuses non-loopback or same-instance targets. It creates all database, archive, log, and tariff state under uniquely named `%TEMP%` directories, verifies source and target identities, restores only into a separately provisioned empty target, and deletes the temporary state in `finally`. A sanitized evidence summary is written to the ignored `servisimibul-backend/target/a13-backup-restore-evidence.json`. Supplying `-JavaHome`, `-PostgresBin`, or `-EvidencePath` overrides discovery/output without changing the safety gates. Never point this local drill at Supabase or another existing database.
 
+APP-12 extends this disposable drill with one synthetic post-backup token disposal. The obligation is recorded outside the archive in a versioned manifest bound to the archive SHA-256 checksum. The restore rejects a missing, modified, wrong-backup, unsupported, or duplicate manifest entry; reapplies the allow-listed synthetic deletion before starting the restored backend; retries it to prove idempotency; and records only aggregate reconciliation evidence. This is a test-harness format, not an approved production erasure ledger or category-4 retention rule.
+
 ### Docker-free logical backup
 
 Install PostgreSQL 17 client tools on the operations host through the normal workstation/server approval process. Confirm `pg_dump.exe`, `pg_restore.exe`, and `psql.exe` report major version 17. Use `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD`, and `PGSSLMODE=require` from a secret binding; never print them.
@@ -160,9 +162,10 @@ The official Supabase CLI dump/restore guide uses Docker for its containerized P
 3. Prefer a new/disposable PostgreSQL 17 target for the first restoration. Provision required roles without reusing exposed passwords.
 4. Verify the archive checksum and inspect `pg_restore --list`.
 5. Restore with `--exit-on-error`, `--single-transaction`, and `--no-owner`. The exact command and target must be reviewed at the time. Never add `--clean` or restore over a populated target by default.
-6. Run the migration verification SQL, Flyway validation, Hibernate validation through the runtime role, row-count/business checks, grant/RLS checks, and application smoke tests.
-7. Rebind or rotate custom-role passwords and application secrets. Switch traffic only after the recovery owner signs off.
-8. Record actual recovery point, data loss, duration, failures, and follow-up work.
+6. Before starting any restored application, verify and reapply every approved erasure or disposal obligation created after the selected backup point. Fail closed if the external reconciliation source is missing, modified, incomplete, or belongs to another backup. The production source and its retention remain blocked on LEG-03 approval.
+7. Run the migration verification SQL, Flyway validation, Hibernate validation through the runtime role, row-count/business checks, grant/RLS checks, and application smoke tests.
+8. Rebind or rotate custom-role passwords and application secrets. Switch traffic only after the recovery owner signs off.
+9. Record actual recovery point, data loss, duration, failures, reconciliation result, and follow-up work.
 
 For a Supabase managed restore, use the Dashboard backup/PITR workflow available to the project plan. It restores in place and causes downtime. Confirm the project reference and recovery point twice, expect temporary unavailability, and re-verify role passwords plus any external Storage objects afterward. A shared, managed, or production-like restore remains separately approval-gated; A-13 proves only the disposable local procedure.
 

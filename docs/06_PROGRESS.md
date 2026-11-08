@@ -1,5 +1,13 @@
 # Progress ledger (update only after verification)
 
+## APP-12 retention/disposal and restore-reconciliation scaffold — 2026-11-08 (Draft PR #263; execution blocked)
+
+- Branch: `codex/app-12-retention-disposal`; issue #219. The technical contract forbids invented universal retention periods, disposal methods, legal-hold rules, evidence retention, migrations, provider changes, or production activation while LEG-03 R1–R6 and R8 remain pending.
+- The A-13 disposable PostgreSQL 17 drill now records one synthetic post-backup token-disposal obligation outside the archive, binds its versioned manifest to the archive SHA-256 checksum, reapplies it before the restored backend starts, retries it idempotently, and records aggregate reconciliation evidence without copying disposed data.
+- Review hardening validates the complete exact manifest schema before mutation; rejects missing, malformed, null, empty, tampered, wrong-backup, unsupported, duplicate-operation, and duplicate-target inputs; canonicalizes UUIDs before the allow-listed SQL; and blocks backend startup unless first-pass, retry, and remaining-row counts prove idempotent reconciliation. Stale PASS evidence is removed at run start and new PASS evidence is published atomically only after temporary database cleanup.
+- PowerShell safety tests and the full two-instance PostgreSQL 17 backup/restore drill passed. Evidence recorded one restored row detected, one first-pass deletion, zero retry deletions, zero remaining rows, 13/13 V1–V21 migration checks, successful runtime-role/RLS checks, relational/public discovery, tariff restore, immutable tariff rollback, and temporary-state cleanup.
+- This is test-only restore mechanics, not an approved category-4 retention rule or production erasure ledger. No application scheduler, disposal endpoint, database migration, live Supabase access, production flag, role/session/CSRF behavior, dependency, or frontend changed. Issue #219 remains open.
+
 ## APP-09 deactivation visibility effects — 2026-11-07 (PR pending review; activation blocked)
 
 - Branch: `feat/app-09-deactivation-visibility`; issue #216. Public discovery, published offerings, published demand responses, operator new-demand notification recipients, parent support counts/reason counts, publication feedback recipients, and demand-exhaustion counts now also require `deactivated_at is null`. No row, publication flag, approval, `is_enabled`, or `active` value is mutated, so nothing is republished or restored automatically.

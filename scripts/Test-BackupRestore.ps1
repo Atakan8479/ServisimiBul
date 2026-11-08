@@ -20,6 +20,17 @@ $backendProcess = $null
 $startedAt = [DateTimeOffset]::UtcNow
 $workspace = Join-Path ([System.IO.Path]::GetTempPath()) ('ServisimiBul-A13-' + [guid]::NewGuid())
 $workspace = Assert-SbA13WorkspacePath -Path $workspace
+$evidence = $null
+if ([string]::IsNullOrWhiteSpace($EvidencePath)) {
+    $EvidencePath = Join-Path $backendDirectory 'target\a13-backup-restore-evidence.json'
+}
+$EvidencePath = [System.IO.Path]::GetFullPath($EvidencePath)
+if (Test-Path -LiteralPath $EvidencePath) {
+    if (-not (Test-Path -LiteralPath $EvidencePath -PathType Leaf)) {
+        throw "Evidence output is not a file: $EvidencePath"
+    }
+    Remove-Item -LiteralPath $EvidencePath -Force
+}
 
 function Invoke-A13Maven {
     param(
@@ -149,6 +160,23 @@ function Invoke-A13NativePostgresCommand {
             Remove-Item -LiteralPath 'Env:PGPASSWORD' -ErrorAction SilentlyContinue
         }
     }
+}
+
+function Invoke-A13Scalar {
+    param(
+        [Parameter(Mandatory = $true)]$Cluster,
+        [Parameter(Mandatory = $true)][string]$Sql
+    )
+
+    $rows = @(
+        @(Invoke-SbPsql -Cluster $Cluster -Database $Cluster.Database `
+            -Username $Cluster.RuntimeUser -Password $Cluster.RuntimePassword -Sql $Sql) |
+            ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ }
+    )
+    if ($rows.Count -eq 0 -or $rows[-1] -notmatch '^[0-9]+$') {
+        throw "Expected a nonnegative integer from the disposable database: $($rows -join ', ')"
+    }
+    return [int]$rows[-1]
 }
 
 function Copy-A13DirectoryContents {
@@ -287,7 +315,7 @@ try {
     Assert-SbDisposableClusterIdentity -Cluster $sourceCluster
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
 
-    Write-Host 'Applying Flyway V1-V14 to the isolated source...'
+    Write-Host 'Applying Flyway V1-V21 to the isolated source...'
     Invoke-A13Migration -Cluster $sourceCluster -JavaRuntime $javaRuntime `
         -TariffDirectory $tariffSourceDirectory
 
@@ -310,6 +338,10 @@ values
      'OPERATOR', true, now()),
     ('00000000-0000-0000-0000-000000000202', 'admin-a13@example.invalid', 'not-used-in-a13',
      'ADMIN', true, now());
+insert into email_verification_token (id, user_id, token_hash, expires_at)
+values
+    ('00000000-0000-0000-0000-000000000701', '00000000-0000-0000-0000-000000000201',
+     repeat('a', 64), now() + interval '1 day');
 insert into operator_profile
     (id, user_id, business_name, contact_phone, description, approval_status, is_active, is_publicly_visible)
 values
@@ -364,6 +396,29 @@ values
         throw 'The database archive does not contain the expected V8 table data entry.'
     }
 
+    Write-Host 'Recording a synthetic post-backup disposal obligation outside the archive...'
+    $reconciliationTokenId = '00000000-0000-0000-0000-000000000701'
+    $reconciliationManifestPath = Join-Path $workspace 'restore-reconciliation.json'
+    [System.IO.File]::WriteAllText($reconciliationManifestPath, ([ordered]@{
+        schemaVersion = 1
+        backupArchiveSha256 = $archiveHash
+        createdAtUtc = [DateTimeOffset]::UtcNow.ToString('o')
+        entries = @([ordered]@{
+            operationId = 'app12-synthetic-token-disposal'
+            category = '4'
+            recordType = 'email_verification_token'
+            recordId = $reconciliationTokenId
+            action = 'DELETE'
+        })
+    } | ConvertTo-Json -Depth 5))
+    $reconciliationManifestHash = (Get-FileHash -Algorithm SHA256 `
+        -LiteralPath $reconciliationManifestPath).Hash.ToLowerInvariant()
+    $null = Read-SbRestoreReconciliationManifest -Path $reconciliationManifestPath `
+        -ExpectedManifestSha256 $reconciliationManifestHash -ExpectedArchiveSha256 $archiveHash
+    $null = Invoke-SbPsql -Cluster $sourceCluster -Database $sourceCluster.Database `
+        -Username $sourceCluster.RuntimeUser -Password $sourceCluster.RuntimePassword `
+        -Sql "delete from email_verification_token where id = '$reconciliationTokenId';"
+
     Write-Host 'Backing up and validating the independent tariff volume...'
     $sourceTariffManifest = @(Get-SbFileManifest -Root $tariffSourceDirectory)
     Copy-A13DirectoryContents -Source $tariffSourceDirectory -Destination $tariffBackupDirectory
@@ -401,6 +456,45 @@ values
         -Arguments $restoreArguments -Password $targetCluster.AdminPassword `
         -FailureMessage 'pg_restore failed for the disposable target.'
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
+
+    Write-Host 'Reapplying and verifying the synthetic post-backup disposal obligation...'
+    $reconciliationManifest = Read-SbRestoreReconciliationManifest `
+        -Path $reconciliationManifestPath `
+        -ExpectedManifestSha256 $reconciliationManifestHash `
+        -ExpectedArchiveSha256 $archiveHash
+    $reconciliationEntries = @($reconciliationManifest.entries)
+    $restoredObligationRows = 0
+    foreach ($entry in $reconciliationEntries) {
+        $restoredObligationRows += Invoke-A13Scalar -Cluster $targetCluster `
+            -Sql "select count(*) from email_verification_token where id = '$($entry.recordId)';"
+    }
+    $firstPassDeleted = 0
+    foreach ($entry in @($reconciliationManifest.entries)) {
+        $firstPassDeleted += Invoke-A13Scalar -Cluster $targetCluster -Sql @"
+with deleted as (
+    delete from email_verification_token where id = '$($entry.recordId)' returning 1
+)
+select count(*) from deleted;
+"@
+    }
+    # A second application must be harmless so an interrupted restore can retry safely.
+    $retryDeleted = 0
+    foreach ($entry in $reconciliationEntries) {
+        $retryDeleted += Invoke-A13Scalar -Cluster $targetCluster -Sql @"
+with deleted as (
+    delete from email_verification_token where id = '$($entry.recordId)' returning 1
+)
+select count(*) from deleted;
+"@
+    }
+    $remainingObligationRows = 0
+    foreach ($entry in $reconciliationEntries) {
+        $remainingObligationRows += Invoke-A13Scalar -Cluster $targetCluster `
+            -Sql "select count(*) from email_verification_token where id = '$($entry.recordId)';"
+    }
+    Assert-SbRestoreReconciliationComplete -ExpectedEntries $reconciliationEntries.Count `
+        -RestoredRowsDetected $restoredObligationRows -FirstPassDeleted $firstPassDeleted `
+        -RetryDeleted $retryDeleted -RemainingRows $remainingObligationRows
 
     Write-Host 'Verifying Flyway history, inventory, RLS, grants, and restored relationships...'
     $verificationOutput = @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `
@@ -490,13 +584,6 @@ join service_offering_coverage offering_coverage
         -JavaRuntime $javaRuntime
     $rollbackManifest = @(Get-SbFileManifest -Root $tariffRestoreDirectory)
 
-    if ([string]::IsNullOrWhiteSpace($EvidencePath)) {
-        $EvidencePath = Join-Path $backendDirectory 'target\a13-backup-restore-evidence.json'
-    }
-    $evidenceDirectory = Split-Path -Parent $EvidencePath
-    if (-not (Test-Path -LiteralPath $evidenceDirectory)) {
-        New-Item -ItemType Directory -Path $evidenceDirectory | Out-Null
-    }
     $finishedAt = [DateTimeOffset]::UtcNow
     $evidence = [ordered]@{
         task = 'A-13'
@@ -506,6 +593,13 @@ join service_offering_coverage offering_coverage
         durationSeconds = [math]::Round(($finishedAt - $startedAt).TotalSeconds, 3)
         postgresMajor = 17
         archiveSha256 = $archiveHash
+        restoreReconciliationManifestSha256 = $reconciliationManifestHash
+        restoreReconciliationEntries = $reconciliationEntries.Count
+        restoredDisposedRowsDetected = $restoredObligationRows
+        restoreReconciliationFirstPassDeleted = $firstPassDeleted
+        restoreReconciliationRetryDeleted = $retryDeleted
+        restoreReconciliationRetried = $true
+        restoredDisposedRowsRemaining = $remainingObligationRows
         migrationChecksPassed = $passCount
         relationalFixture = $relationalEvidence
         runtimeFlywayAccessRejected = $flywayAccessRejected
@@ -518,8 +612,6 @@ join service_offering_coverage offering_coverage
         sourceAndTargetWereDisposableLoopbackInstances = $true
         sharedDatabaseTouched = $false
     }
-    [System.IO.File]::WriteAllText($EvidencePath, ($evidence | ConvertTo-Json -Depth 5))
-    Write-Host "A-13 backup/restore verification passed. Evidence: $EvidencePath"
 } finally {
     Stop-SbProcessTree -Process $backendProcess
     if ($targetCluster) {
@@ -530,3 +622,23 @@ join service_offering_coverage offering_coverage
     }
     Remove-SbA13WorkspaceDirectory -Path $workspace
 }
+
+if ($null -eq $evidence) {
+    throw 'Backup/restore verification finished without evidence.'
+}
+$evidence['temporaryStateCleaned'] = $true
+$evidenceDirectory = Split-Path -Parent $EvidencePath
+if (-not (Test-Path -LiteralPath $evidenceDirectory)) {
+    New-Item -ItemType Directory -Path $evidenceDirectory | Out-Null
+}
+$temporaryEvidencePath = "$EvidencePath.tmp-$([guid]::NewGuid().ToString('N'))"
+try {
+    [System.IO.File]::WriteAllText(
+        $temporaryEvidencePath,
+        ($evidence | ConvertTo-Json -Depth 5)
+    )
+    Move-Item -LiteralPath $temporaryEvidencePath -Destination $EvidencePath -ErrorAction Stop
+} finally {
+    Remove-Item -LiteralPath $temporaryEvidencePath -Force -ErrorAction SilentlyContinue
+}
+Write-Host "A-13 backup/restore verification passed. Evidence: $EvidencePath"
