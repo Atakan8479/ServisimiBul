@@ -144,7 +144,8 @@ public class DemandCommentService {
     }
 
     private AppUser eligibleAuthor(UUID demandId, UUID authorId) {
-        AppUser author = userRepository.findById(authorId)
+        // Row lock serializes one author's submissions so the duplicate check sees in-flight comments.
+        AppUser author = userRepository.findByIdForUpdate(authorId)
                 .orElseThrow(() -> DemandCommentApiException.notFound(
                         "comment_author_not_found",
                         "Comment author was not found"
