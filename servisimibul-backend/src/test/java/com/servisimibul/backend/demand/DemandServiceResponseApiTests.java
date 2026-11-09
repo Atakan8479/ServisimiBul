@@ -35,6 +35,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.OffsetDateTime;
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,6 +53,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional
 class DemandServiceResponseApiTests {
+
+    private int provinceCodeSequence;
 
     @Autowired
     private MockMvc mockMvc;
@@ -93,6 +96,17 @@ class DemandServiceResponseApiTests {
     private com.servisimibul.backend.demand.service.DemandFeedbackService feedbackService;
     @Autowired
     private InAppNotificationRepository notificationRepository;
+
+    @Test
+    void fixtureProvinceCodesRemainUniqueBeyondUuidPrefixSpace() {
+        var codes = new HashSet<String>();
+
+        for (int index = 0; index < 256; index++) {
+            assertThat(codes.add(uniqueCode())).isTrue();
+        }
+
+        assertThat(codes).allMatch(code -> code.length() == 2);
+    }
 
     @Test
     void eligibleOperatorPublishesImmediatelyAndLifecycleIsIdempotent() throws Exception {
@@ -775,7 +789,8 @@ class DemandServiceResponseApiTests {
     }
 
     private String uniqueCode() {
-        return UUID.randomUUID().toString().substring(0, 2);
+        String code = Integer.toString(provinceCodeSequence++, Character.MAX_RADIX);
+        return code.length() == 1 ? "0" + code : code;
     }
 
     private record OperatorFixture(

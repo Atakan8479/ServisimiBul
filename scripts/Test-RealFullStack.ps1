@@ -155,6 +155,7 @@ try {
     $runtimeEnvironment.APP_AUTH_EMAIL_VERIFICATION_REQUIRED = 'false'
     $runtimeEnvironment.SB_PARENT_REGISTRATION_ENABLED = 'true'
     $runtimeEnvironment.SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'false'
+    $runtimeEnvironment.SB_ACCOUNT_DEACTIVATION_ENABLED = 'true'
     $runtimeEnvironment.SB_DEMAND_FEEDBACK_REMINDER_AFTER_OPEN = '5s'
     $runtimeEnvironment.SB_DEMAND_FEEDBACK_EXPIRY_AFTER_OPEN = '10s'
     $runtimeEnvironment.SB_DEMAND_FEEDBACK_EXPIRY_IF_UNOPENED = '15s'
