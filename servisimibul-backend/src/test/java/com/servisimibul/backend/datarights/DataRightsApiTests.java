@@ -369,8 +369,6 @@ class DataRightsApiTests {
         assertThat(detail.get("responseDeliveredAt").isNull()).isTrue();
 
         act(handler, id, action(DataRightsAction.REJECT, version(detail), null, "late"), HttpStatus.CONFLICT);
-        act(handler, id, action(DataRightsAction.ASSIGN, version(detail), colleague.getId(), null),
-                HttpStatus.CONFLICT);
         detail = act(handler, id, action(DataRightsAction.RECORD_DELIVERY, version(detail), null, null),
                 HttpStatus.OK);
         assertThat(detail.get("responseDeliveredAt").isNull()).isFalse();
@@ -383,6 +381,64 @@ class DataRightsApiTests {
         mockMvc.perform(get(BASE + "/" + id).with(as(parent)))
                 .andExpect(jsonPath("$.status").value("PARTIALLY_RESPONDED"))
                 .andExpect(jsonPath("$.closedAt").exists());
+    }
+
+    @Test
+    void undeliveredOutcomeCanBeHandedOverToADesignatedHandlerUntilDeliveryIsRecorded() throws Exception {
+        AppUser parent = account(UserRole.PARENT);
+        AppUser handler = handler();
+        AppUser colleague = handler();
+        AppUser ordinaryAdmin = account(UserRole.ADMIN);
+        UUID id = UUID.fromString(submit(parent, "ACCESS", DETAILS, HttpStatus.CREATED).get("id").asText());
+        JsonNode detail = act(handler, id, action(DataRightsAction.ASSIGN, 0, handler.getId(), null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.START_REVIEW, version(detail), null, null), HttpStatus.OK);
+        detail = act(handler, id, action(DataRightsAction.RECORD_IDENTITY_VERIFIED, version(detail), null, null),
+                HttpStatus.OK);
+        JsonNode outcome = act(handler, id, action(DataRightsAction.RESPOND_PARTIALLY, version(detail), null,
+                "Bir kısmı düzeltildi"), HttpStatus.OK);
+        long outcomeVersion = version(outcome);
+        // The assigned handler becomes unavailable before delivery is recorded.
+        jdbc.update("update app_user set is_enabled = false where id = ?", handler.getId());
+
+        String handover = json(action(DataRightsAction.ASSIGN, outcomeVersion, colleague.getId(), null));
+        mockMvc.perform(post(ADMIN_BASE + "/" + id + "/actions").with(as(colleague))
+                        .contentType("application/json").content(handover))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post(ADMIN_BASE + "/" + id + "/actions").with(as(parent)).with(csrf())
+                        .contentType("application/json").content(handover))
+                .andExpect(status().isForbidden());
+        assertThat(act(ordinaryAdmin, id, action(DataRightsAction.ASSIGN, outcomeVersion, ordinaryAdmin.getId(),
+                null), HttpStatus.FORBIDDEN).get("code").asText()).isEqualTo("handler_required");
+        act(colleague, id, action(DataRightsAction.ASSIGN, outcomeVersion, ordinaryAdmin.getId(), null),
+                HttpStatus.BAD_REQUEST);
+        act(colleague, id, action(DataRightsAction.ASSIGN, outcomeVersion, handler.getId(), null),
+                HttpStatus.BAD_REQUEST);
+        assertThat(act(colleague, id, action(DataRightsAction.ASSIGN, outcomeVersion - 1, colleague.getId(), null),
+                HttpStatus.CONFLICT).get("code").asText()).isEqualTo("stale_request_version");
+
+        detail = act(colleague, id, action(DataRightsAction.ASSIGN, outcomeVersion, colleague.getId(), null),
+                HttpStatus.OK);
+        assertThat(detail.get("assignedHandlerId").asText()).isEqualTo(colleague.getId().toString());
+        for (String preserved : List.of(
+                "status", "closedAt", "responseDueAt", "identityVerifiedAt", "handlerNote", "responseDeliveredAt")) {
+            assertThat(detail.get(preserved)).as(preserved).isEqualTo(outcome.get(preserved));
+        }
+        JsonNode handoverEvent = detail.get("events").get(detail.get("events").size() - 1);
+        assertThat(handoverEvent.get("action").asText()).isEqualTo("ASSIGN");
+        assertThat(handoverEvent.get("fromStatus").asText()).isEqualTo("PARTIALLY_RESPONDED");
+        assertThat(handoverEvent.get("toStatus").asText()).isEqualTo("PARTIALLY_RESPONDED");
+        assertThat(handoverEvent.get("actorId").asText()).isEqualTo(colleague.getId().toString());
+        assertThat(handoverEvent.get("previousAssigneeId").asText()).isEqualTo(handler.getId().toString());
+        assertThat(handoverEvent.get("newAssigneeId").asText()).isEqualTo(colleague.getId().toString());
+
+        detail = act(colleague, id, action(DataRightsAction.RECORD_DELIVERY, version(detail), null, null),
+                HttpStatus.OK);
+        assertThat(detail.get("responseDeliveredAt").isNull()).isFalse();
+        assertThat(act(colleague, id, action(DataRightsAction.ASSIGN, version(detail), handler().getId(), null),
+                HttpStatus.CONFLICT).get("code").asText()).isEqualTo("invalid_transition");
+        assertThat(detail.get("events").findValuesAsString("action")).containsExactly(
+                "RECEIVE", "ASSIGN", "START_REVIEW", "RECORD_IDENTITY_VERIFIED", "RESPOND_PARTIALLY", "ASSIGN",
+                "RECORD_DELIVERY");
     }
 
     @Test

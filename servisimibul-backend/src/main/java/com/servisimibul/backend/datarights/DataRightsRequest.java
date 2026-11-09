@@ -125,9 +125,13 @@ public class DataRightsRequest {
         return assignedHandler != null && Objects.equals(assignedHandler.getId(), handlerId);
     }
 
+    /**
+     * Handover stays possible after an outcome until delivery is recorded, so an undelivered
+     * response is never stranded with an unavailable handler. Outcome, deadline and
+     * verification state are untouched.
+     */
     public void assign(AppUser handler, OffsetDateTime now) {
-        requireOpen();
-        if (isAssignedTo(handler.getId())) {
+        if (responseDeliveredAt != null || isAssignedTo(handler.getId())) {
             throw new InvalidTransitionException();
         }
         assignedHandler = handler;

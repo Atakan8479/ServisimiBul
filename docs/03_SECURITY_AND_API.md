@@ -126,7 +126,8 @@ Every endpoint below returns 503 `data_rights_unavailable` and stores nothing wh
   - `GET` supports optional `status` and `overdue` filters with zero-based pagination (at most 50 per page), ordered by `responseDueAt`.
   - `GET /{id}` returns the request text, the requester id and role (no email), the deadline, identity verification time, internal note, delivery time, `version`, and the audit events.
   - `POST /{id}/actions` accepts `{action, expectedVersion, assigneeId?, note?}`, requires CSRF, takes a row lock, and returns 409 `stale_request_version` when `expectedVersion` does not match.
-    - `ASSIGN` may be used by any handler and accepts only a designated handler as `assigneeId`. All other actions are limited to the assigned handler (403 `handler_not_assigned`).
+    - `ASSIGN` may be used by any handler and accepts only a designated handler as `assigneeId`. All other actions are limited to the assigned handler (403 `handler_not_assigned`). `ASSIGN` remains available after an outcome until `RECORD_DELIVERY` (APP-13, #220), so an undelivered response can be handed over when the assigned handler becomes unavailable; outcome, deadline, verification and note are unchanged, and the `ASSIGN` event records both handler ids. After delivery it returns 409 `invalid_transition`.
+    - Known limitation (APP-13): the single internal note is replaced by each later note-bearing action, and audit events deliberately store no note text, so an earlier `REQUEST_VERIFICATION` note is not kept after an outcome note. Preserving note history needs new personal-data storage and a retention decision (LEG-06 RQ7), so it is deferred; no concatenation or logging is used as a workaround.
     - Transitions:
       - `START_REVIEW`: RECEIVED → UNDER_REVIEW
       - `REQUEST_VERIFICATION` (note required): RECEIVED or UNDER_REVIEW → AWAITING_VERIFICATION

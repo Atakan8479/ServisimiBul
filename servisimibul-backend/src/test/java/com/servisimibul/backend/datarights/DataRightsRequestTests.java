@@ -41,12 +41,29 @@ class DataRightsRequestTests {
         assertInvalid(() -> request.reject("late", RECEIVED.plusDays(3)));
         assertInvalid(() -> request.startReview(RECEIVED.plusDays(3)));
         assertInvalid(() -> request.recordIdentityVerified(handler, RECEIVED.plusDays(3)));
-        assertInvalid(() -> request.assign(handler, RECEIVED.plusDays(3)));
 
         request.recordDelivery(RECEIVED.plusDays(3));
         assertThat(request.getResponseDeliveredAt()).isEqualTo(RECEIVED.plusDays(3));
         assertThat(request.isOverdue(RECEIVED.plusDays(60))).isFalse();
         assertInvalid(() -> request.recordDelivery(RECEIVED.plusDays(4)));
+        assertInvalid(() -> request.assign(handler, RECEIVED.plusDays(4)));
+    }
+
+    @Test
+    void closedUndeliveredRequestCanChangeHandlerWithoutChangingItsOutcome() {
+        DataRightsRequest request = newRequest();
+        request.startReview(RECEIVED);
+        request.recordIdentityVerified(handler, RECEIVED.plusDays(1));
+        request.respondPartially("Bir kısmı", RECEIVED.plusDays(2));
+
+        request.assign(handler, RECEIVED.plusDays(3));
+
+        assertThat(request.getAssignedHandler()).isSameAs(handler);
+        assertThat(request.getStatus()).isEqualTo(DataRightsRequestStatus.PARTIALLY_RESPONDED);
+        assertThat(request.getClosedAt()).isEqualTo(RECEIVED.plusDays(2));
+        assertThat(request.getIdentityVerifiedAt()).isEqualTo(RECEIVED.plusDays(1));
+        assertThat(request.getResponseDueAt()).isEqualTo(RECEIVED.plus(DataRightsRequest.STATUTORY_RESPONSE_PERIOD));
+        assertThat(request.handlerNoteForHandler()).isEqualTo("Bir kısmı");
     }
 
     @Test
