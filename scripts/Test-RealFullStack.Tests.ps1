@@ -18,6 +18,8 @@ $config = Get-Content -Raw -LiteralPath `
     (Join-Path $repositoryRoot 'servisimibul-frontend\playwright.real.config.ts')
 $spec = Get-Content -Raw -LiteralPath `
     (Join-Path $repositoryRoot 'servisimibul-frontend\e2e-real\real-full-stack.spec.ts')
+$qa01Spec = Get-Content -Raw -LiteralPath `
+    (Join-Path $repositoryRoot 'servisimibul-frontend\e2e-real\zz-qa-01-account-lifecycle.spec.ts')
 $workflow = Get-Content -Raw -LiteralPath `
     (Join-Path $repositoryRoot '.github\workflows\full-stack-e2e.yml')
 
@@ -35,6 +37,8 @@ Assert-Condition ($runner.Contains("SB_PARENT_REGISTRATION_ENABLED = 'true'")) `
     'J-03 does not explicitly enable parent registration in its isolated runtime.'
 Assert-Condition ($runner.Contains("SB_PARENT_EMAIL_VERIFICATION_REQUIRED = 'false'")) `
     'J-03 does not select the approved parent verification policy.'
+Assert-Condition ($runner.Contains("SB_ACCOUNT_DEACTIVATION_ENABLED = 'true'")) `
+    'J-03 does not enable deactivation inside its disposable QA runtime.'
 Assert-Condition ($runner.Contains("SB_DEMO_PARENT_BOOTSTRAP_ENABLED = 'false'")) `
     'J-03 still bootstraps a parent instead of exercising real registration.'
 Assert-Condition ($runner.Contains("SB_MAIL_ENABLED = 'false'")) `
@@ -59,12 +63,18 @@ Assert-Condition (-not $spec.Contains('.route(')) `
     'The real full-stack suite intercepts requests.'
 Assert-Condition (-not $spec.Contains('installMockApi')) `
     'The real full-stack suite imports the mocked API.'
+Assert-Condition (-not $qa01Spec.Contains('.route(')) `
+    'The QA-01 real full-stack suite intercepts requests.'
+Assert-Condition (-not $qa01Spec.Contains('installMockApi')) `
+    'The QA-01 real full-stack suite imports the mocked API.'
 Assert-Condition ($workflow.Contains('CREATE TABLE test_harness.database_instance')) `
     'J-03 CI does not mark its PostgreSQL database as disposable.'
 Assert-Condition ($workflow.Contains('SB_PARENT_REGISTRATION_ENABLED: "true"')) `
     'J-03 CI does not enable parent registration for its isolated browser run.'
 Assert-Condition ($workflow.Contains('SB_PARENT_EMAIL_VERIFICATION_REQUIRED: "false"')) `
     'J-03 CI does not select the approved parent verification policy.'
+Assert-Condition ($workflow.Contains('SB_ACCOUNT_DEACTIVATION_ENABLED: "true"')) `
+    'J-03 CI does not enable deactivation inside its disposable QA runtime.'
 Assert-Condition ($workflow.Contains('SB_DEMO_PARENT_BOOTSTRAP_ENABLED: "false"')) `
     'J-03 CI still bootstraps a parent instead of exercising real registration.'
 Assert-Condition ($workflow.Contains('SB_DEMAND_FEEDBACK_SCHEDULER_INTERVAL: 500ms')) `

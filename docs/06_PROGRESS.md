@@ -1,5 +1,11 @@
 # Progress ledger (update only after verification)
 
+## QA-01 real account/privacy lifecycle evidence — 2026-11-09
+
+- Issue #223 now has a separate real React/Vite → Spring Boot → disposable PostgreSQL 17.4 scenario for enabled parent/operator deactivation, anonymous/admin denial, CSRF failure and retry, multi-session invalidation, concurrent requests, operator discovery removal, shared-demand/third-party preservation, the disabled data-rights gate, and 1440/768/390/320 axe/overflow/keyboard checks.
+- Real full-stack passed 2/2 after Flyway V1–V21; backend passed 382/382; frontend passed 290/290 Vitest and 253/253 mocked Chromium plus lint, typecheck, and build. The evidence and test audit are in `docs/35_QA_01_ACCOUNT_PRIVACY_EVIDENCE.md`.
+- QA-01 remains unaccepted: LEG-03/06/07 gates block real erasure/reactivation/retention execution, and the enabled deactivation trigger measured 32 px versus the 44 px touch-target floor. No visual redesign, APP-13-owned file, migration, Supabase state, production flag, deletion, anonymization, or cleanup behavior changed.
+
 ## APP-14 conditional cookie/messaging preferences — 2026-11-08 (Draft PR #264; not activated)
 
 - Issue #221 has no approved product trigger: the repository still has only the essential `SBSESSION` server-session cookie, the tab-scoped auth-role navigation hint, and account/security email operations. No banner, preference center, consent record, İYS integration, tracking, commercial messaging, migration, production flag, or live-environment change was introduced.
