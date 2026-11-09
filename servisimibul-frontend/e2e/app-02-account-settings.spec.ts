@@ -164,3 +164,46 @@ for (const viewport of viewports) {
     await assertAccessibleAndContained(page)
   })
 }
+
+test('deactivation failure is announced and restores focus to retry', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.verified = true
+  state.accountDeactivationAvailable = true
+  await installMockApi(page, state)
+  await page.route('**/api/v1/auth/deactivate', async (route) => {
+    await route.fulfill({
+      contentType: 'application/problem+json',
+      status: 503,
+      body: JSON.stringify({
+        title: 'Service unavailable',
+        status: 503,
+        detail: 'Hesap işlemi şu anda tamamlanamıyor.',
+        code: 'SERVICE_UNAVAILABLE',
+      }),
+    })
+  })
+  await page.goto(roles[0].login)
+  await page.getByLabel('E-posta').fill(roles[0].email)
+  await page
+    .getByRole('textbox', { name: 'Şifre', exact: true })
+    .fill('Password123!')
+  await page.getByRole('button', { name: 'Giriş yap' }).click()
+  await page.goto(roles[0].path)
+
+  await page.getByRole('button', { name: 'Hesabı devre dışı bırak' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Hesabı devre dışı bırak' })
+  await expect(dialog).toHaveAccessibleDescription(
+    /verilerinizin silinmesi değildir/,
+  )
+  const confirm = dialog.getByRole('button', {
+    name: 'Evet, devre dışı bırak',
+  })
+  await confirm.click()
+
+  await expect(dialog.getByRole('alert')).toHaveText(
+    'Hesap işlemi şu anda tamamlanamıyor.',
+  )
+  await expect(confirm).toBeFocused()
+})
