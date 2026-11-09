@@ -564,6 +564,7 @@ function DeactivateAccountDialog({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
+  const descriptionId = useId()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -576,8 +577,17 @@ function DeactivateAccountDialog({
     }
   }, [])
 
+  useEffect(() => {
+    if (error) {
+      dialogRef.current
+        ?.querySelector<HTMLButtonElement>('.ui-button-danger')
+        ?.focus()
+    }
+  }, [error])
+
   return (
     <dialog
+      aria-describedby={descriptionId}
       aria-labelledby={titleId}
       className="account-confirm-dialog"
       onCancel={(event) => {
@@ -594,7 +604,7 @@ function DeactivateAccountDialog({
     >
       <h2 id={titleId}>Hesabı devre dışı bırak</h2>
       <div className="account-confirm-body">
-        <p>
+        <p id={descriptionId}>
           Bu işlem bu cihaz dahil, hesabınızla açık olan tüm oturumları
           sonlandırır ve hesabınıza yeniden giriş yapılamaz. Hesap verilerinizin
           silinmesi değildir ve şu an kendi kendine yeniden etkinleştirme
@@ -643,6 +653,7 @@ function SignOutAllDialog({
   const dialogRef = useRef<HTMLDialogElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
+  const descriptionId = useId()
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -657,6 +668,7 @@ function SignOutAllDialog({
 
   return (
     <dialog
+      aria-describedby={descriptionId}
       aria-labelledby={titleId}
       className="account-confirm-dialog"
       onCancel={(event) => {
@@ -674,7 +686,7 @@ function SignOutAllDialog({
     >
       <h2 id={titleId}>Tüm cihazlardan çıkış yap</h2>
       <div className="account-confirm-body">
-        <p>
+        <p id={descriptionId}>
           Bu işlem bu cihaz dahil, hesabınızla açık olan tüm oturumları
           sonlandırır. Devam etmek için yeniden giriş yapmanız gerekir.
         </p>
