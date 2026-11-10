@@ -94,6 +94,7 @@ export function DemandBoardPage() {
   const demandRequest = useRef(0)
   const operatorRequest = useRef(0)
   const hydratedInitialSelection = useRef(false)
+  const pendingCreateJump = useRef(false)
 
   const initialLocation = useMemo<InitialDemandLocation | undefined>(() => {
     const schoolId = searchParams.get('schoolId')
@@ -252,6 +253,31 @@ export function DemandBoardPage() {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, 0)
   }
 
+  async function showCreateFromAnotherStatus() {
+    if (!appliedSelection) return
+    pendingCreateJump.current = true
+    await changeStatus('OPEN')
+  }
+
+  useEffect(() => {
+    if (
+      !pendingCreateJump.current ||
+      status !== 'OPEN' ||
+      loadingDemands ||
+      demandError ||
+      !appliedSelection
+    ) {
+      return
+    }
+
+    const heading = document.getElementById('create-demand-title')
+    if (!heading) return
+
+    pendingCreateJump.current = false
+    heading.focus()
+    heading.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }, [status, loadingDemands, demandError, appliedSelection, demands])
+
   async function changeDemandPage(page: number) {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, page)
   }
@@ -396,12 +422,26 @@ export function DemandBoardPage() {
             bir talep oluşturun.
           </p>
         </div>
-        <a
-          className="button-link demand-create-shortcut"
-          href="#demand-filters"
-        >
-          Yeni talep oluştur
-        </a>
+        {appliedSelection && status !== 'OPEN' ? (
+          <button
+            className="button-link demand-create-shortcut"
+            onClick={() => void showCreateFromAnotherStatus()}
+            type="button"
+          >
+            Yeni talep oluştur
+          </button>
+        ) : (
+          <a
+            className="button-link demand-create-shortcut"
+            href={
+              appliedSelection && !loadingDemands && !demandError
+                ? '#demand-create-panel'
+                : '#demand-filters'
+            }
+          >
+            Yeni talep oluştur
+          </a>
+        )}
       </header>
 
       <aside className="demand-board-notice" aria-label="Talep panosu bilgisi">
@@ -628,12 +668,13 @@ export function DemandBoardPage() {
         !demandError && (
           <section
             className="demand-create-panel"
+            id="demand-create-panel"
             aria-labelledby="create-demand-title"
           >
             {exactDemand ? (
               <div className="existing-demand-callout">
                 <div>
-                  <h2 id="create-demand-title">
+                  <h2 id="create-demand-title" tabIndex={-1}>
                     Bu okul ve mahalle için zaten bir talep var
                   </h2>
                 </div>
@@ -649,7 +690,7 @@ export function DemandBoardPage() {
               <>
                 <div className="section-heading">
                   <div>
-                    <h2 id="create-demand-title">
+                    <h2 id="create-demand-title" tabIndex={-1}>
                       Servise mi ihtiyacınız var?
                     </h2>
                   </div>
