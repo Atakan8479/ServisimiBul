@@ -7,7 +7,7 @@ import {
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { currentUser } from '../auth/auth-api'
-import { createDemand, supportReasons, type SupportValues } from './demand-api'
+import { createDemand, type SupportValues } from './demand-api'
 import { reasonLabel } from './demand-labels'
 import {
   DemandLocationPicker,
@@ -16,7 +16,6 @@ import {
 } from './DemandLocationPicker'
 import { DemandSupportForm } from './DemandSupportForm'
 
-const DRAFT_KEY = 'servisimibul:demand-create-draft'
 const defaultSupport: SupportValues = {
   needsMorning: true,
   needsAfternoon: false,
@@ -27,13 +26,12 @@ export function DemandCreatePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
-  const [storedDraft] = useState(() => readDraft())
   const [selection, setSelection] = useState<DemandLocationSelection>()
   const [hasLocationDraft, setHasLocationDraft] = useState(false)
   const [academicYear, setAcademicYear] = useState(
-    searchParams.get('academicYear') ?? storedDraft.academicYear,
+    searchParams.get('academicYear') ?? '',
   )
-  const [support, setSupport] = useState<SupportValues>(storedDraft.support)
+  const [support, setSupport] = useState<SupportValues>(defaultSupport)
   const [confirmation, setConfirmation] = useState<SupportValues>()
   const [error, setError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
@@ -46,10 +44,6 @@ export function DemandCreatePage() {
       ? { schoolId, pickupDistrictId, neighborhoodId }
       : undefined
   }, [searchParams])
-
-  useEffect(() => {
-    sessionStorage.setItem(DRAFT_KEY, JSON.stringify({ academicYear, support }))
-  }, [academicYear, support])
 
   function handleSelection(nextSelection?: DemandLocationSelection) {
     setSelection(nextSelection)
@@ -106,7 +100,6 @@ export function DemandCreatePage() {
         confirmation,
         academicYear.trim() || undefined,
       )
-      sessionStorage.removeItem(DRAFT_KEY)
       void navigate(`/demands/${response.demand.id}`, {
         state: {
           notice: response.created
@@ -310,30 +303,6 @@ function DemandConfirmationDialog({
       </div>
     </dialog>
   )
-}
-
-function readDraft(): { academicYear: string; support: SupportValues } {
-  try {
-    const parsed = JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? '') as {
-      academicYear?: unknown
-      support?: Partial<SupportValues>
-    }
-    return {
-      academicYear:
-        typeof parsed.academicYear === 'string' ? parsed.academicYear : '',
-      support: {
-        needsMorning: parsed.support?.needsMorning === true,
-        needsAfternoon: parsed.support?.needsAfternoon === true,
-        reasons: Array.isArray(parsed.support?.reasons)
-          ? parsed.support.reasons.filter((reason) =>
-              supportReasons.includes(reason),
-            )
-          : [],
-      },
-    }
-  } catch {
-    return { academicYear: '', support: defaultSupport }
-  }
 }
 
 function validAcademicYear(value: string) {
