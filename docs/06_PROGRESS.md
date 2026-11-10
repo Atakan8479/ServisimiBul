@@ -1,10 +1,10 @@
 # Progress ledger (update only after verification)
 
-## DEMAND-UX creation journey — 2026-11-10 (PR #289 pending review)
+## DEMAND-UX discovery and creation journey — 2026-11-10 (PR #289 pending review)
 
-- Branch `codex/270-demand-flow` implements issue #270 across the demand board and public discovery: creation is reachable from every status filter, empty states are actionable, status counts are accurate, and school/pickup district/neighborhood/academic year survive filter, discovery, and parent-login transitions.
-- Operator lookup failures now remain distinct from zero results and offer retry or an explicit parent-gated continuation. Existing-demand detection, backend duplicate handling, authorization, lifecycle, authentication state, layouts, and API contracts are unchanged.
-- Current branch verification passed 293/293 frontend Vitest tests and 3/3 mocked demand-board Chromium tests, including a 320 px WCAG 2.2 AA/overflow/focus check. ESLint, TypeScript, Vite build, and `git diff --check` passed. PR #289 remains open and unapproved; real full-stack E2E was intentionally not run concurrently with issue #273 work.
+- Branch `codex/270-demand-flow` implements issue #270 across public discovery and the demand board. Partial school/pickup selections now fail visibly without dropping fields, while an entirely empty selection still browses all demands. Complete and cleared selections preserve the expected school, pickup district, neighborhood, academic year, status, count, sort, and pagination behavior.
+- A complete location now loads demands and matching operators independently with separate loading, empty, error, retry, count, and pagination states. Every valid location exposes the dedicated `/demands/new` route; its editable prefill, support draft, parent-login return, confirmation dialog, backend duplicate response, and parent-only gate preserve the existing API and authorization contract. Demand cards open a privacy-safe preview dialog before the existing detail route.
+- Latest `main`, including PR #288's authentication fixes, is merged. ESLint, strict TypeScript, Vite build, `git diff --check`, all 310 Vitest tests, and all 254 mocked Chromium tests passed. The browser suite covers 1440/768/390/320 px, WCAG 2.2 AA, keyboard/dialog behavior, overflow, shared auth shells, and the creation journey. The Impeccable detector returned no findings. No backend, migration, dependency, Supabase, production, or authorization behavior changed.
 
 ## QA-01 real account/privacy lifecycle evidence — 2026-11-09
 

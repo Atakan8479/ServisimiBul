@@ -1209,9 +1209,8 @@ function demandBoardPath(selection?: SearchSelection) {
     schoolId: selection.schoolId,
     pickupDistrictId: String(selection.pickupDistrictId),
     neighborhoodId: String(selection.neighborhoodId),
-    intent: 'create',
   })
-  return `/demands?${parameters.toString()}`
+  return `/demands/new?${parameters.toString()}`
 }
 
 function SearchContext({ selection }: { selection: SearchSelection }) {

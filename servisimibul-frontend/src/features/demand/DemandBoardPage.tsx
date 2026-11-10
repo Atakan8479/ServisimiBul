@@ -1,23 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  Link,
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from 'react-router-dom'
-import { ApiError } from '../../api/client'
-import { currentUser } from '../auth/auth-api'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   findOperators,
   type OperatorPage,
   type PublicOperator,
 } from '../discovery/discovery-api'
 import {
-  createDemand,
   listDemands,
   type DemandFilters,
   type DemandPage,
-  type SupportValues,
   type DemandListStatus,
 } from './demand-api'
 import {
@@ -26,7 +17,6 @@ import {
   type InitialDemandLocation,
 } from './DemandLocationPicker'
 import { DemandSummaryCard } from './DemandSummaryCard'
-import { DemandSupportForm } from './DemandSupportForm'
 
 type DemandSort = DemandFilters['sort']
 
@@ -68,11 +58,10 @@ const statusFilters: Array<{
 ]
 
 export function DemandBoardPage() {
-  const navigate = useNavigate()
-  const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [pickerKey, setPickerKey] = useState(0)
   const [selection, setSelection] = useState<DemandLocationSelection>()
+  const [hasLocationDraft, setHasLocationDraft] = useState(false)
   const [appliedSelection, setAppliedSelection] =
     useState<DemandLocationSelection>()
   const [academicYear, setAcademicYear] = useState(
@@ -93,13 +82,10 @@ export function DemandBoardPage() {
   const [operatorPage, setOperatorPage] = useState(0)
   const [checkingOperators, setCheckingOperators] = useState(false)
   const [operatorError, setOperatorError] = useState<string>()
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [accessError, setAccessError] = useState<string>()
   const [returnNotice, setReturnNotice] = useState<string>()
   const demandRequest = useRef(0)
   const operatorRequest = useRef(0)
   const hydratedInitialSelection = useRef(false)
-  const pendingCreateJump = useRef(searchParams.get('intent') === 'create')
 
   const initialLocation = useMemo<InitialDemandLocation | undefined>(() => {
     const schoolId = searchParams.get('schoolId')
@@ -160,20 +146,19 @@ export function DemandBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadDemands])
 
-  const resetCreationFlow = useCallback(() => {
+  const resetOperatorResults = useCallback(() => {
     operatorRequest.current += 1
     setOperators(undefined)
     setOperatorPage(0)
     setCheckingOperators(false)
     setOperatorError(undefined)
-    setShowCreateForm(false)
-    setAccessError(undefined)
   }, [])
 
   const handleSelectionChange = useCallback(
     (nextSelection?: DemandLocationSelection) => {
       setSelection(nextSelection)
-      resetCreationFlow()
+      if (nextSelection) setHasLocationDraft(false)
+      resetOperatorResults()
       if (
         !nextSelection &&
         initialLocation &&
@@ -197,21 +182,15 @@ export function DemandBoardPage() {
       ) {
         hydratedInitialSelection.current = true
         setAppliedSelection(nextSelection)
-        if (searchParams.get('intent') === 'create') {
-          pendingCreateJump.current = true
-          setReturnNotice(
-            'Seçiminiz korundu. Devam etmeden önce mevcut servisleri yeniden kontrol edin.',
-          )
-        }
         void loadDemands(nextSelection, appliedAcademicYear, sort, 0)
+        void checkOperators(nextSelection, 0)
       }
     },
     [
       appliedAcademicYear,
       initialLocation,
       loadDemands,
-      resetCreationFlow,
-      searchParams,
+      resetOperatorResults,
       setSearchParams,
       sort,
     ],
@@ -229,9 +208,15 @@ export function DemandBoardPage() {
       setFilterError('Eğitim yılını 2026-2027 biçiminde ve ardışık girin.')
       return
     }
+    if (hasLocationDraft && !selection) {
+      setFilterError(
+        'Okul, servis alınacak ilçe ve mahalle seçimlerini tamamlayın.',
+      )
+      return
+    }
     setFilterError(undefined)
     setAppliedSelection(selection)
-    resetCreationFlow()
+    resetOperatorResults()
     setReturnNotice(undefined)
 
     const parameters = new URLSearchParams()
@@ -243,7 +228,9 @@ export function DemandBoardPage() {
     if (year) parameters.set('academicYear', year)
     setSearchParams(parameters, { replace: true })
     setAppliedAcademicYear(year)
-    await loadDemands(selection, year, sort, 0)
+    const demandLoad = loadDemands(selection, year, sort, 0)
+    if (selection) void checkOperators(selection, 0)
+    await demandLoad
   }
 
   async function changeSort(nextSort: DemandSort) {
@@ -255,46 +242,8 @@ export function DemandBoardPage() {
     if (nextStatus === statusRef.current) return
     statusRef.current = nextStatus
     setStatus(nextStatus)
-    resetCreationFlow()
     await loadDemands(appliedSelection, appliedAcademicYear, sort, 0)
   }
-
-  const focusCreatePanel = useCallback(() => {
-    const heading = document.getElementById('create-demand-title')
-    if (!heading) return
-    pendingCreateJump.current = false
-    heading.focus()
-    heading.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
-  }, [])
-
-  async function showCreateFlow() {
-    if (!appliedSelection) return
-    pendingCreateJump.current = true
-    if (statusRef.current !== 'OPEN') {
-      await changeStatus('OPEN')
-      return
-    }
-    focusCreatePanel()
-  }
-
-  useEffect(() => {
-    if (
-      pendingCreateJump.current &&
-      status === 'OPEN' &&
-      !loadingDemands &&
-      !demandError &&
-      appliedSelection
-    ) {
-      focusCreatePanel()
-    }
-  }, [
-    appliedSelection,
-    demandError,
-    demands,
-    focusCreatePanel,
-    loadingDemands,
-    status,
-  ])
 
   async function changeDemandPage(page: number) {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, page)
@@ -303,6 +252,7 @@ export function DemandBoardPage() {
   function clearFilters() {
     setPickerKey((key) => key + 1)
     setSelection(undefined)
+    setHasLocationDraft(false)
     setAppliedSelection(undefined)
     setAcademicYear('')
     setAppliedAcademicYear('')
@@ -311,23 +261,22 @@ export function DemandBoardPage() {
     setStatus('OPEN')
     setFilterError(undefined)
     setReturnNotice(undefined)
-    pendingCreateJump.current = false
-    resetCreationFlow()
+    resetOperatorResults()
     setSearchParams({}, { replace: true })
     void loadDemands(undefined, '', 'newest', 0)
   }
 
-  async function checkOperators(page: number) {
-    if (!appliedSelection) return
+  async function checkOperators(
+    nextSelection: DemandLocationSelection,
+    page: number,
+  ) {
     const request = ++operatorRequest.current
     setCheckingOperators(true)
     setOperatorError(undefined)
-    setShowCreateForm(false)
-    setAccessError(undefined)
     try {
       const result = await findOperators(
-        appliedSelection.school.id,
-        appliedSelection.neighborhood.id,
+        nextSelection.school.id,
+        nextSelection.neighborhood.id,
         page,
       )
       if (request === operatorRequest.current) {
@@ -338,7 +287,7 @@ export function DemandBoardPage() {
       if (request === operatorRequest.current) {
         setOperators(undefined)
         setOperatorError(
-          'Mevcut servisler şu anda kontrol edilemiyor. Tekrar deneyebilir veya talebinizi oluşturabilirsiniz.',
+          'Mevcut servisler şu anda yüklenemiyor. Tekrar deneyin.',
         )
       }
     } finally {
@@ -346,82 +295,11 @@ export function DemandBoardPage() {
     }
   }
 
-  async function beginCreate() {
-    if (!appliedSelection) return
-    setAccessError(undefined)
-    try {
-      const user = await currentUser()
-      if (user.role !== 'PARENT') {
-        setAccessError(
-          'Talep oluşturma ve destek işlemleri yalnızca veli hesabıyla yapılabilir.',
-        )
-        return
-      }
-      setShowCreateForm(true)
-    } catch (error) {
-      if (error instanceof ApiError && error.problem.status === 401) {
-        const next = createReturnPath(
-          location.pathname,
-          appliedSelection,
-          appliedAcademicYear,
-        )
-        void navigate(`/parent/login?next=${encodeURIComponent(next)}`)
-        return
-      }
-      setAccessError('Oturum bilgisi kontrol edilemedi. Tekrar deneyin.')
-    }
-  }
-
-  async function submitCreate(values: SupportValues) {
-    if (!appliedSelection) return
-    try {
-      const response = await createDemand(
-        appliedSelection.school.id,
-        appliedSelection.neighborhood.id,
-        values,
-        appliedAcademicYear || undefined,
-      )
-      void navigate(`/demands/${response.demand.id}`, {
-        state: {
-          notice: response.created
-            ? 'Talebiniz oluşturuldu.'
-            : response.demand.closureReason === 'INACTIVE'
-              ? 'Bu okul ve mahalle için talep hareketsizlik nedeniyle kapanmış. Talebe katılarak yeniden açabilirsiniz.'
-              : response.demand.status !== 'OPEN'
-                ? 'Bu okul ve mahalle için talep var ancak yeni katılıma kapalı.'
-                : 'Bu okul ve mahalle için zaten bir talep var. Katılmak için “Benim de ihtiyacım var” seçeneğini kullanın.',
-        },
-        viewTransition: typeof document.startViewTransition === 'function',
-      })
-    } catch (error) {
-      if (error instanceof ApiError && error.problem.status === 401) {
-        const next = createReturnPath(
-          location.pathname,
-          appliedSelection,
-          appliedAcademicYear,
-        )
-        void navigate(
-          `/parent/login?next=${encodeURIComponent(next)}&reason=session`,
-        )
-        return
-      }
-      setAccessError(
-        error instanceof ApiError && error.problem.fieldErrors?.academicYear
-          ? 'Bu eğitim yılı için yeni talep açılamıyor. Güncel eğitim yılını seçin.'
-          : error instanceof ApiError
-            ? error.problem.detail
-            : 'Talep oluşturulamadı. Bilgileri koruduk; tekrar deneyin.',
-      )
-    }
-  }
-
   const statusFilter =
     statusFilters.find((item) => item.value === status) ?? statusFilters[1]!
-  // Only the open view decides whether a new demand is needed.
-  const exactDemand =
-    status === 'OPEN' && appliedSelection && demands?.content.length === 1
-      ? demands.content[0]
-      : undefined
+  const createPath = appliedSelection
+    ? createDemandPath(appliedSelection, appliedAcademicYear)
+    : undefined
 
   return (
     <section className="demand-page">
@@ -441,15 +319,14 @@ export function DemandBoardPage() {
             bir talep oluşturun.
           </p>
         </div>
-        {appliedSelection ? (
-          <button
-            aria-label="Yeni talep oluştur: oluşturma bölümüne git"
+        {createPath ? (
+          <Link
             className="button-link demand-create-shortcut"
-            type="button"
-            onClick={() => void showCreateFlow()}
+            to={createPath}
+            viewTransition
           >
             Yeni talep oluştur
-          </button>
+          </Link>
         ) : (
           <a
             className="button-link demand-create-shortcut"
@@ -500,6 +377,7 @@ export function DemandBoardPage() {
         <DemandLocationPicker
           key={pickerKey}
           initialLocation={initialLocation}
+          onLocationDraftChange={setHasLocationDraft}
           onSelectionChange={handleSelectionChange}
         />
 
@@ -550,114 +428,158 @@ export function DemandBoardPage() {
       )}
 
       <div className="demand-board-layout">
-        <section className="demand-board-results" aria-live="polite">
-          <div className="section-heading">
-            <div>
-              <h2>{statusFilter.title}</h2>
-              <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
-            </div>
-            {demands && !loadingDemands && !demandError && (
-              <span className="count-badge">
-                {demands.totalElements} {statusFilter.countLabel}
-              </span>
-            )}
-          </div>
-          <div
-            aria-label="Talep durumuna göre filtrele"
-            className="demand-status-filter"
-            role="group"
-          >
-            {statusFilters.map((item) => (
-              <button
-                aria-pressed={status === item.value}
-                key={item.value}
-                onClick={() => void changeStatus(item.value)}
-                type="button"
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {loadingDemands && <DemandListSkeleton />}
-          {demandError && (
-            <div className="demand-load-error" role="alert">
+        <div className="demand-results-stack">
+          <section className="demand-board-results" aria-live="polite">
+            <div className="section-heading">
               <div>
-                <strong>Talepler yüklenemedi</strong>
-                <p>{demandError}</p>
+                <h2>{statusFilter.title}</h2>
+                <p>
+                  Destek sayıları yalnızca etkin veli katılımlarını gösterir.
+                </p>
               </div>
-              <button
-                className="secondary-button"
-                type="button"
-                onClick={() =>
-                  void loadDemands(
-                    appliedSelection,
-                    appliedAcademicYear,
-                    sort,
-                    demands?.page ?? 0,
-                  )
-                }
-              >
-                Tekrar dene
-              </button>
-            </div>
-          )}
-          {!loadingDemands && demands?.content.length === 0 && (
-            <div className="empty-state demand-empty-state">
-              <h3>{statusFilter.empty}</h3>
-              <p>
-                Yeni talebe geçmeden önce mevcut servis işletmecilerini kontrol
-                edebilirsiniz.
-              </p>
-              {appliedSelection ? (
-                <button
-                  aria-label="Yeni talep oluştur: bu seçimle devam et"
-                  className="button-link"
-                  type="button"
-                  onClick={() => void showCreateFlow()}
-                >
-                  Yeni talep oluştur
-                </button>
-              ) : (
-                <a className="button-link" href="#demand-filters">
-                  Okul ve mahalle seç
-                </a>
+              {demands && !loadingDemands && !demandError && (
+                <span className="count-badge">
+                  {demands.totalElements} {statusFilter.countLabel}
+                </span>
               )}
             </div>
-          )}
-          {!loadingDemands && demands && demands.content.length > 0 && (
-            <div className="demand-summary-list">
-              {demands.content.map((demand) => (
-                <DemandSummaryCard demand={demand} key={demand.id} />
+            <div
+              aria-label="Talep durumuna göre filtrele"
+              className="demand-status-filter"
+              role="group"
+            >
+              {statusFilters.map((item) => (
+                <button
+                  aria-pressed={status === item.value}
+                  key={item.value}
+                  onClick={() => void changeStatus(item.value)}
+                  type="button"
+                >
+                  {item.label}
+                </button>
               ))}
             </div>
+
+            {loadingDemands && <DemandListSkeleton />}
+            {demandError && (
+              <div className="demand-load-error" role="alert">
+                <div>
+                  <strong>Talepler yüklenemedi</strong>
+                  <p>{demandError}</p>
+                </div>
+                <button
+                  className="secondary-button"
+                  type="button"
+                  onClick={() =>
+                    void loadDemands(
+                      appliedSelection,
+                      appliedAcademicYear,
+                      sort,
+                      demands?.page ?? 0,
+                    )
+                  }
+                >
+                  Tekrar dene
+                </button>
+              </div>
+            )}
+            {!loadingDemands && demands?.content.length === 0 && (
+              <div className="empty-state demand-empty-state">
+                <h3>{statusFilter.empty}</h3>
+                <p>
+                  Yeni talebe geçmeden önce mevcut servis işletmecilerini
+                  kontrol edebilirsiniz.
+                </p>
+                {appliedSelection ? (
+                  <Link className="button-link" to={createPath!} viewTransition>
+                    Yeni talep oluştur
+                  </Link>
+                ) : (
+                  <a className="button-link" href="#demand-filters">
+                    Okul ve mahalle seç
+                  </a>
+                )}
+              </div>
+            )}
+            {!loadingDemands && demands && demands.content.length > 0 && (
+              <div className="demand-summary-list">
+                {demands.content.map((demand) => (
+                  <DemandSummaryCard demand={demand} key={demand.id} />
+                ))}
+              </div>
+            )}
+            {demands && demands.totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  className="secondary-button"
+                  disabled={demands.page === 0 || loadingDemands}
+                  type="button"
+                  onClick={() => void changeDemandPage(demands.page - 1)}
+                >
+                  Önceki sayfa
+                </button>
+                <span>
+                  Sayfa {demands.page + 1} / {demands.totalPages}
+                </span>
+                <button
+                  className="secondary-button"
+                  disabled={
+                    demands.page + 1 >= demands.totalPages || loadingDemands
+                  }
+                  type="button"
+                  onClick={() => void changeDemandPage(demands.page + 1)}
+                >
+                  Sonraki sayfa
+                </button>
+              </div>
+            )}
+          </section>
+
+          {appliedSelection && (
+            <section className="demand-board-results" aria-live="polite">
+              <div className="section-heading">
+                <div>
+                  <h2>Eşleşen servis işletmecileri</h2>
+                  <p>
+                    Seçtiğiniz okul ve mahalle için görünür işletmeciler ayrı
+                    olarak yüklenir.
+                  </p>
+                </div>
+                <Link className="button-link" to={createPath!} viewTransition>
+                  Yeni talep oluştur
+                </Link>
+              </div>
+              {checkingOperators && (
+                <p className="inline-loading" role="status">
+                  <span className="loading-dot" aria-hidden="true" /> Servisler
+                  yükleniyor…
+                </p>
+              )}
+              {operatorError && (
+                <div className="demand-load-error" role="alert">
+                  <p>{operatorError}</p>
+                  <button
+                    className="secondary-button"
+                    type="button"
+                    onClick={() =>
+                      void checkOperators(appliedSelection, operatorPage)
+                    }
+                  >
+                    Tekrar dene
+                  </button>
+                </div>
+              )}
+              {!checkingOperators && operators && (
+                <OperatorCheckResult
+                  operators={operators}
+                  onPageChange={(page) =>
+                    void checkOperators(appliedSelection, page)
+                  }
+                />
+              )}
+            </section>
           )}
-          {demands && demands.totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="secondary-button"
-                disabled={demands.page === 0 || loadingDemands}
-                type="button"
-                onClick={() => void changeDemandPage(demands.page - 1)}
-              >
-                Önceki sayfa
-              </button>
-              <span>
-                Sayfa {demands.page + 1} / {demands.totalPages}
-              </span>
-              <button
-                className="secondary-button"
-                disabled={
-                  demands.page + 1 >= demands.totalPages || loadingDemands
-                }
-                type="button"
-                onClick={() => void changeDemandPage(demands.page + 1)}
-              >
-                Sonraki sayfa
-              </button>
-            </div>
-          )}
-        </section>
+        </div>
 
         <aside
           className="demand-board-guidance"
@@ -690,117 +612,11 @@ export function DemandBoardPage() {
           </section>
         </aside>
       </div>
-
-      {appliedSelection &&
-        status === 'OPEN' &&
-        !loadingDemands &&
-        !demandError && (
-          <section
-            className="demand-create-panel"
-            id="demand-create-panel"
-            aria-labelledby="create-demand-title"
-          >
-            {exactDemand ? (
-              <div className="existing-demand-callout">
-                <div>
-                  <h2 id="create-demand-title" tabIndex={-1}>
-                    Bu okul ve mahalle için zaten bir talep var
-                  </h2>
-                </div>
-                <Link
-                  className="button-link"
-                  to={`/demands/${exactDemand.id}`}
-                  viewTransition
-                >
-                  Mevcut talebe git
-                </Link>
-              </div>
-            ) : (
-              <>
-                <div className="section-heading">
-                  <div>
-                    <h2 id="create-demand-title" tabIndex={-1}>
-                      Servise mi ihtiyacınız var?
-                    </h2>
-                  </div>
-                  {!operators && !showCreateForm && (
-                    <button
-                      className="primary-button"
-                      disabled={checkingOperators}
-                      type="button"
-                      onClick={() => void checkOperators(0)}
-                    >
-                      {checkingOperators
-                        ? 'Servisler kontrol ediliyor…'
-                        : 'Mevcut servisleri kontrol et'}
-                    </button>
-                  )}
-                </div>
-                {operatorError && !showCreateForm && (
-                  <div className="demand-load-error" role="alert">
-                    <p>{operatorError}</p>
-                    <div className="demand-error-actions">
-                      <button
-                        className="secondary-button"
-                        type="button"
-                        onClick={() => void checkOperators(operatorPage)}
-                      >
-                        Tekrar dene
-                      </button>
-                      <button
-                        className="primary-button"
-                        type="button"
-                        onClick={() => void beginCreate()}
-                      >
-                        Yine de talep oluştur
-                      </button>
-                    </div>
-                  </div>
-                )}
-                {operators && (
-                  <OperatorCheckResult
-                    operators={operators}
-                    onPageChange={(page) => void checkOperators(page)}
-                  />
-                )}
-                {operators && !showCreateForm && (
-                  <button
-                    className="primary-button demand-continue-button"
-                    type="button"
-                    onClick={() => void beginCreate()}
-                  >
-                    {operators.totalElements > 0
-                      ? 'Yine de servise ihtiyacım var'
-                      : 'Yeni talep oluştur'}
-                  </button>
-                )}
-                {accessError && (
-                  <div className="form-error" role="alert">
-                    {accessError}
-                  </div>
-                )}
-                {showCreateForm && (
-                  <div className="demand-inline-form">
-                    <h3>İhtiyacınızı ekleyin</h3>
-
-                    <DemandSupportForm
-                      busyLabel="Talep oluşturuluyor…"
-                      submitLabel="Talebi ve desteğimi oluştur"
-                      onCancel={() => setShowCreateForm(false)}
-                      onSubmit={submitCreate}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </section>
-        )}
     </section>
   )
 }
 
-function createReturnPath(
-  pathname: string,
+function createDemandPath(
   selection: DemandLocationSelection,
   academicYear: string,
 ) {
@@ -808,10 +624,9 @@ function createReturnPath(
     schoolId: selection.school.id,
     pickupDistrictId: String(selection.pickupDistrict.id),
     neighborhoodId: String(selection.neighborhood.id),
-    intent: 'create',
   })
   if (academicYear) parameters.set('academicYear', academicYear)
-  return `${pathname}?${parameters.toString()}`
+  return `/demands/new?${parameters.toString()}`
 }
 
 function OperatorCheckResult({

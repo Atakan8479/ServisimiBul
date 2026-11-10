@@ -19,22 +19,14 @@ test('keeps a prefilled mobile selection while starting creation from a populate
   await expect(
     page.getByText('1 karşılanan talep', { exact: true }),
   ).toBeVisible()
-  await page
-    .getByRole('button', {
-      name: 'Yeni talep oluştur: oluşturma bölümüne git',
-    })
-    .click()
+  await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
 
-  await expect(page.getByRole('button', { name: 'Açık' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  )
+  await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
   await expect(
-    page.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
   ).toBeVisible()
-  await expect(
-    page.getByRole('heading', { name: 'Servise mi ihtiyacınız var?' }),
-  ).toBeFocused()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await expect(page.getByLabel('Servis alınacak mahalle')).toHaveValue('201')
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -62,15 +54,15 @@ test('parent creates and manages an anonymous demand after checking operators', 
     page.getByRole('heading', { name: 'Bu seçim için açık talep yok' }),
   ).toBeVisible()
 
-  await page
-    .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-    .click()
   await expect(
     page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
   ).toBeVisible()
-  await page
-    .getByRole('button', { name: 'Yeni talep oluştur', exact: true })
-    .click()
+  await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
+  await expect(
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+  ).toBeVisible()
+  await page.getByLabel('Uygun servis bulamıyorum').check()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
   await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
@@ -112,17 +104,22 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .getByRole('textbox', { name: 'Şifre', exact: true })
     .fill('parent password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
-  await expect(page.getByText(/Seçiminiz korundu/)).toBeVisible()
-  await page
-    .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-    .click()
-  await page
-    .getByRole('button', { name: 'Yeni talep oluştur', exact: true })
-    .click()
-  await page.getByLabel('Uygun servis bulamıyorum').check()
-  await page
-    .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
-    .click()
+  await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
+  const confirmation = page.getByRole('dialog', { name: 'Talebi onaylayın' })
+  await expect(confirmation).toBeVisible()
+  await expect(confirmation.getByText('Örnek Okulu')).toBeVisible()
+  await expect(confirmation.getByText('Acıbadem, Üsküdar')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(confirmation).toBeHidden()
+  await expect(
+    page.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+  ).toBeFocused()
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
+  await expect(confirmation).toBeVisible()
+  await confirmation.getByRole('button', { name: 'Talebi oluştur' }).click()
 
   await expect(page.getByText('Talebiniz oluşturuldu.')).toBeVisible()
   await expect(page.getByText('Destekliyorsunuz')).toBeVisible()

@@ -13,8 +13,20 @@ import { routes } from '../../app/router'
 import { server } from '../../test/server'
 import type { DemandFeedbackList } from './demand-api'
 
-afterEach(() => resetCsrfToken())
-beforeEach(() => server.use(emptyCommentsHandler()))
+afterEach(() => {
+  resetCsrfToken()
+  sessionStorage.clear()
+})
+beforeEach(() =>
+  server.use(
+    emptyCommentsHandler(),
+    emptyOperatorHandler(),
+    guestHandler(),
+    http.get('/api/v1/notifications/unread-count', () =>
+      HttpResponse.json({ unreadCount: 0 }),
+    ),
+  ),
+)
 
 describe('public demand board', () => {
   it('hydrates exact school and neighborhood filters and links to the existing demand', async () => {
@@ -46,12 +58,13 @@ describe('public demand board', () => {
       screen.getByText('1', { selector: '.demand-supporter-count strong' }),
     ).toBeInTheDocument()
     expect(screen.getByText('Sabah').closest('div')).toHaveTextContent('Sabah1')
+    fireEvent.click(screen.getByRole('button', { name: 'Önizlemeyi aç' }))
     expect(
-      screen.getByRole('link', { name: 'Talebi görüntüle' }),
-    ).toHaveAttribute('href', `/demands/${demandId}`)
-    expect(
-      screen.getByText('Bu okul ve mahalle için zaten bir talep var'),
+      await screen.findByRole('dialog', { name: school.name }),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Tüm detayları görüntüle' }),
+    ).toHaveAttribute('href', `/demands/${demandId}`)
     expect(requests.at(-1)?.get('neighborhoodId')).toBe('201')
   })
 
@@ -79,13 +92,18 @@ describe('public demand board', () => {
 
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
-    )
     expect(
       await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' }),
     ).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
+    fireEvent.click(
+      screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
+    )
+    await screen.findByRole('heading', { name: 'Yeni servis talebi oluştur' })
+    await waitForLocationHydration()
+    fireEvent.click(await screen.findByLabelText('Uygun servis bulamıyorum'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
 
     expect(
       await screen.findByRole('heading', {
@@ -124,7 +142,13 @@ describe('public demand board', () => {
     await openCreateForm()
     fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
     fireEvent.click(
-      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
+    const confirmation = await screen.findByRole('dialog', {
+      name: 'Talebi onaylayın',
+    })
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'Talebi oluştur' }),
     )
 
     expect(
@@ -150,24 +174,21 @@ describe('public demand board', () => {
 
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
-    )
-
     expect(
       await screen.findByText(
-        'Mevcut servisler şu anda kontrol edilemiyor. Tekrar deneyebilir veya talebinizi oluşturabilirsiniz.',
+        'Mevcut servisler şu anda yüklenemiyor. Tekrar deneyin.',
       ),
     ).toBeInTheDocument()
     expect(
       screen.queryByText('Görünür servis bulunamadı'),
     ).not.toBeInTheDocument()
     fireEvent.click(
-      screen.getByRole('button', { name: 'Yine de talep oluştur' }),
+      screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
     )
     const formHeading = await screen.findByRole('heading', {
-      name: 'İhtiyacınızı ekleyin',
+      name: 'Servis ihtiyacınız',
     })
+    await waitForLocationHydration()
     const afternoon = screen.getByLabelText(/^Öğleden sonra/)
     const reason = screen.getByLabelText('Uygun servis bulamıyorum')
     fireEvent.click(afternoon)
@@ -180,11 +201,8 @@ describe('public demand board', () => {
     expect(afternoon).toBeChecked()
     expect(reason).toBeChecked()
     expect(
-      screen.queryByRole('button', { name: 'Tekrar dene' }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole('button', { name: 'Mevcut servisleri kontrol et' }),
-    ).not.toBeInTheDocument()
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    ).toBeInTheDocument()
   })
 
   it('keeps demand creation parent-only after the operator check', async () => {
@@ -197,18 +215,21 @@ describe('public demand board', () => {
 
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
-    )
     await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' })
-    fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
+    fireEvent.click(
+      screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
+    )
+    await screen.findByRole('heading', { name: 'Yeni servis talebi oluştur' })
+    await waitForLocationHydration()
+    fireEvent.click(await screen.findByLabelText('Uygun servis bulamıyorum'))
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
 
     expect(
       await screen.findByText(/yalnızca veli hesabıyla yapılabilir/),
     ).toBeInTheDocument()
-    expect(
-      screen.queryByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('does not silently add support when creation finds an existing demand', async () => {
@@ -232,7 +253,13 @@ describe('public demand board', () => {
     await openCreateForm()
     fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
     fireEvent.click(
-      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
+    const confirmation = await screen.findByRole('dialog', {
+      name: 'Talebi onaylayın',
+    })
+    fireEvent.click(
+      within(confirmation).getByRole('button', { name: 'Talebi oluştur' }),
     )
 
     expect(
@@ -327,7 +354,12 @@ describe('demand board regression cases', () => {
     await openCreateForm()
     fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
     fireEvent.click(
-      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: 'Talebi onaylayın' }),
+      ).getByRole('button', { name: 'Talebi oluştur' }),
     )
     expect(
       await screen.findByText(/talep var ancak yeni katılıma kapalı/),
@@ -353,7 +385,12 @@ describe('demand board regression cases', () => {
     await openCreateForm()
     fireEvent.click(screen.getByLabelText('Uygun servis bulamıyorum'))
     fireEvent.click(
-      screen.getByRole('button', { name: 'Talebi ve desteğimi oluştur' }),
+      screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+    )
+    fireEvent.click(
+      within(
+        await screen.findByRole('dialog', { name: 'Talebi onaylayın' }),
+      ).getByRole('button', { name: 'Talebi oluştur' }),
     )
 
     expect(
@@ -361,6 +398,73 @@ describe('demand board regression cases', () => {
         'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
       ),
     ).toBeInTheDocument()
+  })
+})
+
+describe('demand location filter regression', () => {
+  it('distinguishes partial, complete, and cleared location selections', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/demands', ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(demandPage([]))
+      }),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
+    fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${school.name} okulunu seç`,
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('Servis alınacak ilçe')).not.toBeDisabled(),
+    )
+    fireEvent.change(screen.getByLabelText('Servis alınacak ilçe'), {
+      target: { value: '11' },
+    })
+    await screen.findByRole('option', { name: 'Acıbadem' })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+
+    expect(
+      screen.getByText(
+        'Okul, servis alınacak ilçe ve mahalle seçimlerini tamamlayın.',
+      ),
+    ).toBeInTheDocument()
+    expect(requests).toHaveLength(1)
+    expect(screen.getByLabelText('Servis alınacak ilçe')).toHaveValue('11')
+
+    fireEvent.change(screen.getByLabelText('Servis alınacak mahalle'), {
+      target: { value: '201' },
+    })
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2027' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await waitFor(() => expect(requests).toHaveLength(2))
+    expect(requests[1].get('schoolId')).toBe(school.id)
+    expect(requests[1].get('neighborhoodId')).toBe('201')
+    expect(requests[1].get('academicYear')).toBe('2026-2027')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].has('schoolId')).toBe(false)
+    expect(requests[2].has('neighborhoodId')).toBe(false)
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('')
   })
 })
 
@@ -445,7 +549,7 @@ describe('demand board status filters', () => {
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
     expect(
-      screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+      await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' }),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Kapalı' }))
@@ -457,20 +561,14 @@ describe('demand board status filters', () => {
     expect(statuses.at(-1)).toBe('CLOSED')
 
     fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Yeni talep oluştur: bu seçimle devam et',
-      }),
+      screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
     )
     expect(
-      await screen.findByRole('button', {
-        name: 'Mevcut servisleri kontrol et',
+      await screen.findByRole('heading', {
+        name: 'Yeni servis talebi oluştur',
       }),
     ).toBeInTheDocument()
-    expect(statuses.at(-1)).toBeNull()
-    expect(screen.getByRole('button', { name: 'Açık' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    )
+    expect(statuses.at(-1)).toBe('CLOSED')
   })
 
   it('starts creation from All without losing a populated selection', async () => {
@@ -497,20 +595,19 @@ describe('demand board status filters', () => {
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
     fireEvent.click(screen.getByRole('button', { name: 'Tümü' }))
     expect(
-      await screen.findByRole('link', { name: 'Talebi görüntüle' }),
+      await screen.findByRole('button', { name: 'Önizlemeyi aç' }),
     ).toBeInTheDocument()
 
     fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Yeni talep oluştur: oluşturma bölümüne git',
-      }),
+      screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
     )
     expect(
-      await screen.findByRole('button', {
-        name: 'Mevcut servisleri kontrol et',
+      await screen.findByRole('heading', {
+        name: 'Yeni servis talebi oluştur',
       }),
     ).toBeInTheDocument()
-    expect(statuses.slice(-2)).toEqual(['ALL', null])
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('2026-2027')
+    expect(statuses.at(-1)).toBe('ALL')
   })
 })
 
@@ -1631,14 +1728,28 @@ function problem(status: number, detail: string) {
 
 async function openCreateForm() {
   await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
-  )
   await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' })
-  fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
+  fireEvent.click(
+    screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
+  )
   expect(
-    await screen.findByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
+    await screen.findByRole('heading', { name: 'Servis ihtiyacınız' }),
   ).toBeInTheDocument()
+  await waitForLocationHydration()
+}
+
+async function waitForLocationHydration() {
+  await waitFor(() =>
+    expect(screen.getByLabelText('Servis alınacak mahalle')).toHaveValue('201'),
+  )
+}
+
+function guestHandler() {
+  return http.get('/api/v1/auth/me', () =>
+    HttpResponse.json(problem(401, 'Authentication is required'), {
+      status: 401,
+    }),
+  )
 }
 
 function renderRoute(path: string) {

@@ -4208,6 +4208,109 @@ button:disabled {
   margin-top: 2rem;
 }
 
+.demand-results-stack {
+  display: grid;
+  gap: 2rem;
+  min-width: 0;
+}
+
+.demand-results-stack > .demand-board-results + .demand-board-results {
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-results-stack .section-heading > .button-link {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.demand-summary-card {
+  cursor: pointer;
+}
+
+button.button-link {
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.demand-create-year {
+  max-width: 22rem;
+  margin-top: 1.25rem;
+}
+
+.demand-confirm-dialog,
+.demand-preview-dialog {
+  width: min(38rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  padding: clamp(1.25rem, 4vw, 2rem);
+  overflow: auto;
+  border: 0;
+  border-radius: var(--radius-medium);
+  background: var(--neutral-0);
+  color: var(--navy-950);
+  box-shadow: 0 1.5rem 4rem rgba(10, 28, 48, 0.28);
+}
+
+.demand-confirm-dialog::backdrop,
+.demand-preview-dialog::backdrop {
+  background: rgba(10, 28, 48, 0.58);
+  backdrop-filter: blur(0.25rem);
+}
+
+.demand-confirm-dialog > h2,
+.demand-preview-heading h2,
+.demand-preview-heading p {
+  margin: 0;
+}
+
+.demand-confirm-summary {
+  display: grid;
+  gap: 0;
+  margin: 1.25rem 0;
+}
+
+.demand-confirm-summary > div {
+  display: grid;
+  grid-template-columns: minmax(7.5rem, 0.4fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.demand-confirm-summary dt {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.demand-confirm-summary dd {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.demand-preview-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.demand-preview-heading h2 {
+  margin-top: 0.75rem;
+  font-size: clamp(1.35rem, 4vw, 1.8rem);
+}
+
+.demand-preview-heading p {
+  margin-top: 0.35rem;
+  color: var(--color-muted);
+}
+
+.demand-preview-dialog > .button-link {
+  margin-top: 0;
+}
+
 .demand-board-guidance {
   display: grid;
   gap: 0.75rem;
@@ -4688,6 +4791,23 @@ button:disabled {
   .demand-summary-footer .button-link {
     width: 100%;
     justify-content: center;
+  }
+
+  .demand-results-stack .section-heading,
+  .demand-preview-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .demand-results-stack .section-heading > .button-link,
+  .demand-preview-dialog > .button-link {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .demand-confirm-summary > div {
+    grid-template-columns: 1fr;
+    gap: 0.3rem;
   }
 }
 

@@ -36,6 +36,15 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        path: 'demands/new',
+        handle: { pageTitle: 'Yeni servis talebi' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/demand/DemandCreatePage'))
+            .DemandCreatePage,
+        }),
+      },
+      {
         path: 'demands/:demandId',
         handle: { pageTitle: 'Talep ayrıntısı' },
         HydrateFallback: LoadingPage,

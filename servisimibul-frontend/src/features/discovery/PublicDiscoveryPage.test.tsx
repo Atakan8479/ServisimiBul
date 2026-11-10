@@ -270,7 +270,7 @@ describe('public operator discovery', () => {
     )
     await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
 
-    const expected = `/demands?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=201&intent=create`
+    const expected = `/demands/new?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=201`
     const emptyLink = screen.getByRole('link', {
       name: 'Servis talebi oluştur',
     })
@@ -325,16 +325,14 @@ describe('public operator discovery', () => {
     await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
     fireEvent.click(screen.getByRole('link', { name: 'Servis talebi oluştur' }))
 
-    await waitFor(() => expect(router.state.location.pathname).toBe('/demands'))
     await waitFor(() =>
-      expect(demandRequests.at(-1)?.get('neighborhoodId')).toBe('201'),
+      expect(router.state.location.pathname).toBe('/demands/new'),
     )
-    expect(demandRequests.at(-1)?.get('schoolId')).toBe(school.id)
+    expect(demandRequests).toHaveLength(0)
     expect(router.state.location.search).toContain('pickupDistrictId=11')
-    expect(router.state.location.search).toContain('intent=create')
     expect(
-      await screen.findByRole('button', {
-        name: 'Mevcut servisleri kontrol et',
+      await screen.findByRole('heading', {
+        name: 'Yeni servis talebi oluştur',
       }),
     ).toBeInTheDocument()
   })
