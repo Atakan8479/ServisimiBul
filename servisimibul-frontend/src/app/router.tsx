@@ -194,7 +194,8 @@ const applicationRoutes: RouteObject[] = [
         handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
-          Component: (await import('../features/auth/AuthPages')).LoginPage,
+          Component: (await import('../features/auth/AuthPages'))
+            .SharedLoginPage,
         }),
       },
       {

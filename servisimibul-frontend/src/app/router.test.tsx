@@ -218,6 +218,17 @@ describe('application routes', () => {
       ).toBeInTheDocument()
       expect(router.state.location.pathname).toBe('/login')
       expect(
+        screen.getByRole('heading', { level: 1, name: 'Giriş yap' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('İşletmeci paneline giriş'),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Profilinizi, okul kapsamınızı ve bildirimlerinizi yönetin.',
+        ),
+      ).not.toBeInTheDocument()
+      expect(
         new URLSearchParams(router.state.location.search).get('next'),
       ).toBe('/admin/schools')
 
