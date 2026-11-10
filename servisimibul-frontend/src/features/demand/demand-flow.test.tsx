@@ -344,7 +344,7 @@ describe('demand board status filters', () => {
     expect(requests[0]?.has('status')).toBe(false)
   })
 
-  it('keeps the selection and only offers a new demand in the open view', async () => {
+  it('lets users return to demand creation from a non-open status tab', async () => {
     const statuses: Array<string | null> = []
     server.use(
       ...locationHandlers(),
@@ -373,6 +373,61 @@ describe('demand board status filters', () => {
       screen.queryByRole('button', { name: 'Mevcut servisleri kontrol et' }),
     ).toBeNull()
     expect(statuses.at(-1)).toBe('CLOSED')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
+    expect(
+      await screen.findByRole('button', {
+        name: 'Mevcut servisleri kontrol et',
+      }),
+    ).toBeInTheDocument()
+    expect(statuses.at(-1)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Açık' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+  })
+
+  it('keeps the location and returns to creation from All with closed results', async () => {
+    const statuses: Array<string | null> = []
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/demands', ({ request }) => {
+        const status = new URL(request.url).searchParams.get('status')
+        statuses.push(status)
+        return HttpResponse.json(
+          demandPage(
+            status === 'ALL'
+              ? [
+                  demand({
+                    status: 'ARCHIVED',
+                    closureReason: 'INACTIVE',
+                    closedAt: '2026-10-21T09:00:00Z',
+                  }),
+                ]
+              : [],
+          ),
+        )
+      }),
+    )
+
+    renderRoute(filteredBoardPath)
+    await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
+    fireEvent.click(screen.getByRole('button', { name: 'Tümü' }))
+    expect(
+      await screen.findByRole('link', { name: 'Talebi görüntüle' }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yeni talep oluştur' }))
+    expect(
+      await screen.findByRole('button', {
+        name: 'Mevcut servisleri kontrol et',
+      }),
+    ).toBeInTheDocument()
+    expect(statuses.slice(-2)).toEqual(['ALL', null])
+    expect(screen.getByRole('button', { name: 'Açık' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 })
 
