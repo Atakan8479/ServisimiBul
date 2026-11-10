@@ -1,5 +1,50 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
+
+test('keeps a prefilled mobile selection while starting creation from a populated non-open tab', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.demandCreated = true
+  state.demandClosure = 'FULFILLED'
+  await page.setViewportSize({ width: 320, height: 800 })
+  await installMockApi(page, state)
+  await page.goto(
+    '/demands?schoolId=6de54e65-6e04-4168-a1cb-967a98d7ec12&pickupDistrictId=11&neighborhoodId=201&academicYear=2026-2027&intent=create',
+  )
+
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await page.getByRole('button', { name: 'Karşılandı' }).click()
+  await expect(
+    page.getByText('1 karşılanan talep', { exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole('button', {
+      name: 'Yeni talep oluştur: oluşturma bölümüne git',
+    })
+    .click()
+
+  await expect(page.getByRole('button', { name: 'Açık' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await expect(
+    page.getByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('heading', { name: 'Servise mi ihtiyacınız var?' }),
+  ).toBeFocused()
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+})
 
 test('parent creates and manages an anonymous demand after checking operators', async ({
   page,
@@ -23,7 +68,9 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(
     page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  await page
+    .getByRole('button', { name: 'Yeni talep oluştur', exact: true })
+    .click()
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
   await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
@@ -69,7 +116,9 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page
     .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
     .click()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  await page
+    .getByRole('button', { name: 'Yeni talep oluştur', exact: true })
+    .click()
   await page.getByLabel('Uygun servis bulamıyorum').check()
   await page
     .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })

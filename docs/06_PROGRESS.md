@@ -1,5 +1,11 @@
 # Progress ledger (update only after verification)
 
+## DEMAND-UX complete creation journey — 2026-11-10
+
+- Branch `codex/270-demand-flow` implements issue #270 across the demand board and public discovery: creation is reachable from every status filter, empty states are actionable, status counts are accurate, and school/pickup district/neighborhood/academic year survive filter, discovery, and parent-login transitions.
+- Operator lookup failures now remain distinct from zero results and offer retry or an explicit parent-gated continuation. Existing-demand detection, backend duplicate handling, authorization, lifecycle, authentication state, layouts, and API contracts are unchanged.
+- Frontend Vitest passed 293/293; mocked demand-board Chromium passed 3/3, including a 320 px WCAG 2.2 AA/overflow/focus check. ESLint, TypeScript, Vite build, and `git diff --check` passed. Real full-stack E2E was intentionally not run concurrently with issue #273 work.
+
 ## QA-01 real account/privacy lifecycle evidence — 2026-11-09
 
 - Issue #223 now has a separate real React/Vite → Spring Boot → disposable PostgreSQL 17.4 scenario for enabled parent/operator deactivation, anonymous/admin denial, CSRF failure and retry, multi-session invalidation, concurrent requests, operator discovery removal, shared-demand/third-party preservation, the disabled data-rights gate, and 1440/768/390/320 axe/overflow/keyboard checks.

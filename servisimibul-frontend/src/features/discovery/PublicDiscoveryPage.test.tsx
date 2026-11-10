@@ -261,7 +261,7 @@ describe('public operator discovery', () => {
     renderHome()
     expect(
       screen
-        .queryByRole('link', { name: 'Talep panosuna git', hidden: true })
+        .queryByRole('link', { name: 'Servis talebi oluştur', hidden: true })
         ?.getAttribute('href') ?? '/demands',
     ).toBe('/demands')
     await selectLocation()
@@ -270,28 +270,23 @@ describe('public operator discovery', () => {
     )
     await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
 
-    const expected = `/demands?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=201`
-    const links = screen.getAllByRole('link', { name: 'Talep panosuna git' })
-    const emptyLink = links.find(
-      (link) => link.getAttribute('href') !== '/demands',
-    )
+    const expected = `/demands?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=201&intent=create`
+    const emptyLink = screen.getByRole('link', {
+      name: 'Servis talebi oluştur',
+    })
     expect(emptyLink).toHaveAttribute('href', expected)
     // School district is 10 (Kadıköy) but pickup is 11 (Üsküdar).
     expect(emptyLink?.getAttribute('href')).not.toContain('pickupDistrictId=10')
     // The unrelated promotional link keeps its plain destination.
     expect(
-      links.filter((link) => link.getAttribute('href') === '/demands'),
-    ).toHaveLength(1)
+      screen.getByRole('link', { name: 'Talep panosuna git' }),
+    ).toHaveAttribute('href', '/demands')
 
     // Unsubmitted edits never produce a link for the unexecuted selection.
     fireEvent.change(screen.getByLabelText('Servis alınacak ilçe'), {
       target: { value: '10' },
     })
-    for (const link of screen.getAllByRole('link', {
-      name: 'Talep panosuna git',
-    })) {
-      expect(link.getAttribute('href')).not.toContain('pickupDistrictId=10')
-    }
+    expect(emptyLink.getAttribute('href')).not.toContain('pickupDistrictId=10')
   })
 
   it('restores the empty-result context on the demand board through the deep link', async () => {
@@ -328,10 +323,7 @@ describe('public operator discovery', () => {
       screen.getByRole('button', { name: 'Servis işletmecilerini bul' }),
     )
     await screen.findByRole('heading', { name: 'Henüz bir eşleşme yok' })
-    const emptyLink = screen
-      .getAllByRole('link', { name: 'Talep panosuna git' })
-      .find((link) => link.getAttribute('href') !== '/demands')
-    fireEvent.click(emptyLink!)
+    fireEvent.click(screen.getByRole('link', { name: 'Servis talebi oluştur' }))
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/demands'))
     await waitFor(() =>
@@ -339,7 +331,12 @@ describe('public operator discovery', () => {
     )
     expect(demandRequests.at(-1)?.get('schoolId')).toBe(school.id)
     expect(router.state.location.search).toContain('pickupDistrictId=11')
-    expect(router.state.location.search).not.toContain('intent')
+    expect(router.state.location.search).toContain('intent=create')
+    expect(
+      await screen.findByRole('button', {
+        name: 'Mevcut servisleri kontrol et',
+      }),
+    ).toBeInTheDocument()
   })
 
   it('focuses the error and retries the same discovery selection', async () => {

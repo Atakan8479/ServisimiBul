@@ -35,30 +35,35 @@ const statusFilters: Array<{
   label: string
   title: string
   empty: string
+  countLabel: string
 }> = [
   {
     value: 'ALL',
     label: 'Tümü',
     title: 'Tüm talepler',
     empty: 'Bu seçim için listelenecek talep yok',
+    countLabel: 'talep',
   },
   {
     value: 'OPEN',
     label: 'Açık',
     title: 'Açık servis talepleri',
     empty: 'Bu seçim için açık talep yok',
+    countLabel: 'açık talep',
   },
   {
     value: 'FULFILLED',
     label: 'Karşılandı',
     title: 'Karşılanan talepler',
     empty: 'Bu seçim için karşılanan talep yok',
+    countLabel: 'karşılanan talep',
   },
   {
     value: 'CLOSED',
     label: 'Kapalı',
     title: 'Hareketsizlik nedeniyle kapanan talepler',
     empty: 'Bu seçim için kapanan talep yok',
+    countLabel: 'kapalı talep',
   },
 ]
 
@@ -94,6 +99,7 @@ export function DemandBoardPage() {
   const demandRequest = useRef(0)
   const operatorRequest = useRef(0)
   const hydratedInitialSelection = useRef(false)
+  const pendingCreateJump = useRef(searchParams.get('intent') === 'create')
 
   const initialLocation = useMemo<InitialDemandLocation | undefined>(() => {
     const schoolId = searchParams.get('schoolId')
@@ -192,6 +198,7 @@ export function DemandBoardPage() {
         hydratedInitialSelection.current = true
         setAppliedSelection(nextSelection)
         if (searchParams.get('intent') === 'create') {
+          pendingCreateJump.current = true
           setReturnNotice(
             'Seçiminiz korundu. Devam etmeden önce mevcut servisleri yeniden kontrol edin.',
           )
@@ -252,6 +259,43 @@ export function DemandBoardPage() {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, 0)
   }
 
+  const focusCreatePanel = useCallback(() => {
+    const heading = document.getElementById('create-demand-title')
+    if (!heading) return
+    pendingCreateJump.current = false
+    heading.focus()
+    heading.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }, [])
+
+  async function showCreateFlow() {
+    if (!appliedSelection) return
+    pendingCreateJump.current = true
+    if (statusRef.current !== 'OPEN') {
+      await changeStatus('OPEN')
+      return
+    }
+    focusCreatePanel()
+  }
+
+  useEffect(() => {
+    if (
+      pendingCreateJump.current &&
+      status === 'OPEN' &&
+      !loadingDemands &&
+      !demandError &&
+      appliedSelection
+    ) {
+      focusCreatePanel()
+    }
+  }, [
+    appliedSelection,
+    demandError,
+    demands,
+    focusCreatePanel,
+    loadingDemands,
+    status,
+  ])
+
   async function changeDemandPage(page: number) {
     await loadDemands(appliedSelection, appliedAcademicYear, sort, page)
   }
@@ -267,6 +311,7 @@ export function DemandBoardPage() {
     setStatus('OPEN')
     setFilterError(undefined)
     setReturnNotice(undefined)
+    pendingCreateJump.current = false
     resetCreationFlow()
     setSearchParams({}, { replace: true })
     void loadDemands(undefined, '', 'newest', 0)
@@ -396,12 +441,23 @@ export function DemandBoardPage() {
             bir talep oluşturun.
           </p>
         </div>
-        <a
-          className="button-link demand-create-shortcut"
-          href="#demand-filters"
-        >
-          Yeni talep oluştur
-        </a>
+        {appliedSelection ? (
+          <button
+            aria-label="Yeni talep oluştur: oluşturma bölümüne git"
+            className="button-link demand-create-shortcut"
+            type="button"
+            onClick={() => void showCreateFlow()}
+          >
+            Yeni talep oluştur
+          </button>
+        ) : (
+          <a
+            className="button-link demand-create-shortcut"
+            href="#demand-filters"
+          >
+            Yeni talep oluştur
+          </a>
+        )}
       </header>
 
       <aside className="demand-board-notice" aria-label="Talep panosu bilgisi">
@@ -418,10 +474,10 @@ export function DemandBoardPage() {
             işletmeciyle ayrıca teyit edin.
           </p>
         </div>
-        {demands && (
+        {demands && !loadingDemands && !demandError && (
           <p className="demand-board-total">
             <strong>{demands.totalElements}</strong>
-            <span>açık talep</span>
+            <span>{statusFilter.countLabel}</span>
           </p>
         )}
       </aside>
@@ -500,8 +556,10 @@ export function DemandBoardPage() {
               <h2>{statusFilter.title}</h2>
               <p>Destek sayıları yalnızca etkin veli katılımlarını gösterir.</p>
             </div>
-            {demands && !loadingDemands && (
-              <span className="count-badge">{demands.totalElements} talep</span>
+            {demands && !loadingDemands && !demandError && (
+              <span className="count-badge">
+                {demands.totalElements} {statusFilter.countLabel}
+              </span>
             )}
           </div>
           <div
@@ -551,9 +609,20 @@ export function DemandBoardPage() {
                 Yeni talebe geçmeden önce mevcut servis işletmecilerini kontrol
                 edebilirsiniz.
               </p>
-              <a className="button-link" href="#demand-filters">
-                Seçimi güncelle
-              </a>
+              {appliedSelection ? (
+                <button
+                  aria-label="Yeni talep oluştur: bu seçimle devam et"
+                  className="button-link"
+                  type="button"
+                  onClick={() => void showCreateFlow()}
+                >
+                  Yeni talep oluştur
+                </button>
+              ) : (
+                <a className="button-link" href="#demand-filters">
+                  Okul ve mahalle seç
+                </a>
+              )}
             </div>
           )}
           {!loadingDemands && demands && demands.content.length > 0 && (
@@ -628,12 +697,13 @@ export function DemandBoardPage() {
         !demandError && (
           <section
             className="demand-create-panel"
+            id="demand-create-panel"
             aria-labelledby="create-demand-title"
           >
             {exactDemand ? (
               <div className="existing-demand-callout">
                 <div>
-                  <h2 id="create-demand-title">
+                  <h2 id="create-demand-title" tabIndex={-1}>
                     Bu okul ve mahalle için zaten bir talep var
                   </h2>
                 </div>
@@ -649,7 +719,7 @@ export function DemandBoardPage() {
               <>
                 <div className="section-heading">
                   <div>
-                    <h2 id="create-demand-title">
+                    <h2 id="create-demand-title" tabIndex={-1}>
                       Servise mi ihtiyacınız var?
                     </h2>
                   </div>
@@ -668,14 +738,29 @@ export function DemandBoardPage() {
                 </div>
                 {operatorError && (
                   <div className="demand-load-error" role="alert">
-                    <p>{operatorError}</p>
-                    <button
-                      className="secondary-button"
-                      type="button"
-                      onClick={() => void checkOperators(operatorPage)}
-                    >
-                      Tekrar dene
-                    </button>
+                    <div>
+                      <p>{operatorError}</p>
+                      <p>
+                        Kontrol tamamlanamadı; talebinizi yine de
+                        oluşturabilirsiniz.
+                      </p>
+                    </div>
+                    <div className="demand-error-actions">
+                      <button
+                        className="secondary-button"
+                        type="button"
+                        onClick={() => void checkOperators(operatorPage)}
+                      >
+                        Tekrar dene
+                      </button>
+                      <button
+                        className="primary-button"
+                        type="button"
+                        onClick={() => void beginCreate()}
+                      >
+                        Yine de talep oluştur
+                      </button>
+                    </div>
                   </div>
                 )}
                 {operators && (
