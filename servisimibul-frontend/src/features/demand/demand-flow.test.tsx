@@ -155,7 +155,9 @@ describe('public demand board', () => {
     )
 
     expect(
-      await screen.findByText(/Mevcut servisler kontrol edilemedi/),
+      await screen.findByText(
+        'Mevcut servisler şu anda kontrol edilemiyor. Tekrar deneyebilir veya talebinizi oluşturabilirsiniz.',
+      ),
     ).toBeInTheDocument()
     expect(
       screen.queryByText('Görünür servis bulunamadı'),
@@ -163,9 +165,26 @@ describe('public demand board', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Yine de talep oluştur' }),
     )
+    const formHeading = await screen.findByRole('heading', {
+      name: 'İhtiyacınızı ekleyin',
+    })
+    const afternoon = screen.getByLabelText(/^Öğleden sonra/)
+    const reason = screen.getByLabelText('Uygun servis bulamıyorum')
+    fireEvent.click(afternoon)
+    fireEvent.click(reason)
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2027-2028' },
+    })
+
+    expect(formHeading).toBeInTheDocument()
+    expect(afternoon).toBeChecked()
+    expect(reason).toBeChecked()
     expect(
-      await screen.findByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
-    ).toBeInTheDocument()
+      screen.queryByRole('button', { name: 'Tekrar dene' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Mevcut servisleri kontrol et' }),
+    ).not.toBeInTheDocument()
   })
 
   it('keeps demand creation parent-only after the operator check', async () => {

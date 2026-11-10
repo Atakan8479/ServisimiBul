@@ -338,7 +338,7 @@ export function DemandBoardPage() {
       if (request === operatorRequest.current) {
         setOperators(undefined)
         setOperatorError(
-          'Mevcut servisler kontrol edilemedi. Yeni talebe geçmeden önce tekrar deneyin.',
+          'Mevcut servisler şu anda kontrol edilemiyor. Tekrar deneyebilir veya talebinizi oluşturabilirsiniz.',
         )
       }
     } finally {
@@ -723,7 +723,7 @@ export function DemandBoardPage() {
                       Servise mi ihtiyacınız var?
                     </h2>
                   </div>
-                  {!operators && (
+                  {!operators && !showCreateForm && (
                     <button
                       className="primary-button"
                       disabled={checkingOperators}
@@ -736,15 +736,9 @@ export function DemandBoardPage() {
                     </button>
                   )}
                 </div>
-                {operatorError && (
+                {operatorError && !showCreateForm && (
                   <div className="demand-load-error" role="alert">
-                    <div>
-                      <p>{operatorError}</p>
-                      <p>
-                        Kontrol tamamlanamadı; talebinizi yine de
-                        oluşturabilirsiniz.
-                      </p>
-                    </div>
+                    <p>{operatorError}</p>
                     <div className="demand-error-actions">
                       <button
                         className="secondary-button"
