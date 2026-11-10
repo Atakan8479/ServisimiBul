@@ -189,6 +189,16 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        // Shared (non-parent-only) login; admin session expiry lands here.
+        path: 'login',
+        handle: { pageTitle: 'Giriş' },
+        HydrateFallback: LoadingPage,
+        lazy: async () => ({
+          Component: (await import('../features/auth/AuthPages'))
+            .SharedLoginPage,
+        }),
+      },
+      {
         path: 'privacy/notice',
         handle: { pageTitle: 'Gizlilik ve kişisel veriler' },
         HydrateFallback: LoadingPage,
@@ -443,9 +453,7 @@ async function adminLoader({ request }: LoaderFunctionArgs) {
       const url = new URL(request.url)
       const next = `${url.pathname}${url.search}`
       const reason = error.sessionExpired ? '&reason=session' : ''
-      throw redirect(
-        `/operator/login?next=${encodeURIComponent(next)}${reason}`,
-      )
+      throw redirect(`/login?next=${encodeURIComponent(next)}${reason}`)
     }
     throw error
   }

@@ -2,6 +2,11 @@ import { z } from 'zod'
 import { ApiError, apiRequest, resetCsrfToken } from '../../api/client'
 
 const AUTH_ROLE_KEY = 'servisimibul.auth-role'
+// In-memory cross-tab signal for login/logout; carries no data and stores nothing.
+const authChannel =
+  typeof BroadcastChannel === 'function'
+    ? new BroadcastChannel('servisimibul.auth')
+    : undefined
 export const AUTH_ROLE_CHANGED_EVENT = 'servisimibul:auth-role-changed'
 
 export const authUserSchema = z.object({
@@ -78,6 +83,7 @@ export async function changePassword(
   })
   resetCsrfToken()
   clearKnownAuthRole()
+  announceAuthChange()
 }
 
 export async function login(request: LoginRequest): Promise<AuthUser> {
@@ -88,6 +94,7 @@ export async function login(request: LoginRequest): Promise<AuthUser> {
   })
   resetCsrfToken()
   setKnownAuthRole(user.role)
+  announceAuthChange()
   return user
 }
 
@@ -108,12 +115,20 @@ export async function currentUser(): Promise<AuthUser> {
 }
 
 export async function logout(): Promise<void> {
-  await apiRequest('/auth/logout', {
-    method: 'POST',
-    requiresSession: true,
-  })
+  try {
+    await apiRequest('/auth/logout', {
+      method: 'POST',
+      requiresSession: true,
+    })
+  } catch (error) {
+    if (error instanceof ApiError && error.sessionExpired) {
+      clearKnownAuthRole()
+    }
+    throw error
+  }
   resetCsrfToken()
   clearKnownAuthRole()
+  announceAuthChange()
 }
 
 export async function logoutAllDevices(): Promise<void> {
@@ -123,6 +138,7 @@ export async function logoutAllDevices(): Promise<void> {
   })
   resetCsrfToken()
   clearKnownAuthRole()
+  announceAuthChange()
 }
 
 export async function deactivateAccount(): Promise<void> {
@@ -132,6 +148,7 @@ export async function deactivateAccount(): Promise<void> {
   })
   resetCsrfToken()
   clearKnownAuthRole()
+  announceAuthChange()
 }
 
 export function requestEmailChange(email: string): Promise<void> {
@@ -149,6 +166,63 @@ export async function confirmEmailChange(token: string): Promise<void> {
   })
   resetCsrfToken()
   clearKnownAuthRole()
+  announceAuthChange()
+}
+
+let authGeneration = 0
+let authCheck: { generation: number; promise: Promise<void> } | undefined
+
+/**
+ * Re-reads the server session for navigation display only (never authorization).
+ * Concurrent calls share one request; a result is dropped when login/logout
+ * changed the cached role while it was in flight. 401 means guest; other
+ * failures reject and leave the cached role untouched.
+ */
+export function refreshAuthRole(): Promise<void> {
+  if (authCheck?.generation === authGeneration) return authCheck.promise
+  const generation = authGeneration
+  const promise = apiRequest('/auth/me', {
+    requiresSession: true,
+    schema: authUserSchema,
+  })
+    .then(
+      (user) => {
+        if (generation === authGeneration) setKnownAuthRole(user.role)
+      },
+      (error: unknown) => {
+        if (generation !== authGeneration) return
+        if (error instanceof ApiError && error.problem.status === 401) {
+          clearKnownAuthRole()
+          return
+        }
+        throw error
+      },
+    )
+    .finally(() => {
+      if (authCheck?.promise === promise) authCheck = undefined
+    })
+  authCheck = { generation, promise }
+  return promise
+}
+
+/** True once this page has a server answer or a login/logout result. */
+export function authStateKnown(): boolean {
+  return authGeneration > 0
+}
+
+export function resetAuthStateForTests(): void {
+  authGeneration = 0
+  authCheck = undefined
+}
+
+/** Runs the listener when another tab of this browser logs in or out. */
+export function onAuthChangedInOtherTab(listener: () => void): () => void {
+  authChannel?.addEventListener('message', listener)
+  return () => authChannel?.removeEventListener('message', listener)
+}
+
+function announceAuthChange(): void {
+  authChannel?.postMessage('changed')
 }
 
 export function knownAuthRole(): AuthRole | undefined {
@@ -159,11 +233,13 @@ export function knownAuthRole(): AuthRole | undefined {
 }
 
 export function clearKnownAuthRole(): void {
+  authGeneration += 1
   window.sessionStorage.removeItem(AUTH_ROLE_KEY)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
 
 function setKnownAuthRole(role: AuthRole): void {
+  authGeneration += 1
   window.sessionStorage.setItem(AUTH_ROLE_KEY, role)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }

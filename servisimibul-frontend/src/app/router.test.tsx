@@ -172,10 +172,95 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
+  it.each([
+    ['ADMIN', '/admin/schools'],
+    ['OPERATOR', '/operator'],
+    ['PARENT', '/demands'],
+  ] as const)(
+    'sends an expired admin deep link to the shared login and lets only %s reach %s',
+    async (role, destination) => {
+      let signedIn = false
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          signedIn
+            ? HttpResponse.json(authUser(role))
+            : HttpResponse.json(
+                {
+                  title: 'Unauthorized',
+                  status: 401,
+                  detail: 'Authentication is required',
+                  code: 'UNAUTHENTICATED',
+                },
+                { status: 401 },
+              ),
+        ),
+        http.get('/api/v1/auth/csrf', () =>
+          HttpResponse.json({
+            headerName: 'X-CSRF-TOKEN',
+            parameterName: '_csrf',
+            token: 'csrf-token',
+          }),
+        ),
+        http.post('/api/v1/auth/login', () => {
+          signedIn = true
+          return HttpResponse.json(authUser(role))
+        }),
+      )
+      const router = createMemoryRouter(routes, {
+        initialEntries: ['/admin/schools'],
+      })
+      render(<RouterProvider router={router} />)
+
+      expect(
+        await screen.findByText(
+          'Oturumunuz sona erdi. Devam etmek için yeniden giriş yapın.',
+        ),
+      ).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe('/login')
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Giriş yap' }),
+      ).toBeInTheDocument()
+      expect(
+        screen.queryByText('İşletmeci paneline giriş'),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Profilinizi, okul kapsamınızı ve bildirimlerinizi yönetin.',
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        new URLSearchParams(router.state.location.search).get('next'),
+      ).toBe('/admin/schools')
+
+      fireEvent.change(screen.getByLabelText('E-posta'), {
+        target: { value: 'user@example.com' },
+      })
+      fireEvent.change(screen.getByLabelText('Şifre'), {
+        target: { value: 'password value' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe(destination),
+      )
+    },
+  )
+
   it('uses a view transition when navigating between pages', async () => {
     server.use(
       http.get('/api/v1/provinces', () =>
         HttpResponse.json([{ id: 34, code: '34', name: 'İstanbul' }]),
+      ),
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json(
+          {
+            title: 'Unauthorized',
+            status: 401,
+            detail: 'Authentication is required',
+            code: 'UNAUTHENTICATED',
+          },
+          { status: 401 },
+        ),
       ),
     )
     const startViewTransition = vi.fn((update: () => void) => {
@@ -217,7 +302,7 @@ describe('application routes', () => {
         screen.getByRole('navigation', { name: 'Ana menü' }),
       )
       expect(
-        primaryNavigation.getByRole('link', { name: 'Veli kaydı' }),
+        await primaryNavigation.findByRole('link', { name: 'Veli kaydı' }),
       ).toHaveAttribute('href', '/parent/register')
       expect(
         primaryNavigation.getByRole('link', { name: 'İşletmeci girişi' }),
@@ -283,3 +368,13 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 })
+
+function authUser(role: 'ADMIN' | 'OPERATOR' | 'PARENT') {
+  return {
+    id: 'd28cc858-ed74-479a-b346-8b9cdccaaab8',
+    email: 'user@example.com',
+    role,
+    operatorApprovalRequired: true,
+    approvalStatus: role === 'OPERATOR' ? 'APPROVED' : null,
+  }
+}

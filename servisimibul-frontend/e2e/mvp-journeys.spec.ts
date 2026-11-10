@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
+import { isSessionCheck401 } from './support/console'
 
 test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   browser,
@@ -19,8 +20,16 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   ])
 
   const browserErrors: string[] = []
+  let revocationStep = false
+  let operatorSessionRejections = 0
   for (const page of [operatorPage, adminPage, publicPage]) {
     page.on('console', (message) => {
+      if (isSessionCheck401(message)) {
+        if (revocationStep && page === operatorPage) {
+          operatorSessionRejections += 1
+        }
+        return
+      }
       if (message.type() === 'error') browserErrors.push(message.text())
     })
     page.on('pageerror', (error) => browserErrors.push(error.message))
@@ -274,6 +283,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   })
 
   await test.step('13. Suspend the operator and verify visibility and session removal', async () => {
+    revocationStep = true
     await adminPage.goto(
       '/admin/applications/99dd588e-2b72-419e-aa29-28fb97f8ad20',
     )
@@ -299,13 +309,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     await expect(publicPage.getByText('+905321234568')).toHaveCount(0)
   })
 
-  const expectedRevocationErrors = browserErrors.filter((message) =>
-    message.includes('401 (Unauthorized)'),
-  )
-  expect(expectedRevocationErrors).toHaveLength(1)
-  expect(
-    browserErrors.filter((message) => !message.includes('401 (Unauthorized)')),
-  ).toEqual([])
+  // Other /auth/me 401s are guest header checks; only the revoked session may 401 here.
+  expect(operatorSessionRejections).toBe(1)
+  expect(browserErrors).toEqual([])
   await Promise.all([
     operatorContext.close(),
     adminContext.close(),

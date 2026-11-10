@@ -627,7 +627,17 @@ export function ParentLoginPage() {
   return <LoginScreen parentOnly />
 }
 
-function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
+export function SharedLoginPage() {
+  return <LoginScreen parentOnly={false} shared />
+}
+
+function LoginScreen({
+  parentOnly,
+  shared = false,
+}: {
+  parentOnly: boolean
+  shared?: boolean
+}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formError, setFormError] = useState<string>()
@@ -669,7 +679,8 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
         return
       }
       if (user.role === 'ADMIN') {
-        void navigate('/admin', {
+        const next = searchParams.get('next')
+        void navigate(next?.startsWith('/admin/') ? next : '/admin', {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
         })
@@ -822,6 +833,8 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
     >
       {content}
     </AuthFrame>
+  ) : shared ? (
+    <AuthFrame title="Giriş yap">{content}</AuthFrame>
   ) : (
     <AuthFrame
       title="İşletmeci paneline giriş"
