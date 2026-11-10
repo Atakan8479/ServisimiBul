@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { ApiError, apiRequest, resetCsrfToken } from '../../api/client'
 
 const AUTH_ROLE_KEY = 'servisimibul.auth-role'
+// Cross-tab hint (no role, not authorization) that this browser may hold a session.
+export const AUTH_SESSION_HINT_KEY = 'servisimibul.auth-session'
 export const AUTH_ROLE_CHANGED_EVENT = 'servisimibul:auth-role-changed'
 
 export const authUserSchema = z.object({
@@ -165,9 +167,13 @@ let authCheck: { generation: number; promise: Promise<void> } | undefined
  * Re-reads the server session for navigation display only (never authorization).
  * Concurrent calls share one request; a result is dropped when login/logout
  * changed the cached role while it was in flight. 401 means guest; other
- * failures reject and leave the cached role untouched.
+ * failures reject and leave the cached role untouched. Browsers with no session
+ * hint are guests and are not asked, so guests never trigger a 401.
  */
 export function refreshAuthRole(): Promise<void> {
+  if (!knownAuthRole() && !localStorage.getItem(AUTH_SESSION_HINT_KEY)) {
+    return Promise.resolve()
+  }
   if (authCheck?.generation === authGeneration) return authCheck.promise
   const generation = authGeneration
   const promise = apiRequest('/auth/me', {
@@ -204,11 +210,13 @@ export function knownAuthRole(): AuthRole | undefined {
 export function clearKnownAuthRole(): void {
   authGeneration += 1
   window.sessionStorage.removeItem(AUTH_ROLE_KEY)
+  window.localStorage.removeItem(AUTH_SESSION_HINT_KEY)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
 
 function setKnownAuthRole(role: AuthRole): void {
   authGeneration += 1
   window.sessionStorage.setItem(AUTH_ROLE_KEY, role)
+  window.localStorage.setItem(AUTH_SESSION_HINT_KEY, '1')
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }

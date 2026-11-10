@@ -10,6 +10,7 @@ import { http, HttpResponse, delay } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import {
+  AUTH_SESSION_HINT_KEY,
   knownAuthRole,
   login,
   refreshAuthRole,
@@ -53,8 +54,14 @@ let sessionRole: AuthRole | undefined
 let meStatus = 200
 let meRequests = 0
 
+function signIn(role: AuthRole) {
+  sessionRole = role
+  localStorage.setItem(AUTH_SESSION_HINT_KEY, '1')
+}
+
 beforeEach(() => {
   sessionStorage.clear()
+  localStorage.clear()
   sessionRole = undefined
   meStatus = 200
   meRequests = 0
@@ -185,7 +192,7 @@ describe('PublicLayout', () => {
   ] as const)(
     'shows the %s workspace instead of guest links',
     async (role, homeLabel, homePath, notifications) => {
-      sessionRole = role
+      signIn(role)
       renderLayout()
 
       expect(
@@ -207,7 +214,7 @@ describe('PublicLayout', () => {
   )
 
   it('re-enables sign out after parent logout and a new login in the same tab', async () => {
-    sessionRole = 'PARENT'
+    signIn('PARENT')
     server.use(
       http.post('/api/v1/auth/logout', async () => {
         await delay(20)
@@ -231,7 +238,7 @@ describe('PublicLayout', () => {
   })
 
   it('sends an expired logout to the role login with a session reason', async () => {
-    sessionRole = 'ADMIN'
+    signIn('ADMIN')
     server.use(
       http.post('/api/v1/auth/logout', () =>
         HttpResponse.json(problem(401), { status: 401 }),
@@ -252,7 +259,7 @@ describe('PublicLayout', () => {
   })
 
   it('keeps the session and allows retry when logout fails', async () => {
-    sessionRole = 'OPERATOR'
+    signIn('OPERATOR')
     let attempts = 0
     server.use(
       http.post('/api/v1/auth/logout', () => {
@@ -281,11 +288,11 @@ describe('PublicLayout', () => {
   })
 
   it('follows an account switch made in another tab when focused', async () => {
-    sessionRole = 'PARENT'
+    signIn('PARENT')
     renderLayout()
     await screen.findByText('Veli oturumu açık')
 
-    sessionRole = 'OPERATOR'
+    signIn('OPERATOR')
     act(() => {
       window.dispatchEvent(new Event('focus'))
     })
@@ -294,6 +301,46 @@ describe('PublicLayout', () => {
       await screen.findByRole('link', { name: 'İşletmeci paneli' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
+  })
+
+  it('does not ask the server for a browser with no session hint', async () => {
+    renderLayout()
+
+    expect(
+      await screen.findByRole('link', { name: 'Veli girişi' }),
+    ).toBeInTheDocument()
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(meRequests).toBe(0)
+  })
+
+  it('verifies when another tab signs in or out', async () => {
+    renderLayout()
+    await screen.findByRole('link', { name: 'Veli girişi' })
+
+    sessionRole = 'OPERATOR'
+    localStorage.setItem(AUTH_SESSION_HINT_KEY, '1')
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: AUTH_SESSION_HINT_KEY }),
+      )
+    })
+    expect(
+      await screen.findByRole('link', { name: 'İşletmeci paneli' }),
+    ).toBeInTheDocument()
+
+    sessionRole = undefined
+    localStorage.removeItem(AUTH_SESSION_HINT_KEY)
+    act(() => {
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: AUTH_SESSION_HINT_KEY }),
+      )
+    })
+    expect(
+      await screen.findByRole('link', { name: 'Veli girişi' }),
+    ).toBeInTheDocument()
+    expect(localStorage.getItem(AUTH_SESSION_HINT_KEY)).toBeNull()
   })
 
   it('does not turn a server error into a guest, and clears on a later 401', async () => {
@@ -317,7 +364,7 @@ describe('PublicLayout', () => {
 
 describe('refreshAuthRole', () => {
   it('shares one request between concurrent checks', async () => {
-    sessionRole = 'PARENT'
+    signIn('PARENT')
     await Promise.all([refreshAuthRole(), refreshAuthRole()])
     expect(meRequests).toBe(1)
     expect(knownAuthRole()).toBe('PARENT')

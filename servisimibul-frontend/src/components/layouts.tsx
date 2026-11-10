@@ -12,6 +12,7 @@ import { RoadBackdrop } from './RoadBackdrop'
 import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
+  AUTH_SESSION_HINT_KEY,
   knownAuthRole,
   logout,
   refreshAuthRole,
@@ -98,13 +99,19 @@ export function PublicLayout() {
     const verifyWhenVisible = () => {
       if (document.visibilityState === 'visible') verify()
     }
+    // Login or logout in another tab changes the shared session hint.
+    const verifyOnHintChange = (event: StorageEvent) => {
+      if (event.key === AUTH_SESSION_HINT_KEY) verify()
+    }
     verify()
     window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+    window.addEventListener('storage', verifyOnHintChange)
     window.addEventListener('focus', verify)
     document.addEventListener('visibilitychange', verifyWhenVisible)
     return () => {
       active = false
       window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+      window.removeEventListener('storage', verifyOnHintChange)
       window.removeEventListener('focus', verify)
       document.removeEventListener('visibilitychange', verifyWhenVisible)
     }
