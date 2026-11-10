@@ -108,10 +108,17 @@ export async function currentUser(): Promise<AuthUser> {
 }
 
 export async function logout(): Promise<void> {
-  await apiRequest('/auth/logout', {
-    method: 'POST',
-    requiresSession: true,
-  })
+  try {
+    await apiRequest('/auth/logout', {
+      method: 'POST',
+      requiresSession: true,
+    })
+  } catch (error) {
+    if (error instanceof ApiError && error.sessionExpired) {
+      clearKnownAuthRole()
+    }
+    throw error
+  }
   resetCsrfToken()
   clearKnownAuthRole()
 }
@@ -151,6 +158,42 @@ export async function confirmEmailChange(token: string): Promise<void> {
   clearKnownAuthRole()
 }
 
+let authGeneration = 0
+let authCheck: { generation: number; promise: Promise<void> } | undefined
+
+/**
+ * Re-reads the server session for navigation display only (never authorization).
+ * Concurrent calls share one request; a result is dropped when login/logout
+ * changed the cached role while it was in flight. 401 means guest; other
+ * failures reject and leave the cached role untouched.
+ */
+export function refreshAuthRole(): Promise<void> {
+  if (authCheck?.generation === authGeneration) return authCheck.promise
+  const generation = authGeneration
+  const promise = apiRequest('/auth/me', {
+    requiresSession: true,
+    schema: authUserSchema,
+  })
+    .then(
+      (user) => {
+        if (generation === authGeneration) setKnownAuthRole(user.role)
+      },
+      (error: unknown) => {
+        if (generation !== authGeneration) return
+        if (error instanceof ApiError && error.problem.status === 401) {
+          clearKnownAuthRole()
+          return
+        }
+        throw error
+      },
+    )
+    .finally(() => {
+      if (authCheck?.promise === promise) authCheck = undefined
+    })
+  authCheck = { generation, promise }
+  return promise
+}
+
 export function knownAuthRole(): AuthRole | undefined {
   const role = window.sessionStorage.getItem(AUTH_ROLE_KEY)
   return role === 'ADMIN' || role === 'OPERATOR' || role === 'PARENT'
@@ -159,11 +202,13 @@ export function knownAuthRole(): AuthRole | undefined {
 }
 
 export function clearKnownAuthRole(): void {
+  authGeneration += 1
   window.sessionStorage.removeItem(AUTH_ROLE_KEY)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
 
 function setKnownAuthRole(role: AuthRole): void {
+  authGeneration += 1
   window.sessionStorage.setItem(AUTH_ROLE_KEY, role)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }

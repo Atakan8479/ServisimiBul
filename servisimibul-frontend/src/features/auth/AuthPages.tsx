@@ -669,7 +669,8 @@ function LoginScreen({ parentOnly }: { parentOnly: boolean }) {
         return
       }
       if (user.role === 'ADMIN') {
-        void navigate('/admin', {
+        const next = searchParams.get('next')
+        void navigate(next?.startsWith('/admin/') ? next : '/admin', {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
         })

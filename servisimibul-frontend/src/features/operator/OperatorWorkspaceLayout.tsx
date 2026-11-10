@@ -47,6 +47,7 @@ export function OperatorWorkspaceLayout() {
           ? reason.problem.detail
           : 'Çıkış yapılamadı. Lütfen tekrar deneyin.',
       )
+    } finally {
       setLoggingOut(false)
     }
   }
