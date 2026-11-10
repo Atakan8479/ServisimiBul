@@ -31,10 +31,10 @@ export function AdminWorkspaceLayout() {
     setError(undefined)
     try {
       await logout()
-      void navigate('/operator/login', { replace: true })
+      void navigate('/', { replace: true })
     } catch (reason) {
       if (reason instanceof ApiError && reason.sessionExpired) {
-        void navigate('/operator/login?reason=session', { replace: true })
+        void navigate('/login?reason=session', { replace: true })
         return
       }
       setError(
@@ -42,6 +42,7 @@ export function AdminWorkspaceLayout() {
           ? reason.problem.detail
           : 'Çıkış yapılamadı. Lütfen tekrar deneyin.',
       )
+    } finally {
       setLoggingOut(false)
     }
   }

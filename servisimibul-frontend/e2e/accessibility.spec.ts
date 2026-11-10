@@ -5,6 +5,7 @@ import {
   demandId,
   installMockApi,
 } from './support/mock-api'
+import { isSessionCheck401 } from './support/console'
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -21,6 +22,8 @@ for (const viewport of viewports) {
     const state = createMockApiState()
     const consoleProblems: string[] = []
     page.on('console', (message) => {
+      // Guest header session checks are expected; this journey never expires a session.
+      if (isSessionCheck401(message)) return
       if (message.type() === 'warning' || message.type() === 'error') {
         consoleProblems.push(message.text())
       }

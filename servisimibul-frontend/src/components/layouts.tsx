@@ -12,14 +12,54 @@ import { RoadBackdrop } from './RoadBackdrop'
 import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
-  clearKnownAuthRole,
+  authStateKnown,
   knownAuthRole,
   logout,
+  onAuthChangedInOtherTab,
+  refreshAuthRole,
+  type AuthRole,
 } from '../features/auth/auth-api'
 import { NotificationNavLink } from '../features/notification/NotificationNavLink'
 
+const sessionNavigation: Record<
+  AuthRole,
+  {
+    label: string
+    home?: { to: string; label: string }
+    notifications: string
+    account?: string
+    afterLogout: string
+    loginOnExpiry: string
+  }
+> = {
+  PARENT: {
+    label: 'Veli oturumu açık',
+    notifications: '/notifications',
+    account: '/parent/account',
+    afterLogout: '/parent/login',
+    loginOnExpiry: '/parent/login?reason=session',
+  },
+  OPERATOR: {
+    label: 'İşletmeci oturumu açık',
+    home: { to: '/operator', label: 'İşletmeci paneli' },
+    notifications: '/operator/notifications',
+    account: '/operator/account',
+    afterLogout: '/operator/login',
+    loginOnExpiry: '/operator/login?reason=session',
+  },
+  ADMIN: {
+    label: 'Yönetici oturumu açık',
+    home: { to: '/admin', label: 'Yönetim paneli' },
+    notifications: '/admin/notifications',
+    afterLogout: '/',
+    loginOnExpiry: '/login?reason=session',
+  },
+}
+
 export function PublicLayout() {
   const [role, setRole] = useState(knownAuthRole)
+  // Header shows no account controls until the server confirms the session once.
+  const [authChecked, setAuthChecked] = useState(authStateKnown)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutError, setLogoutError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -46,10 +86,33 @@ export function PublicLayout() {
   }, [menuOpen])
 
   useEffect(() => {
+    let active = true
     const refreshRole = () => setRole(knownAuthRole())
+    const verify = () => {
+      void refreshAuthRole()
+        .catch(() => undefined)
+        .finally(() => {
+          if (!active) return
+          refreshRole()
+          setAuthChecked(true)
+        })
+    }
+    // Guests are not re-asked on focus; another tab's login reaches them via the channel.
+    const verifySignedIn = () => {
+      if (knownAuthRole() && document.visibilityState === 'visible') verify()
+    }
+    // Ask once per page load; later mounts reuse the answer already received.
+    if (!authStateKnown()) verify()
+    const stopListening = onAuthChangedInOtherTab(verify)
     window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+    window.addEventListener('focus', verifySignedIn)
+    document.addEventListener('visibilitychange', verifySignedIn)
     return () => {
+      active = false
+      stopListening()
       window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+      window.removeEventListener('focus', verifySignedIn)
+      document.removeEventListener('visibilitychange', verifySignedIn)
     }
   }, [])
 
@@ -113,22 +176,28 @@ export function PublicLayout() {
     }
   }, [menuOpen])
 
-  async function signOutParent() {
+  async function signOut(session: (typeof sessionNavigation)[AuthRole]) {
     setLoggingOut(true)
     setLogoutError(undefined)
     try {
       await logout()
-      void navigate('/parent/login', { replace: true, viewTransition: true })
+      void navigate(session.afterLogout, {
+        replace: true,
+        viewTransition: true,
+      })
     } catch (error) {
       if (error instanceof ApiError && error.sessionExpired) {
-        clearKnownAuthRole()
-        void navigate('/parent/login?reason=session', { replace: true })
+        void navigate(session.loginOnExpiry, { replace: true })
         return
       }
       setLogoutError('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+    } finally {
+      // The layout stays mounted across logout → login, so always release the busy state.
       setLoggingOut(false)
     }
   }
+
+  const session = role && sessionNavigation[role]
 
   return (
     <div className="app-shell">
@@ -184,16 +253,23 @@ export function PublicLayout() {
             <NavLink to="/demands" viewTransition>
               Talep panosu
             </NavLink>
-            {role === 'PARENT' ? (
+            {!authChecked ? null : session ? (
               <>
-                <span className="nav-session">Veli oturumu açık</span>
-                <NotificationNavLink to="/notifications" />
-                <NavLink to="/parent/account" viewTransition>
-                  Hesap ve gizlilik
-                </NavLink>
+                <span className="nav-session">{session.label}</span>
+                {session.home && (
+                  <NavLink to={session.home.to} viewTransition>
+                    {session.home.label}
+                  </NavLink>
+                )}
+                <NotificationNavLink key={role} to={session.notifications} />
+                {session.account && (
+                  <NavLink to={session.account} viewTransition>
+                    Hesap ve gizlilik
+                  </NavLink>
+                )}
                 <button
                   disabled={loggingOut}
-                  onClick={() => void signOutParent()}
+                  onClick={() => void signOut(session)}
                   type="button"
                 >
                   {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}

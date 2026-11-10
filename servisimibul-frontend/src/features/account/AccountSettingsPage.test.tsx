@@ -214,7 +214,8 @@ describe('account settings', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Yeniden dene' }))
     expect(await screen.findByText('parent@example.com')).toBeInTheDocument()
-    expect(attempts).toBe(2)
+    // Two loader attempts plus the public header's own session check.
+    await waitFor(() => expect(attempts).toBe(3))
   })
 
   it('handles an expired account session through the parent login flow', async () => {
@@ -463,6 +464,12 @@ describe('password change', () => {
       csrfHandler(),
       http.post('/api/v1/auth/change-password', async ({ request }) => {
         requestBody = await request.json()
+        // The server invalidates every session after a password change.
+        server.use(
+          http.get('/api/v1/auth/me', () =>
+            HttpResponse.json(problem(401), { status: 401 }),
+          ),
+        )
         return new HttpResponse(null, { status: 204 })
       }),
     )
