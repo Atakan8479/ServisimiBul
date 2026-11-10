@@ -97,7 +97,7 @@ test('D01 exposes truthful empty, loading and retry states', async ({
     page.getByRole('heading', { name: 'Bu seçim için açık talep yok' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('link', { name: 'Seçimi güncelle' }),
+    page.getByRole('link', { name: 'Okul ve mahalle seç' }),
   ).toHaveAttribute('href', '#demand-filters')
   await page.screenshot({
     path: testInfo.outputPath('d01-empty.png'),
@@ -131,9 +131,12 @@ test('D01 keeps the real operator check before parent demand creation', async ({
   await expect(
     page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  const creationPanel = page.locator('#demand-create-panel')
+  await creationPanel
+    .getByRole('button', { name: 'Yeni talep oluştur', exact: true })
+    .click()
   await expect(
-    page.getByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
+    creationPanel.getByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
   ).toBeVisible()
 
   await page.evaluate(() => window.scrollTo(0, 0))
