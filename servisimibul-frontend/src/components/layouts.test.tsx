@@ -10,10 +10,10 @@ import { http, HttpResponse, delay } from 'msw'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import {
-  AUTH_SESSION_HINT_KEY,
   knownAuthRole,
   login,
   refreshAuthRole,
+  resetAuthStateForTests,
   type AuthRole,
   type AuthUser,
 } from '../features/auth/auth-api'
@@ -56,12 +56,18 @@ let meRequests = 0
 
 function signIn(role: AuthRole) {
   sessionRole = role
-  localStorage.setItem(AUTH_SESSION_HINT_KEY, '1')
+}
+
+// Another tab of the same browser announcing a login or logout.
+function announceFromOtherTab() {
+  const otherTab = new BroadcastChannel('servisimibul.auth')
+  otherTab.postMessage('changed')
+  otherTab.close()
 }
 
 beforeEach(() => {
   sessionStorage.clear()
-  localStorage.clear()
+  resetAuthStateForTests()
   sessionRole = undefined
   meStatus = 200
   meRequests = 0
@@ -303,16 +309,28 @@ describe('PublicLayout', () => {
     expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
   })
 
-  it('does not ask the server for a browser with no session hint', async () => {
+  it('asks once per page load for a guest and not again on focus or remount', async () => {
+    const { unmount } = render(
+      <MemoryRouter>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route index element={<h1>Okulunu seç</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    )
+    await screen.findByRole('link', { name: 'Veli girişi' })
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    unmount()
     renderLayout()
 
     expect(
       await screen.findByRole('link', { name: 'Veli girişi' }),
     ).toBeInTheDocument()
-    act(() => {
-      window.dispatchEvent(new Event('focus'))
-    })
-    expect(meRequests).toBe(0)
+    expect(meRequests).toBe(1)
   })
 
   it('verifies when another tab signs in or out', async () => {
@@ -320,27 +338,29 @@ describe('PublicLayout', () => {
     await screen.findByRole('link', { name: 'Veli girişi' })
 
     sessionRole = 'OPERATOR'
-    localStorage.setItem(AUTH_SESSION_HINT_KEY, '1')
-    act(() => {
-      window.dispatchEvent(
-        new StorageEvent('storage', { key: AUTH_SESSION_HINT_KEY }),
-      )
-    })
+    announceFromOtherTab()
     expect(
       await screen.findByRole('link', { name: 'İşletmeci paneli' }),
     ).toBeInTheDocument()
 
     sessionRole = undefined
-    localStorage.removeItem(AUTH_SESSION_HINT_KEY)
-    act(() => {
-      window.dispatchEvent(
-        new StorageEvent('storage', { key: AUTH_SESSION_HINT_KEY }),
-      )
-    })
+    announceFromOtherTab()
     expect(
       await screen.findByRole('link', { name: 'Veli girişi' }),
     ).toBeInTheDocument()
-    expect(localStorage.getItem(AUTH_SESSION_HINT_KEY)).toBeNull()
+    expect(knownAuthRole()).toBeUndefined()
+  })
+
+  it('reuses the answer a workspace loader already received', async () => {
+    signIn('OPERATOR')
+    await refreshAuthRole()
+    const before = meRequests
+    renderLayout()
+
+    expect(
+      screen.getByRole('link', { name: 'İşletmeci paneli' }),
+    ).toBeInTheDocument()
+    expect(meRequests).toBe(before)
   })
 
   it('does not turn a server error into a guest, and clears on a later 401', async () => {

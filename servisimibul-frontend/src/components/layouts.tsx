@@ -12,9 +12,10 @@ import { RoadBackdrop } from './RoadBackdrop'
 import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
-  AUTH_SESSION_HINT_KEY,
+  authStateKnown,
   knownAuthRole,
   logout,
+  onAuthChangedInOtherTab,
   refreshAuthRole,
   type AuthRole,
 } from '../features/auth/auth-api'
@@ -58,7 +59,7 @@ const sessionNavigation: Record<
 export function PublicLayout() {
   const [role, setRole] = useState(knownAuthRole)
   // Header shows no account controls until the server confirms the session once.
-  const [authChecked, setAuthChecked] = useState(false)
+  const [authChecked, setAuthChecked] = useState(authStateKnown)
   const [menuOpen, setMenuOpen] = useState(false)
   const [logoutError, setLogoutError] = useState<string>()
   const [loggingOut, setLoggingOut] = useState(false)
@@ -96,24 +97,22 @@ export function PublicLayout() {
           setAuthChecked(true)
         })
     }
-    const verifyWhenVisible = () => {
-      if (document.visibilityState === 'visible') verify()
+    // Guests are not re-asked on focus; another tab's login reaches them via the channel.
+    const verifySignedIn = () => {
+      if (knownAuthRole() && document.visibilityState === 'visible') verify()
     }
-    // Login or logout in another tab changes the shared session hint.
-    const verifyOnHintChange = (event: StorageEvent) => {
-      if (event.key === AUTH_SESSION_HINT_KEY) verify()
-    }
-    verify()
+    // Ask once per page load; later mounts reuse the answer already received.
+    if (!authStateKnown()) verify()
+    const stopListening = onAuthChangedInOtherTab(verify)
     window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
-    window.addEventListener('storage', verifyOnHintChange)
-    window.addEventListener('focus', verify)
-    document.addEventListener('visibilitychange', verifyWhenVisible)
+    window.addEventListener('focus', verifySignedIn)
+    document.addEventListener('visibilitychange', verifySignedIn)
     return () => {
       active = false
+      stopListening()
       window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
-      window.removeEventListener('storage', verifyOnHintChange)
-      window.removeEventListener('focus', verify)
-      document.removeEventListener('visibilitychange', verifyWhenVisible)
+      window.removeEventListener('focus', verifySignedIn)
+      document.removeEventListener('visibilitychange', verifySignedIn)
     }
   }, [])
 
