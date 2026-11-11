@@ -16,22 +16,36 @@ import {
 } from './DemandLocationPicker'
 import { DemandSupportForm } from './DemandSupportForm'
 
-const defaultSupport: SupportValues = {
+const defaultSupport = (): SupportValues => ({
   needsMorning: true,
   needsAfternoon: false,
   reasons: [],
-}
+})
+
+let pendingDraft:
+  | {
+      id: string
+      locationKey: string
+      academicYear: string
+      support: SupportValues
+    }
+  | undefined
+let draftSequence = 0
 
 export function DemandCreatePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
+  const locationKey = draftLocationKey(searchParams)
+  const initialDraft = readPendingDraft(searchParams.get('draft'), locationKey)
   const [selection, setSelection] = useState<DemandLocationSelection>()
   const [hasLocationDraft, setHasLocationDraft] = useState(false)
   const [academicYear, setAcademicYear] = useState(
-    searchParams.get('academicYear') ?? '',
+    searchParams.get('academicYear') ?? initialDraft?.academicYear ?? '',
   )
-  const [support, setSupport] = useState<SupportValues>(defaultSupport)
+  const [support, setSupport] = useState<SupportValues>(
+    initialDraft?.support ?? defaultSupport(),
+  )
   const [confirmation, setConfirmation] = useState<SupportValues>()
   const [error, setError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
@@ -81,7 +95,7 @@ export function DemandCreatePage() {
       setConfirmation(values)
     } catch (failure) {
       if (failure instanceof ApiError && failure.problem.status === 401) {
-        const next = `${location.pathname}${location.search}`
+        const next = rememberForLogin(values)
         void navigate(`/parent/login?next=${encodeURIComponent(next)}`)
         return
       }
@@ -100,6 +114,7 @@ export function DemandCreatePage() {
         confirmation,
         academicYear.trim() || undefined,
       )
+      clearPendingDraft()
       void navigate(`/demands/${response.demand.id}`, {
         state: {
           notice: response.created
@@ -114,7 +129,7 @@ export function DemandCreatePage() {
       })
     } catch (failure) {
       if (failure instanceof ApiError && failure.problem.status === 401) {
-        const next = `${location.pathname}${location.search}`
+        const next = rememberForLogin(confirmation)
         void navigate(
           `/parent/login?next=${encodeURIComponent(next)}&reason=session`,
         )
@@ -131,6 +146,14 @@ export function DemandCreatePage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function rememberForLogin(values: SupportValues) {
+    if (!locationKey) return `${location.pathname}${location.search}`
+    const id = rememberPendingDraft(locationKey, academicYear, values)
+    const nextParams = new URLSearchParams(location.search)
+    nextParams.set('draft', id)
+    return `${location.pathname}?${nextParams}`
   }
 
   return (
@@ -309,6 +332,35 @@ function validAcademicYear(value: string) {
   if (!value) return true
   const match = /^(\d{4})-(\d{4})$/.exec(value)
   return Boolean(match && Number(match[2]) === Number(match[1]) + 1)
+}
+
+function draftLocationKey(searchParams: URLSearchParams) {
+  const schoolId = searchParams.get('schoolId')
+  const pickupDistrictId = searchParams.get('pickupDistrictId')
+  const neighborhoodId = searchParams.get('neighborhoodId')
+  return schoolId && pickupDistrictId && neighborhoodId
+    ? `${schoolId}:${pickupDistrictId}:${neighborhoodId}`
+    : ''
+}
+
+function readPendingDraft(id: string | null, locationKey: string) {
+  return pendingDraft?.id === id && pendingDraft.locationKey === locationKey
+    ? pendingDraft
+    : undefined
+}
+
+function rememberPendingDraft(
+  locationKey: string,
+  academicYear: string,
+  support: SupportValues,
+) {
+  const id = String(++draftSequence)
+  pendingDraft = { id, locationKey, academicYear, support }
+  return id
+}
+
+function clearPendingDraft() {
+  pendingDraft = undefined
 }
 
 function boardPath(

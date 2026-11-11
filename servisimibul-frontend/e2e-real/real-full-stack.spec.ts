@@ -10,8 +10,9 @@ const adminPassword = process.env.J03_ADMIN_PASSWORD
 const parentEmail = process.env.J03_PARENT_EMAIL ?? 'j03.parent@example.test'
 const secondParentEmail = 'j03.parent.two@example.test'
 const parentPassword = process.env.J03_PARENT_PASSWORD
-const parentDemandPath =
-  '/demands?schoolId=10000000-0000-4000-8000-000000000001&pickupDistrictId=3402&neighborhoodId=340201&intent=create'
+const demandBoardPath =
+  '/demands?schoolId=10000000-0000-4000-8000-000000000001&pickupDistrictId=3402&neighborhoodId=340201'
+const parentDemandPath = demandBoardPath.replace('/demands?', '/demands/new?')
 
 interface DemandState {
   id: string
@@ -180,7 +181,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
           return `${url.pathname}${url.search}`
         })
         .toBe(parentDemandPath)
-      await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
+      await expect(
+        parentPage.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+      ).toBeVisible()
 
       const secondParentCsrf = await csrf(secondParentPage)
       const secondRegistration = await secondParentPage.request.post(
@@ -1491,26 +1494,28 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     })
 
     await test.step('publish a demand service and resolve parent feedback against the real API', async () => {
-      await parentPage.goto(parentDemandPath)
-      await expect(parentPage.getByText(/Seçiminiz korundu/)).toBeVisible()
-      await parentPage
-        .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-        .click()
+      await parentPage.goto(demandBoardPath)
       await expect(
         parentPage.getByRole('heading', { name: '1 mevcut servis bulundu' }),
       ).toBeVisible()
       await parentPage
-        .getByRole('button', { name: 'Yine de servise ihtiyacım var' })
+        .getByRole('link', { name: 'Yeni talep oluştur' })
+        .first()
         .click()
       await parentPage.getByLabel('Uygun servis bulamıyorum').check()
+      await parentPage
+        .getByRole('button', { name: 'Bilgileri gözden geçir' })
+        .click()
+      const confirmation = parentPage.getByRole('dialog', {
+        name: 'Talebi onaylayın',
+      })
+      await expect(confirmation).toBeVisible()
       const created = parentPage.waitForResponse(
         (response) =>
           response.request().method() === 'POST' &&
           response.url().endsWith('/api/v1/demands'),
       )
-      await parentPage
-        .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
-        .click()
+      await confirmation.getByRole('button', { name: 'Talebi oluştur' }).click()
       expect((await created).status()).toBe(201)
       await expect(parentPage.getByText('Talebiniz oluşturuldu.')).toBeVisible()
       const demandId = new URL(parentPage.url()).pathname.split('/').at(-1)!
