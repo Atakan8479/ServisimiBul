@@ -466,6 +466,133 @@ describe('demand location filter regression', () => {
     expect(requests[2].has('neighborhoodId')).toBe(false)
     expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('')
   })
+
+  it('keeps a cleared school as an incomplete draft until filters are explicitly reset', async () => {
+    const requests: URLSearchParams[] = []
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/demands', ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        return HttpResponse.json(demandPage([]))
+      }),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
+    fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${school.name} okulunu seç`,
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('Servis alınacak ilçe')).not.toBeDisabled(),
+    )
+    fireEvent.change(screen.getByLabelText('Servis alınacak ilçe'), {
+      target: { value: '11' },
+    })
+    await screen.findByRole('option', { name: 'Acıbadem' })
+    fireEvent.change(screen.getByLabelText('Servis alınacak mahalle'), {
+      target: { value: '201' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await waitFor(() => expect(requests).toHaveLength(2))
+
+    fireEvent.click(screen.getByRole('button', { name: 'Okulu değiştir' }))
+    fireEvent.change(screen.getByLabelText('Okul sıralaması'), {
+      target: { value: 'name-desc' },
+    })
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Talepleri göster' }),
+    )
+
+    expect(
+      screen.getByText(
+        'Okul, servis alınacak ilçe ve mahalle seçimlerini tamamlayın.',
+      ),
+    ).toBeInTheDocument()
+    expect(requests).toHaveLength(2)
+    expect(
+      screen.getByRole('link', { name: 'Yeni talep oluştur' }),
+    ).toHaveAttribute('href', '#demand-filters')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
+    await waitFor(() => expect(requests).toHaveLength(3))
+    expect(requests[2].has('schoolId')).toBe(false)
+    expect(requests[2].has('neighborhoodId')).toBe(false)
+  })
+
+  it('targets demand creation at the current complete draft instead of applied results', async () => {
+    server.use(
+      http.get('/api/v1/neighborhoods', () =>
+        HttpResponse.json([
+          { id: 201, districtId: 11, name: 'Acıbadem' },
+          { id: 202, districtId: 11, name: 'Altunizade' },
+        ]),
+      ),
+      ...locationHandlers(),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      emptyDemandHandler(),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
+    fireEvent.change(screen.getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: `${school.name} okulunu seç`,
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.getByLabelText('Servis alınacak ilçe')).not.toBeDisabled(),
+    )
+    fireEvent.change(screen.getByLabelText('Servis alınacak ilçe'), {
+      target: { value: '11' },
+    })
+    await screen.findByRole('option', { name: 'Acıbadem' })
+    fireEvent.change(screen.getByLabelText('Servis alınacak mahalle'), {
+      target: { value: '201' },
+    })
+    fireEvent.change(screen.getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2027' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await screen.findByRole('heading', { name: 'Eşleşen servis işletmecileri' })
+
+    fireEvent.change(screen.getByLabelText('Servis alınacak mahalle'), {
+      target: { value: '202' },
+    })
+
+    for (const link of screen.getAllByRole('link', {
+      name: 'Yeni talep oluştur',
+    })) {
+      expect(link).toHaveAttribute(
+        'href',
+        `/demands/new?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=202&academicYear=2026-2027`,
+      )
+    }
+  })
 })
 
 describe('demand board status filters', () => {

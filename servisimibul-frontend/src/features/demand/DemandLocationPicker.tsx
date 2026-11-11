@@ -191,6 +191,7 @@ export function DemandLocationPicker({
   function clearSchool() {
     setSelectedSchool(undefined)
     clearPickup()
+    onLocationDraftChange?.(Boolean(provinceId))
   }
 
   async function selectProvince(nextProvinceId: string) {

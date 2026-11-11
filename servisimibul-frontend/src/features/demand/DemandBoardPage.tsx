@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
   findOperators,
@@ -87,14 +87,14 @@ export function DemandBoardPage() {
   const operatorRequest = useRef(0)
   const hydratedInitialSelection = useRef(false)
 
-  const initialLocation = useMemo<InitialDemandLocation | undefined>(() => {
+  const [initialLocation] = useState<InitialDemandLocation | undefined>(() => {
     const schoolId = searchParams.get('schoolId')
     const pickupDistrictId = Number(searchParams.get('pickupDistrictId'))
     const neighborhoodId = Number(searchParams.get('neighborhoodId'))
     return schoolId && pickupDistrictId > 0 && neighborhoodId > 0
       ? { schoolId, pickupDistrictId, neighborhoodId }
       : undefined
-  }, [searchParams])
+  })
   const initialLocationRef = useRef(initialLocation)
   const initialHydrationFailed = useRef(false)
 
@@ -218,6 +218,7 @@ export function DemandBoardPage() {
     setAppliedSelection(selection)
     resetOperatorResults()
     setReturnNotice(undefined)
+    hydratedInitialSelection.current = true
 
     const parameters = new URLSearchParams()
     if (selection) {
@@ -297,8 +298,8 @@ export function DemandBoardPage() {
 
   const statusFilter =
     statusFilters.find((item) => item.value === status) ?? statusFilters[1]!
-  const createPath = appliedSelection
-    ? createDemandPath(appliedSelection, appliedAcademicYear)
+  const createPath = selection
+    ? createDemandPath(selection, academicYear.trim())
     : undefined
 
   return (
@@ -490,7 +491,7 @@ export function DemandBoardPage() {
                   Yeni talebe geçmeden önce mevcut servis işletmecilerini
                   kontrol edebilirsiniz.
                 </p>
-                {appliedSelection ? (
+                {createPath ? (
                   <Link className="button-link" to={createPath!} viewTransition>
                     Yeni talep oluştur
                   </Link>
@@ -545,9 +546,15 @@ export function DemandBoardPage() {
                     olarak yüklenir.
                   </p>
                 </div>
-                <Link className="button-link" to={createPath!} viewTransition>
-                  Yeni talep oluştur
-                </Link>
+                {createPath ? (
+                  <Link className="button-link" to={createPath} viewTransition>
+                    Yeni talep oluştur
+                  </Link>
+                ) : (
+                  <a className="button-link" href="#demand-filters">
+                    Okul ve mahalle seç
+                  </a>
+                )}
               </div>
               {checkingOperators && (
                 <p className="inline-loading" role="status">
