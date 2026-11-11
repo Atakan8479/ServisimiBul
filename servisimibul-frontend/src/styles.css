@@ -88,6 +88,7 @@
 html {
   accent-color: var(--teal-600);
   caret-color: var(--teal-600);
+  scroll-padding-top: 5.25rem;
   scrollbar-color: var(--teal-600) var(--neutral-100);
 }
 
