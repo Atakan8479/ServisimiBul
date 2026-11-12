@@ -67,6 +67,96 @@ describe('application routes', () => {
     ).toBeInTheDocument()
   })
 
+  it.each([
+    ['DRAFT', '/operator/schools', 'Taslak'],
+    ['DRAFT', '/operator/offerings', 'Taslak'],
+    ['PENDING', '/operator/schools', 'İncelemede'],
+    ['PENDING', '/operator/offerings', 'İncelemede'],
+    ['CHANGES_REQUESTED', '/operator/schools', 'Düzeltme istendi'],
+    ['CHANGES_REQUESTED', '/operator/offerings', 'Düzeltme istendi'],
+  ] as const)(
+    'redirects a %s operator from the gated deep link %s to approval guidance',
+    async (approvalStatus, path, statusLabel) => {
+      let resourceRequests = 0
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          HttpResponse.json(operatorAuthUser(true, approvalStatus)),
+        ),
+        http.get('/api/v1/operator/profile', () =>
+          HttpResponse.json(operatorProfile(approvalStatus)),
+        ),
+        http.get('/api/v1/operator/schools', () => {
+          resourceRequests += 1
+          return HttpResponse.json([])
+        }),
+        http.get('/api/v1/operator/vehicles', () => {
+          resourceRequests += 1
+          return HttpResponse.json([])
+        }),
+        http.get('/api/v1/operator/offerings', () => {
+          resourceRequests += 1
+          return HttpResponse.json([])
+        }),
+      )
+      const router = createMemoryRouter(routes, { initialEntries: [path] })
+
+      render(<RouterProvider router={router} />)
+
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe('/operator/profile'),
+      )
+      expect(
+        await screen.findByRole('heading', { name: 'İşletme profilim' }),
+      ).toBeInTheDocument()
+      expect(screen.getByText(statusLabel)).toBeInTheDocument()
+      expect(resourceRequests).toBe(0)
+    },
+  )
+
+  it.each([
+    [true, 'APPROVED', '/operator/schools', 'Okullar ve hizmet kapsamı'],
+    [true, 'APPROVED', '/operator/offerings', 'Araçlar ve servis teklifleri'],
+    [false, 'DRAFT', '/operator/schools', 'Okullar ve hizmet kapsamı'],
+    [false, 'DRAFT', '/operator/offerings', 'Araçlar ve servis teklifleri'],
+  ] as const)(
+    'allows approvalRequired=%s status=%s to open %s',
+    async (approvalRequired, approvalStatus, path, heading) => {
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          HttpResponse.json(operatorAuthUser(approvalRequired, approvalStatus)),
+        ),
+        http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+        http.get('/api/v1/operator/vehicles', () => HttpResponse.json([])),
+        http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+        http.get('/api/v1/operator/discovery-readiness', () =>
+          HttpResponse.json({
+            discoveryEligible: false,
+            emailVerified: true,
+            accountEnabled: true,
+            profileActive: true,
+            publiclyVisible: true,
+            approvalRequired,
+            approvalSatisfied:
+              !approvalRequired || approvalStatus === 'APPROVED',
+            hasActiveSchoolRelationship: false,
+            hasEligibleSchoolCoverage: false,
+            schools: [],
+          }),
+        ),
+      )
+
+      render(
+        <RouterProvider
+          router={createMemoryRouter(routes, { initialEntries: [path] })}
+        />,
+      )
+
+      expect(
+        await screen.findByRole('heading', { name: heading }),
+      ).toBeInTheDocument()
+    },
+  )
+
   it('renders the admin workspace shell', async () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
@@ -376,5 +466,34 @@ function authUser(role: 'ADMIN' | 'OPERATOR' | 'PARENT') {
     role,
     operatorApprovalRequired: true,
     approvalStatus: role === 'OPERATOR' ? 'APPROVED' : null,
+  }
+}
+
+function operatorAuthUser(
+  operatorApprovalRequired: boolean,
+  approvalStatus: 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED',
+) {
+  return {
+    id: '6e2973ac-0302-49a8-b519-563ec9861272',
+    email: 'operator@example.com',
+    role: 'OPERATOR',
+    operatorApprovalRequired,
+    approvalStatus,
+  }
+}
+
+function operatorProfile(
+  approvalStatus: 'DRAFT' | 'PENDING' | 'CHANGES_REQUESTED' | 'APPROVED',
+) {
+  return {
+    id: '99dd588e-2b72-419e-aa29-28fb97f8ad20',
+    businessName: null,
+    contactPhone: '+905321234567',
+    description: 'Açıklama',
+    approvalStatus,
+    active: true,
+    publiclyVisible: true,
+    createdAt: '2026-10-15T10:00:00Z',
+    updatedAt: '2026-10-15T10:00:00Z',
   }
 }

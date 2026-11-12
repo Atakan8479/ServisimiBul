@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
 import { ReportControl } from '../moderation/ReportControl'
@@ -12,15 +17,23 @@ import {
 } from './demand-api'
 
 interface DemandCommentsProps {
+  authChecked: boolean
   demandId: string
   open: boolean
   parentHasActiveSupport: boolean
+  role: AuthRole | undefined
+  sessionKey: string | undefined
+  userId: string | undefined
 }
 
 export function DemandComments({
+  authChecked,
   demandId,
   open,
   parentHasActiveSupport,
+  role,
+  sessionKey,
+  userId,
 }: DemandCommentsProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -30,13 +43,16 @@ export function DemandComments({
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [loadError, setLoadError] = useState<string>()
-  const [formOpen, setFormOpen] = useState(false)
+  const [formOwnerKey, setFormOwnerKey] = useState<string>()
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [deletingId, setDeletingId] = useState<string>()
   const [actionError, setActionError] = useState<string>()
   const [notice, setNotice] = useState<string>()
   const requestVersion = useRef(0)
+  const sessionKeyRef = useRef(sessionKey)
+  sessionKeyRef.current = sessionKey
+  const [commentsOwnerKey, setCommentsOwnerKey] = useState<string>()
   const resumeHandled = useRef(false)
   const commentButtonRef = useRef<HTMLButtonElement>(null)
   const commentBodyRef = useRef<HTMLTextAreaElement>(null)
@@ -50,13 +66,14 @@ export function DemandComments({
       if (request !== requestVersion.current) return
       setComments(result.content)
       setPageInfo(result)
+      setCommentsOwnerKey(sessionKey)
     } catch {
       if (request !== requestVersion.current) return
       setLoadError('Yorumlar yüklenemedi. Tekrar deneyin.')
     } finally {
       if (request === requestVersion.current) setLoading(false)
     }
-  }, [demandId])
+  }, [demandId, sessionKey])
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadFirstPage(), 0)
@@ -81,6 +98,18 @@ export function DemandComments({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, searchParams, setSearchParams])
 
+  const canComment =
+    open &&
+    authChecked &&
+    Boolean(sessionKey && userId) &&
+    (role === 'OPERATOR' || (role === 'PARENT' && parentHasActiveSupport))
+  const formOpen = canComment && formOwnerKey === sessionKey
+  const currentCommentOwnership =
+    authChecked &&
+    Boolean(userId) &&
+    commentsOwnerKey === sessionKey &&
+    (role === 'PARENT' || role === 'OPERATOR')
+
   function redirectToLogin(
     sessionExpired = false,
     role: AuthRole | undefined = knownAuthRole(),
@@ -92,28 +121,35 @@ export function DemandComments({
   }
 
   async function beginComment() {
+    if (!sessionKey || !userId) return
+    const ownerKey = sessionKey
+    const ownerId = userId
     setActionError(undefined)
     setNotice(undefined)
     if (!open) {
       setActionError('Katılıma kapalı taleplere yeni yorum eklenemez.')
       return
     }
-    const role = knownAuthRole()
+    const knownRole = knownAuthRole()
     try {
       const user = await currentUser()
+      if (
+        sessionKeyRef.current !== ownerKey ||
+        user.id !== ownerId ||
+        (user.role !== 'PARENT' && user.role !== 'OPERATOR')
+      ) {
+        return
+      }
       if (user.role === 'PARENT' && !parentHasActiveSupport) {
         setActionError('Yorum yazmak için önce bu talebe destek verin.')
         return
       }
-      if (user.role === 'ADMIN') {
-        setActionError('Yorumlar veli ve servis işletmecisi hesapları içindir.')
-        return
-      }
-      setFormOpen(true)
+      if (formOwnerKey !== ownerKey) setBody('')
+      setFormOwnerKey(ownerKey)
       window.requestAnimationFrame(() => commentBodyRef.current?.focus())
     } catch (error) {
       if (error instanceof ApiError && error.problem.status === 401) {
-        redirectToLogin(error.sessionExpired, role)
+        redirectToLogin(error.sessionExpired, knownRole)
         return
       }
       setActionError('Oturum bilgisi kontrol edilemedi. Tekrar deneyin.')
@@ -122,6 +158,8 @@ export function DemandComments({
 
   async function submitComment(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const ownerKey = formOwnerKey
+    if (!ownerKey || sessionKeyRef.current !== ownerKey) return
     const normalized = body.trim()
     const length = Array.from(normalized).length
     if (length < 2 || length > 1000) {
@@ -133,11 +171,13 @@ export function DemandComments({
     setNotice(undefined)
     try {
       await createDemandComment(demandId, normalized)
+      if (sessionKeyRef.current !== ownerKey) return
       setBody('')
-      setFormOpen(false)
+      setFormOwnerKey(undefined)
       setNotice('Yorumunuz yayınlandı.')
       await loadFirstPage()
     } catch (error) {
+      if (sessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Yorumunuz yayınlanamadı. Tekrar deneyin.')
     } finally {
       setSubmitting(false)
@@ -145,14 +185,18 @@ export function DemandComments({
   }
 
   async function removeComment(commentId: string) {
+    const ownerKey = sessionKey
+    if (!ownerKey || !currentCommentOwnership) return
     setDeletingId(commentId)
     setActionError(undefined)
     setNotice(undefined)
     try {
       await deleteDemandComment(demandId, commentId)
+      if (sessionKeyRef.current !== ownerKey) return
       await loadFirstPage()
       setNotice('Yorumunuz silindi.')
     } catch (error) {
+      if (sessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Yorum silinemedi. Tekrar deneyin.')
     } finally {
       setDeletingId(undefined)
@@ -161,13 +205,16 @@ export function DemandComments({
 
   async function loadMore() {
     if (!pageInfo || pageInfo.page + 1 >= pageInfo.totalPages) return
+    const ownerKey = sessionKey
     setLoadingMore(true)
     setLoadError(undefined)
     try {
       const result = await listDemandComments(demandId, pageInfo.page + 1)
+      if (sessionKeyRef.current !== ownerKey) return
       setComments((current) => [...current, ...result.content])
       setPageInfo(result)
     } catch {
+      if (sessionKeyRef.current !== ownerKey) return
       setLoadError('Diğer yorumlar yüklenemedi. Tekrar deneyin.')
     } finally {
       setLoadingMore(false)
@@ -199,7 +246,7 @@ export function DemandComments({
           {pageInfo && pageInfo.totalElements > 0 && (
             <span className="count-badge">{pageInfo.totalElements} yorum</span>
           )}
-          {open && !formOpen && (
+          {canComment && !formOpen && (
             <button
               className="secondary-button"
               ref={commentButtonRef}
@@ -209,8 +256,22 @@ export function DemandComments({
               Yorum yaz
             </button>
           )}
+          {open && authChecked && !role && (
+            <Link
+              className="button-link"
+              to={`/login?next=${encodeURIComponent(`${location.pathname}?action=comment`)}`}
+            >
+              Yorum yapmak için giriş yap
+            </Link>
+          )}
         </div>
       </div>
+
+      {open && authChecked && role === 'PARENT' && !parentHasActiveSupport && (
+        <p className="comment-state">
+          Yorum yazmak için önce bu talebe destek verin.
+        </p>
+      )}
 
       {formOpen && (
         <form className="demand-comment-form" onSubmit={submitComment}>
@@ -248,7 +309,7 @@ export function DemandComments({
               disabled={submitting}
               type="button"
               onClick={() => {
-                setFormOpen(false)
+                setFormOwnerKey(undefined)
                 setActionError(undefined)
                 window.requestAnimationFrame(() =>
                   commentButtonRef.current?.focus(),
@@ -311,8 +372,14 @@ export function DemandComments({
                 </header>
                 <p>{comment.body}</p>
                 <div className="comment-actions">
-                  <ReportControl targetId={comment.id} targetType="COMMENT" />
-                  {comment.canDelete && (
+                  <ReportControl
+                    authChecked={authChecked}
+                    role={role}
+                    sessionKey={sessionKey}
+                    targetId={comment.id}
+                    targetType="COMMENT"
+                  />
+                  {currentCommentOwnership && comment.canDelete && (
                     <button
                       className="text-button danger-text"
                       disabled={deletingId === comment.id}

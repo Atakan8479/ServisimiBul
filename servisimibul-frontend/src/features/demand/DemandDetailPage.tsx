@@ -3,11 +3,13 @@ import {
   Link,
   useLocation,
   useNavigate,
+  useOutletContext,
   useParams,
   useSearchParams,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../../components/design-system'
+import type { PublicAuthContext } from '../../components/layouts'
 import { currentUser } from '../auth/auth-api'
 import {
   getDemand,
@@ -39,7 +41,10 @@ export function DemandDetailPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { authChecked, role, sessionKey, userId } =
+    useOutletContext<PublicAuthContext>()
   const [demand, setDemand] = useState<Demand>()
+  const [demandOwnerKey, setDemandOwnerKey] = useState<string>()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string>()
   const [supportMode, setSupportMode] = useState<SupportMode>()
@@ -47,6 +52,7 @@ export function DemandDetailPage() {
   const [notice, setNotice] = useState<string | undefined>(
     (location.state as { notice?: string } | null)?.notice,
   )
+  const [supportOwnerKey, setSupportOwnerKey] = useState(sessionKey)
   const [withdrawing, setWithdrawing] = useState(false)
   const [serviceResponses, setServiceResponses] =
     useState<PublicServiceResponsePage>()
@@ -59,9 +65,27 @@ export function DemandDetailPage() {
   const [servicePending, setServicePending] = useState(false)
   const [serviceError, setServiceError] = useState<string>()
   const [serviceNotice, setServiceNotice] = useState<string>()
+  const [serviceOwnerKey, setServiceOwnerKey] = useState<string>()
   const requestVersion = useRef(0)
   const responseRequestVersion = useRef(0)
   const resumeHandled = useRef(false)
+  const parentSessionKey =
+    authChecked && role === 'PARENT' && userId ? sessionKey : undefined
+  const parentSessionKeyRef = useRef(parentSessionKey)
+  parentSessionKeyRef.current = parentSessionKey
+  const supportStateIsCurrent =
+    Boolean(parentSessionKey) && supportOwnerKey === parentSessionKey
+  const currentSupportMode = supportStateIsCurrent ? supportMode : undefined
+  const operatorSessionKey =
+    authChecked && role === 'OPERATOR' && userId ? sessionKey : undefined
+  const operatorSessionKeyRef = useRef(operatorSessionKey)
+  operatorSessionKeyRef.current = operatorSessionKey
+  const serviceStateIsCurrent =
+    Boolean(operatorSessionKey) && serviceOwnerKey === operatorSessionKey
+  const currentServiceEligibility = serviceStateIsCurrent
+    ? serviceEligibility
+    : undefined
+  const currentServicePending = serviceStateIsCurrent && servicePending
 
   const loadDemand = useCallback(async () => {
     if (!demandId) return
@@ -70,7 +94,10 @@ export function DemandDetailPage() {
     setLoadError(undefined)
     try {
       const result = await getDemand(demandId)
-      if (request === requestVersion.current) setDemand(result)
+      if (request === requestVersion.current) {
+        setDemand(result)
+        setDemandOwnerKey(sessionKey)
+      }
     } catch (error) {
       if (request !== requestVersion.current) return
       setDemand(undefined)
@@ -82,7 +109,7 @@ export function DemandDetailPage() {
     } finally {
       if (request === requestVersion.current) setLoading(false)
     }
-  }, [demandId])
+  }, [demandId, sessionKey])
 
   const loadServiceResponses = useCallback(async () => {
     if (!demandId) return
@@ -154,17 +181,18 @@ export function DemandDetailPage() {
   }
 
   async function beginSupport(mode?: SupportMode) {
+    if (!parentSessionKey || !userId) return
+    const ownerKey = parentSessionKey
+    const ownerId = userId
     setActionError(undefined)
     setNotice(undefined)
     try {
       const user = await currentUser()
-      if (user.role !== 'PARENT') {
-        setActionError(
-          'Desteğinizi yönetmek için veli hesabınızla giriş yapın.',
-        )
-        return
-      }
-      const support = demand?.currentUserSupport
+      if (user.role !== 'PARENT' || user.id !== ownerId) return
+      if (parentSessionKeyRef.current !== ownerKey) return
+      const support =
+        demandOwnerKey === ownerKey ? demand?.currentUserSupport : null
+      setSupportOwnerKey(ownerKey)
       setSupportMode(
         mode ??
           (support?.status === 'ACTIVE' ||
@@ -176,6 +204,7 @@ export function DemandDetailPage() {
               : 'join'),
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin('support', error.sessionExpired)
         return
@@ -185,24 +214,26 @@ export function DemandDetailPage() {
   }
 
   async function beginServiceResponse() {
-    if (!demandId) return
+    if (!demandId || !operatorSessionKey || !userId) return
+    const ownerKey = operatorSessionKey
+    const ownerId = userId
+    setServiceOwnerKey(ownerKey)
+    setServiceEligibility(undefined)
+    setServiceFormOpen(false)
     setServicePending(true)
     setServiceError(undefined)
     setServiceNotice(undefined)
     try {
       const user = await currentUser()
-      if (user.role !== 'OPERATOR') {
-        setServiceError(
-          'Servis bildirimi yalnızca doğrulanmış işletmeci hesabıyla yayınlanabilir.',
-        )
-        return
-      }
+      if (user.role !== 'OPERATOR' || user.id !== ownerId) return
       const eligibility = await getServiceResponseEligibility(demandId)
+      if (operatorSessionKeyRef.current !== ownerKey) return
       setServiceEligibility(eligibility)
       setServiceFormOpen(
         eligibility.eligible && eligibility.response?.status !== 'ACTIVE',
       )
     } catch (error) {
+      if (operatorSessionKeyRef.current !== ownerKey) return
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin('response', error.sessionExpired)
         return
@@ -213,16 +244,24 @@ export function DemandDetailPage() {
           : 'İşletmeci uygunluğu kontrol edilemedi. Tekrar deneyin.',
       )
     } finally {
-      setServicePending(false)
+      if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
     }
   }
 
   async function submitServiceResponse(values: ServiceResponseValues) {
-    if (!demandId) return
+    if (
+      !demandId ||
+      !operatorSessionKey ||
+      serviceOwnerKey !== operatorSessionKey
+    ) {
+      return
+    }
+    const ownerKey = operatorSessionKey
     setServiceError(undefined)
     setServiceNotice(undefined)
     try {
       const result = await publishDemandServiceResponse(demandId, values)
+      if (operatorSessionKeyRef.current !== ownerKey) return
       setServiceEligibility((current) =>
         current
           ? {
@@ -241,6 +280,7 @@ export function DemandDetailPage() {
       )
       await loadServiceResponses()
     } catch (error) {
+      if (operatorSessionKeyRef.current !== ownerKey) return
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin('response', true)
         return
@@ -254,12 +294,20 @@ export function DemandDetailPage() {
   }
 
   async function withdrawServiceResponse() {
-    if (!demandId) return
+    if (
+      !demandId ||
+      !operatorSessionKey ||
+      serviceOwnerKey !== operatorSessionKey
+    ) {
+      return
+    }
+    const ownerKey = operatorSessionKey
     setServicePending(true)
     setServiceError(undefined)
     setServiceNotice(undefined)
     try {
       const response = await withdrawDemandServiceResponse(demandId)
+      if (operatorSessionKeyRef.current !== ownerKey) return
       setServiceEligibility((current) =>
         current ? { ...current, response } : current,
       )
@@ -269,6 +317,7 @@ export function DemandDetailPage() {
       )
       await loadServiceResponses()
     } catch (error) {
+      if (operatorSessionKeyRef.current !== ownerKey) return
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin('response', true)
         return
@@ -279,48 +328,56 @@ export function DemandDetailPage() {
           : 'Servis bildirimi geri çekilemedi. Tekrar deneyin.',
       )
     } finally {
-      setServicePending(false)
+      if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
     }
   }
 
   async function submitSupport(values: SupportValues) {
-    if (!demandId || !supportMode) return
+    if (!demandId || !parentSessionKey || !currentSupportMode) return
+    const ownerKey = parentSessionKey
     setActionError(undefined)
     try {
       const result =
-        supportMode === 'edit'
+        currentSupportMode === 'edit'
           ? await updateDemandSupport(demandId, values)
           : await joinDemand(demandId, values)
+      if (parentSessionKeyRef.current !== ownerKey) return
       setDemand(result)
       setSupportMode(undefined)
       setNotice(
-        supportMode === 'edit'
+        currentSupportMode === 'edit'
           ? 'Destek tercihleriniz güncellendi.'
-          : supportMode === 'reactivate'
+          : currentSupportMode === 'reactivate'
             ? 'Desteğiniz yeniden etkinleştirildi.'
             : 'Desteğiniz talebe eklendi.',
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Desteğiniz kaydedilemedi. Tekrar deneyin.')
     }
   }
 
   async function withdrawSupport() {
-    if (!demandId) return
+    if (!demandId || !parentSessionKey) return
+    const ownerKey = parentSessionKey
+    setSupportOwnerKey(ownerKey)
     setWithdrawing(true)
     setActionError(undefined)
     setNotice(undefined)
     try {
       await withdrawDemandSupport(demandId)
+      if (parentSessionKeyRef.current !== ownerKey) return
       await loadDemand()
+      if (parentSessionKeyRef.current !== ownerKey) return
       setSupportMode(undefined)
       setNotice(
         'Desteğiniz geri çekildi. İsterseniz daha sonra yeniden katılabilirsiniz.',
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Desteğiniz geri çekilemedi. Tekrar deneyin.')
     } finally {
-      setWithdrawing(false)
+      if (parentSessionKeyRef.current === ownerKey) setWithdrawing(false)
     }
   }
 
@@ -368,27 +425,30 @@ export function DemandDetailPage() {
   }
 
   const activeReasons = demand.reasonCounts.filter((item) => item.count > 0)
+  const currentUserSupport =
+    demandOwnerKey === sessionKey ? demand.currentUserSupport : null
   const activeSupport =
-    demand.currentUserSupport?.status === 'ACTIVE' ||
-    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+    currentUserSupport?.status === 'ACTIVE' ||
+    currentUserSupport?.status === 'AWAITING_FEEDBACK'
   const withdrawnSupport =
-    demand.currentUserSupport?.status === 'WITHDRAWN' ||
-    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
+    currentUserSupport?.status === 'WITHDRAWN' ||
+    currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const feedbackVisible =
-    demand.currentUserSupport?.status === 'ACTIVE' ||
-    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
-    demand.currentUserSupport?.status === 'SATISFIED' ||
-    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
+    currentUserSupport?.status === 'ACTIVE' ||
+    currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
+    currentUserSupport?.status === 'SATISFIED' ||
+    currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const open = demand.status === 'OPEN'
-  const canManageSupport =
+  const supportAvailable =
     open ||
-    ((withdrawnSupport || !demand.currentUserSupport) &&
+    ((withdrawnSupport || !currentUserSupport) &&
       demand.closureReason === 'INACTIVE')
-  const initialValues = demand.currentUserSupport
+  const canManageSupport = Boolean(parentSessionKey) && supportAvailable
+  const initialValues = currentUserSupport
     ? {
-        needsMorning: demand.currentUserSupport.needsMorning,
-        needsAfternoon: demand.currentUserSupport.needsAfternoon,
-        reasons: demand.currentUserSupport.reasons,
+        needsMorning: currentUserSupport.needsMorning,
+        needsAfternoon: currentUserSupport.needsAfternoon,
+        reasons: currentUserSupport.reasons,
       }
     : undefined
 
@@ -425,7 +485,10 @@ export function DemandDetailPage() {
               <div className="demand-detail-header-actions">
                 {open && (
                   <ReportControl
+                    authChecked={authChecked}
                     label="Talebi bildir"
+                    role={role}
+                    sessionKey={sessionKey}
                     targetId={demand.id}
                     targetType="DEMAND"
                   />
@@ -471,7 +534,7 @@ export function DemandDetailPage() {
               </dl>
             </section>
 
-            {notice && (
+            {supportStateIsCurrent && notice && (
               <div className="status-banner success" role="status">
                 {notice}
               </div>
@@ -569,7 +632,10 @@ export function DemandDetailPage() {
                             {response.contactPhone} numarasını ara
                           </a>
                           <ReportControl
+                            authChecked={authChecked}
                             label="Bildir"
+                            role={role}
+                            sessionKey={sessionKey}
                             targetId={response.id}
                             targetType="SERVICE_RESPONSE"
                           />
@@ -616,7 +682,7 @@ export function DemandDetailPage() {
               </>
             )}
 
-            {open && (
+            {open && operatorSessionKey && (
               <div className="demand-service-publish">
                 <div>
                   <h3>Bu konuma servis sunuyor musunuz?</h3>
@@ -625,14 +691,14 @@ export function DemandDetailPage() {
                     paylaşabilirsiniz.
                   </p>
                 </div>
-                {!serviceEligibility && (
+                {!currentServiceEligibility && (
                   <button
                     className="primary-button"
-                    disabled={servicePending}
+                    disabled={currentServicePending}
                     onClick={() => void beginServiceResponse()}
                     type="button"
                   >
-                    {servicePending
+                    {currentServicePending
                       ? 'Bilgiler kontrol ediliyor…'
                       : 'Bu talep için servis ekle'}
                   </button>
@@ -640,235 +706,292 @@ export function DemandDetailPage() {
               </div>
             )}
 
-            {serviceEligibility && serviceEligibility.blockers.length > 0 && (
-              <div className="demand-service-guidance" role="status">
-                <h3>Yayınlamadan önce tamamlanması gerekenler</h3>
-                <ul>
-                  {serviceEligibility.blockers.map((blocker) => (
-                    <li key={blocker}>
-                      {serviceResponseBlockerMessage(blocker)}
-                    </li>
-                  ))}
-                </ul>
-                {serviceEligibility.blockers.some((blocker) =>
-                  [
-                    'SCHOOL_NOT_LINKED',
-                    'SCHOOL_RELATIONSHIP_INACTIVE',
-                    'COVERAGE_MISSING',
-                  ].includes(blocker),
-                ) && (
-                  <Link
-                    className="button-link"
-                    to="/operator/schools"
-                    viewTransition
-                  >
-                    Okul ve kapsam yönetimine git
-                  </Link>
-                )}
-                {serviceEligibility.blockers.includes('PROFILE_HIDDEN') && (
-                  <Link
-                    className="button-link"
-                    to="/operator/profile"
-                    viewTransition
-                  >
-                    Profil görünürlüğünü düzenle
-                  </Link>
-                )}
-                <button
-                  className="secondary-button"
-                  disabled={servicePending}
-                  onClick={() => void beginServiceResponse()}
-                  type="button"
+            {open && authChecked && !role && (
+              <div className="demand-service-publish">
+                <div>
+                  <h3>Bu konuma servis sunuyor musunuz?</h3>
+                  <p>
+                    Servis duyurusu paylaşmak için işletmeci hesabınızla giriş
+                    yapın.
+                  </p>
+                </div>
+                <Link
+                  className="button-link"
+                  to={`/operator/login?next=${encodeURIComponent(loginReturnPath('response'))}`}
+                  viewTransition
                 >
-                  Uygunluğu yeniden kontrol et
-                </button>
+                  İşletmeci olarak giriş yap
+                </Link>
               </div>
             )}
 
-            {serviceEligibility?.response?.status === 'ACTIVE' && (
+            {currentServiceEligibility &&
+              currentServiceEligibility.blockers.length > 0 && (
+                <div className="demand-service-guidance" role="status">
+                  <h3>Yayınlamadan önce tamamlanması gerekenler</h3>
+                  <ul>
+                    {currentServiceEligibility.blockers.map((blocker) => (
+                      <li key={blocker}>
+                        {serviceResponseBlockerMessage(blocker)}
+                      </li>
+                    ))}
+                  </ul>
+                  {currentServiceEligibility.blockers.some((blocker) =>
+                    [
+                      'SCHOOL_NOT_LINKED',
+                      'SCHOOL_RELATIONSHIP_INACTIVE',
+                      'COVERAGE_MISSING',
+                    ].includes(blocker),
+                  ) && (
+                    <Link
+                      className="button-link"
+                      to="/operator/schools"
+                      viewTransition
+                    >
+                      Okul ve kapsam yönetimine git
+                    </Link>
+                  )}
+                  {currentServiceEligibility.blockers.includes(
+                    'PROFILE_HIDDEN',
+                  ) && (
+                    <Link
+                      className="button-link"
+                      to="/operator/profile"
+                      viewTransition
+                    >
+                      Profil görünürlüğünü düzenle
+                    </Link>
+                  )}
+                  <button
+                    className="secondary-button"
+                    disabled={currentServicePending}
+                    onClick={() => void beginServiceResponse()}
+                    type="button"
+                  >
+                    Uygunluğu yeniden kontrol et
+                  </button>
+                </div>
+              )}
+
+            {currentServiceEligibility?.response?.status === 'ACTIVE' && (
               <div className="demand-service-owned" role="status">
                 <div>
                   <span
                     className={`status-pill ${
-                      serviceEligibility.response.currentlyPublic
+                      currentServiceEligibility.response.currentlyPublic
                         ? 'success'
                         : 'neutral'
                     }`}
                   >
-                    {serviceEligibility.response.currentlyPublic
+                    {currentServiceEligibility.response.currentlyPublic
                       ? 'Bildiriminiz yayında'
                       : 'Bildiriminiz şu anda gizli'}
                   </span>
                   <p>
-                    {serviceEligibility.response.offersMorning && 'Sabah'}
-                    {serviceEligibility.response.offersMorning &&
-                      serviceEligibility.response.offersAfternoon &&
+                    {currentServiceEligibility.response.offersMorning &&
+                      'Sabah'}
+                    {currentServiceEligibility.response.offersMorning &&
+                      currentServiceEligibility.response.offersAfternoon &&
                       ' ve '}
-                    {serviceEligibility.response.offersAfternoon &&
+                    {currentServiceEligibility.response.offersAfternoon &&
                       'öğleden sonra'}{' '}
                     yönü{' '}
-                    {serviceEligibility.response.currentlyPublic
+                    {currentServiceEligibility.response.currentlyPublic
                       ? 'velilere gösteriliyor.'
                       : 'gerekli koşullar sağlanana kadar velilere gösterilmiyor.'}
                   </p>
                 </div>
                 <button
                   className="danger-button"
-                  disabled={servicePending}
+                  disabled={currentServicePending}
                   onClick={() => void withdrawServiceResponse()}
                   type="button"
                 >
-                  {servicePending ? 'Geri çekiliyor…' : 'Bildirimi geri çek'}
+                  {currentServicePending
+                    ? 'Geri çekiliyor…'
+                    : 'Bildirimi geri çek'}
                 </button>
               </div>
             )}
 
-            {serviceFormOpen && serviceEligibility?.eligible && (
-              <DemandServiceResponseForm
-                initialValues={
-                  serviceEligibility.response
-                    ? {
-                        offersMorning:
-                          serviceEligibility.response.offersMorning,
-                        offersAfternoon:
-                          serviceEligibility.response.offersAfternoon,
-                      }
-                    : undefined
-                }
-                onCancel={() => setServiceFormOpen(false)}
-                onSubmit={submitServiceResponse}
-              />
-            )}
+            {serviceStateIsCurrent &&
+              serviceFormOpen &&
+              currentServiceEligibility?.eligible && (
+                <DemandServiceResponseForm
+                  initialValues={
+                    currentServiceEligibility.response
+                      ? {
+                          offersMorning:
+                            currentServiceEligibility.response.offersMorning,
+                          offersAfternoon:
+                            currentServiceEligibility.response.offersAfternoon,
+                        }
+                      : undefined
+                  }
+                  onCancel={() => setServiceFormOpen(false)}
+                  onSubmit={submitServiceResponse}
+                />
+              )}
 
-            {serviceNotice && (
+            {serviceStateIsCurrent && serviceNotice && (
               <div className="status-banner success" role="status">
                 {serviceNotice}
               </div>
             )}
-            {serviceError && (
+            {serviceStateIsCurrent && serviceError && (
               <div className="form-error" role="alert">
                 {serviceError}
               </div>
             )}
           </section>
 
-          {feedbackVisible && (
+          {parentSessionKey && feedbackVisible && (
             <DemandFeedbackPanel demandId={demand.id} onResolved={loadDemand} />
           )}
 
-          <section
-            className="demand-support-panel"
-            aria-labelledby="support-title"
-          >
-            <div className="section-heading">
-              <div>
-                <h2 id="support-title">Sizin desteğiniz</h2>
-                <p>
-                  Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
-                  yönetilir.
-                </p>
-              </div>
-              {activeSupport && (
-                <span className="status-pill success">
-                  {demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
-                    ? 'Yanıtınız bekleniyor'
-                    : 'Destekliyorsunuz'}
-                </span>
-              )}
-              {withdrawnSupport && (
-                <span className="status-pill neutral">Geri çekildi</span>
-              )}
-            </div>
-
-            {!open && (
-              <div className="status-banner neutral">
-                {demand.closureReason === 'INACTIVE' && withdrawnSupport
-                  ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
-                  : demand.closureReason === 'INACTIVE' &&
-                      !demand.currentUserSupport
-                    ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
-                    : demand.closureReason === 'FULFILLED'
-                      ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
-                      : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
-              </div>
-            )}
-
-            {demand.currentUserSupport && (
-              <div
-                className="demand-current-support"
-                aria-label="Katılım özetiniz"
-              >
+          {parentSessionKey && (
+            <section
+              className="demand-support-panel"
+              aria-labelledby="support-title"
+            >
+              <div className="section-heading">
                 <div>
-                  <span>Katılım durumu</span>
-                  <strong>
-                    {supportStateLabel(demand.currentUserSupport.status)}
-                  </strong>
+                  <h2 id="support-title">Sizin desteğiniz</h2>
+                  <p>
+                    Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
+                    yönetilir.
+                  </p>
                 </div>
-                <div>
-                  <span>İhtiyaç yönü</span>
-                  <strong>
-                    {directionSummary(
-                      demand.currentUserSupport.needsMorning,
-                      demand.currentUserSupport.needsAfternoon,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            {canManageSupport && !supportMode && (
-              <div className="button-row demand-support-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={() => void beginSupport()}
-                >
-                  {activeSupport
-                    ? 'Desteğimi düzenle'
-                    : withdrawnSupport
-                      ? 'Desteğimi yeniden etkinleştir'
-                      : 'Benim de ihtiyacım var'}
-                </button>
                 {activeSupport && (
-                  <button
-                    className="danger-button"
-                    disabled={withdrawing}
-                    type="button"
-                    onClick={() => void withdrawSupport()}
-                  >
-                    {withdrawing ? 'Geri çekiliyor…' : 'Desteğimi geri çek'}
-                  </button>
+                  <span className="status-pill success">
+                    {currentUserSupport?.status === 'AWAITING_FEEDBACK'
+                      ? 'Yanıtınız bekleniyor'
+                      : 'Destekliyorsunuz'}
+                  </span>
+                )}
+                {withdrawnSupport && (
+                  <span className="status-pill neutral">Geri çekildi</span>
                 )}
               </div>
-            )}
 
-            {canManageSupport && supportMode && (
-              <DemandSupportForm
-                initialValues={initialValues}
-                submitLabel={
-                  supportMode === 'edit'
-                    ? 'Tercihlerimi kaydet'
-                    : supportMode === 'reactivate'
-                      ? 'Desteğimi yeniden etkinleştir'
-                      : 'Talebe katıl'
-                }
-                busyLabel="Kaydediliyor…"
-                onCancel={() => setSupportMode(undefined)}
-                onSubmit={submitSupport}
-              />
-            )}
+              {!open && (
+                <div className="status-banner neutral">
+                  {demand.closureReason === 'INACTIVE' && withdrawnSupport
+                    ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
+                    : demand.closureReason === 'INACTIVE' && !currentUserSupport
+                      ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
+                      : demand.closureReason === 'FULFILLED'
+                        ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
+                        : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
+                </div>
+              )}
 
-            {actionError && (
-              <div className="form-error" role="alert">
-                {actionError}
+              {currentUserSupport && (
+                <div
+                  className="demand-current-support"
+                  aria-label="Katılım özetiniz"
+                >
+                  <div>
+                    <span>Katılım durumu</span>
+                    <strong>
+                      {supportStateLabel(currentUserSupport.status)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>İhtiyaç yönü</span>
+                    <strong>
+                      {directionSummary(
+                        currentUserSupport.needsMorning,
+                        currentUserSupport.needsAfternoon,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              {canManageSupport && !currentSupportMode && (
+                <div className="button-row demand-support-actions">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => void beginSupport()}
+                  >
+                    {activeSupport
+                      ? 'Desteğimi düzenle'
+                      : withdrawnSupport
+                        ? 'Desteğimi yeniden etkinleştir'
+                        : 'Benim de ihtiyacım var'}
+                  </button>
+                  {activeSupport && (
+                    <button
+                      className="danger-button"
+                      disabled={supportStateIsCurrent && withdrawing}
+                      type="button"
+                      onClick={() => void withdrawSupport()}
+                    >
+                      {supportStateIsCurrent && withdrawing
+                        ? 'Geri çekiliyor…'
+                        : 'Desteğimi geri çek'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {canManageSupport && currentSupportMode && (
+                <DemandSupportForm
+                  initialValues={initialValues}
+                  submitLabel={
+                    currentSupportMode === 'edit'
+                      ? 'Tercihlerimi kaydet'
+                      : currentSupportMode === 'reactivate'
+                        ? 'Desteğimi yeniden etkinleştir'
+                        : 'Talebe katıl'
+                  }
+                  busyLabel="Kaydediliyor…"
+                  onCancel={() => setSupportMode(undefined)}
+                  onSubmit={submitSupport}
+                />
+              )}
+
+              {supportStateIsCurrent && actionError && (
+                <div className="form-error" role="alert">
+                  {actionError}
+                </div>
+              )}
+            </section>
+          )}
+
+          {authChecked && !role && supportAvailable && (
+            <section
+              className="demand-support-panel"
+              aria-labelledby="support-login-title"
+            >
+              <div className="section-heading">
+                <div>
+                  <h2 id="support-login-title">Talebi destekleyin</h2>
+                  <p>
+                    Bu servis ihtiyacına katılmak için veli hesabınızla giriş
+                    yapın.
+                  </p>
+                </div>
               </div>
-            )}
-          </section>
+              <Link
+                className="button-link"
+                to={`/parent/login?next=${encodeURIComponent(loginReturnPath('support'))}`}
+              >
+                Veli olarak giriş yap
+              </Link>
+            </section>
+          )}
 
           <DemandComments
+            authChecked={authChecked}
             demandId={demand.id}
             open={open}
             parentHasActiveSupport={activeSupport}
+            role={role}
+            sessionKey={sessionKey}
+            userId={userId}
           />
         </div>
 
