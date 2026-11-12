@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
 
-type TransitionLog = string[][]
+// One entry per started route transition; null until its animations are known.
+type TransitionLog = (string[] | null)[]
 
 const contentMotion = [
   '::view-transition-new(page-content):page-enter',
@@ -11,15 +12,16 @@ const contentMotion = [
 test.beforeEach(async ({ page }) => {
   // Record the animations each route view transition actually runs.
   await page.addInitScript(() => {
-    const log: string[][] = []
+    const log: (string[] | null)[] = []
     Object.assign(window, { routeTransitions: log })
     const start = document.startViewTransition?.bind(document)
     if (!start) return
     document.startViewTransition = ((update: () => Promise<void>) => {
       const transition = start(update)
-      void transition.ready.then(() => {
-        log.push(
-          document
+      const index = log.push(null) - 1
+      transition.ready.then(
+        () => {
+          log[index] = document
             .getAnimations()
             .map((animation) => {
               const pseudo =
@@ -28,9 +30,11 @@ test.beforeEach(async ({ page }) => {
               return `${pseudo}:${name}`
             })
             .filter((entry) => entry.startsWith('::view-transition'))
-            .sort(),
-        )
-      })
+            .sort()
+        },
+        // A newer navigation replaced this transition before it started.
+        () => (log[index] = ['skipped']),
+      )
       return transition
     }) as typeof document.startViewTransition
   })
@@ -216,6 +220,6 @@ async function transitionCount(page: Page) {
 }
 
 async function lastTransition(page: Page) {
-  await expect.poll(() => transitionCount(page)).toBeGreaterThan(0)
+  await expect.poll(async () => (await transitions(page)).at(-1)).toBeTruthy()
   return (await transitions(page)).at(-1)!
 }
