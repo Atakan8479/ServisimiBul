@@ -26,6 +26,7 @@ import {
   type SchoolPage,
   type SchoolWriteRequest,
 } from './admin-api'
+import { exitDialog } from '../../components/dialog-exit'
 
 const emptyForm = {
   name: '',
@@ -636,7 +637,9 @@ export function AdminSchoolsPage() {
               <button
                 className="secondary-button"
                 disabled={pending === 'save'}
-                onClick={closeEditor}
+                onClick={(event) =>
+                  exitDialog(event.currentTarget.closest('dialog'), closeEditor)
+                }
                 type="button"
               >
                 Vazgeç
@@ -726,7 +729,7 @@ function SchoolEditorDialog({
       className="admin-confirm-dialog admin-school-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       onClose={(event) => {
         // Repeated Escape can close a native dialog without a cancel event.

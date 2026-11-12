@@ -15,6 +15,7 @@ import {
   type InitialDemandLocation,
 } from './DemandLocationPicker'
 import { DemandSupportForm } from './DemandSupportForm'
+import { exitDialog } from '../../components/dialog-exit'
 
 const defaultSupport = (): SupportValues => ({
   needsMorning: true,
@@ -286,7 +287,7 @@ function DemandConfirmationDialog({
       className="demand-confirm-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       ref={dialogRef}
     >
@@ -321,7 +322,7 @@ function DemandConfirmationDialog({
           disabled={pending}
           ref={cancelRef}
           type="button"
-          onClick={onCancel}
+          onClick={() => exitDialog(dialogRef.current, onCancel)}
         >
           Düzenlemeye dön
         </button>

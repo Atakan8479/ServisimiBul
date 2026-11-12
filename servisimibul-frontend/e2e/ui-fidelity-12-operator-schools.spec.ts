@@ -5,6 +5,7 @@ import {
   installMockApi,
   type MockApiState,
 } from './support/mock-api'
+import { settleDialogMotion } from './support/dialog-motion'
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -324,6 +325,7 @@ async function prepare(page: Page, state: MockApiState) {
 }
 
 async function assertAccessibleAndContained(page: Page) {
+  await settleDialogMotion(page)
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze()

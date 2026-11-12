@@ -2344,6 +2344,7 @@ select[aria-invalid='true'] {
     background-color var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
     color var(--motion-fast) ease,
+    filter var(--motion-fast) ease,
     transform var(--motion-fast) var(--ease-out);
 }
 
@@ -2358,7 +2359,8 @@ select[aria-invalid='true'] {
 .primary-button {
   background: var(--color-accent);
   color: #fff;
-  box-shadow: 0 0.5rem 1.25rem rgba(23, 107, 77, 0.15);
+  box-shadow: 0 0.5rem 1.25rem
+    color-mix(in srgb, var(--color-accent) 15%, transparent);
 }
 
 .secondary-button {
@@ -3643,10 +3645,12 @@ button:disabled {
   color: #fff;
   font-weight: 750;
   text-decoration: none;
-  box-shadow: 0 0.5rem 1.25rem rgba(23, 107, 77, 0.18);
+  box-shadow: 0 0.5rem 1.25rem
+    color-mix(in srgb, var(--color-accent) 18%, transparent);
   transition:
     background-color var(--motion-fast) ease,
     box-shadow var(--motion-fast) ease,
+    filter var(--motion-fast) ease,
     transform var(--motion-fast) var(--ease-out);
 }
 
@@ -5346,13 +5350,71 @@ button.button-link {
   }
 }
 
+nav a:active {
+  background: color-mix(in srgb, var(--color-accent) 13%, transparent);
+}
+
+.ui-button:active,
+.button-link:active,
+.primary-button:active,
+.secondary-button:active,
+.danger-button:active,
+.operator-phone-link:active {
+  transform: scale(0.98);
+}
+
+.secondary-button[aria-disabled='true'] {
+  transform: none;
+}
+
+/* Native dialogs: closed and closing share the exit state; see dialog-exit.ts. */
+dialog {
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition:
+    opacity var(--motion-fast) ease-in,
+    transform var(--motion-fast) ease-in,
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
+}
+
+dialog::backdrop {
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast) ease-in,
+    overlay var(--motion-fast) allow-discrete,
+    display var(--motion-fast) allow-discrete;
+}
+
+dialog[open]:not([data-closing]) {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-page) var(--ease-out),
+    transform var(--motion-page) var(--ease-out);
+}
+
+dialog[open]:not([data-closing])::backdrop {
+  opacity: 1;
+  transition: opacity var(--motion-page) var(--ease-out);
+}
+
+dialog[data-closing] {
+  pointer-events: none;
+}
+
+@starting-style {
+  dialog[open]:not([data-closing]) {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  dialog[open]:not([data-closing])::backdrop {
+    opacity: 0;
+  }
+}
+
 @media (hover: hover) {
-  .brand:hover,
-  nav a:hover,
-  .button-link:hover,
-  .primary-button:hover,
-  .secondary-button:hover,
-  .danger-button:hover,
   .action-card:hover {
     transform: translateY(-2px);
   }
@@ -5363,21 +5425,28 @@ button.button-link {
   }
 
   nav a:hover {
-    background: rgba(23, 107, 77, 0.07);
+    background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  }
+
+  /* Brightness keeps hover feedback correct on every colour variant. */
+  .button-link:hover,
+  .primary-button:hover,
+  .secondary-button:hover,
+  .danger-button:hover {
+    filter: brightness(0.94);
   }
 
   .button-link:hover {
-    background: var(--color-accent-strong);
-    box-shadow: 0 0.75rem 1.5rem rgba(23, 107, 77, 0.24);
+    box-shadow: 0 0.75rem 1.5rem
+      color-mix(in srgb, var(--color-accent) 24%, transparent);
+  }
+
+  .secondary-button:hover {
+    border-color: var(--color-border-strong);
   }
 
   .operator-phone-link:hover {
     background: var(--teal-600);
-    transform: translateY(-2px);
-  }
-
-  .primary-button:hover {
-    background: var(--color-accent-strong);
   }
 
   .action-card:hover {

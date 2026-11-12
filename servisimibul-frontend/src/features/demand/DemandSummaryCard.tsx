@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { StatusBadge } from '../../components/design-system'
 import type { Demand } from './demand-api'
 import { demandStateLabel, reasonLabel } from './demand-labels'
+import { exitDialog } from '../../components/dialog-exit'
 
 export function DemandSummaryCard({ demand }: { demand: Demand }) {
   const activeReasons = demand.reasonCounts.filter((item) => item.count > 0)
@@ -128,7 +129,7 @@ function DemandPreviewDialog({
       className="demand-preview-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        onClose()
+        exitDialog(dialogRef.current, onClose)
       }}
       ref={dialogRef}
     >
@@ -147,7 +148,7 @@ function DemandPreviewDialog({
           className="secondary-button"
           ref={closeRef}
           type="button"
-          onClick={onClose}
+          onClick={() => exitDialog(dialogRef.current, onClose)}
         >
           Kapat
         </button>
