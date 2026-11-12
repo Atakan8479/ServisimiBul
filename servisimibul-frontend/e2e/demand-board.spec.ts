@@ -197,7 +197,7 @@ test('eligible operator publishes and withdraws a demand-specific service respon
   await installMockApi(page, state)
 
   await page.goto(`/demands/481be36b-c8ee-4c03-868e-47bbc19b7735`)
-  await page.getByRole('button', { name: 'Bu talep için servis ekle' }).click()
+  await page.getByRole('link', { name: 'İşletmeci olarak giriş yap' }).click()
   await expect(page).toHaveURL(/\/operator\/login\?next=/)
   await expect(page.getByText(/İşletmeci hesabınız yoksa/)).toBeVisible()
 
