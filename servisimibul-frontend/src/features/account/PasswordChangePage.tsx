@@ -171,7 +171,11 @@ export function PasswordChangePage() {
             <Button disabled={isSubmitting} type="submit">
               {isSubmitting ? 'Güncelleniyor…' : 'Şifreyi güncelle'}
             </Button>
-            <Link className="ui-button ui-button-secondary" to={accountPath}>
+            <Link
+              className="ui-button ui-button-secondary"
+              to={accountPath}
+              viewTransition
+            >
               Vazgeç
             </Link>
           </div>

@@ -346,7 +346,11 @@ export function AccountSettingsRouteError() {
       <div className="account-route-state">
         <StatePanel
           action={
-            <Link className="ui-button ui-button-secondary" to={backPath}>
+            <Link
+              className="ui-button ui-button-secondary"
+              to={backPath}
+              viewTransition
+            >
               {backLabel}
             </Link>
           }

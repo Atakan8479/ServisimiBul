@@ -86,7 +86,11 @@ export function EmailChangePage() {
               E-posta teslimi ve gerekli hukuki kararlar tamamlanana kadar yeni
               adres kaydedilemez.
             </p>
-            <Link className="ui-button ui-button-secondary" to={accountPath}>
+            <Link
+              className="ui-button ui-button-secondary"
+              to={accountPath}
+              viewTransition
+            >
               Hesap ayarlarına dön
             </Link>
           </div>
@@ -98,7 +102,11 @@ export function EmailChangePage() {
               bağlantısı gönderilir. Bağlantı doğrulanana kadar mevcut
               e-postanız değişmez.
             </p>
-            <Link className="ui-button ui-button-secondary" to={accountPath}>
+            <Link
+              className="ui-button ui-button-secondary"
+              to={accountPath}
+              viewTransition
+            >
               Hesap ayarlarına dön
             </Link>
           </div>
@@ -137,6 +145,7 @@ export function EmailChangePage() {
                 <Link
                   className="ui-button ui-button-secondary"
                   to={accountPath}
+                  viewTransition
                 >
                   Vazgeç
                 </Link>
@@ -196,12 +205,17 @@ export function EmailChangeConfirmationPage() {
               Tüm açık oturumlar sonlandırıldı. Yeni adresinizle giriş yapın.
             </p>
             <div className="account-password-actions">
-              <Link className="ui-button ui-button-primary" to="/parent/login">
+              <Link
+                className="ui-button ui-button-primary"
+                to="/parent/login"
+                viewTransition
+              >
                 Veli girişi
               </Link>
               <Link
                 className="ui-button ui-button-secondary"
                 to="/operator/login"
+                viewTransition
               >
                 İşletmeci girişi
               </Link>
@@ -222,7 +236,11 @@ export function EmailChangeConfirmationPage() {
               <Button disabled={pending} onClick={confirm} type="button">
                 {pending ? 'Doğrulanıyor…' : 'E-posta değişikliğini doğrula'}
               </Button>
-              <Link className="ui-button ui-button-secondary" to="/">
+              <Link
+                className="ui-button ui-button-secondary"
+                to="/"
+                viewTransition
+              >
                 Ana sayfaya dön
               </Link>
             </div>
