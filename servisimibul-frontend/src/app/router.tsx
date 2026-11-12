@@ -266,6 +266,7 @@ const applicationRoutes: RouteObject[] = [
       {
         path: 'schools',
         handle: { pageTitle: 'Okullar ve kapsam' },
+        loader: operatorResourceLoader,
         lazy: async () => ({
           Component: (await import('../features/operator/OperatorSchoolsPage'))
             .OperatorSchoolsPage,
@@ -274,6 +275,7 @@ const applicationRoutes: RouteObject[] = [
       {
         path: 'offerings',
         handle: { pageTitle: 'Araçlar ve servisler' },
+        loader: operatorResourceLoader,
         lazy: async () => ({
           Component: (
             await import('../features/operator/OperatorOfferingsPage')
@@ -445,6 +447,14 @@ async function operatorLoader({ request }: LoaderFunctionArgs) {
     }
     throw error
   }
+}
+
+async function operatorResourceLoader(args: LoaderFunctionArgs) {
+  const user = await operatorLoader(args)
+  if (user.operatorApprovalRequired && user.approvalStatus !== 'APPROVED') {
+    throw redirect('/operator/profile')
+  }
+  return user
 }
 
 async function adminLoader({ request }: LoaderFunctionArgs) {
