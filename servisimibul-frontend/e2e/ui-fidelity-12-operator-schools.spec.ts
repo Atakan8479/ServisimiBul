@@ -5,6 +5,7 @@ import {
   installMockApi,
   type MockApiState,
 } from './support/mock-api'
+import { settleDialogMotion } from './support/dialog-motion'
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -324,14 +325,7 @@ async function prepare(page: Page, state: MockApiState) {
 }
 
 async function assertAccessibleAndContained(page: Page) {
-  // Axe must read settled colours, not a dialog that is still fading in.
-  await page.evaluate(() =>
-    Promise.all(
-      [...document.querySelectorAll('dialog[open]')].flatMap((dialog) =>
-        dialog.getAnimations().map((animation) => animation.finished),
-      ),
-    ),
-  )
+  await settleDialogMotion(page)
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze()

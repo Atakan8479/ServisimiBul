@@ -1,6 +1,7 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
+import { settleDialogMotion } from './support/dialog-motion'
 
 const viewports = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -224,6 +225,7 @@ async function assertReachable(page: Page, target: Locator) {
 }
 
 async function assertAccessibleAndContained(page: Page) {
+  await settleDialogMotion(page)
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze()
