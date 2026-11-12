@@ -40,7 +40,7 @@ export function DemandCreatePage() {
   const [selection, setSelection] = useState<DemandLocationSelection>()
   const [hasLocationDraft, setHasLocationDraft] = useState(false)
   const [academicYear, setAcademicYear] = useState(
-    searchParams.get('academicYear') ?? initialDraft?.academicYear ?? '',
+    initialDraft?.academicYear ?? searchParams.get('academicYear') ?? '',
   )
   const [support, setSupport] = useState<SupportValues>(
     initialDraft?.support ?? defaultSupport(),
@@ -193,7 +193,17 @@ export function DemandCreatePage() {
             inputMode="numeric"
             placeholder="Güncel yıl veya 2026-2027"
             value={academicYear}
-            onChange={(event) => setAcademicYear(event.target.value)}
+            onChange={(event) => {
+              const nextAcademicYear = event.target.value
+              setAcademicYear(nextAcademicYear)
+              const nextParams = new URLSearchParams(searchParams)
+              if (nextAcademicYear.trim()) {
+                nextParams.set('academicYear', nextAcademicYear.trim())
+              } else {
+                nextParams.delete('academicYear')
+              }
+              setSearchParams(nextParams, { replace: true })
+            }}
           />
         </label>
       </section>

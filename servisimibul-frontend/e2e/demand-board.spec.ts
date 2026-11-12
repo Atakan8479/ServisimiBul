@@ -38,7 +38,7 @@ test('keeps a prefilled mobile selection while starting creation from a populate
   expect(accessibility.violations).toEqual([])
 })
 
-test('parent creates and manages an anonymous demand after checking operators', async ({
+test('parent keeps an edited academic year through registration, login and refresh', async ({
   page,
 }) => {
   const state = createMockApiState()
@@ -49,6 +49,7 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()
   await page.getByLabel('Servis alınacak ilçe').selectOption('11')
   await page.getByLabel('Servis alınacak mahalle').selectOption('201')
+  await page.getByLabel('Eğitim yılı').fill('2026-2027')
   await page.getByRole('button', { name: 'Talepleri göster' }).click()
   await expect(
     page.getByRole('heading', { name: 'Bu seçim için açık talep yok' }),
@@ -61,6 +62,8 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(
     page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
   ).toBeVisible()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await page.getByLabel('Eğitim yılı').fill('2027-2028')
   await page.getByLabel('Uygun servis bulamıyorum').check()
   await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
@@ -115,8 +118,10 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .fill('parent password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2027-2028')
   await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
   await page.reload()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2027-2028')
   await expect(page.getByLabel('Uygun servis bulamıyorum')).not.toBeChecked()
   await expect(page.getByLabel(/^Sabah/)).toBeChecked()
   await page.getByLabel('Uygun servis bulamıyorum').check()
