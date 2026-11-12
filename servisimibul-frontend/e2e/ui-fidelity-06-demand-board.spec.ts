@@ -30,9 +30,15 @@ for (const viewport of viewports) {
     ).toBeVisible()
     await expect(page.getByText('Katılıma açık')).toBeVisible()
     await expect(page.getByText('Güvenli ve açık iletişim')).toBeVisible()
+    const previewTrigger = page.getByRole('button', { name: 'Önizlemeyi aç' })
+    await previewTrigger.click()
+    const preview = page.getByRole('dialog', { name: 'Örnek Okulu' })
     await expect(
-      page.getByRole('link', { name: 'Talebi görüntüle' }),
+      preview.getByRole('link', { name: 'Tüm detayları görüntüle' }),
     ).toHaveAttribute('href', /\/demands\//)
+    await page.keyboard.press('Escape')
+    await expect(preview).toBeHidden()
+    await expect(previewTrigger).toBeFocused()
 
     expect(
       await page.evaluate(
@@ -97,7 +103,7 @@ test('D01 exposes truthful empty, loading and retry states', async ({
     page.getByRole('heading', { name: 'Bu seçim için açık talep yok' }),
   ).toBeVisible()
   await expect(
-    page.getByRole('link', { name: 'Seçimi güncelle' }),
+    page.getByRole('link', { name: 'Okul ve mahalle seç' }),
   ).toHaveAttribute('href', '#demand-filters')
   await page.screenshot({
     path: testInfo.outputPath('d01-empty.png'),
@@ -105,11 +111,12 @@ test('D01 exposes truthful empty, loading and retry states', async ({
   })
 })
 
-test('D01 keeps the real operator check before parent demand creation', async ({
+test('D01 combines operator results with the dedicated creation screen', async ({
   page,
 }, testInfo) => {
   const state = createMockApiState()
   await page.setViewportSize({ width: 390, height: 844 })
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   await installMockApi(page, state)
 
   await page.goto('/parent/login')
@@ -125,16 +132,14 @@ test('D01 keeps the real operator check before parent demand creation', async ({
   await page.getByLabel('Servis alınacak ilçe').selectOption('11')
   await page.getByLabel('Servis alınacak mahalle').selectOption('201')
   await page.getByRole('button', { name: 'Talepleri göster' }).click()
-  await page
-    .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-    .click()
   await expect(
     page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
   await expect(
-    page.getByRole('heading', { name: 'İhtiyacınızı ekleyin' }),
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
   ).toBeVisible()
+  await expect(page.getByLabel('Servis alınacak mahalle')).toHaveValue('201')
 
   await page.evaluate(() => window.scrollTo(0, 0))
   await page.screenshot({

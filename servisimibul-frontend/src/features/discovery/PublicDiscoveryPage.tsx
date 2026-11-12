@@ -1144,7 +1144,7 @@ function DiscoveryResults({
                 to={demandBoardPath(selection)}
                 viewTransition
               >
-                Talep panosuna git
+                Servis talebi oluştur
               </Link>
             </div>
           )}
@@ -1210,7 +1210,7 @@ function demandBoardPath(selection?: SearchSelection) {
     pickupDistrictId: String(selection.pickupDistrictId),
     neighborhoodId: String(selection.neighborhoodId),
   })
-  return `/demands?${parameters.toString()}`
+  return `/demands/new?${parameters.toString()}`
 }
 
 function SearchContext({ selection }: { selection: SearchSelection }) {

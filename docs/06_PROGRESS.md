@@ -1,5 +1,11 @@
 # Progress ledger (update only after verification)
 
+## DEMAND-UX discovery and creation journey — 2026-11-10 (PR #289 pending review)
+
+- Branch `codex/270-demand-flow` implements issue #270 across public discovery and the demand board. Partial school/pickup selections now fail visibly without dropping fields, while an entirely empty selection still browses all demands. Complete and cleared selections preserve the expected school, pickup district, neighborhood, academic year, status, count, sort, and pagination behavior.
+- A complete location now loads demands and matching operators independently with separate loading, empty, error, retry, count, and pagination states. Every valid location exposes the dedicated `/demands/new` route; its editable prefill, support draft, parent-login return, confirmation dialog, backend duplicate response, and parent-only gate preserve the existing API and authorization contract. Demand cards open a privacy-safe preview dialog before the existing detail route.
+- Latest `main`, including PR #288's authentication fixes, is merged. ESLint, strict TypeScript, Vite build, `git diff --check`, all 310 Vitest tests, and all 254 mocked Chromium tests passed. The browser suite covers 1440/768/390/320 px, WCAG 2.2 AA, keyboard/dialog behavior, overflow, shared auth shells, and the creation journey. The Impeccable detector returned no findings. No backend, migration, dependency, Supabase, production, or authorization behavior changed.
+
 ## QA-01 real account/privacy lifecycle evidence — 2026-11-09
 
 - Issue #223 now has a separate real React/Vite → Spring Boot → disposable PostgreSQL 17.4 scenario for enabled parent/operator deactivation, anonymous/admin denial, CSRF failure and retry, multi-session invalidation, concurrent requests, operator discovery removal, shared-demand/third-party preservation, the disabled data-rights gate, and 1440/768/390/320 axe/overflow/keyboard checks.

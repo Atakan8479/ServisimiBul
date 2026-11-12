@@ -22,15 +22,18 @@ export function DemandSupportForm({
   busyLabel,
   onSubmit,
   onCancel,
+  onChange,
 }: {
   initialValues?: SupportValues
   submitLabel: string
   busyLabel: string
   onSubmit: (values: SupportValues) => Promise<void>
   onCancel: () => void
+  onChange?: (values: SupportValues) => void
 }) {
   const {
     register,
+    getValues,
     handleSubmit,
     reset,
     formState: { errors, isSubmitting },
@@ -56,6 +59,7 @@ export function DemandSupportForm({
   return (
     <form
       className="demand-support-form"
+      onChange={() => onChange?.(getValues())}
       onSubmit={handleSubmit(onSubmit)}
       noValidate
     >

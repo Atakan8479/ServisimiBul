@@ -28,9 +28,11 @@ const DEFAULT_SORT: SchoolSort = 'name-asc'
 
 export function DemandLocationPicker({
   initialLocation,
+  onLocationDraftChange,
   onSelectionChange,
 }: {
   initialLocation?: InitialDemandLocation
+  onLocationDraftChange?: (hasLocation: boolean) => void
   onSelectionChange: (selection?: DemandLocationSelection) => void
 }) {
   const [provinces, setProvinces] = useState<
@@ -54,9 +56,11 @@ export function DemandLocationPicker({
   const [error, setError] = useState<string>()
   const requestVersion = useRef(0)
   const onSelectionChangeRef = useRef(onSelectionChange)
+  const onLocationDraftChangeRef = useRef(onLocationDraftChange)
   useEffect(() => {
     onSelectionChangeRef.current = onSelectionChange
-  }, [onSelectionChange])
+    onLocationDraftChangeRef.current = onLocationDraftChange
+  }, [onLocationDraftChange, onSelectionChange])
 
   const loadSchoolPage = useCallback(
     async (
@@ -155,6 +159,7 @@ export function DemandLocationPicker({
           setPickupDistrictId(String(pickupDistrict.id))
           setNeighborhoods(nextNeighborhoods)
           setNeighborhoodId(String(neighborhood.id))
+          onLocationDraftChangeRef.current?.(true)
           onSelectionChangeRef.current({ school, pickupDistrict, neighborhood })
         })
         .catch(() => {
@@ -186,6 +191,7 @@ export function DemandLocationPicker({
   function clearSchool() {
     setSelectedSchool(undefined)
     clearPickup()
+    onLocationDraftChange?.(Boolean(provinceId))
   }
 
   async function selectProvince(nextProvinceId: string) {
@@ -199,6 +205,7 @@ export function DemandLocationPicker({
     setSchoolPage(undefined)
     setError(undefined)
     clearSchool()
+    onLocationDraftChange?.(Boolean(nextProvinceId))
     if (!nextProvinceId) return
 
     const numericId = Number(nextProvinceId)
@@ -271,6 +278,7 @@ export function DemandLocationPicker({
     setNeighborhoods([])
     setNeighborhoodId('')
     onSelectionChange(undefined)
+    onLocationDraftChange?.(true)
     setLoadingPickup(true)
     setError(undefined)
     try {
@@ -289,6 +297,7 @@ export function DemandLocationPicker({
     setNeighborhoods([])
     setNeighborhoodId('')
     onSelectionChange(undefined)
+    onLocationDraftChange?.(true)
     if (!value || !selectedSchool) return
     setLoadingPickup(true)
     setError(undefined)
@@ -308,12 +317,14 @@ export function DemandLocationPicker({
     )
     const neighborhood = neighborhoods.find((item) => item.id === Number(value))
     if (selectedSchool && pickupDistrict && neighborhood) {
+      onLocationDraftChange?.(true)
       onSelectionChange({
         school: selectedSchool,
         pickupDistrict,
         neighborhood,
       })
     } else {
+      onLocationDraftChange?.(true)
       onSelectionChange(undefined)
     }
   }

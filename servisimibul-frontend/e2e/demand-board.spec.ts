@@ -1,7 +1,44 @@
+import AxeBuilder from '@axe-core/playwright'
 import { expect, test } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
 
-test('parent creates and manages an anonymous demand after checking operators', async ({
+test('keeps a prefilled mobile selection while starting creation from a populated non-open tab', async ({
+  page,
+}) => {
+  const state = createMockApiState()
+  state.demandCreated = true
+  state.demandClosure = 'FULFILLED'
+  await page.setViewportSize({ width: 320, height: 800 })
+  await installMockApi(page, state)
+  await page.goto(
+    '/demands?schoolId=6de54e65-6e04-4168-a1cb-967a98d7ec12&pickupDistrictId=11&neighborhoodId=201&academicYear=2026-2027&intent=create',
+  )
+
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await page.getByRole('button', { name: 'Karşılandı' }).click()
+  await expect(
+    page.getByText('1 karşılanan talep', { exact: true }),
+  ).toBeVisible()
+  await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
+
+  await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
+  await expect(
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await expect(page.getByLabel('Servis alınacak mahalle')).toHaveValue('201')
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+})
+
+test('parent keeps an edited academic year through registration, login and refresh', async ({
   page,
 }) => {
   const state = createMockApiState()
@@ -12,19 +49,34 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page.getByRole('button', { name: 'Örnek Okulu okulunu seç' }).click()
   await page.getByLabel('Servis alınacak ilçe').selectOption('11')
   await page.getByLabel('Servis alınacak mahalle').selectOption('201')
+  await page.getByLabel('Eğitim yılı').fill('2026-2027')
   await page.getByRole('button', { name: 'Talepleri göster' }).click()
   await expect(
     page.getByRole('heading', { name: 'Bu seçim için açık talep yok' }),
   ).toBeVisible()
 
-  await page
-    .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-    .click()
   await expect(
     page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
   ).toBeVisible()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
+  await expect(
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+  await page.getByLabel('Eğitim yılı').fill('2027-2028')
+  await page.getByLabel('Uygun servis bulamıyorum').check()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
+  await expect(page).not.toHaveURL(/NO_SUITABLE_SERVICE/)
+  await page.goBack()
+  await expect(
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.goForward()
+  await expect(
+    page.getByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
+  ).toBeVisible()
   await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
   // The URL updates before the view transition swaps out the login form's same-labelled fields.
@@ -65,15 +117,28 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .getByRole('textbox', { name: 'Şifre', exact: true })
     .fill('parent password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
-  await expect(page.getByText(/Seçiminiz korundu/)).toBeVisible()
-  await page
-    .getByRole('button', { name: 'Mevcut servisleri kontrol et' })
-    .click()
-  await page.getByRole('button', { name: 'Yeni talep oluştur' }).click()
+  await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2027-2028')
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.reload()
+  await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2027-2028')
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).not.toBeChecked()
+  await expect(page.getByLabel(/^Sabah/)).toBeChecked()
   await page.getByLabel('Uygun servis bulamıyorum').check()
-  await page
-    .getByRole('button', { name: 'Talebi ve desteğimi oluştur' })
-    .click()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
+  const confirmation = page.getByRole('dialog', { name: 'Talebi onaylayın' })
+  await expect(confirmation).toBeVisible()
+  await expect(confirmation.getByText('Örnek Okulu')).toBeVisible()
+  await expect(confirmation.getByText('Acıbadem, Üsküdar')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(confirmation).toBeHidden()
+  await expect(
+    page.getByRole('button', { name: 'Bilgileri gözden geçir' }),
+  ).toBeFocused()
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
+  await expect(confirmation).toBeVisible()
+  await confirmation.getByRole('button', { name: 'Talebi oluştur' }).click()
 
   await expect(page.getByText('Talebiniz oluşturuldu.')).toBeVisible()
   await expect(page.getByText('Destekliyorsunuz')).toBeVisible()
