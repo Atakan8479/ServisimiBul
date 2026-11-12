@@ -298,6 +298,10 @@ export function DemandBoardPage() {
 
   const statusFilter =
     statusFilters.find((item) => item.value === status) ?? statusFilters[1]!
+  const resultsMatchDraft =
+    !hasLocationDraft &&
+    sameLocation(selection, appliedSelection) &&
+    academicYear.trim() === appliedAcademicYear
   const createPath = selection
     ? createDemandPath(selection, academicYear.trim())
     : undefined
@@ -428,6 +432,13 @@ export function DemandBoardPage() {
         </div>
       )}
 
+      {!resultsMatchDraft && (
+        <div className="status-banner pending" role="status">
+          Filtre seçiminiz değişti. Aşağıdaki sonuçlar son uygulanan filtrelere
+          aittir. Güncel sonuçlar için Talepleri göster&apos;i seçin.
+        </div>
+      )}
+
       <div className="demand-board-layout">
         <div className="demand-results-stack">
           <section className="demand-board-results" aria-live="polite">
@@ -491,15 +502,15 @@ export function DemandBoardPage() {
                   Yeni talebe geçmeden önce mevcut servis işletmecilerini
                   kontrol edebilirsiniz.
                 </p>
-                {createPath ? (
-                  <Link className="button-link" to={createPath!} viewTransition>
+                {createPath && resultsMatchDraft ? (
+                  <Link className="button-link" to={createPath} viewTransition>
                     Yeni talep oluştur
                   </Link>
-                ) : (
+                ) : !createPath ? (
                   <a className="button-link" href="#demand-filters">
                     Okul ve mahalle seç
                   </a>
-                )}
+                ) : null}
               </div>
             )}
             {!loadingDemands && demands && demands.content.length > 0 && (
@@ -546,15 +557,15 @@ export function DemandBoardPage() {
                     olarak yüklenir.
                   </p>
                 </div>
-                {createPath ? (
+                {createPath && resultsMatchDraft ? (
                   <Link className="button-link" to={createPath} viewTransition>
                     Yeni talep oluştur
                   </Link>
-                ) : (
+                ) : !createPath ? (
                   <a className="button-link" href="#demand-filters">
                     Okul ve mahalle seç
                   </a>
-                )}
+                ) : null}
               </div>
               {checkingOperators && (
                 <p className="inline-loading" role="status">
@@ -634,6 +645,18 @@ function createDemandPath(
   })
   if (academicYear) parameters.set('academicYear', academicYear)
   return `/demands/new?${parameters.toString()}`
+}
+
+function sameLocation(
+  first?: DemandLocationSelection,
+  second?: DemandLocationSelection,
+) {
+  if (!first || !second) return first === second
+  return (
+    first.school.id === second.school.id &&
+    first.pickupDistrict.id === second.pickupDistrict.id &&
+    first.neighborhood.id === second.neighborhood.id
+  )
 }
 
 function OperatorCheckResult({

@@ -533,7 +533,7 @@ describe('demand location filter regression', () => {
     expect(requests[2].has('neighborhoodId')).toBe(false)
   })
 
-  it('targets demand creation at the current complete draft instead of applied results', async () => {
+  it('keeps pending creation on the current draft without presenting it as an applied result action', async () => {
     server.use(
       http.get('/api/v1/neighborhoods', () =>
         HttpResponse.json([
@@ -584,6 +584,26 @@ describe('demand location filter regression', () => {
       target: { value: '202' },
     })
 
+    expect(
+      screen.getByText(
+        /Filtre seçiminiz değişti. Aşağıdaki sonuçlar son uygulanan filtrelere aittir/,
+      ),
+    ).toBeInTheDocument()
+    const pendingLinks = screen.getAllByRole('link', {
+      name: 'Yeni talep oluştur',
+    })
+    expect(pendingLinks).toHaveLength(1)
+    expect(pendingLinks[0]).toHaveAttribute(
+      'href',
+      `/demands/new?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=202&academicYear=2026-2027`,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Talepleri göster' }))
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/Filtre seçiminiz değişti/),
+      ).not.toBeInTheDocument(),
+    )
     for (const link of screen.getAllByRole('link', {
       name: 'Yeni talep oluştur',
     })) {
@@ -592,6 +612,36 @@ describe('demand location filter regression', () => {
         `/demands/new?schoolId=${school.id}&pickupDistrictId=11&neighborhoodId=202&academicYear=2026-2027`,
       )
     }
+  })
+
+  it('restores only validated auth-return draft fields from tab storage', async () => {
+    sessionStorage.setItem(
+      'servisimibul:demand-create-auth-draft',
+      JSON.stringify({
+        id: 'refresh-draft',
+        locationKey: `${school.id}:11:201`,
+        academicYear: '2027-2028',
+        support: {
+          needsMorning: false,
+          needsAfternoon: true,
+          reasons: ['OTHER', 'INVALID_REASON'],
+        },
+        password: 'must-not-be-used',
+      }),
+    )
+    server.use(...locationHandlers())
+
+    renderRoute(
+      `${filteredBoardPath.replace('/demands?', '/demands/new?')}&draft=refresh-draft`,
+    )
+    await waitForLocationHydration()
+
+    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('2027-2028')
+    expect(screen.getByLabelText(/^Sabah/)).not.toBeChecked()
+    expect(screen.getByLabelText(/^Öğleden sonra/)).toBeChecked()
+    expect(screen.getByLabelText('Başka bir neden')).toBeChecked()
+    expect(screen.queryByText('INVALID_REASON')).not.toBeInTheDocument()
+    expect(screen.queryByText('must-not-be-used')).not.toBeInTheDocument()
   })
 })
 

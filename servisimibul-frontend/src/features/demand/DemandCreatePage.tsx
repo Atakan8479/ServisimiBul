@@ -7,7 +7,12 @@ import {
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { currentUser } from '../auth/auth-api'
-import { createDemand, type SupportValues } from './demand-api'
+import {
+  createDemand,
+  supportReasons,
+  type SupportReason,
+  type SupportValues,
+} from './demand-api'
 import { reasonLabel } from './demand-labels'
 import {
   DemandLocationPicker,
@@ -21,23 +26,15 @@ const defaultSupport = (): SupportValues => ({
   needsAfternoon: false,
   reasons: [],
 })
-
-let pendingDraft:
-  | {
-      id: string
-      locationKey: string
-      academicYear: string
-      support: SupportValues
-    }
-  | undefined
-let draftSequence = 0
+const PENDING_DRAFT_KEY = 'servisimibul:demand-create-auth-draft'
 
 export function DemandCreatePage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const locationKey = draftLocationKey(searchParams)
-  const initialDraft = readPendingDraft(searchParams.get('draft'), locationKey)
+  const draftId = searchParams.get('draft')
+  const initialDraft = readPendingDraft(draftId, locationKey)
   const [selection, setSelection] = useState<DemandLocationSelection>()
   const [hasLocationDraft, setHasLocationDraft] = useState(false)
   const [academicYear, setAcademicYear] = useState(
@@ -49,6 +46,12 @@ export function DemandCreatePage() {
   const [confirmation, setConfirmation] = useState<SupportValues>()
   const [error, setError] = useState<string>()
   const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    if (draftId && locationKey) {
+      writePendingDraft(draftId, locationKey, academicYear, support)
+    }
+  }, [academicYear, draftId, locationKey, support])
 
   const initialLocation = useMemo<InitialDemandLocation | undefined>(() => {
     const schoolId = searchParams.get('schoolId')
@@ -70,6 +73,7 @@ export function DemandCreatePage() {
       neighborhoodId: String(nextSelection.neighborhood.id),
     })
     if (academicYear.trim()) next.set('academicYear', academicYear.trim())
+    if (draftId) next.set('draft', draftId)
     setSearchParams(next, { replace: true })
   }
 
@@ -344,9 +348,35 @@ function draftLocationKey(searchParams: URLSearchParams) {
 }
 
 function readPendingDraft(id: string | null, locationKey: string) {
-  return pendingDraft?.id === id && pendingDraft.locationKey === locationKey
-    ? pendingDraft
-    : undefined
+  if (!id || !locationKey) return undefined
+  try {
+    const draft = JSON.parse(
+      sessionStorage.getItem(PENDING_DRAFT_KEY) ?? '',
+    ) as {
+      id?: unknown
+      locationKey?: unknown
+      academicYear?: unknown
+      support?: {
+        needsMorning?: unknown
+        needsAfternoon?: unknown
+        reasons?: unknown
+      }
+    }
+    if (draft.id !== id || draft.locationKey !== locationKey) return undefined
+    return {
+      academicYear:
+        typeof draft.academicYear === 'string' ? draft.academicYear : '',
+      support: {
+        needsMorning: draft.support?.needsMorning === true,
+        needsAfternoon: draft.support?.needsAfternoon === true,
+        reasons: Array.isArray(draft.support?.reasons)
+          ? draft.support.reasons.filter(isSupportReason)
+          : [],
+      },
+    }
+  } catch {
+    return undefined
+  }
 }
 
 function rememberPendingDraft(
@@ -354,13 +384,39 @@ function rememberPendingDraft(
   academicYear: string,
   support: SupportValues,
 ) {
-  const id = String(++draftSequence)
-  pendingDraft = { id, locationKey, academicYear, support }
+  const id = crypto.randomUUID()
+  writePendingDraft(id, locationKey, academicYear, support)
   return id
 }
 
 function clearPendingDraft() {
-  pendingDraft = undefined
+  try {
+    sessionStorage.removeItem(PENDING_DRAFT_KEY)
+  } catch {
+    // Storage can be unavailable in restricted browser contexts.
+  }
+}
+
+function writePendingDraft(
+  id: string,
+  locationKey: string,
+  academicYear: string,
+  support: SupportValues,
+) {
+  try {
+    sessionStorage.setItem(
+      PENDING_DRAFT_KEY,
+      JSON.stringify({ id, locationKey, academicYear, support }),
+    )
+  } catch {
+    // The auth return path still works; only draft restoration is unavailable.
+  }
+}
+
+function isSupportReason(value: unknown): value is SupportReason {
+  return (
+    typeof value === 'string' && supportReasons.includes(value as SupportReason)
+  )
 }
 
 function boardPath(
