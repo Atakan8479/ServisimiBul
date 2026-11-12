@@ -613,36 +613,6 @@ describe('demand location filter regression', () => {
       )
     }
   })
-
-  it('restores only validated auth-return draft fields from tab storage', async () => {
-    sessionStorage.setItem(
-      'servisimibul:demand-create-auth-draft',
-      JSON.stringify({
-        id: 'refresh-draft',
-        locationKey: `${school.id}:11:201`,
-        academicYear: '2027-2028',
-        support: {
-          needsMorning: false,
-          needsAfternoon: true,
-          reasons: ['OTHER', 'INVALID_REASON'],
-        },
-        password: 'must-not-be-used',
-      }),
-    )
-    server.use(...locationHandlers())
-
-    renderRoute(
-      `${filteredBoardPath.replace('/demands?', '/demands/new?')}&draft=refresh-draft`,
-    )
-    await waitForLocationHydration()
-
-    expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('2027-2028')
-    expect(screen.getByLabelText(/^Sabah/)).not.toBeChecked()
-    expect(screen.getByLabelText(/^Öğleden sonra/)).toBeChecked()
-    expect(screen.getByLabelText('Başka bir neden')).toBeChecked()
-    expect(screen.queryByText('INVALID_REASON')).not.toBeInTheDocument()
-    expect(screen.queryByText('must-not-be-used')).not.toBeInTheDocument()
-  })
 })
 
 describe('demand board status filters', () => {

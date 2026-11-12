@@ -65,17 +65,18 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
   await expect(page).toHaveURL(/\/parent\/login\?next=/)
   await expect(page).not.toHaveURL(/NO_SUITABLE_SERVICE/)
-  await page.reload()
+  await page.goBack()
+  await expect(
+    page.getByRole('heading', { name: 'Yeni servis talebi oluştur' }),
+  ).toBeVisible()
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.goForward()
   await expect(
     page.getByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
   ).toBeVisible()
   await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
   // The URL updates before the view transition swaps out the login form's same-labelled fields.
-  await expect(
-    page.getByRole('heading', { level: 1, name: 'Veli hesabı oluşturun' }),
-  ).toBeVisible()
-  await page.reload()
   await expect(
     page.getByRole('heading', { level: 1, name: 'Veli hesabı oluşturun' }),
   ).toBeVisible()
@@ -107,16 +108,6 @@ test('parent creates and manages an anonymous demand after checking operators', 
   await expect(
     page.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
   ).toBeVisible()
-  await page.reload()
-  await expect(
-    page.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
-  ).toBeVisible()
-  expect(
-    await page.evaluate(
-      () =>
-        sessionStorage.getItem('servisimibul:demand-create-auth-draft') ?? '',
-    ),
-  ).not.toContain('parent@example.com')
 
   await page.getByLabel('E-posta').fill('parent@example.com')
   await page
@@ -124,8 +115,11 @@ test('parent creates and manages an anonymous demand after checking operators', 
     .fill('parent password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   await expect(page).toHaveURL(/\/demands\/new\?.*schoolId=/)
-  await page.reload()
   await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
+  await page.reload()
+  await expect(page.getByLabel('Uygun servis bulamıyorum')).not.toBeChecked()
+  await expect(page.getByLabel(/^Sabah/)).toBeChecked()
+  await page.getByLabel('Uygun servis bulamıyorum').check()
   await page.getByRole('button', { name: 'Bilgileri gözden geçir' }).click()
   const confirmation = page.getByRole('dialog', { name: 'Talebi onaylayın' })
   await expect(confirmation).toBeVisible()
@@ -143,11 +137,6 @@ test('parent creates and manages an anonymous demand after checking operators', 
 
   await expect(page.getByText('Talebiniz oluşturuldu.')).toBeVisible()
   await expect(page.getByText('Destekliyorsunuz')).toBeVisible()
-  expect(
-    await page.evaluate(() =>
-      sessionStorage.getItem('servisimibul:demand-create-auth-draft'),
-    ),
-  ).toBeNull()
   expect(state.demandCreated).toBe(true)
   expect(state.parentSupport?.status).toBe('ACTIVE')
 
