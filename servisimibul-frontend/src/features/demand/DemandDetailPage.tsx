@@ -3,11 +3,13 @@ import {
   Link,
   useLocation,
   useNavigate,
+  useOutletContext,
   useParams,
   useSearchParams,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatusBadge } from '../../components/design-system'
+import type { PublicAuthContext } from '../../components/layouts'
 import { currentUser } from '../auth/auth-api'
 import {
   getDemand,
@@ -39,6 +41,7 @@ export function DemandDetailPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
+  const { authChecked, role } = useOutletContext<PublicAuthContext>()
   const [demand, setDemand] = useState<Demand>()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string>()
@@ -616,7 +619,7 @@ export function DemandDetailPage() {
               </>
             )}
 
-            {open && (
+            {open && authChecked && role === 'OPERATOR' && (
               <div className="demand-service-publish">
                 <div>
                   <h3>Bu konuma servis sunuyor musunuz?</h3>
@@ -637,6 +640,24 @@ export function DemandDetailPage() {
                       : 'Bu talep için servis ekle'}
                   </button>
                 )}
+              </div>
+            )}
+
+            {open && authChecked && !role && (
+              <div className="demand-service-publish">
+                <div>
+                  <h3>Bu konuma servis sunuyor musunuz?</h3>
+                  <p>
+                    Servis duyurusu paylaşmak için işletmeci hesabınızla giriş
+                    yapın.
+                  </p>
+                </div>
+                <Link
+                  className="button-link"
+                  to={`/operator/login?next=${encodeURIComponent(loginReturnPath('response'))}`}
+                >
+                  İşletmeci olarak giriş yap
+                </Link>
               </div>
             )}
 

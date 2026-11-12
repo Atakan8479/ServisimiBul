@@ -335,7 +335,14 @@ export function PublicLayout() {
         className={`page-content${location.pathname === '/' ? ' home-page-content' : ''}`}
         inert={menuOpen || undefined}
       >
-        <Outlet />
+        <Outlet
+          context={
+            {
+              authChecked,
+              role: authChecked ? role : undefined,
+            } satisfies PublicAuthContext
+          }
+        />
       </main>
       <footer className="site-footer" inert={menuOpen || undefined}>
         <div className="site-footer-inner">
@@ -356,6 +363,11 @@ export function PublicLayout() {
       </footer>
     </div>
   )
+}
+
+export interface PublicAuthContext {
+  authChecked: boolean
+  role: AuthRole | undefined
 }
 
 export function RouteAccessibility() {

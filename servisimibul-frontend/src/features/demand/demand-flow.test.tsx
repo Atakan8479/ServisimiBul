@@ -1470,7 +1470,7 @@ describe('demand-specific operator service responses', () => {
     ).toHaveAttribute('href', 'tel:+905321234567')
   })
 
-  it('returns an anonymous operator to the demand response flow after login', async () => {
+  it('offers an explicit operator login route to anonymous visitors', async () => {
     server.use(
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand()),
@@ -1484,14 +1484,65 @@ describe('demand-specific operator service responses', () => {
     )
 
     renderRoute(`/demands/${demandId}`)
-    fireEvent.click(
+    expect(
+      await screen.findByRole('link', {
+        name: 'İşletmeci olarak giriş yap',
+      }),
+    ).toHaveAttribute(
+      'href',
+      `/operator/login?next=${encodeURIComponent(`/demands/${demandId}?action=response`)}`,
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Bu talep için servis ekle' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['parent', parentHandler, 'Veli oturumu açık'],
+    ['administrator', adminHandler, 'Yönetici oturumu açık'],
+  ])(
+    'keeps announcements readable but hides operator publishing from a %s',
+    async (_role, roleHandler, sessionLabel) => {
+      server.use(
+        http.get(`/api/v1/demands/${demandId}`, () =>
+          HttpResponse.json(demand()),
+        ),
+        http.get(`/api/v1/demands/${demandId}/responses`, () =>
+          HttpResponse.json(serviceResponsePage([publicServiceResponse()])),
+        ),
+        roleHandler(),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+
+      expect(await screen.findByText(sessionLabel)).toBeInTheDocument()
+      expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Bu talep için servis ekle' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('heading', {
+          name: 'Bu konuma servis sunuyor musunuz?',
+        }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
+  it('shows the publishing action after the server confirms an operator', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      operatorHandler(),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+
+    expect(
       await screen.findByRole('button', {
         name: 'Bu talep için servis ekle',
       }),
-    )
-
-    expect(
-      await screen.findByText(/İşletmeci hesabınız yoksa/),
     ).toBeInTheDocument()
   })
 
@@ -1803,6 +1854,18 @@ function parentHandler() {
       id: 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd',
       email: 'parent@example.test',
       role: 'PARENT',
+      operatorApprovalRequired: true,
+      approvalStatus: null,
+    }),
+  )
+}
+
+function adminHandler() {
+  return http.get('/api/v1/auth/me', () =>
+    HttpResponse.json({
+      id: 'b34a6f3a-e1c7-44cf-b2ea-bad382a9f9a2',
+      email: 'admin@example.test',
+      role: 'ADMIN',
       operatorApprovalRequired: true,
       approvalStatus: null,
     }),
