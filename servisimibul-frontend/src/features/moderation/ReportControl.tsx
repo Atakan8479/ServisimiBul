@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
+import { currentUser, type AuthRole } from '../auth/auth-api'
 import {
   reportContent,
   reportReasons,
@@ -19,12 +19,16 @@ const reasonLabels: Record<ReportReason, string> = {
 }
 
 interface ReportControlProps {
+  authChecked: boolean
+  role: AuthRole | undefined
   targetType: ModerationTargetType
   targetId: string
   label?: string
 }
 
 export function ReportControl({
+  authChecked,
+  role,
   targetType,
   targetId,
   label = 'Bildir',
@@ -54,19 +58,14 @@ export function ReportControl({
     window.requestAnimationFrame(() => triggerRef.current?.focus())
   }
 
-  function redirectToLogin(
-    sessionExpired: boolean,
-    role: AuthRole | undefined = knownAuthRole(),
-  ) {
-    const loginPath = role === 'OPERATOR' ? '/operator/login' : '/parent/login'
+  function redirectToLogin(sessionExpired: boolean) {
     const next = encodeURIComponent(location.pathname + location.search)
     const reason = sessionExpired ? '&reason=session' : ''
-    void navigate(`${loginPath}?next=${next}${reason}`)
+    void navigate(`/login?next=${next}${reason}`)
   }
 
   async function begin() {
     setError(undefined)
-    const role = knownAuthRole()
     try {
       const user = await currentUser()
       if (user.role !== 'PARENT' && user.role !== 'OPERATOR') {
@@ -78,7 +77,7 @@ export function ReportControl({
       setOpen(true)
     } catch (failure) {
       if (failure instanceof ApiError && failure.problem.status === 401) {
-        redirectToLogin(failure.sessionExpired, role)
+        redirectToLogin(failure.sessionExpired)
         return
       }
       setError('Hesabınız kontrol edilemedi. Tekrar deneyin.')
@@ -128,6 +127,19 @@ export function ReportControl({
         <strong>Bildirim alındı</strong>
         <small>İçerik inceleme sırasında görünür kalır.</small>
       </span>
+    )
+  }
+
+  if (!authChecked || role === 'ADMIN') return null
+
+  if (!role) {
+    return (
+      <Link
+        className="text-button report-trigger"
+        to={`/login?next=${encodeURIComponent(location.pathname + location.search)}`}
+      >
+        Giriş yaparak bildir
+      </Link>
     )
   }
 

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
 import { ReportControl } from '../moderation/ReportControl'
@@ -12,15 +17,19 @@ import {
 } from './demand-api'
 
 interface DemandCommentsProps {
+  authChecked: boolean
   demandId: string
   open: boolean
   parentHasActiveSupport: boolean
+  role: AuthRole | undefined
 }
 
 export function DemandComments({
+  authChecked,
   demandId,
   open,
   parentHasActiveSupport,
+  role,
 }: DemandCommentsProps) {
   const location = useLocation()
   const navigate = useNavigate()
@@ -80,6 +89,11 @@ export function DemandComments({
     // Resume only once after login.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, searchParams, setSearchParams])
+
+  const canComment =
+    open &&
+    authChecked &&
+    (role === 'OPERATOR' || (role === 'PARENT' && parentHasActiveSupport))
 
   function redirectToLogin(
     sessionExpired = false,
@@ -199,7 +213,7 @@ export function DemandComments({
           {pageInfo && pageInfo.totalElements > 0 && (
             <span className="count-badge">{pageInfo.totalElements} yorum</span>
           )}
-          {open && !formOpen && (
+          {canComment && !formOpen && (
             <button
               className="secondary-button"
               ref={commentButtonRef}
@@ -209,8 +223,22 @@ export function DemandComments({
               Yorum yaz
             </button>
           )}
+          {open && authChecked && !role && (
+            <Link
+              className="button-link"
+              to={`/login?next=${encodeURIComponent(`${location.pathname}?action=comment`)}`}
+            >
+              Yorum yapmak için giriş yap
+            </Link>
+          )}
         </div>
       </div>
+
+      {open && authChecked && role === 'PARENT' && !parentHasActiveSupport && (
+        <p className="comment-state">
+          Yorum yazmak için önce bu talebe destek verin.
+        </p>
+      )}
 
       {formOpen && (
         <form className="demand-comment-form" onSubmit={submitComment}>
@@ -311,7 +339,12 @@ export function DemandComments({
                 </header>
                 <p>{comment.body}</p>
                 <div className="comment-actions">
-                  <ReportControl targetId={comment.id} targetType="COMMENT" />
+                  <ReportControl
+                    authChecked={authChecked}
+                    role={role}
+                    targetId={comment.id}
+                    targetType="COMMENT"
+                  />
                   {comment.canDelete && (
                     <button
                       className="text-button danger-text"

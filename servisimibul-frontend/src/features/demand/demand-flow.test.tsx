@@ -962,6 +962,7 @@ describe('demand support management', () => {
     'keeps a %s closed demand closed to a new parent',
     async (closureReason) => {
       server.use(
+        parentHandler(),
         emptyServiceResponsesHandler(),
         http.get(`/api/v1/demands/${demandId}`, () =>
           HttpResponse.json(
@@ -1373,15 +1374,16 @@ describe('demand comments', () => {
     )
 
     renderRoute(`/demands/${demandId}`)
-    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
-
     expect(
       await screen.findByText('Yorum yazmak için önce bu talebe destek verin.'),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Yorum yaz' }),
+    ).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
   })
 
-  it('sends an unauthenticated commenter to the parent login', async () => {
+  it('offers an unauthenticated commenter the shared login route', async () => {
     server.use(
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand()),
@@ -1394,13 +1396,39 @@ describe('demand comments', () => {
     )
 
     renderRoute(`/demands/${demandId}`)
-    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
-
     expect(
-      await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
-      }),
-    ).toBeInTheDocument()
+      await screen.findByRole('link', { name: 'Yorum yapmak için giriş yap' }),
+    ).toHaveAttribute(
+      'href',
+      `/login?next=${encodeURIComponent(`/demands/${demandId}?action=comment`)}`,
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Yorum yaz' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('keeps public comments visible to admins without authoring controls', async () => {
+    server.use(
+      adminHandler(),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, () =>
+        HttpResponse.json(
+          commentPage([comment({ body: 'Kamuya açık yorum' })]),
+        ),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+
+    expect(await screen.findByText('Kamuya açık yorum')).toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Yorum yaz' }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('link', { name: 'Yorum yapmak için giriş yap' }),
+    ).not.toBeInTheDocument()
   })
 
   it('lets an eligible operator open the form and paginates public comments', async () => {

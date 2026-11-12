@@ -58,6 +58,8 @@ describe('reporting and moderation flows', () => {
     render(
       <MemoryRouter>
         <ReportControl
+          authChecked
+          role="PARENT"
           targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
           targetType="COMMENT"
         />
@@ -85,26 +87,15 @@ describe('reporting and moderation flows', () => {
     })
   })
 
-  it('sends an unauthenticated reporter to the parent login', async () => {
-    server.use(
-      http.get('/api/v1/auth/me', () =>
-        HttpResponse.json(
-          {
-            title: 'Unauthorized',
-            status: 401,
-            detail: 'Authentication is required',
-            code: 'UNAUTHORIZED',
-          },
-          { status: 401 },
-        ),
-      ),
-    )
+  it('offers an unauthenticated reporter the shared login route', async () => {
     const router = createMemoryRouter(
       [
         {
           path: '*',
           element: (
             <ReportControl
+              authChecked
+              role={undefined}
               targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
               targetType="COMMENT"
             />
@@ -115,14 +106,27 @@ describe('reporting and moderation flows', () => {
     )
 
     render(<RouterProvider router={router} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Giriş yaparak bildir' }))
 
-    await waitFor(() =>
-      expect(router.state.location.pathname).toBe('/parent/login'),
-    )
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'))
     expect(router.state.location.search).toBe(
-      '?next=%2Fdemands%2Fexample%3Ftab%3Dcomments&reason=session',
+      '?next=%2Fdemands%2Fexample%3Ftab%3Dcomments',
     )
+  })
+
+  it('does not show reporting controls to administrators', () => {
+    render(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="ADMIN"
+          targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText(/bildir/i)).not.toBeInTheDocument()
   })
 
   it('shows grouped admin cases without reporter identity and records a reasoned action', async () => {

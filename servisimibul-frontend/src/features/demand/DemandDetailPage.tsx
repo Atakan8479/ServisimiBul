@@ -383,10 +383,11 @@ export function DemandDetailPage() {
     demand.currentUserSupport?.status === 'SATISFIED' ||
     demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const open = demand.status === 'OPEN'
-  const canManageSupport =
+  const supportAvailable =
     open ||
     ((withdrawnSupport || !demand.currentUserSupport) &&
       demand.closureReason === 'INACTIVE')
+  const canManageSupport = role === 'PARENT' && supportAvailable
   const initialValues = demand.currentUserSupport
     ? {
         needsMorning: demand.currentUserSupport.needsMorning,
@@ -428,7 +429,9 @@ export function DemandDetailPage() {
               <div className="demand-detail-header-actions">
                 {open && (
                   <ReportControl
+                    authChecked={authChecked}
                     label="Talebi bildir"
+                    role={role}
                     targetId={demand.id}
                     targetType="DEMAND"
                   />
@@ -572,7 +575,9 @@ export function DemandDetailPage() {
                             {response.contactPhone} numarasını ara
                           </a>
                           <ReportControl
+                            authChecked={authChecked}
                             label="Bildir"
+                            role={role}
                             targetId={response.id}
                             targetType="SERVICE_RESPONSE"
                           />
@@ -765,123 +770,150 @@ export function DemandDetailPage() {
             )}
           </section>
 
-          {feedbackVisible && (
+          {role === 'PARENT' && feedbackVisible && (
             <DemandFeedbackPanel demandId={demand.id} onResolved={loadDemand} />
           )}
 
-          <section
-            className="demand-support-panel"
-            aria-labelledby="support-title"
-          >
-            <div className="section-heading">
-              <div>
-                <h2 id="support-title">Sizin desteğiniz</h2>
-                <p>
-                  Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
-                  yönetilir.
-                </p>
-              </div>
-              {activeSupport && (
-                <span className="status-pill success">
-                  {demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
-                    ? 'Yanıtınız bekleniyor'
-                    : 'Destekliyorsunuz'}
-                </span>
-              )}
-              {withdrawnSupport && (
-                <span className="status-pill neutral">Geri çekildi</span>
-              )}
-            </div>
-
-            {!open && (
-              <div className="status-banner neutral">
-                {demand.closureReason === 'INACTIVE' && withdrawnSupport
-                  ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
-                  : demand.closureReason === 'INACTIVE' &&
-                      !demand.currentUserSupport
-                    ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
-                    : demand.closureReason === 'FULFILLED'
-                      ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
-                      : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
-              </div>
-            )}
-
-            {demand.currentUserSupport && (
-              <div
-                className="demand-current-support"
-                aria-label="Katılım özetiniz"
-              >
+          {authChecked && role === 'PARENT' && (
+            <section
+              className="demand-support-panel"
+              aria-labelledby="support-title"
+            >
+              <div className="section-heading">
                 <div>
-                  <span>Katılım durumu</span>
-                  <strong>
-                    {supportStateLabel(demand.currentUserSupport.status)}
-                  </strong>
+                  <h2 id="support-title">Sizin desteğiniz</h2>
+                  <p>
+                    Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
+                    yönetilir.
+                  </p>
                 </div>
-                <div>
-                  <span>İhtiyaç yönü</span>
-                  <strong>
-                    {directionSummary(
-                      demand.currentUserSupport.needsMorning,
-                      demand.currentUserSupport.needsAfternoon,
-                    )}
-                  </strong>
-                </div>
-              </div>
-            )}
-
-            {canManageSupport && !supportMode && (
-              <div className="button-row demand-support-actions">
-                <button
-                  className="primary-button"
-                  type="button"
-                  onClick={() => void beginSupport()}
-                >
-                  {activeSupport
-                    ? 'Desteğimi düzenle'
-                    : withdrawnSupport
-                      ? 'Desteğimi yeniden etkinleştir'
-                      : 'Benim de ihtiyacım var'}
-                </button>
                 {activeSupport && (
-                  <button
-                    className="danger-button"
-                    disabled={withdrawing}
-                    type="button"
-                    onClick={() => void withdrawSupport()}
-                  >
-                    {withdrawing ? 'Geri çekiliyor…' : 'Desteğimi geri çek'}
-                  </button>
+                  <span className="status-pill success">
+                    {demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+                      ? 'Yanıtınız bekleniyor'
+                      : 'Destekliyorsunuz'}
+                  </span>
+                )}
+                {withdrawnSupport && (
+                  <span className="status-pill neutral">Geri çekildi</span>
                 )}
               </div>
-            )}
 
-            {canManageSupport && supportMode && (
-              <DemandSupportForm
-                initialValues={initialValues}
-                submitLabel={
-                  supportMode === 'edit'
-                    ? 'Tercihlerimi kaydet'
-                    : supportMode === 'reactivate'
-                      ? 'Desteğimi yeniden etkinleştir'
-                      : 'Talebe katıl'
-                }
-                busyLabel="Kaydediliyor…"
-                onCancel={() => setSupportMode(undefined)}
-                onSubmit={submitSupport}
-              />
-            )}
+              {!open && (
+                <div className="status-banner neutral">
+                  {demand.closureReason === 'INACTIVE' && withdrawnSupport
+                    ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
+                    : demand.closureReason === 'INACTIVE' &&
+                        !demand.currentUserSupport
+                      ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
+                      : demand.closureReason === 'FULFILLED'
+                        ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
+                        : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
+                </div>
+              )}
 
-            {actionError && (
-              <div className="form-error" role="alert">
-                {actionError}
+              {demand.currentUserSupport && (
+                <div
+                  className="demand-current-support"
+                  aria-label="Katılım özetiniz"
+                >
+                  <div>
+                    <span>Katılım durumu</span>
+                    <strong>
+                      {supportStateLabel(demand.currentUserSupport.status)}
+                    </strong>
+                  </div>
+                  <div>
+                    <span>İhtiyaç yönü</span>
+                    <strong>
+                      {directionSummary(
+                        demand.currentUserSupport.needsMorning,
+                        demand.currentUserSupport.needsAfternoon,
+                      )}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              {canManageSupport && !supportMode && (
+                <div className="button-row demand-support-actions">
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => void beginSupport()}
+                  >
+                    {activeSupport
+                      ? 'Desteğimi düzenle'
+                      : withdrawnSupport
+                        ? 'Desteğimi yeniden etkinleştir'
+                        : 'Benim de ihtiyacım var'}
+                  </button>
+                  {activeSupport && (
+                    <button
+                      className="danger-button"
+                      disabled={withdrawing}
+                      type="button"
+                      onClick={() => void withdrawSupport()}
+                    >
+                      {withdrawing ? 'Geri çekiliyor…' : 'Desteğimi geri çek'}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {canManageSupport && supportMode && (
+                <DemandSupportForm
+                  initialValues={initialValues}
+                  submitLabel={
+                    supportMode === 'edit'
+                      ? 'Tercihlerimi kaydet'
+                      : supportMode === 'reactivate'
+                        ? 'Desteğimi yeniden etkinleştir'
+                        : 'Talebe katıl'
+                  }
+                  busyLabel="Kaydediliyor…"
+                  onCancel={() => setSupportMode(undefined)}
+                  onSubmit={submitSupport}
+                />
+              )}
+
+              {actionError && (
+                <div className="form-error" role="alert">
+                  {actionError}
+                </div>
+              )}
+            </section>
+          )}
+
+          {authChecked && !role && supportAvailable && (
+            <section
+              className="demand-support-panel"
+              aria-labelledby="support-login-title"
+            >
+              <div className="section-heading">
+                <div>
+                  <h2 id="support-login-title">Talebi destekleyin</h2>
+                  <p>
+                    Bu servis ihtiyacına katılmak için veli hesabınızla giriş
+                    yapın.
+                  </p>
+                </div>
               </div>
-            )}
-          </section>
+              <Link
+                className="button-link"
+                to={`/parent/login?next=${encodeURIComponent(loginReturnPath('support'))}`}
+              >
+                Veli olarak giriş yap
+              </Link>
+            </section>
+          )}
 
           <DemandComments
+            authChecked={authChecked}
             demandId={demand.id}
             open={open}
             parentHasActiveSupport={activeSupport}
+            role={role}
           />
         </div>
 
