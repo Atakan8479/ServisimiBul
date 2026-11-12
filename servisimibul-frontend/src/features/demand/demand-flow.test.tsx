@@ -1331,6 +1331,7 @@ describe('demand comments', () => {
       }),
     )
     server.use(
+      parentHandler(),
       csrfHandler(),
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand()),
@@ -1717,6 +1718,236 @@ describe('demand-specific operator service responses', () => {
   })
 })
 
+describe('demand session ownership changes', () => {
+  it.each([
+    ['parent', parentUser(), 'form'],
+    ['administrator', adminUser(), 'blocker'],
+    ['guest', undefined, 'response'],
+  ] as const)(
+    'removes operator-owned controls after switching to a %s session',
+    async (_label, nextSession, initialState) => {
+      let session: TestAuthUser | undefined = operatorUser()
+      let demandRequests = 0
+      server.use(
+        sessionHandler(() => session),
+        http.get(`/api/v1/demands/${demandId}`, () => {
+          demandRequests += 1
+          return HttpResponse.json(demand())
+        }),
+        http.get(`/api/v1/demands/${demandId}/responses`, () =>
+          HttpResponse.json(serviceResponsePage([publicServiceResponse()])),
+        ),
+        http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+          HttpResponse.json(
+            initialState === 'form'
+              ? serviceEligibility()
+              : initialState === 'blocker'
+                ? serviceEligibility({
+                    eligible: false,
+                    blockers: ['COVERAGE_MISSING'],
+                  })
+                : serviceEligibility({
+                    response: operatorServiceResponse(),
+                  }),
+          ),
+        ),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
+      fireEvent.click(
+        await screen.findByRole('button', {
+          name: 'Bu talep için servis ekle',
+        }),
+      )
+      if (initialState === 'form') {
+        expect(
+          await screen.findByRole('button', {
+            name: 'Servis bildirimini yayınla',
+          }),
+        ).toBeInTheDocument()
+      } else if (initialState === 'blocker') {
+        expect(
+          await screen.findByText(
+            'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+          ),
+        ).toBeInTheDocument()
+      } else {
+        expect(
+          await screen.findByRole('button', { name: 'Bildirimi geri çek' }),
+        ).toBeInTheDocument()
+      }
+
+      session = nextSession
+      announceAuthChangeFromOtherTab()
+
+      if (nextSession?.role === 'PARENT') {
+        await screen.findByText('Veli oturumu açık')
+      } else if (nextSession?.role === 'ADMIN') {
+        await screen.findByText('Yönetici oturumu açık')
+      } else {
+        await screen.findByRole('link', { name: 'İşletmeci olarak giriş yap' })
+      }
+      expect(
+        screen.queryByRole('button', {
+          name: 'Servis bildirimini yayınla',
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByText(
+          'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+        ),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Bildirimi geri çek' }),
+      ).not.toBeInTheDocument()
+      await waitFor(() => expect(demandRequests).toBeGreaterThan(1))
+      await screen.findByRole('heading', { name: school.name })
+      expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
+    },
+  )
+
+  it.each([
+    ['administrator', adminUser()],
+    ['guest', undefined],
+  ] as const)(
+    'closes parent comment controls and refreshes ownership for a %s session',
+    async (_label, nextSession) => {
+      let session: TestAuthUser | undefined = parentUser()
+      let commentRequests = 0
+      server.use(
+        sessionHandler(() => session),
+        http.get(`/api/v1/demands/${demandId}`, () =>
+          HttpResponse.json(
+            demand({
+              currentUserSupport:
+                session?.role === 'PARENT' ? activeSupport : null,
+            }),
+          ),
+        ),
+        http.get(`/api/v1/demands/${demandId}/comments`, () => {
+          commentRequests += 1
+          return HttpResponse.json(
+            commentPage([
+              comment({
+                body: 'Kamuya açık yorum',
+                canDelete: session?.role === 'PARENT',
+              }),
+            ]),
+          )
+        }),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+      fireEvent.change(await screen.findByLabelText('Yorumunuz'), {
+        target: { value: 'Önceki hesaba ait taslak' },
+      })
+      expect(
+        screen.getByRole('button', { name: 'Yorumumu sil' }),
+      ).toBeInTheDocument()
+
+      session = nextSession
+      announceAuthChangeFromOtherTab()
+
+      await waitFor(() => expect(commentRequests).toBeGreaterThan(1))
+      expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Yorumumu sil' }),
+      ).not.toBeInTheDocument()
+      expect(await screen.findByText('Kamuya açık yorum')).toBeInTheDocument()
+    },
+  )
+
+  it('drops operator state when another operator account replaces the session', async () => {
+    let session: TestAuthUser | undefined = operatorUser()
+    server.use(
+      sessionHandler(() => session),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(
+          serviceEligibility({
+            response:
+              session?.id === operatorUser().id
+                ? operatorServiceResponse()
+                : null,
+          }),
+        ),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Bildirimi geri çek' }),
+    ).toBeInTheDocument()
+
+    session = operatorUser('63cd572a-a10b-4f39-8319-c22974ae47bf')
+    announceAuthChangeFromOtherTab()
+
+    const add = await screen.findByRole('button', {
+      name: 'Bu talep için servis ekle',
+    })
+    expect(
+      screen.queryByRole('button', { name: 'Bildirimi geri çek' }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(add)
+    expect(
+      await screen.findByRole('button', {
+        name: 'Servis bildirimini yayınla',
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it('refreshes delete ownership and clears a draft for a new parent account', async () => {
+    const firstParent = parentUser()
+    let session: TestAuthUser | undefined = firstParent
+    let commentRequests = 0
+    server.use(
+      sessionHandler(() => session),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand({ currentUserSupport: activeSupport })),
+      ),
+      http.get(`/api/v1/demands/${demandId}/comments`, () => {
+        commentRequests += 1
+        return HttpResponse.json(
+          commentPage([
+            comment({
+              canDelete: session?.id === firstParent.id,
+            }),
+          ]),
+        )
+      }),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+    fireEvent.change(await screen.findByLabelText('Yorumunuz'), {
+      target: { value: 'Önceki veli taslağı' },
+    })
+    expect(
+      screen.getByRole('button', { name: 'Yorumumu sil' }),
+    ).toBeInTheDocument()
+
+    session = parentUser('0980a654-6643-4e86-a2ac-b9fcdb9bf31d')
+    announceAuthChangeFromOtherTab()
+
+    await waitFor(() => expect(commentRequests).toBeGreaterThan(1))
+    expect(
+      screen.queryByRole('button', { name: 'Yorumumu sil' }),
+    ).not.toBeInTheDocument()
+    fireEvent.click(await screen.findByRole('button', { name: 'Yorum yaz' }))
+    expect(await screen.findByLabelText('Yorumunuz')).toHaveValue('')
+  })
+})
+
 const demandId = '481be36b-c8ee-4c03-868e-47bbc19b7735'
 const supportId = 'b6586a84-6094-4ddb-80ea-e36756cf1915'
 const commentId = '6b78776f-ad3f-4580-9d69-839a14786aed'
@@ -1865,39 +2096,67 @@ function commentPage(content: unknown[], page = 0, totalPages?: number) {
 }
 
 function operatorHandler() {
-  return http.get('/api/v1/auth/me', () =>
-    HttpResponse.json({
-      id: '6e2973ac-0302-49a8-b519-563ec9861272',
-      email: 'operator@example.test',
-      role: 'OPERATOR',
-      operatorApprovalRequired: true,
-      approvalStatus: 'APPROVED',
-    }),
-  )
+  return http.get('/api/v1/auth/me', () => HttpResponse.json(operatorUser()))
 }
 
 function parentHandler() {
-  return http.get('/api/v1/auth/me', () =>
-    HttpResponse.json({
-      id: 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd',
-      email: 'parent@example.test',
-      role: 'PARENT',
-      operatorApprovalRequired: true,
-      approvalStatus: null,
-    }),
-  )
+  return http.get('/api/v1/auth/me', () => HttpResponse.json(parentUser()))
 }
 
 function adminHandler() {
-  return http.get('/api/v1/auth/me', () =>
-    HttpResponse.json({
-      id: 'b34a6f3a-e1c7-44cf-b2ea-bad382a9f9a2',
-      email: 'admin@example.test',
-      role: 'ADMIN',
-      operatorApprovalRequired: true,
-      approvalStatus: null,
-    }),
-  )
+  return http.get('/api/v1/auth/me', () => HttpResponse.json(adminUser()))
+}
+
+function operatorUser(id = '6e2973ac-0302-49a8-b519-563ec9861272') {
+  return {
+    id,
+    email: 'operator@example.test',
+    role: 'OPERATOR' as const,
+    operatorApprovalRequired: true,
+    approvalStatus: 'APPROVED' as const,
+  }
+}
+
+function parentUser(id = 'b6322f08-1a1d-4ba6-b32a-a1c72f5aeacd') {
+  return {
+    id,
+    email: 'parent@example.test',
+    role: 'PARENT' as const,
+    operatorApprovalRequired: true,
+    approvalStatus: null,
+  }
+}
+
+function adminUser(id = 'b34a6f3a-e1c7-44cf-b2ea-bad382a9f9a2') {
+  return {
+    id,
+    email: 'admin@example.test',
+    role: 'ADMIN' as const,
+    operatorApprovalRequired: true,
+    approvalStatus: null,
+  }
+}
+
+type TestAuthUser =
+  | ReturnType<typeof operatorUser>
+  | ReturnType<typeof parentUser>
+  | ReturnType<typeof adminUser>
+
+function sessionHandler(getSession: () => TestAuthUser | undefined) {
+  return http.get('/api/v1/auth/me', () => {
+    const session = getSession()
+    return session
+      ? HttpResponse.json(session)
+      : HttpResponse.json(problem(401, 'Authentication is required'), {
+          status: 401,
+        })
+  })
+}
+
+function announceAuthChangeFromOtherTab() {
+  const otherTab = new BroadcastChannel('servisimibul.auth')
+  otherTab.postMessage('changed')
+  otherTab.close()
 }
 
 function csrfHandler() {

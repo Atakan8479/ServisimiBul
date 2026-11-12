@@ -14,6 +14,7 @@ import {
   AUTH_ROLE_CHANGED_EVENT,
   authStateKnown,
   knownAuthRole,
+  knownAuthUserId,
   logout,
   onAuthChangedInOtherTab,
   refreshAuthRole,
@@ -57,7 +58,13 @@ const sessionNavigation: Record<
 }
 
 export function PublicLayout() {
-  const [role, setRole] = useState(knownAuthRole)
+  const sessionRevision = useRef(0)
+  const [authSession, setAuthSession] = useState(() => ({
+    key: '0',
+    role: knownAuthRole(),
+    userId: knownAuthUserId(),
+  }))
+  const { role } = authSession
   // Header shows no account controls until the server confirms the session once.
   const [authChecked, setAuthChecked] = useState(authStateKnown)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -87,13 +94,25 @@ export function PublicLayout() {
 
   useEffect(() => {
     let active = true
-    const refreshRole = () => setRole(knownAuthRole())
+    const refreshSession = () => {
+      const nextRole = knownAuthRole()
+      const nextUserId = knownAuthUserId()
+      setAuthSession((current) =>
+        current.role === nextRole && current.userId === nextUserId
+          ? current
+          : {
+              key: String(++sessionRevision.current),
+              role: nextRole,
+              userId: nextUserId,
+            },
+      )
+    }
     const verify = () => {
       void refreshAuthRole()
         .catch(() => undefined)
         .finally(() => {
           if (!active) return
-          refreshRole()
+          refreshSession()
           setAuthChecked(true)
         })
     }
@@ -104,13 +123,13 @@ export function PublicLayout() {
     // Ask once per page load; later mounts reuse the answer already received.
     if (!authStateKnown()) verify()
     const stopListening = onAuthChangedInOtherTab(verify)
-    window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+    window.addEventListener(AUTH_ROLE_CHANGED_EVENT, refreshSession)
     window.addEventListener('focus', verifySignedIn)
     document.addEventListener('visibilitychange', verifySignedIn)
     return () => {
       active = false
       stopListening()
-      window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshRole)
+      window.removeEventListener(AUTH_ROLE_CHANGED_EVENT, refreshSession)
       window.removeEventListener('focus', verifySignedIn)
       document.removeEventListener('visibilitychange', verifySignedIn)
     }
@@ -340,6 +359,8 @@ export function PublicLayout() {
             {
               authChecked,
               role: authChecked ? role : undefined,
+              sessionKey: authChecked ? authSession.key : undefined,
+              userId: authChecked ? authSession.userId : undefined,
             } satisfies PublicAuthContext
           }
         />
@@ -368,6 +389,8 @@ export function PublicLayout() {
 export interface PublicAuthContext {
   authChecked: boolean
   role: AuthRole | undefined
+  sessionKey: string | undefined
+  userId: string | undefined
 }
 
 export function RouteAccessibility() {

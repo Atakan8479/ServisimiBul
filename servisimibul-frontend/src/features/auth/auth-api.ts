@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { ApiError, apiRequest, resetCsrfToken } from '../../api/client'
 
 const AUTH_ROLE_KEY = 'servisimibul.auth-role'
+let verifiedAuthUserId: string | undefined
 // In-memory cross-tab signal for login/logout; carries no data and stores nothing.
 const authChannel =
   typeof BroadcastChannel === 'function'
@@ -93,7 +94,7 @@ export async function login(request: LoginRequest): Promise<AuthUser> {
     schema: authUserSchema,
   })
   resetCsrfToken()
-  setKnownAuthRole(user.role)
+  setKnownAuthSession(user)
   announceAuthChange()
   return user
 }
@@ -104,7 +105,7 @@ export async function currentUser(): Promise<AuthUser> {
       requiresSession: true,
       schema: authUserSchema,
     })
-    setKnownAuthRole(user.role)
+    setKnownAuthSession(user)
     return user
   } catch (error) {
     if (error instanceof ApiError && error.problem.status === 401) {
@@ -173,7 +174,7 @@ let authGeneration = 0
 let authCheck: { generation: number; promise: Promise<void> } | undefined
 
 /**
- * Re-reads the server session for navigation display only (never authorization).
+ * Re-reads the server session for shared UI identity only (never authorization).
  * Concurrent calls share one request; a result is dropped when login/logout
  * changed the cached role while it was in flight. 401 means guest; other
  * failures reject and leave the cached role untouched.
@@ -187,7 +188,7 @@ export function refreshAuthRole(): Promise<void> {
   })
     .then(
       (user) => {
-        if (generation === authGeneration) setKnownAuthRole(user.role)
+        if (generation === authGeneration) setKnownAuthSession(user)
       },
       (error: unknown) => {
         if (generation !== authGeneration) return
@@ -213,6 +214,7 @@ export function authStateKnown(): boolean {
 export function resetAuthStateForTests(): void {
   authGeneration = 0
   authCheck = undefined
+  verifiedAuthUserId = undefined
 }
 
 /** Runs the listener when another tab of this browser logs in or out. */
@@ -232,14 +234,20 @@ export function knownAuthRole(): AuthRole | undefined {
     : undefined
 }
 
+export function knownAuthUserId(): string | undefined {
+  return verifiedAuthUserId
+}
+
 export function clearKnownAuthRole(): void {
   authGeneration += 1
+  verifiedAuthUserId = undefined
   window.sessionStorage.removeItem(AUTH_ROLE_KEY)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
 
-function setKnownAuthRole(role: AuthRole): void {
+function setKnownAuthSession(user: AuthUser): void {
   authGeneration += 1
-  window.sessionStorage.setItem(AUTH_ROLE_KEY, role)
+  verifiedAuthUserId = user.id
+  window.sessionStorage.setItem(AUTH_ROLE_KEY, user.role)
   window.dispatchEvent(new Event(AUTH_ROLE_CHANGED_EVENT))
 }
