@@ -2182,7 +2182,8 @@ h1 {
   border-block: 0.35rem solid rgba(23, 33, 27, 0.24);
   background: #667169;
   box-shadow: 0 1.25rem 2.5rem rgba(33, 66, 47, 0.1);
-  opacity: 0.3;
+  /* Stays faint so the decorative road never lowers the contrast of page text. */
+  opacity: 0.12;
 }
 
 .road-lane::after {
@@ -2212,6 +2213,8 @@ h1 {
   height: clamp(6.5rem, 10vw, 9rem);
   filter: drop-shadow(0 0.35rem 0.4rem rgba(0, 0, 0, 0.25));
   transform: translateY(-50%) rotate(90deg);
+  /* Parked off the lane; the homepage drive animates translate, not layout. */
+  translate: -9rem 0;
   z-index: 1;
 }
 
@@ -2222,13 +2225,15 @@ h1 {
 }
 
 .road-minibus-one {
-  animation: drive-right 19s linear infinite;
+  left: 0;
+  animation: drive-right 19s linear 1 both;
 }
 
 .road-minibus-two {
-  right: -9rem;
+  right: 0;
   transform: translateY(-50%) rotate(-90deg);
-  animation: drive-left 23s 4s linear infinite;
+  translate: 9rem 0;
+  animation: drive-left 23s 4s linear 1 both;
 }
 
 .auth-card > p:not(.eyebrow):not(.auth-switch) {
@@ -5431,23 +5436,16 @@ button.button-link {
   }
 }
 
+/* The lane is 130vw wide, so each minibus crosses it and parks out of view. */
 @keyframes drive-right {
-  from {
-    left: -9rem;
-  }
-
   to {
-    left: calc(100% + 9rem);
+    translate: calc(130vw + 9rem) 0;
   }
 }
 
 @keyframes drive-left {
-  from {
-    right: -9rem;
-  }
-
   to {
-    right: calc(100% + 9rem);
+    translate: calc(-130vw - 9rem) 0;
   }
 }
 
@@ -5938,10 +5936,6 @@ button.button-link {
 
   .notification-action {
     white-space: normal;
-  }
-
-  .road-lane {
-    opacity: 0.2;
   }
 
   .search-row > button,
