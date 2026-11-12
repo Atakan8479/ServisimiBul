@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { exitDialog } from '../../components/dialog-exit'
 
 export function AdminConfirmDialog({
   children,
@@ -38,7 +39,7 @@ export function AdminConfirmDialog({
       className="admin-confirm-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       onClose={(event) => {
         // Repeated Escape can close a native dialog without a cancel event.
@@ -55,7 +56,7 @@ export function AdminConfirmDialog({
         <button
           className="secondary-button"
           disabled={pending}
-          onClick={onCancel}
+          onClick={() => exitDialog(dialogRef.current, onCancel)}
           ref={cancelRef}
           type="button"
         >

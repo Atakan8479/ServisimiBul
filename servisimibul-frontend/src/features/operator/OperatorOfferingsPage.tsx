@@ -23,6 +23,7 @@ import {
   type ServiceOffering,
   type Vehicle,
 } from './offering-api'
+import { exitDialog } from '../../components/dialog-exit'
 
 export function OperatorOfferingsPage() {
   const navigate = useNavigate()
@@ -1036,6 +1037,7 @@ function ModalDialog({
     if (!dialog) return
     if (open && !dialog.open) dialog.showModal()
     if (!open && dialog.open) dialog.close()
+    if (!open) delete dialog.dataset.closing
   }, [open])
 
   return (
@@ -1044,7 +1046,7 @@ function ModalDialog({
       className={`operator-dialog${wide ? ' operator-dialog-wide' : ''}`}
       onCancel={(event) => {
         event.preventDefault()
-        onClose()
+        exitDialog(dialogRef.current, onClose)
       }}
       ref={dialogRef}
     >
@@ -1056,7 +1058,7 @@ function ModalDialog({
         <button
           aria-label={`${title} penceresini kapat`}
           className="operator-dialog-close"
-          onClick={onClose}
+          onClick={() => exitDialog(dialogRef.current, onClose)}
           type="button"
         >
           <CloseIcon />
