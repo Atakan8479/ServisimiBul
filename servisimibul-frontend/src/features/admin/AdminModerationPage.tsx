@@ -29,6 +29,7 @@ import {
   type ReportReason,
 } from '../moderation/moderation-api'
 import { AdminConfirmDialog } from './AdminConfirmDialog'
+import { exitDialog } from '../../components/dialog-exit'
 
 const statusLabels: Record<ModerationCaseStatus, string> = {
   OPEN: 'Açık',
@@ -704,7 +705,7 @@ function ReviewDialog({
       className="admin-confirm-dialog moderation-review-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onClose()
+        if (!pending) exitDialog(dialogRef.current, onClose)
       }}
       onClose={(event) => {
         // Repeated Escape can close a native dialog without a cancel event.
@@ -822,7 +823,9 @@ function ModerationDetail({
           <div className="admin-confirm-actions">
             <button
               className="secondary-button"
-              onClick={onClose}
+              onClick={(event) =>
+                exitDialog(event.currentTarget.closest('dialog'), onClose)
+              }
               type="button"
             >
               Kapat
@@ -891,7 +894,9 @@ function ModerationDetail({
             <button
               className="secondary-button"
               disabled={saving}
-              onClick={onClose}
+              onClick={(event) =>
+                exitDialog(event.currentTarget.closest('dialog'), onClose)
+              }
               type="button"
             >
               Vazgeç

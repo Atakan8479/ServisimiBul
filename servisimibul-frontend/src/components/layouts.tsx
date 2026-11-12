@@ -372,13 +372,27 @@ export function PublicLayout() {
             <p>Okul servisi aramanın daha açık yolu.</p>
           </div>
           <nav aria-label="Alt menü">
-            <NavLink to="/">Ana sayfa</NavLink>
-            <NavLink to="/demands">Talep panosu</NavLink>
-            <NavLink to="/parent/register">Veli kaydı</NavLink>
-            <NavLink to="/operator/register">İşletmeci kaydı</NavLink>
-            <NavLink to="/privacy/notice">Gizlilik ve kişisel veriler</NavLink>
-            <NavLink to="/terms">Kullanım koşulları</NavLink>
-            <NavLink to="/privacy/requests">Kişisel veri başvuru yolu</NavLink>
+            <NavLink to="/" viewTransition>
+              Ana sayfa
+            </NavLink>
+            <NavLink to="/demands" viewTransition>
+              Talep panosu
+            </NavLink>
+            <NavLink to="/parent/register" viewTransition>
+              Veli kaydı
+            </NavLink>
+            <NavLink to="/operator/register" viewTransition>
+              İşletmeci kaydı
+            </NavLink>
+            <NavLink to="/privacy/notice" viewTransition>
+              Gizlilik ve kişisel veriler
+            </NavLink>
+            <NavLink to="/terms" viewTransition>
+              Kullanım koşulları
+            </NavLink>
+            <NavLink to="/privacy/requests" viewTransition>
+              Kişisel veri başvuru yolu
+            </NavLink>
           </nav>
         </div>
       </footer>

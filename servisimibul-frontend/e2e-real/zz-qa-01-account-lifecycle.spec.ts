@@ -1,5 +1,6 @@
 import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
+import { settleDialogMotion } from '../e2e/support/dialog-motion'
 
 const schoolId = '10000000-0000-4000-8000-000000000001'
 const password = process.env.J03_PARENT_PASSWORD
@@ -117,6 +118,7 @@ test('QA-01 verifies the enabled account lifecycle on the real stack', async ({
     await trigger.click()
     const cancel = parent.getByRole('button', { name: 'Vazgeç' })
     await expect(cancel).toBeFocused()
+    await settleDialogMotion(parent)
     expect(
       (
         await new AxeBuilder({ page: parent })

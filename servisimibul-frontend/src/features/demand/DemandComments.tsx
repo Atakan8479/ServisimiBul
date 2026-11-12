@@ -375,6 +375,7 @@ export function DemandComments({
                   <ReportControl
                     authChecked={authChecked}
                     role={role}
+                    sessionKey={sessionKey}
                     targetId={comment.id}
                     targetType="COMMENT"
                   />

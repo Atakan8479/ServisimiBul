@@ -8,6 +8,7 @@ import {
   type ModerationTargetType,
   type ReportReason,
 } from './moderation-api'
+import { exitDialog } from '../../components/dialog-exit'
 
 const reasonLabels: Record<ReportReason, string> = {
   ABUSE_HARASSMENT: 'Hakaret veya taciz',
@@ -21,12 +22,17 @@ const reasonLabels: Record<ReportReason, string> = {
 interface ReportControlProps {
   authChecked: boolean
   role: AuthRole | undefined
+  sessionKey: string | undefined
   targetType: ModerationTargetType
   targetId: string
   label?: string
 }
 
-export function ReportControl({
+export function ReportControl(props: ReportControlProps) {
+  return <SessionReportControl key={props.sessionKey ?? 'pending'} {...props} />
+}
+
+function SessionReportControl({
   authChecked,
   role,
   targetType,
@@ -159,7 +165,7 @@ export function ReportControl({
           className="report-dialog"
           onCancel={(event) => {
             event.preventDefault()
-            closeDialog()
+            exitDialog(dialogRef.current, closeDialog)
           }}
           ref={dialogRef}
         >
@@ -216,7 +222,7 @@ export function ReportControl({
               <button
                 className="secondary-button"
                 disabled={pending}
-                onClick={closeDialog}
+                onClick={() => exitDialog(dialogRef.current, closeDialog)}
                 type="button"
               >
                 Vazgeç

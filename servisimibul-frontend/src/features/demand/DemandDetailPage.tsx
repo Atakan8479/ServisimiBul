@@ -44,6 +44,7 @@ export function DemandDetailPage() {
   const { authChecked, role, sessionKey, userId } =
     useOutletContext<PublicAuthContext>()
   const [demand, setDemand] = useState<Demand>()
+  const [demandOwnerKey, setDemandOwnerKey] = useState<string>()
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string>()
   const [supportMode, setSupportMode] = useState<SupportMode>()
@@ -51,6 +52,7 @@ export function DemandDetailPage() {
   const [notice, setNotice] = useState<string | undefined>(
     (location.state as { notice?: string } | null)?.notice,
   )
+  const [supportOwnerKey, setSupportOwnerKey] = useState(sessionKey)
   const [withdrawing, setWithdrawing] = useState(false)
   const [serviceResponses, setServiceResponses] =
     useState<PublicServiceResponsePage>()
@@ -67,6 +69,13 @@ export function DemandDetailPage() {
   const requestVersion = useRef(0)
   const responseRequestVersion = useRef(0)
   const resumeHandled = useRef(false)
+  const parentSessionKey =
+    authChecked && role === 'PARENT' && userId ? sessionKey : undefined
+  const parentSessionKeyRef = useRef(parentSessionKey)
+  parentSessionKeyRef.current = parentSessionKey
+  const supportStateIsCurrent =
+    Boolean(parentSessionKey) && supportOwnerKey === parentSessionKey
+  const currentSupportMode = supportStateIsCurrent ? supportMode : undefined
   const operatorSessionKey =
     authChecked && role === 'OPERATOR' && userId ? sessionKey : undefined
   const operatorSessionKeyRef = useRef(operatorSessionKey)
@@ -85,7 +94,10 @@ export function DemandDetailPage() {
     setLoadError(undefined)
     try {
       const result = await getDemand(demandId)
-      if (request === requestVersion.current) setDemand(result)
+      if (request === requestVersion.current) {
+        setDemand(result)
+        setDemandOwnerKey(sessionKey)
+      }
     } catch (error) {
       if (request !== requestVersion.current) return
       setDemand(undefined)
@@ -97,7 +109,7 @@ export function DemandDetailPage() {
     } finally {
       if (request === requestVersion.current) setLoading(false)
     }
-  }, [demandId])
+  }, [demandId, sessionKey])
 
   const loadServiceResponses = useCallback(async () => {
     if (!demandId) return
@@ -129,7 +141,7 @@ export function DemandDetailPage() {
       window.clearTimeout(timer)
       requestVersion.current += 1
     }
-  }, [loadDemand, sessionKey])
+  }, [loadDemand])
 
   useEffect(() => {
     const timer = window.setTimeout(() => void loadServiceResponses(), 0)
@@ -169,17 +181,18 @@ export function DemandDetailPage() {
   }
 
   async function beginSupport(mode?: SupportMode) {
+    if (!parentSessionKey || !userId) return
+    const ownerKey = parentSessionKey
+    const ownerId = userId
     setActionError(undefined)
     setNotice(undefined)
     try {
       const user = await currentUser()
-      if (user.role !== 'PARENT') {
-        setActionError(
-          'Desteğinizi yönetmek için veli hesabınızla giriş yapın.',
-        )
-        return
-      }
-      const support = demand?.currentUserSupport
+      if (user.role !== 'PARENT' || user.id !== ownerId) return
+      if (parentSessionKeyRef.current !== ownerKey) return
+      const support =
+        demandOwnerKey === ownerKey ? demand?.currentUserSupport : null
+      setSupportOwnerKey(ownerKey)
       setSupportMode(
         mode ??
           (support?.status === 'ACTIVE' ||
@@ -191,6 +204,7 @@ export function DemandDetailPage() {
               : 'join'),
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin('support', error.sessionExpired)
         return
@@ -319,43 +333,51 @@ export function DemandDetailPage() {
   }
 
   async function submitSupport(values: SupportValues) {
-    if (!demandId || !supportMode) return
+    if (!demandId || !parentSessionKey || !currentSupportMode) return
+    const ownerKey = parentSessionKey
     setActionError(undefined)
     try {
       const result =
-        supportMode === 'edit'
+        currentSupportMode === 'edit'
           ? await updateDemandSupport(demandId, values)
           : await joinDemand(demandId, values)
+      if (parentSessionKeyRef.current !== ownerKey) return
       setDemand(result)
       setSupportMode(undefined)
       setNotice(
-        supportMode === 'edit'
+        currentSupportMode === 'edit'
           ? 'Destek tercihleriniz güncellendi.'
-          : supportMode === 'reactivate'
+          : currentSupportMode === 'reactivate'
             ? 'Desteğiniz yeniden etkinleştirildi.'
             : 'Desteğiniz talebe eklendi.',
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Desteğiniz kaydedilemedi. Tekrar deneyin.')
     }
   }
 
   async function withdrawSupport() {
-    if (!demandId) return
+    if (!demandId || !parentSessionKey) return
+    const ownerKey = parentSessionKey
+    setSupportOwnerKey(ownerKey)
     setWithdrawing(true)
     setActionError(undefined)
     setNotice(undefined)
     try {
       await withdrawDemandSupport(demandId)
+      if (parentSessionKeyRef.current !== ownerKey) return
       await loadDemand()
+      if (parentSessionKeyRef.current !== ownerKey) return
       setSupportMode(undefined)
       setNotice(
         'Desteğiniz geri çekildi. İsterseniz daha sonra yeniden katılabilirsiniz.',
       )
     } catch (error) {
+      if (parentSessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Desteğiniz geri çekilemedi. Tekrar deneyin.')
     } finally {
-      setWithdrawing(false)
+      if (parentSessionKeyRef.current === ownerKey) setWithdrawing(false)
     }
   }
 
@@ -395,7 +417,7 @@ export function DemandDetailPage() {
             Tekrar dene
           </button>
         </div>
-        <Link className="text-link" to="/demands">
+        <Link className="text-link" to="/demands" viewTransition>
           Talep panosuna dön
         </Link>
       </section>
@@ -403,28 +425,30 @@ export function DemandDetailPage() {
   }
 
   const activeReasons = demand.reasonCounts.filter((item) => item.count > 0)
+  const currentUserSupport =
+    demandOwnerKey === sessionKey ? demand.currentUserSupport : null
   const activeSupport =
-    demand.currentUserSupport?.status === 'ACTIVE' ||
-    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+    currentUserSupport?.status === 'ACTIVE' ||
+    currentUserSupport?.status === 'AWAITING_FEEDBACK'
   const withdrawnSupport =
-    demand.currentUserSupport?.status === 'WITHDRAWN' ||
-    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
+    currentUserSupport?.status === 'WITHDRAWN' ||
+    currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const feedbackVisible =
-    demand.currentUserSupport?.status === 'ACTIVE' ||
-    demand.currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
-    demand.currentUserSupport?.status === 'SATISFIED' ||
-    demand.currentUserSupport?.status === 'INACTIVE_EXPIRED'
+    currentUserSupport?.status === 'ACTIVE' ||
+    currentUserSupport?.status === 'AWAITING_FEEDBACK' ||
+    currentUserSupport?.status === 'SATISFIED' ||
+    currentUserSupport?.status === 'INACTIVE_EXPIRED'
   const open = demand.status === 'OPEN'
   const supportAvailable =
     open ||
-    ((withdrawnSupport || !demand.currentUserSupport) &&
+    ((withdrawnSupport || !currentUserSupport) &&
       demand.closureReason === 'INACTIVE')
-  const canManageSupport = role === 'PARENT' && supportAvailable
-  const initialValues = demand.currentUserSupport
+  const canManageSupport = Boolean(parentSessionKey) && supportAvailable
+  const initialValues = currentUserSupport
     ? {
-        needsMorning: demand.currentUserSupport.needsMorning,
-        needsAfternoon: demand.currentUserSupport.needsAfternoon,
-        reasons: demand.currentUserSupport.reasons,
+        needsMorning: currentUserSupport.needsMorning,
+        needsAfternoon: currentUserSupport.needsAfternoon,
+        reasons: currentUserSupport.reasons,
       }
     : undefined
 
@@ -464,6 +488,7 @@ export function DemandDetailPage() {
                     authChecked={authChecked}
                     label="Talebi bildir"
                     role={role}
+                    sessionKey={sessionKey}
                     targetId={demand.id}
                     targetType="DEMAND"
                   />
@@ -509,7 +534,7 @@ export function DemandDetailPage() {
               </dl>
             </section>
 
-            {notice && (
+            {supportStateIsCurrent && notice && (
               <div className="status-banner success" role="status">
                 {notice}
               </div>
@@ -610,6 +635,7 @@ export function DemandDetailPage() {
                             authChecked={authChecked}
                             label="Bildir"
                             role={role}
+                            sessionKey={sessionKey}
                             targetId={response.id}
                             targetType="SERVICE_RESPONSE"
                           />
@@ -692,6 +718,7 @@ export function DemandDetailPage() {
                 <Link
                   className="button-link"
                   to={`/operator/login?next=${encodeURIComponent(loginReturnPath('response'))}`}
+                  viewTransition
                 >
                   İşletmeci olarak giriş yap
                 </Link>
@@ -716,14 +743,22 @@ export function DemandDetailPage() {
                       'COVERAGE_MISSING',
                     ].includes(blocker),
                   ) && (
-                    <Link className="button-link" to="/operator/schools">
+                    <Link
+                      className="button-link"
+                      to="/operator/schools"
+                      viewTransition
+                    >
                       Okul ve kapsam yönetimine git
                     </Link>
                   )}
                   {currentServiceEligibility.blockers.includes(
                     'PROFILE_HIDDEN',
                   ) && (
-                    <Link className="button-link" to="/operator/profile">
+                    <Link
+                      className="button-link"
+                      to="/operator/profile"
+                      viewTransition
+                    >
                       Profil görünürlüğünü düzenle
                     </Link>
                   )}
@@ -810,11 +845,11 @@ export function DemandDetailPage() {
             )}
           </section>
 
-          {role === 'PARENT' && feedbackVisible && (
+          {parentSessionKey && feedbackVisible && (
             <DemandFeedbackPanel demandId={demand.id} onResolved={loadDemand} />
           )}
 
-          {authChecked && role === 'PARENT' && (
+          {parentSessionKey && (
             <section
               className="demand-support-panel"
               aria-labelledby="support-title"
@@ -829,7 +864,7 @@ export function DemandDetailPage() {
                 </div>
                 {activeSupport && (
                   <span className="status-pill success">
-                    {demand.currentUserSupport?.status === 'AWAITING_FEEDBACK'
+                    {currentUserSupport?.status === 'AWAITING_FEEDBACK'
                       ? 'Yanıtınız bekleniyor'
                       : 'Destekliyorsunuz'}
                   </span>
@@ -843,8 +878,7 @@ export function DemandDetailPage() {
                 <div className="status-banner neutral">
                   {demand.closureReason === 'INACTIVE' && withdrawnSupport
                     ? 'Talep hareketsizlik nedeniyle kapandı. Desteğinizi yeniden etkinleştirerek talebi açabilirsiniz.'
-                    : demand.closureReason === 'INACTIVE' &&
-                        !demand.currentUserSupport
+                    : demand.closureReason === 'INACTIVE' && !currentUserSupport
                       ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
                       : demand.closureReason === 'FULFILLED'
                         ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
@@ -852,7 +886,7 @@ export function DemandDetailPage() {
                 </div>
               )}
 
-              {demand.currentUserSupport && (
+              {currentUserSupport && (
                 <div
                   className="demand-current-support"
                   aria-label="Katılım özetiniz"
@@ -860,22 +894,22 @@ export function DemandDetailPage() {
                   <div>
                     <span>Katılım durumu</span>
                     <strong>
-                      {supportStateLabel(demand.currentUserSupport.status)}
+                      {supportStateLabel(currentUserSupport.status)}
                     </strong>
                   </div>
                   <div>
                     <span>İhtiyaç yönü</span>
                     <strong>
                       {directionSummary(
-                        demand.currentUserSupport.needsMorning,
-                        demand.currentUserSupport.needsAfternoon,
+                        currentUserSupport.needsMorning,
+                        currentUserSupport.needsAfternoon,
                       )}
                     </strong>
                   </div>
                 </div>
               )}
 
-              {canManageSupport && !supportMode && (
+              {canManageSupport && !currentSupportMode && (
                 <div className="button-row demand-support-actions">
                   <button
                     className="primary-button"
@@ -891,23 +925,25 @@ export function DemandDetailPage() {
                   {activeSupport && (
                     <button
                       className="danger-button"
-                      disabled={withdrawing}
+                      disabled={supportStateIsCurrent && withdrawing}
                       type="button"
                       onClick={() => void withdrawSupport()}
                     >
-                      {withdrawing ? 'Geri çekiliyor…' : 'Desteğimi geri çek'}
+                      {supportStateIsCurrent && withdrawing
+                        ? 'Geri çekiliyor…'
+                        : 'Desteğimi geri çek'}
                     </button>
                   )}
                 </div>
               )}
 
-              {canManageSupport && supportMode && (
+              {canManageSupport && currentSupportMode && (
                 <DemandSupportForm
                   initialValues={initialValues}
                   submitLabel={
-                    supportMode === 'edit'
+                    currentSupportMode === 'edit'
                       ? 'Tercihlerimi kaydet'
-                      : supportMode === 'reactivate'
+                      : currentSupportMode === 'reactivate'
                         ? 'Desteğimi yeniden etkinleştir'
                         : 'Talebe katıl'
                   }
@@ -917,7 +953,7 @@ export function DemandDetailPage() {
                 />
               )}
 
-              {actionError && (
+              {supportStateIsCurrent && actionError && (
                 <div className="form-error" role="alert">
                   {actionError}
                 </div>

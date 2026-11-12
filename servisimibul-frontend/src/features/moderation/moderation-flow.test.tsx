@@ -60,6 +60,7 @@ describe('reporting and moderation flows', () => {
         <ReportControl
           authChecked
           role="PARENT"
+          sessionKey="PARENT:d28cc858-ed74-479a-b346-8b9cdccaaab8"
           targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
           targetType="COMMENT"
         />
@@ -96,6 +97,7 @@ describe('reporting and moderation flows', () => {
             <ReportControl
               authChecked
               role={undefined}
+              sessionKey="guest"
               targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
               targetType="COMMENT"
             />
@@ -120,6 +122,7 @@ describe('reporting and moderation flows', () => {
         <ReportControl
           authChecked
           role="ADMIN"
+          sessionKey="ADMIN:d28cc858-ed74-479a-b346-8b9cdccaaab8"
           targetId="75c3339d-f6f0-4e8e-aad9-2d783f7f2760"
           targetType="COMMENT"
         />
@@ -127,6 +130,157 @@ describe('reporting and moderation flows', () => {
     )
 
     expect(screen.queryByText(/bildir/i)).not.toBeInTheDocument()
+  })
+
+  it('clears an open report draft and error when the account changes', async () => {
+    server.use(authHandler('PARENT'))
+    const targetId = '75c3339d-f6f0-4e8e-aad9-2d783f7f2760'
+    const { rerender } = render(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="PARENT"
+          sessionKey="PARENT:parent-a"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+    fireEvent.change(await screen.findByLabelText('Açıklama (isteğe bağlı)'), {
+      target: { value: 'x' },
+    })
+    fireEvent.change(screen.getByLabelText('Bildirim nedeni'), {
+      target: { value: 'OTHER' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Bildirimi gönder' }))
+    expect(
+      await screen.findByText('Açıklama en az 2 karakter olmalıdır.'),
+    ).toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="PARENT"
+          sessionKey="PARENT:parent-b"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Açıklama en az 2 karakter olmalıdır.'),
+    ).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+    expect(await screen.findByLabelText('Bildirim nedeni')).toHaveValue(
+      'ABUSE_HARASSMENT',
+    )
+    expect(screen.getByLabelText('Açıklama (isteğe bağlı)')).toHaveValue('')
+  })
+
+  it('removes a stale report dialog after a role change or logout', async () => {
+    server.use(authHandler('PARENT'))
+    const targetId = '75c3339d-f6f0-4e8e-aad9-2d783f7f2760'
+    const { rerender } = render(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="PARENT"
+          sessionKey="PARENT:parent-a"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="ADMIN"
+          sessionKey="ADMIN:admin-a"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByText(/bildir/i)).not.toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role={undefined}
+          sessionKey="guest"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+    expect(
+      screen.getByRole('link', { name: 'Giriş yaparak bildir' }),
+    ).toBeInTheDocument()
+  })
+
+  it('clears report success state for the next account', async () => {
+    server.use(
+      authHandler('PARENT'),
+      csrfHandler(),
+      http.post('/api/v1/reports', () =>
+        HttpResponse.json(
+          {
+            id: '7bd12425-ea60-45e5-b937-ddf75db2eb45',
+            caseId: '1b0b4456-5e55-4814-b8f8-64d1343617fd',
+            targetType: 'COMMENT',
+            targetId: '75c3339d-f6f0-4e8e-aad9-2d783f7f2760',
+            reason: 'ABUSE_HARASSMENT',
+            status: 'OPEN',
+            createdAt: '2026-10-24T09:00:00Z',
+          },
+          { status: 201 },
+        ),
+      ),
+    )
+    const targetId = '75c3339d-f6f0-4e8e-aad9-2d783f7f2760'
+    const { rerender } = render(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="PARENT"
+          sessionKey="PARENT:parent-a"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bildir' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Bildirimi gönder' }),
+    )
+    expect(await screen.findByText('Bildirim alındı')).toBeInTheDocument()
+
+    rerender(
+      <MemoryRouter>
+        <ReportControl
+          authChecked
+          role="PARENT"
+          sessionKey="PARENT:parent-b"
+          targetId={targetId}
+          targetType="COMMENT"
+        />
+      </MemoryRouter>,
+    )
+    expect(screen.queryByText('Bildirim alındı')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Bildir' })).toBeInTheDocument()
   })
 
   it('shows grouped admin cases without reporter identity and records a reasoned action', async () => {

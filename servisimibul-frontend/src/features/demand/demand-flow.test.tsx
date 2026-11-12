@@ -1720,6 +1720,119 @@ describe('demand-specific operator service responses', () => {
 
 describe('demand session ownership changes', () => {
   it.each([
+    ['administrator', adminUser()],
+    ['guest', undefined],
+  ] as const)(
+    'removes parent support state after switching to a %s session',
+    async (_label, nextSession) => {
+      let session: TestAuthUser | undefined = parentUser()
+      let demandRequests = 0
+      server.use(
+        sessionHandler(() => session),
+        http.get(`/api/v1/demands/${demandId}`, () => {
+          demandRequests += 1
+          return HttpResponse.json(
+            demand({
+              currentUserSupport:
+                session?.role === 'PARENT' ? activeSupport : null,
+            }),
+          )
+        }),
+        emptyServiceResponsesHandler(),
+        csrfHandler(),
+        http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+          HttpResponse.json({ demandId, feedback: [], disclaimer: '' }),
+        ),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Desteğimi düzenle' }),
+      )
+      expect(
+        await screen.findByRole('button', { name: 'Tercihlerimi kaydet' }),
+      ).toBeInTheDocument()
+
+      const requestsBeforeSwitch = demandRequests
+      session = nextSession
+      announceAuthChangeFromOtherTab()
+
+      if (nextSession) {
+        await screen.findByText('Yönetici oturumu açık')
+      } else {
+        await screen.findByRole('link', { name: 'Veli olarak giriş yap' })
+      }
+      await waitFor(() =>
+        expect(demandRequests).toBeGreaterThan(requestsBeforeSwitch),
+      )
+      expect(
+        screen.queryByRole('button', { name: 'Tercihlerimi kaydet' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole('button', { name: 'Desteğimi geri çek' }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByLabelText('Katılım özetiniz'),
+      ).not.toBeInTheDocument()
+      expect(
+        await screen.findByRole('heading', { name: school.name }),
+      ).toBeInTheDocument()
+    },
+  )
+
+  it('reloads support ownership and clears the form for a new parent account', async () => {
+    const firstParent = parentUser()
+    let session: TestAuthUser | undefined = firstParent
+    let demandRequests = 0
+    server.use(
+      sessionHandler(() => session),
+      http.get(`/api/v1/demands/${demandId}`, () => {
+        demandRequests += 1
+        return HttpResponse.json(
+          demand({
+            currentUserSupport:
+              session?.id === firstParent.id ? activeSupport : null,
+          }),
+        )
+      }),
+      emptyServiceResponsesHandler(),
+      csrfHandler(),
+      http.post(`/api/v1/demands/${demandId}/feedback/open`, () =>
+        HttpResponse.json({ demandId, feedback: [], disclaimer: '' }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Desteğimi düzenle' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Tercihlerimi kaydet' }),
+    ).toBeInTheDocument()
+
+    const requestsBeforeSwitch = demandRequests
+    session = parentUser('0980a654-6643-4e86-a2ac-b9fcdb9bf31d')
+    announceAuthChangeFromOtherTab()
+
+    await waitFor(() =>
+      expect(demandRequests).toBeGreaterThan(requestsBeforeSwitch),
+    )
+    expect(
+      screen.queryByRole('button', { name: 'Tercihlerimi kaydet' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Katılım özetiniz')).not.toBeInTheDocument()
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Benim de ihtiyacım var' }),
+    )
+    expect(
+      await screen.findByRole('button', { name: 'Talebe katıl' }),
+    ).toBeInTheDocument()
+    const choices = screen.getAllByRole('checkbox')
+    expect(choices[0]).toBeChecked()
+    choices.slice(1).forEach((choice) => expect(choice).not.toBeChecked())
+  })
+
+  it.each([
     ['parent', parentUser(), 'form'],
     ['administrator', adminUser(), 'blocker'],
     ['guest', undefined, 'response'],

@@ -64,7 +64,11 @@ export function OperatorOverviewPage() {
           <h1>Genel bakış</h1>
           <p>Profilinizi, okul kapsamınızı ve servis bilgilerinizi yönetin.</p>
         </div>
-        <Link className="secondary-button button-link" to="/operator/profile">
+        <Link
+          className="secondary-button button-link"
+          to="/operator/profile"
+          viewTransition
+        >
           Profili düzenle
         </Link>
       </header>
@@ -211,7 +215,11 @@ export function OperatorOverviewPage() {
                 />
               </ol>
               {canManageSchools(readiness) && (
-                <Link className="operator-card-link" to="/operator/offerings">
+                <Link
+                  className="operator-card-link"
+                  to="/operator/offerings"
+                  viewTransition
+                >
                   Araçlar ve servisler isteğe bağlıdır
                 </Link>
               )}
@@ -224,7 +232,9 @@ export function OperatorOverviewPage() {
               <div className="operator-card-heading">
                 <h2 id="school-readiness-title">Bağlı okullar</h2>
                 {canManageSchools(readiness) && (
-                  <Link to="/operator/schools">Tümünü gör</Link>
+                  <Link to="/operator/schools" viewTransition>
+                    Tümünü gör
+                  </Link>
                 )}
               </div>
               {readiness.schools.length > 0 ? (
@@ -258,6 +268,7 @@ export function OperatorOverviewPage() {
                 <Link
                   className="secondary-button button-link operator-school-action"
                   to="/operator/schools"
+                  viewTransition
                 >
                   Okul kapsamını düzenle
                 </Link>
@@ -354,7 +365,11 @@ function ReadinessItem({
         <strong>{title}</strong>
         <p>{description}</p>
       </div>
-      {to && action && <Link to={to}>{action}</Link>}
+      {to && action && (
+        <Link to={to} viewTransition>
+          {action}
+        </Link>
+      )}
     </li>
   )
 }
@@ -389,7 +404,7 @@ function QuickLink({
   to: string
 }) {
   return (
-    <Link className="operator-quick-link" to={to}>
+    <Link className="operator-quick-link" to={to} viewTransition>
       <span>
         <strong>{title}</strong>
         <small>{description}</small>

@@ -28,6 +28,7 @@ import {
   type NotificationPreference,
 } from '../notification/notification-api'
 import './account-settings.css'
+import { exitDialog } from '../../components/dialog-exit'
 
 export function AccountSettingsPage() {
   const user = useLoaderData() as AuthUser
@@ -345,7 +346,11 @@ export function AccountSettingsRouteError() {
       <div className="account-route-state">
         <StatePanel
           action={
-            <Link className="ui-button ui-button-secondary" to={backPath}>
+            <Link
+              className="ui-button ui-button-secondary"
+              to={backPath}
+              viewTransition
+            >
               {backLabel}
             </Link>
           }
@@ -592,7 +597,7 @@ function DeactivateAccountDialog({
       className="account-confirm-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       onClose={(event) => {
         const dialog = event.currentTarget
@@ -620,7 +625,7 @@ function DeactivateAccountDialog({
         <button
           className="ui-button ui-button-secondary"
           disabled={pending}
-          onClick={onCancel}
+          onClick={() => exitDialog(dialogRef.current, onCancel)}
           ref={cancelRef}
           type="button"
         >
@@ -673,7 +678,7 @@ function SignOutAllDialog({
       className="account-confirm-dialog"
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       onClose={(event) => {
         // Repeated Escape can close a native dialog without a cancel event.
@@ -700,7 +705,7 @@ function SignOutAllDialog({
         <button
           className="ui-button ui-button-secondary"
           disabled={pending}
-          onClick={onCancel}
+          onClick={() => exitDialog(dialogRef.current, onCancel)}
           ref={cancelRef}
           type="button"
         >

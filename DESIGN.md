@@ -192,7 +192,7 @@ Use the existing quarter-rem spacing scale. Separate school geography from picku
 
 The system combines pale tonal layers, thin borders, and soft ambient shadows. The reusable SurfaceCard is flat with a border; existing form, school, and empty-state cards add the soft shadow. The raised shadow belongs to floating mobile navigation. The homepage image and its dark caption have stronger local shadows, appropriate to the editorial hero rather than a new global elevation scale.
 
-The exact soft and raised shadow values, durations, easing, and breakpoints are recorded in the sidecar. Controls use fast transitions; content uses the page duration. Existing page-level buttons can lift on pointer hover; reusable Button primitives have no separate hover color or lift in the source. Reduced-motion preferences remove page transitions and loading motion and disable smooth scrolling.
+The exact soft and raised shadow values, durations, easing, and breakpoints are recorded in the sidecar. Controls use fast transitions; content uses the page duration. Route changes fade and shift only the main content by about 6px through view transitions; the header, workspace sidebar, and road backdrop stay in place. Existing page-level buttons can lift on pointer hover; reusable Button primitives have no separate hover color or lift in the source. Reduced-motion preferences remove page transitions and loading motion and disable smooth scrolling.
 
 ## Shapes
 

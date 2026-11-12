@@ -28,6 +28,7 @@ import {
   type SchoolPage,
 } from './operator-api'
 import { schoolInitials } from './school-initials'
+import { exitDialog } from '../../components/dialog-exit'
 
 const visibleCoverageChips = 6
 
@@ -353,7 +354,9 @@ export function OperatorSchoolsPage() {
             yapana kadar aramalarda görünmezsiniz.{' '}
             <button
               className="text-button"
-              onClick={() => void navigate('/operator/profile')}
+              onClick={() =>
+                void navigate('/operator/profile', { viewTransition: true })
+              }
               type="button"
             >
               Profil ayarlarına git
@@ -613,7 +616,12 @@ export function OperatorSchoolsPage() {
               <button
                 className="secondary-button"
                 disabled={pending === 'add'}
-                onClick={closeAddDialog}
+                onClick={(event) =>
+                  exitDialog(
+                    event.currentTarget.closest('dialog'),
+                    closeAddDialog,
+                  )
+                }
                 type="button"
               >
                 Vazgeç
@@ -672,7 +680,11 @@ export function OperatorSchoolsPage() {
               className="secondary-button"
               data-autofocus
               disabled={pending === removeTarget.id}
-              onClick={() => setRemoveTarget(undefined)}
+              onClick={(event) =>
+                exitDialog(event.currentTarget.closest('dialog'), () =>
+                  setRemoveTarget(undefined),
+                )
+              }
               type="button"
             >
               Vazgeç
@@ -884,7 +896,7 @@ function SchoolDialog({
       className={`operator-dialog${wide ? ' operator-dialog-wide' : ''}`}
       onCancel={(event) => {
         event.preventDefault()
-        if (!pending) onCancel()
+        if (!pending) exitDialog(dialogRef.current, onCancel)
       }}
       onClose={(event) => {
         // Repeated Escape can close a native dialog without a cancel event.
@@ -906,7 +918,7 @@ function SchoolDialog({
           aria-label="Kapat"
           className="operator-dialog-close"
           disabled={pending}
-          onClick={onCancel}
+          onClick={() => exitDialog(dialogRef.current, onCancel)}
           type="button"
         >
           <span aria-hidden="true">×</span>
@@ -1246,7 +1258,9 @@ function CoverageEditor({
         <button
           className="secondary-button"
           disabled={saving}
-          onClick={onClose}
+          onClick={(event) =>
+            exitDialog(event.currentTarget.closest('dialog'), onClose)
+          }
           type="button"
         >
           Vazgeç
