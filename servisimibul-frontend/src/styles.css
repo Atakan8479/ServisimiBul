@@ -5481,16 +5481,42 @@ dialog[data-closing] {
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(0.65rem);
+    transform: translateY(0.375rem);
   }
 }
 
-::view-transition-old(root) {
+/*
+ * Route transitions move only the changing content. Sticky and overlay chrome
+ * gets its own group so the content snapshot never paints over it.
+ */
+.page-content,
+.workspace-content {
+  view-transition-name: page-content;
+}
+
+.site-header {
+  view-transition-name: site-header;
+}
+
+.workspace-mobile-bar {
+  view-transition-name: workspace-bar;
+}
+
+.workspace-sidebar {
+  view-transition-name: workspace-sidebar;
+}
+
+::view-transition-old(page-content) {
   animation: page-exit var(--motion-fast) ease-in both;
 }
 
-::view-transition-new(root) {
+::view-transition-new(page-content) {
   animation: page-enter var(--motion-page) var(--ease-out) both;
+}
+
+/* The new page is already live underneath; never block it during the fade. */
+::view-transition {
+  pointer-events: none;
 }
 
 @keyframes loading-pulse {
@@ -6057,8 +6083,9 @@ dialog[data-closing] {
     scroll-behavior: auto;
   }
 
-  ::view-transition-old(root),
-  ::view-transition-new(root) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
     animation: none !important;
   }
 

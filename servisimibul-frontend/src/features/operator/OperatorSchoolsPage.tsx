@@ -354,7 +354,9 @@ export function OperatorSchoolsPage() {
             yapana kadar aramalarda görünmezsiniz.{' '}
             <button
               className="text-button"
-              onClick={() => void navigate('/operator/profile')}
+              onClick={() =>
+                void navigate('/operator/profile', { viewTransition: true })
+              }
               type="button"
             >
               Profil ayarlarına git

@@ -360,7 +360,7 @@ export function DemandDetailPage() {
             Tekrar dene
           </button>
         </div>
-        <Link className="text-link" to="/demands">
+        <Link className="text-link" to="/demands" viewTransition>
           Talep panosuna dön
         </Link>
       </section>
@@ -657,12 +657,20 @@ export function DemandDetailPage() {
                     'COVERAGE_MISSING',
                   ].includes(blocker),
                 ) && (
-                  <Link className="button-link" to="/operator/schools">
+                  <Link
+                    className="button-link"
+                    to="/operator/schools"
+                    viewTransition
+                  >
                     Okul ve kapsam yönetimine git
                   </Link>
                 )}
                 {serviceEligibility.blockers.includes('PROFILE_HIDDEN') && (
-                  <Link className="button-link" to="/operator/profile">
+                  <Link
+                    className="button-link"
+                    to="/operator/profile"
+                    viewTransition
+                  >
                     Profil görünürlüğünü düzenle
                   </Link>
                 )}

@@ -308,6 +308,7 @@ export function OperatorOfferingsPage() {
                     <Link
                       className="secondary-button button-link"
                       to="/operator/schools"
+                      viewTransition
                     >
                       Okullara git
                     </Link>

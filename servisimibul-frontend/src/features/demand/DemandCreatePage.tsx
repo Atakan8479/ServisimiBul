@@ -220,7 +220,11 @@ export function DemandCreatePage() {
           busyLabel="Kontrol ediliyor…"
           initialValues={support}
           submitLabel="Bilgileri gözden geçir"
-          onCancel={() => void navigate(boardPath(selection, academicYear))}
+          onCancel={() =>
+            void navigate(boardPath(selection, academicYear), {
+              viewTransition: true,
+            })
+          }
           onChange={setSupport}
           onSubmit={review}
         />
