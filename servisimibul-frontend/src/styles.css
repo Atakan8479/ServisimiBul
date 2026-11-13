@@ -530,22 +530,72 @@ a:focus-visible {
   font-size: 0.9rem;
 }
 
-.site-footer nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
+.site-footer-nav {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(3, minmax(0, max-content));
+  gap: var(--space-5) var(--space-10);
 }
 
-.site-footer nav a {
+.site-footer-group-label {
+  margin: 0 0 var(--space-2);
+  padding-inline: 0.6rem;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-footer-group ul {
+  display: grid;
+  gap: 0.15rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-footer-nav a {
+  position: relative;
+  display: inline-flex;
+  min-height: 2.25rem;
+  align-items: center;
+  padding: 0.35rem 0.6rem;
+  border-radius: var(--radius-small);
   color: var(--neutral-700);
   font-size: 0.9rem;
-  font-weight: 650;
+  font-weight: 600;
   text-decoration: none;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
 }
 
-.site-footer nav a:hover,
-.site-footer nav a:focus-visible {
+.site-footer-nav a:hover {
+  background: var(--color-surface-soft);
   color: var(--teal-700);
+}
+
+.site-footer-nav a:focus-visible {
+  color: var(--teal-700);
+  outline-offset: 1px;
+}
+
+.site-footer-nav a[aria-current='page'] {
+  color: var(--teal-700);
+  font-weight: 750;
+}
+
+.site-footer-nav a[aria-current='page']::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 2px;
+  height: 1rem;
+  border-radius: 2px;
+  background: var(--teal-500);
+  content: '';
+  transform: translateY(-50%);
 }
 
 .site-nav-backdrop {
@@ -5678,9 +5728,14 @@ dialog[data-closing] {
     padding-block: var(--space-8);
   }
 
-  .site-footer nav {
-    display: grid;
-    gap: var(--space-3);
+  .site-footer-nav {
+    width: 100%;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+    gap: var(--space-5);
+  }
+
+  .site-footer-group:last-child {
+    grid-column: 1 / -1;
   }
 
   .workspace-shell {
