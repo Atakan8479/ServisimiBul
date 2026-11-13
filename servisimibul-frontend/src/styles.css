@@ -1123,98 +1123,6 @@ a:focus-visible {
   border-top: 1px solid var(--color-border);
 }
 
-.discovery-how {
-  background: var(--color-surface-soft);
-}
-
-.discovery-how-inner {
-  width: min(72rem, calc(100% - 2rem));
-  margin: 0 auto;
-  padding: clamp(4rem, 8vw, 7rem) 0;
-}
-
-.discovery-section-heading {
-  max-width: 46rem;
-}
-
-.discovery-section-heading.centered {
-  margin-inline: auto;
-  text-align: center;
-}
-
-.discovery-section-heading h2,
-.discovery-section-heading p {
-  margin: 0;
-}
-
-.discovery-section-heading h2 {
-  color: var(--navy-900);
-  font-family: Manrope, sans-serif;
-  font-size: clamp(1.8rem, 4vw, 2.6rem);
-  letter-spacing: -0.03em;
-}
-
-.discovery-section-heading > p:last-child {
-  margin-top: 0.85rem;
-  color: var(--color-muted);
-  line-height: 1.6;
-}
-
-.discovery-how-steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(2rem, 6vw, 5rem);
-  margin: 3.5rem 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.discovery-how-steps li {
-  position: relative;
-  text-align: center;
-}
-
-.discovery-how-steps li + li::before {
-  position: absolute;
-  top: 1.4rem;
-  right: calc(50% + 3.5rem);
-  width: calc(100% - 7rem);
-  border-top: 1px dashed var(--teal-100);
-  content: '';
-}
-
-.discovery-how-steps span {
-  display: grid;
-  width: 3rem;
-  height: 3rem;
-  place-items: center;
-  margin: 0 auto 1rem;
-  border-radius: var(--radius-medium);
-  background: var(--neutral-0);
-  color: var(--teal-700);
-  font-size: 0.75rem;
-  font-weight: 850;
-  box-shadow: 0 0.65rem 1.5rem rgba(16, 40, 67, 0.08);
-}
-
-.discovery-how-steps h3,
-.discovery-how-steps p {
-  margin: 0;
-}
-
-.discovery-how-steps h3 {
-  color: var(--navy-900);
-  font-size: 1rem;
-}
-
-.discovery-how-steps p {
-  max-width: 17rem;
-  margin: 0.55rem auto 0;
-  color: var(--color-muted);
-  font-size: 0.9rem;
-  line-height: 1.55;
-}
-
 .discovery-demand-promo {
   display: grid;
   width: min(72rem, calc(100% - 2rem));
@@ -5715,17 +5623,8 @@ dialog[data-closing] {
   }
 
   .school-result-list,
-  .school-result-loading > div,
-  .discovery-how-steps {
+  .school-result-loading > div {
     grid-template-columns: 1fr;
-  }
-
-  .discovery-how-steps {
-    gap: 2.5rem;
-  }
-
-  .discovery-how-steps li + li::before {
-    display: none;
   }
 
   .discovery-demand-promo {
