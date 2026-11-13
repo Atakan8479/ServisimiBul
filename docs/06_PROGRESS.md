@@ -1,5 +1,10 @@
 # Progress ledger (update only after verification)
 
+## DISCOVERY-CONTACT-UX phone layout — 2026-11-13
+
+- Branch `fix/issue-293-discovery-phone-wrap` implements issue #293 with a wider proportional desktop contact column and non-wrapping phone digits. Existing `tel:` values, accessible names, focus behavior, anonymous discovery, and operator mapping are unchanged.
+- Focused discovery tests passed 21/21 and mocked Chromium passed 4/4 at 1440, 768, 390, and 320 px with a maximum-length E.164 number, axe, focus, clipping, single-line, and overflow assertions. ESLint, strict TypeScript, Vite build, and `git diff --check` passed; no backend, API, dependency, or business-logic change was made.
+
 ## ROLE-UX shared-screen action gates — 2026-11-12 (Draft PR #296 pending review)
 
 - Issue #272 now has frontend role-aware presentation across the public demand detail: operator publishing is operator-only; support and feedback are parent-only; comments are available to eligible parents and operators; and reporting is available to parents and operators. Guests receive explicit login routes while admins retain read-only public content without dead-end authoring controls. Existing backend authorization and session verification remain authoritative.

@@ -154,7 +154,7 @@ describe('public operator discovery', () => {
       ...operator('Geçici ad'),
       operatorId: '11111111-1111-4111-8111-111111111111',
       businessName: null,
-      contactPhone: '+905321111111',
+      contactPhone: '+905321234567890',
       description: null,
       publishedOfferings: [],
     }
@@ -191,9 +191,9 @@ describe('public operator discovery', () => {
     ).toBeInTheDocument()
     expect(
       within(fallbackCard).getByRole('link', {
-        name: 'Telefonla ara: +905321111111',
+        name: 'Telefonla ara: +905321234567890',
       }),
-    ).toHaveAttribute('href', 'tel:+905321111111')
+    ).toHaveAttribute('href', 'tel:+905321234567890')
     expect(
       within(screen.getByRole('article', { name: 'Kuzey Servis' })).getByRole(
         'link',

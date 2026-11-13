@@ -18,6 +18,7 @@ for (const viewport of viewports) {
     state.approvalStatus = 'APPROVED'
     state.operatorSchoolAdded = true
     state.generalCoverage = [201]
+    state.contactPhone = '+905321234567890'
 
     await page.setViewportSize(viewport)
     await installMockApi(page, state)
@@ -62,11 +63,33 @@ for (const viewport of viewports) {
     }
 
     const phoneLink = page.getByRole('link', {
-      name: 'Telefonla ara: +905321234567',
+      name: 'Telefonla ara: +905321234567890',
     })
-    await expect(phoneLink).toHaveAttribute('href', 'tel:+905321234567')
+    await expect(phoneLink).toHaveAttribute('href', 'tel:+905321234567890')
     await phoneLink.focus()
     await expect(phoneLink).toBeFocused()
+    const phoneText = phoneLink.getByText('+905321234567890', { exact: true })
+    expect(
+      await phoneText.evaluate((element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return range.getClientRects().length
+      }),
+    ).toBe(1)
+    expect(
+      await phoneText.evaluate(
+        (element) => element.scrollWidth - element.clientWidth,
+      ),
+    ).toBeLessThanOrEqual(1)
+    if (viewport.width === 768) {
+      const phoneBox = await phoneLink.boundingBox()
+      const contactBox = await page.locator('.operator-contact').boundingBox()
+      expect(phoneBox?.width).toBeGreaterThanOrEqual(320)
+      expect(phoneBox?.width).toBeLessThanOrEqual(352)
+      expect(
+        Math.abs((phoneBox?.x ?? 0) - (contactBox?.x ?? 0)),
+      ).toBeLessThanOrEqual(1)
+    }
     const accessibility = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
       .analyze()
