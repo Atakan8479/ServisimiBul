@@ -1529,7 +1529,7 @@ a:focus-visible {
 
 .operator-result-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(13rem, 0.36fr);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.45fr);
   align-items: start;
   min-width: 0;
   gap: 0 1.5rem;
@@ -1708,9 +1708,9 @@ a:focus-visible {
 }
 
 .operator-phone-link strong {
-  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
   text-align: right;
+  white-space: nowrap;
 }
 
 .discovery-results .pagination {
