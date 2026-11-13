@@ -29,8 +29,8 @@ describe('public operator discovery', () => {
       screen.getByRole('link', { name: 'Talep panosunu keşfet' }),
     ).toHaveAttribute('href', '/demands')
     expect(
-      screen.getByRole('heading', { name: 'Üç adımda servis keşfi' }),
-    ).toBeInTheDocument()
+      screen.queryByRole('heading', { name: 'Üç adımda servis keşfi' }),
+    ).not.toBeInTheDocument()
     expect(await screen.findByLabelText('Okulun bulunduğu il')).toBeEnabled()
     expect(screen.getByLabelText('Servis alınacak ilçe')).toBeDisabled()
   })

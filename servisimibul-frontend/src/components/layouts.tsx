@@ -57,6 +57,34 @@ const sessionNavigation: Record<
   },
 }
 
+const footerLinkGroups = [
+  {
+    id: 'footer-group-discover',
+    label: 'Keşfet',
+    links: [
+      { to: '/', label: 'Ana sayfa' },
+      { to: '/demands', label: 'Talep panosu' },
+    ],
+  },
+  {
+    id: 'footer-group-account',
+    label: 'Hesap',
+    links: [
+      { to: '/parent/register', label: 'Veli kaydı' },
+      { to: '/operator/register', label: 'İşletmeci kaydı' },
+    ],
+  },
+  {
+    id: 'footer-group-legal',
+    label: 'Yasal',
+    links: [
+      { to: '/privacy/notice', label: 'Gizlilik ve kişisel veriler' },
+      { to: '/terms', label: 'Kullanım koşulları' },
+      { to: '/privacy/requests', label: 'Kişisel veri başvuru yolu' },
+    ],
+  },
+] as const
+
 export function PublicLayout() {
   const sessionRevision = useRef(0)
   const [authSession, setAuthSession] = useState(() => ({
@@ -369,30 +397,27 @@ export function PublicLayout() {
         <div className="site-footer-inner">
           <div>
             <BrandLockup />
-            <p>Okul servisi aramanın daha açık yolu.</p>
+            <p className="site-footer-tagline">
+              Okul servisi aramanın daha açık yolu.
+            </p>
           </div>
-          <nav aria-label="Alt menü">
-            <NavLink to="/" viewTransition>
-              Ana sayfa
-            </NavLink>
-            <NavLink to="/demands" viewTransition>
-              Talep panosu
-            </NavLink>
-            <NavLink to="/parent/register" viewTransition>
-              Veli kaydı
-            </NavLink>
-            <NavLink to="/operator/register" viewTransition>
-              İşletmeci kaydı
-            </NavLink>
-            <NavLink to="/privacy/notice" viewTransition>
-              Gizlilik ve kişisel veriler
-            </NavLink>
-            <NavLink to="/terms" viewTransition>
-              Kullanım koşulları
-            </NavLink>
-            <NavLink to="/privacy/requests" viewTransition>
-              Kişisel veri başvuru yolu
-            </NavLink>
+          <nav aria-label="Alt menü" className="site-footer-nav">
+            {footerLinkGroups.map((group) => (
+              <div className="site-footer-group" key={group.id}>
+                <p className="site-footer-group-label" id={group.id}>
+                  {group.label}
+                </p>
+                <ul aria-labelledby={group.id}>
+                  {group.links.map((link) => (
+                    <li key={link.to}>
+                      <NavLink end to={link.to} viewTransition>
+                        {link.label}
+                      </NavLink>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </nav>
         </div>
       </footer>

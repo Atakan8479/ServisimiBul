@@ -210,35 +210,63 @@ describe('TermsPage', () => {
 })
 
 describe('public footer navigation', () => {
-  it('exposes the legal and request-entry links from every public page', () => {
+  it('exposes every footer destination in labelled groups with active state', () => {
     render(
-      <MemoryRouter initialEntries={['/']}>
+      <MemoryRouter initialEntries={['/demands']}>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route index element={<h1>Okulunu seç</h1>} />
+            <Route path="demands" element={<h1>Talep panosu</h1>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
 
-    const footer = screen.getByRole('contentinfo', { hidden: true })
+    const footerNav = screen.getByRole('navigation', {
+      name: 'Alt menü',
+      hidden: true,
+    })
+    const groups = within(footerNav).getAllByRole('list', { hidden: true })
     expect(
-      within(footer).getByRole('link', {
-        name: 'Gizlilik ve kişisel veriler',
+      groups.map((group) => [
+        group.getAttribute('aria-labelledby') &&
+          document.getElementById(group.getAttribute('aria-labelledby')!)
+            ?.textContent,
+        within(group)
+          .getAllByRole('link', { hidden: true })
+          .map((link) => [link.textContent, link.getAttribute('href')]),
+      ]),
+    ).toEqual([
+      [
+        'Keşfet',
+        [
+          ['Ana sayfa', '/'],
+          ['Talep panosu', '/demands'],
+        ],
+      ],
+      [
+        'Hesap',
+        [
+          ['Veli kaydı', '/parent/register'],
+          ['İşletmeci kaydı', '/operator/register'],
+        ],
+      ],
+      [
+        'Yasal',
+        [
+          ['Gizlilik ve kişisel veriler', '/privacy/notice'],
+          ['Kullanım koşulları', '/terms'],
+          ['Kişisel veri başvuru yolu', '/privacy/requests'],
+        ],
+      ],
+    ])
+    expect(
+      within(footerNav).getByRole('link', {
+        name: 'Talep panosu',
         hidden: true,
       }),
-    ).toHaveAttribute('href', '/privacy/notice')
+    ).toHaveAttribute('aria-current', 'page')
     expect(
-      within(footer).getByRole('link', {
-        name: 'Kullanım koşulları',
-        hidden: true,
-      }),
-    ).toHaveAttribute('href', '/terms')
-    expect(
-      within(footer).getByRole('link', {
-        name: 'Kişisel veri başvuru yolu',
-        hidden: true,
-      }),
-    ).toHaveAttribute('href', '/privacy/requests')
+      within(footerNav).getByRole('link', { name: 'Ana sayfa', hidden: true }),
+    ).not.toHaveAttribute('aria-current')
   })
 })

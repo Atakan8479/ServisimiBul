@@ -808,36 +808,6 @@ export function PublicDiscoveryPage() {
         />
       </div>
 
-      <section className="discovery-how" aria-labelledby="discovery-how-title">
-        <div className="discovery-how-inner">
-          <div className="discovery-section-heading centered">
-            <p className="discovery-section-label">Basit ve açık</p>
-            <h2 id="discovery-how-title">Üç adımda servis keşfi</h2>
-            <p>
-              ServisimiBul, işletmecilerle doğrudan iletişim kurmanızı
-              kolaylaştırır.
-            </p>
-          </div>
-          <ol className="discovery-how-steps">
-            <li>
-              <span aria-hidden="true">01</span>
-              <h3>Okulunuzu seçin</h3>
-              <p>Aramanızı okul, ilçe ve mahalle kapsamıyla daraltın.</p>
-            </li>
-            <li>
-              <span aria-hidden="true">02</span>
-              <h3>Seçenekleri inceleyin</h3>
-              <p>Paylaşılan okul ve mahalle kapsamını karşılaştırın.</p>
-            </li>
-            <li>
-              <span aria-hidden="true">03</span>
-              <h3>Doğrudan teyit edin</h3>
-              <p>Hizmet koşullarını işletmeciyle doğrudan görüşün.</p>
-            </li>
-          </ol>
-        </div>
-      </section>
-
       <aside
         className="discovery-demand-promo"
         aria-labelledby="demand-promo-title"
