@@ -81,6 +81,15 @@ for (const viewport of viewports) {
         (element) => element.scrollWidth - element.clientWidth,
       ),
     ).toBeLessThanOrEqual(1)
+    if (viewport.width === 768) {
+      const phoneBox = await phoneLink.boundingBox()
+      const contactBox = await page.locator('.operator-contact').boundingBox()
+      expect(phoneBox?.width).toBeGreaterThanOrEqual(320)
+      expect(phoneBox?.width).toBeLessThanOrEqual(352)
+      expect(
+        Math.abs((phoneBox?.x ?? 0) - (contactBox?.x ?? 0)),
+      ).toBeLessThanOrEqual(1)
+    }
     const accessibility = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
       .analyze()

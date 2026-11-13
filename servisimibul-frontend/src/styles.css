@@ -1788,6 +1788,8 @@ a:focus-visible {
   }
 
   .operator-phone-link {
+    justify-self: start;
+    width: min(100%, 22rem);
     min-height: 3rem;
   }
 
