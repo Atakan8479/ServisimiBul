@@ -3753,6 +3753,7 @@ button:disabled {
 
 .demand-filter-panel,
 .demand-create-panel,
+.demand-operator-panel,
 .demand-comments,
 .demand-service-panel,
 .demand-feedback-panel,
@@ -4182,13 +4183,8 @@ button:disabled {
   min-width: 0;
 }
 
-.demand-results-stack > .demand-board-results + .demand-board-results {
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--color-border);
-}
-
-.demand-results-stack .section-heading > .button-link {
-  flex: 0 0 auto;
+/* The stack's grid gap already separates the operator panel. */
+.demand-operator-panel {
   margin-top: 0;
 }
 
@@ -4767,7 +4763,6 @@ button.button-link {
     flex-direction: column;
   }
 
-  .demand-results-stack .section-heading > .button-link,
   .demand-preview-dialog > .button-link {
     width: 100%;
     justify-content: center;

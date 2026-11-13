@@ -548,7 +548,10 @@ export function DemandBoardPage() {
           </section>
 
           {appliedSelection && (
-            <section className="demand-board-results" aria-live="polite">
+            <section
+              className="demand-board-results demand-operator-panel"
+              aria-live="polite"
+            >
               <div className="section-heading">
                 <div>
                   <h2>Eşleşen servis işletmecileri</h2>
@@ -557,15 +560,6 @@ export function DemandBoardPage() {
                     olarak yüklenir.
                   </p>
                 </div>
-                {createPath && resultsMatchDraft ? (
-                  <Link className="button-link" to={createPath} viewTransition>
-                    Yeni talep oluştur
-                  </Link>
-                ) : !createPath ? (
-                  <a className="button-link" href="#demand-filters">
-                    Okul ve mahalle seç
-                  </a>
-                ) : null}
               </div>
               {checkingOperators && (
                 <p className="inline-loading" role="status">
