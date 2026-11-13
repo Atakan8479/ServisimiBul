@@ -76,6 +76,20 @@ for (const viewport of viewports) {
         }
       })
     expect(styles.fontSize).toBeLessThanOrEqual(16)
+
+    // Group labels keep their own compact style (not the tagline's).
+    const label = await footerNav
+      .locator('.site-footer-group-label')
+      .first()
+      .evaluate((element) => {
+        const computed = getComputedStyle(element)
+        return {
+          fontSize: parseFloat(computed.fontSize),
+          marginTop: parseFloat(computed.marginTop),
+        }
+      })
+    expect(label.fontSize).toBeLessThan(styles.fontSize)
+    expect(label.marginTop).toBe(0)
     expect(styles.footerPosition).not.toBe('fixed')
     expect(styles.footerPosition).not.toBe('sticky')
 

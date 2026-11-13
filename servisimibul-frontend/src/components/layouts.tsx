@@ -397,7 +397,9 @@ export function PublicLayout() {
         <div className="site-footer-inner">
           <div>
             <BrandLockup />
-            <p>Okul servisi aramanın daha açık yolu.</p>
+            <p className="site-footer-tagline">
+              Okul servisi aramanın daha açık yolu.
+            </p>
           </div>
           <nav aria-label="Alt menü" className="site-footer-nav">
             {footerLinkGroups.map((group) => (

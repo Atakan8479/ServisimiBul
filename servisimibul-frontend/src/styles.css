@@ -524,7 +524,7 @@ a:focus-visible {
   padding: var(--space-10) clamp(1rem, 5vw, 4rem);
 }
 
-.site-footer p {
+.site-footer-tagline {
   margin: var(--space-3) 0 0;
   color: var(--color-muted);
   font-size: 0.9rem;
