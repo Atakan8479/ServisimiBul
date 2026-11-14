@@ -81,15 +81,24 @@ for (const viewport of viewports) {
         (element) => element.scrollWidth - element.clientWidth,
       ),
     ).toBeLessThanOrEqual(1)
-    if (viewport.width === 768) {
-      const phoneBox = await phoneLink.boundingBox()
-      const contactBox = await page.locator('.operator-contact').boundingBox()
-      expect(phoneBox?.width).toBeGreaterThanOrEqual(320)
-      expect(phoneBox?.width).toBeLessThanOrEqual(352)
-      expect(
-        Math.abs((phoneBox?.x ?? 0) - (contactBox?.x ?? 0)),
-      ).toBeLessThanOrEqual(1)
-    }
+    const phoneBox = await phoneLink.boundingBox()
+    const contactBox = await page.locator('.operator-contact').boundingBox()
+    const labelBox = await phoneLink
+      .getByText('Ara', { exact: true })
+      .boundingBox()
+    const numberBox = await phoneText.boundingBox()
+    // Content-sized: link width is label + number plus fixed padding/gap
+    // (~44px), independent of platform font metrics.
+    expect(phoneBox?.width).toBeLessThanOrEqual(
+      (labelBox?.width ?? 0) + (numberBox?.width ?? 0) + 48,
+    )
+    expect(phoneBox?.height).toBeGreaterThanOrEqual(44)
+    expect(
+      (numberBox?.x ?? 0) - ((labelBox?.x ?? 0) + (labelBox?.width ?? 0)),
+    ).toBeLessThanOrEqual(32)
+    expect(
+      Math.abs((phoneBox?.x ?? 0) - (contactBox?.x ?? 0)),
+    ).toBeLessThanOrEqual(viewport.width > 960 ? 25 : 1)
     const accessibility = await new AxeBuilder({ page })
       .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
       .analyze()
