@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useRouteLoaderData } from 'react-router-dom'
 import { z } from 'zod'
 import { ApiError } from '../../api/client'
@@ -66,6 +66,7 @@ export function OperatorProfilePage() {
     reset,
     setError,
     setValue,
+    control,
     formState: { errors, isSubmitting, isDirty },
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileFormSchema),
@@ -76,6 +77,7 @@ export function OperatorProfilePage() {
       publiclyVisible: true,
     },
   })
+  const publiclyVisible = useWatch({ control, name: 'publiclyVisible' })
 
   useEffect(() => {
     let active = true
@@ -297,12 +299,20 @@ export function OperatorProfilePage() {
                 başına yayımlanacağınız anlamına gelmez.
               </small>
             </span>
-            <input
-              disabled={!profileEditable}
-              role="switch"
-              type="checkbox"
-              {...register('publiclyVisible')}
-            />
+            <span className="operator-profile-visibility-control">
+              <span
+                aria-hidden="true"
+                className="operator-profile-visibility-state"
+              >
+                {publiclyVisible ? 'Açık' : 'Kapalı'}
+              </span>
+              <input
+                disabled={!profileEditable}
+                role="switch"
+                type="checkbox"
+                {...register('publiclyVisible')}
+              />
+            </span>
           </label>
 
           <footer className="operator-profile-footer">
