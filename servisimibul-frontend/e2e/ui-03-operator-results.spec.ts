@@ -87,7 +87,11 @@ for (const viewport of viewports) {
       .getByText('Ara', { exact: true })
       .boundingBox()
     const numberBox = await phoneText.boundingBox()
-    expect(phoneBox?.width).toBeLessThanOrEqual(260)
+    // Content-sized: link width is label + number plus fixed padding/gap
+    // (~44px), independent of platform font metrics.
+    expect(phoneBox?.width).toBeLessThanOrEqual(
+      (labelBox?.width ?? 0) + (numberBox?.width ?? 0) + 48,
+    )
     expect(phoneBox?.height).toBeGreaterThanOrEqual(44)
     expect(
       (numberBox?.x ?? 0) - ((labelBox?.x ?? 0) + (labelBox?.width ?? 0)),
