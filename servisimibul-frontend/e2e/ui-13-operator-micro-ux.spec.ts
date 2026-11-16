@@ -105,6 +105,24 @@ for (const viewport of viewports) {
       await expect(visibility).not.toBeChecked()
       await expect(state).toHaveText('Kapalı')
       await expect.poll(() => backgroundOf(visibility)).not.toBe(onBackground)
+      // WCAG 1.4.11: the off-state outline and thumb need >= 3:1.
+      // Let the 160ms colour transitions settle before sampling.
+      await visibility.evaluate((element) =>
+        Promise.all(element.getAnimations().map((motion) => motion.finished)),
+      )
+      const off = await visibility.evaluate((element) => {
+        const input = getComputedStyle(element)
+        return {
+          border: input.borderTopColor,
+          track: input.backgroundColor,
+          thumb: getComputedStyle(element, '::before').backgroundColor,
+          surface: getComputedStyle(
+            element.closest('.operator-profile-visibility') as Element,
+          ).backgroundColor,
+        }
+      })
+      expect(contrast(off.border, off.surface)).toBeGreaterThanOrEqual(3)
+      expect(contrast(off.thumb, off.track)).toBeGreaterThanOrEqual(3)
 
       // Keyboard: Space toggles, focus ring is visible.
       await visibility.focus()
@@ -282,6 +300,21 @@ function backgroundOf(locator: ReturnType<Page['locator']>) {
   return locator.evaluate(
     (element) => getComputedStyle(element).backgroundColor,
   )
+}
+
+function contrast(first: string, second: string) {
+  const luminance = (color: string) => {
+    const channels = (color.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3)
+    const [r, g, b] = channels.map((value) => {
+      const c = Number(value) / 255
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
+    })
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const [light, dark] = [luminance(first), luminance(second)].sort(
+    (a, b) => b - a,
+  )
+  return (light + 0.05) / (dark + 0.05)
 }
 
 function focusInside(page: Page, selector: string) {

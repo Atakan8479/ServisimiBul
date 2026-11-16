@@ -605,7 +605,7 @@
   width: 2.9rem;
   height: 1.65rem;
   margin: 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--neutral-500);
   border-radius: 999px;
   appearance: none;
   background: var(--neutral-200);
@@ -622,7 +622,7 @@
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background: var(--neutral-0);
+  background: var(--neutral-500);
   box-shadow: 0 1px 3px rgba(13, 42, 35, 0.25);
   content: '';
   transition: transform 160ms ease;
@@ -634,6 +634,7 @@
 }
 
 .operator-profile-visibility input:checked::before {
+  background: var(--neutral-0);
   transform: translateX(1.25rem);
 }
 
