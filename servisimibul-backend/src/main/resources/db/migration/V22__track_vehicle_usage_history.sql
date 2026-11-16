@@ -57,34 +57,15 @@ CREATE TRIGGER vehicle_usage_history_append_only
     BEFORE UPDATE OF usage_history_complete, usage_recorded_at ON vehicle
     FOR EACH ROW EXECUTE FUNCTION protect_vehicle_usage_history();
 
--- Database-level deletion guard (backstop for the backend check). The only exception is an
--- explicit, auditable erasure context: the transaction must SET LOCAL
--- servisimibul.erasure_request_id to an open, identity-verified ERASURE data-rights request of the
--- vehicle owner's account. Real erasure stays disabled until LEG-03 is approved; this keeps a
--- future authorized procedure possible without silently bypassing or blocking it.
+-- Database-level deletion guard (backstop for the backend check). It has no bypass: session
+-- settings are not an authorization boundary, so no runtime-role transaction can skip it.
+-- Privileged erasure of used vehicles is deferred to the approved LEG-03/APP-11 workflow, which
+-- must introduce its own reviewed migration.
 CREATE FUNCTION guard_vehicle_deletion() RETURNS trigger
     LANGUAGE plpgsql
     SET search_path = public, pg_temp
 AS $$
-DECLARE
-    erasure_request TEXT := nullif(current_setting('servisimibul.erasure_request_id', true), '');
 BEGIN
-    IF erasure_request IS NOT NULL THEN
-        IF erasure_request !~ '^[0-9a-fA-F-]{36}$' OR NOT EXISTS (
-            SELECT 1
-            FROM data_rights_request request
-            JOIN operator_profile profile ON profile.user_id = request.requester_id
-            WHERE request.id = erasure_request::uuid
-              AND request.request_type = 'ERASURE'
-              AND request.status IN ('RECEIVED', 'UNDER_REVIEW', 'AWAITING_VERIFICATION')
-              AND request.identity_verified_at IS NOT NULL
-              AND profile.id = OLD.operator_id
-        ) THEN
-            RAISE EXCEPTION 'vehicle deletion erasure context is not an open verified erasure request of the owner'
-                USING ERRCODE = 'integrity_constraint_violation';
-        END IF;
-        RETURN OLD;
-    END IF;
     IF NOT OLD.usage_history_complete
         OR OLD.usage_recorded_at IS NOT NULL
         OR EXISTS (SELECT 1 FROM service_offering offering WHERE offering.vehicle_id = OLD.id) THEN

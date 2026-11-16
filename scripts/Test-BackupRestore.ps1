@@ -502,8 +502,8 @@ select count(*) from deleted;
         -File $migrationVerification)
     $verificationText = $verificationOutput -join [Environment]::NewLine
     $passCount = @($verificationOutput | Where-Object { $_.ToString() -match '\|PASS\|' }).Count
-    if ($passCount -ne 13 -or $verificationText -match '\|FAIL\|') {
-        throw "Migration verification expected 13 PASS rows and no failures.`n$verificationText"
+    if ($passCount -ne 14 -or $verificationText -match '\|FAIL\|') {
+        throw "Migration verification expected 14 PASS rows and no failures.`n$verificationText"
     }
     $relationalRows = @(
         @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `

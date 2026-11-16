@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -619,9 +620,8 @@ class OfferingApiTests {
         expectSqlRejected("update vehicle set usage_recorded_at = now() - interval '1 day' where id = ?", vehicleId);
         expectSqlRejected("delete from vehicle where id = ?", vehicleId);
 
-        // An erasure context must name an open, identity-verified ERASURE request of the owner.
-        jdbcTemplate.execute("select set_config('servisimibul.erasure_request_id', gen_random_uuid()::text, true)");
-        expectSqlRejected("delete from vehicle where id = ?", vehicleId);
+        // A session setting is not an authorization boundary: even one naming an open,
+        // identity-verified ERASURE request of the owner must not bypass the guard (D059).
         UUID requestId = UUID.randomUUID();
         jdbcTemplate.update("""
                 insert into data_rights_request (id, requester_id, request_type, details, status,
@@ -631,8 +631,37 @@ class OfferingApiTests {
                     now(), now() + interval '720 hours', now(), ?, 0, now())
                 """, requestId, fixture.user().getId(), fixture.user().getId());
         jdbcTemplate.execute("select set_config('servisimibul.erasure_request_id', '" + requestId + "', true)");
-        assertThat(jdbcTemplate.update("delete from vehicle where id = ?", vehicleId)).isEqualTo(1);
+        expectSqlRejected("delete from vehicle where id = ?", vehicleId);
         jdbcTemplate.execute("select set_config('servisimibul.erasure_request_id', '', true)");
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from vehicle where id = ?", Integer.class, vehicleId
+        )).isOne();
+    }
+
+    @Test
+    void runtimeRoleCannotDisableOrBypassVehicleGuards() {
+        assertThat(jdbcTemplate.queryForObject(
+                "select rolsuper or rolbypassrls from pg_roles where rolname = current_user",
+                Boolean.class
+        )).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from pg_class c join pg_roles r on r.oid = c.relowner"
+                        + " where c.relname in ('vehicle', 'service_offering') and r.rolname = current_user",
+                Integer.class
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_function_privilege(current_user, 'guard_vehicle_deletion()', 'EXECUTE')",
+                Boolean.class
+        )).isFalse();
+        expectSqlDenied("set local session_replication_role = replica");
+        expectSqlDenied("alter table vehicle disable trigger vehicle_deletion_guard");
+        expectSqlDenied("drop trigger vehicle_deletion_guard on vehicle");
+        expectSqlDenied("create or replace function guard_vehicle_deletion() returns trigger"
+                + " language plpgsql as $$ begin return old; end $$");
+        assertThat(jdbcTemplate.queryForObject(
+                "select pg_get_functiondef('guard_vehicle_deletion()'::regprocedure) ilike '%erasure%'",
+                Boolean.class
+        )).isFalse();
     }
 
     @Test
@@ -681,6 +710,12 @@ class OfferingApiTests {
                 .andExpect(jsonPath("$.code").value(code));
         entityManager.clear();
         assertThat(vehicleRepository.findById(vehicle.getId())).isPresent();
+    }
+
+    private void expectSqlDenied(String sql) {
+        jdbcTemplate.execute("savepoint vehicle_guard_probe");
+        assertThatThrownBy(() -> jdbcTemplate.execute(sql)).isInstanceOf(DataAccessException.class);
+        jdbcTemplate.execute("rollback to savepoint vehicle_guard_probe");
     }
 
     private void expectSqlRejected(String sql, Object... arguments) {

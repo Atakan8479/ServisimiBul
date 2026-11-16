@@ -94,7 +94,7 @@ jobs:
             exit 1
           fi
           pass_count="$(printf '%s\n' "$output" | grep -Ec '\|[[:space:]]*PASS[[:space:]]*\|')"
-          if [ "$pass_count" -ne 13 ]; then
-            echo "Expected 13 passing migration checks, found $pass_count." >&2
+          if [ "$pass_count" -ne 14 ]; then
+            echo "Expected 14 passing migration checks, found $pass_count." >&2
             exit 1
           fi
