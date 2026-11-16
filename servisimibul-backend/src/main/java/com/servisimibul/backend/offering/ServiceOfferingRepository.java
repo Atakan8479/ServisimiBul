@@ -74,6 +74,24 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
 
     boolean existsByVehicleIdAndAvailableSeatsGreaterThan(UUID vehicleId, int capacity);
 
+    boolean existsByVehicleId(UUID vehicleId);
+
+    long countByVehicleId(UUID vehicleId);
+
+    @Query("""
+            select offering.vehicle.id as vehicleId, count(offering) as offeringCount
+            from ServiceOffering offering
+            where offering.vehicle.operator.id = :operatorId
+            group by offering.vehicle.id
+            """)
+    List<VehicleOfferingCount> countByOperatorVehicles(@Param("operatorId") UUID operatorId);
+
+    interface VehicleOfferingCount {
+        UUID getVehicleId();
+
+        long getOfferingCount();
+    }
+
     @Modifying(flushAutomatically = true)
     @Query("""
             update ServiceOffering offering

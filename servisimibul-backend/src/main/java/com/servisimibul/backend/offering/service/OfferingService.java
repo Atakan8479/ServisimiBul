@@ -54,8 +54,12 @@ public class OfferingService {
     @Transactional(readOnly = true)
     public List<VehicleResponse> listVehicles() {
         OperatorProfile operator = currentOperator();
+        Map<UUID, Long> offeringCounts = new HashMap<>();
+        offeringRepository.countByOperatorVehicles(operator.getId()).forEach(count ->
+                offeringCounts.put(count.getVehicleId(), count.getOfferingCount())
+        );
         return vehicleRepository.findAllByOperatorIdOrderByPlateAscIdAsc(operator.getId()).stream()
-                .map(this::toVehicleResponse)
+                .map(vehicle -> toVehicleResponse(vehicle, offeringCounts.getOrDefault(vehicle.getId(), 0L)))
                 .toList();
     }
 
@@ -129,6 +133,25 @@ public class OfferingService {
         deactivateVehicleAndOfferings(vehicle);
         vehicleRepository.flush();
         return toVehicleResponse(vehicle);
+    }
+
+    /**
+     * Permanently deletes an owned vehicle only when no service offering references it (D059).
+     * The owned row lock serializes this with offering create/patch, which lock the same vehicle,
+     * and {@code service_offering_vehicle_fk ON DELETE RESTRICT} remains the integrity backstop.
+     */
+    @Transactional
+    public void deleteVehicle(UUID id) {
+        OperatorProfile operator = currentOperator();
+        Vehicle vehicle = ownedVehicleForUpdate(id, operator.getId());
+        if (offeringRepository.existsByVehicleId(vehicle.getId())) {
+            throw OfferingApiException.conflict(
+                    "vehicle_in_use",
+                    "A vehicle referenced by a service offering cannot be deleted; deactivate it instead"
+            );
+        }
+        vehicleRepository.delete(vehicle);
+        vehicleRepository.flush();
     }
 
     @Transactional(readOnly = true)
@@ -479,11 +502,16 @@ public class OfferingService {
     }
 
     private VehicleResponse toVehicleResponse(Vehicle vehicle) {
+        return toVehicleResponse(vehicle, offeringRepository.countByVehicleId(vehicle.getId()));
+    }
+
+    private VehicleResponse toVehicleResponse(Vehicle vehicle, long offeringCount) {
         return new VehicleResponse(
                 vehicle.getId(),
                 vehicle.getPlate(),
                 vehicle.getCapacity(),
                 vehicle.isActive(),
+                offeringCount,
                 vehicle.getCreatedAt(),
                 vehicle.getUpdatedAt()
         );
