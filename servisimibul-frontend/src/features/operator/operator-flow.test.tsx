@@ -293,7 +293,9 @@ describe('operator workspace flows', () => {
       name: /Profil görünürlük tercihi/,
     })
     expect(visibility).toBeChecked()
+    expect(screen.getByText('Açık')).toBeVisible()
     fireEvent.click(visibility)
+    expect(screen.getByText('Kapalı')).toBeVisible()
     fireEvent.click(
       screen.getByRole('button', { name: 'Değişiklikleri kaydet' }),
     )

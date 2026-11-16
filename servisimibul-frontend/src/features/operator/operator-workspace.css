@@ -579,13 +579,33 @@
   cursor: pointer;
 }
 
+.operator-profile-visibility-control {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.operator-profile-visibility-state {
+  min-width: 3.25rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-align: right;
+}
+
+.operator-profile-visibility-control:has(input:checked)
+  .operator-profile-visibility-state {
+  color: var(--teal-700);
+}
+
 .operator-profile-visibility input {
   position: relative;
   flex: 0 0 auto;
   width: 2.9rem;
   height: 1.65rem;
   margin: 0;
-  border: 1px solid var(--color-border-strong);
+  border: 1px solid var(--neutral-500);
   border-radius: 999px;
   appearance: none;
   background: var(--neutral-200);
@@ -602,18 +622,19 @@
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 50%;
-  background: var(--neutral-0);
+  background: var(--neutral-500);
   box-shadow: 0 1px 3px rgba(13, 42, 35, 0.25);
   content: '';
   transition: transform 160ms ease;
 }
 
 .operator-profile-visibility input:checked {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--teal-700);
+  background: var(--teal-700);
 }
 
 .operator-profile-visibility input:checked::before {
+  background: var(--neutral-0);
   transform: translateX(1.25rem);
 }
 

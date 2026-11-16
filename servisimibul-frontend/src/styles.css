@@ -1997,21 +1997,51 @@ h1 {
   display: none;
 }
 
-.workspace-home-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 2.75rem;
+/* Secondary actions stay together at the bottom instead of floating mid-sidebar. */
+.workspace-sidebar-footer {
+  display: grid;
+  gap: var(--space-2);
   margin-top: auto;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.workspace-sidebar-footer .sidebar-action {
+  margin-top: 0;
+}
+
+.workspace-home-link {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
   padding: 0.55rem 0.75rem;
   border-radius: var(--radius-small);
   color: var(--neutral-700);
   font-weight: 650;
   text-decoration: none;
+  transition:
+    color var(--motion-fast) ease,
+    background-color var(--motion-fast) ease;
 }
 
 .workspace-home-link:hover {
   background: var(--neutral-50);
   color: var(--teal-700);
+}
+
+.workspace-home-link:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.workspace-home-link-icon {
+  color: var(--teal-700);
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+
+.workspace-home-link:hover .workspace-home-link-icon {
+  transform: translateX(-0.15rem);
 }
 
 .workspace-topbar {
@@ -3044,6 +3074,10 @@ button:disabled {
 .school-card-copy p,
 .empty-state p {
   margin-bottom: 0;
+}
+
+.operator-schools-empty > p + button {
+  margin-top: var(--space-5);
 }
 
 .school-card-copy .school-warning {

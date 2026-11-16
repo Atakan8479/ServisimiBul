@@ -44,6 +44,21 @@ describe('WorkspaceShell', () => {
     expect(onSignOut).toHaveBeenCalledOnce()
   })
 
+  it('groups the home link with sign-out in the sidebar footer', () => {
+    const { container } = renderShell()
+    const footer = container.querySelector(
+      '.workspace-sidebar .workspace-sidebar-footer',
+    ) as HTMLElement
+
+    expect(footer).not.toBeNull()
+    expect(
+      within(footer).getByRole('link', { name: 'Ana sayfaya dön' }),
+    ).toHaveAttribute('href', '/')
+    expect(
+      within(footer).getByRole('button', { name: 'Çıkış yap' }),
+    ).toBeVisible()
+  })
+
   it('contains focus and restores it after keyboard dismissal', () => {
     renderShell()
     const toggle = screen.getByRole('button', { name: 'Menü' })

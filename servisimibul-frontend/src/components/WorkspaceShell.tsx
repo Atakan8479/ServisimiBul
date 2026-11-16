@@ -187,23 +187,28 @@ export function WorkspaceShell({
         >
           {navigation}
         </nav>
-        <Link className="workspace-home-link" to="/" viewTransition>
-          Ana sayfaya dön
-        </Link>
-        <Button
-          className="sidebar-action"
-          disabled={loggingOut}
-          onClick={onSignOut}
-          tone="secondary"
-          type="button"
-        >
-          {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-        </Button>
-        {error && (
-          <p className="workspace-error" role="alert">
-            {error}
-          </p>
-        )}
+        <div className="workspace-sidebar-footer">
+          <Link className="workspace-home-link" to="/" viewTransition>
+            <span aria-hidden="true" className="workspace-home-link-icon">
+              ←
+            </span>
+            Ana sayfaya dön
+          </Link>
+          <Button
+            className="sidebar-action"
+            disabled={loggingOut}
+            onClick={onSignOut}
+            tone="secondary"
+            type="button"
+          >
+            {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+          </Button>
+          {error && (
+            <p className="workspace-error" role="alert">
+              {error}
+            </p>
+          )}
+        </div>
       </aside>
       <header className="workspace-topbar" inert={menuOpen || undefined}>
         <nav aria-label="Sayfa yolu">
