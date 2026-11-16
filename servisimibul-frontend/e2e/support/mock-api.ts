@@ -60,6 +60,10 @@ export interface MockApiState {
     active: boolean
     createdAt: string
     updatedAt: string
+    /** Mirrors V22: set once any offering references the vehicle, never cleared. */
+    usageRecorded?: boolean
+    /** Mirrors V22: vehicles that predate usage tracking. */
+    historyUnknown?: boolean
   }>
   offerings: Array<{
     id: string
@@ -530,7 +534,10 @@ export async function installMockApi(page: Page, state: MockApiState) {
 
     if (path === '/operator/vehicles' && method === 'GET') {
       return requireRole(route, role, 'OPERATOR', () =>
-        json(route, state.vehicles),
+        json(
+          route,
+          state.vehicles.map((vehicle) => vehicleView(state, vehicle)),
+        ),
       )
     }
     if (path === '/operator/vehicles' && method === 'POST') {
@@ -545,7 +552,7 @@ export async function installMockApi(page: Page, state: MockApiState) {
           updatedAt: createdAt,
         }
         state.vehicles.push(vehicle)
-        return json(route, vehicle, 201)
+        return json(route, vehicleView(state, vehicle), 201)
       })
     }
     if (/^\/operator\/vehicles\/[0-9a-f-]+$/.test(path) && method === 'PATCH') {
@@ -563,7 +570,7 @@ export async function installMockApi(page: Page, state: MockApiState) {
             offering.vehiclePlate = vehicle.plate
             offering.vehicleCapacity = vehicle.capacity
           })
-        return json(route, vehicle)
+        return json(route, vehicleView(state, vehicle))
       })
     }
     if (
@@ -580,7 +587,7 @@ export async function installMockApi(page: Page, state: MockApiState) {
           .forEach((offering) => {
             offering.published = false
           })
-        return json(route, vehicle)
+        return json(route, vehicleView(state, vehicle))
       })
     }
     if (
@@ -591,8 +598,13 @@ export async function installMockApi(page: Page, state: MockApiState) {
         const id = path.split('/').at(-1)
         const index = state.vehicles.findIndex((item) => item.id === id)
         if (index < 0) return problem(route, 404, 'vehicle_not_found')
-        if (state.offerings.some((offering) => offering.vehicleId === id)) {
-          return problem(route, 409, 'vehicle_in_use')
+        const view = vehicleView(state, state.vehicles[index])
+        if (!view.deletable) {
+          return problem(
+            route,
+            409,
+            `vehicle_${view.deletionBlockedReason?.toLowerCase()}`,
+          )
         }
         state.vehicles.splice(index, 1)
         return route.fulfill({ status: 204 })
@@ -609,6 +621,7 @@ export async function installMockApi(page: Page, state: MockApiState) {
         const vehicle = state.vehicles.find(
           (item) => item.id === body.vehicleId,
         )
+        if (vehicle) vehicle.usageRecorded = true
         const offering = {
           id: offeringId,
           operatorSchoolId: body.operatorSchoolId,
@@ -642,6 +655,11 @@ export async function installMockApi(page: Page, state: MockApiState) {
         )
         offering.operatorSchoolId = body.operatorSchoolId
         offering.vehicleId = body.vehicleId
+        state.vehicles
+          .filter((item) => item.id === body.vehicleId)
+          .forEach((item) => {
+            item.usageRecorded = true
+          })
         offering.vehiclePlate = vehicle?.plate ?? offering.vehiclePlate
         offering.vehicleCapacity = vehicle?.capacity ?? offering.vehicleCapacity
         offering.availableSeats = body.availableSeats
@@ -1253,6 +1271,27 @@ function json(route: Route, body: unknown, status = 200) {
 
 function empty(route: Route, status = 204) {
   return route.fulfill({ status, body: '' })
+}
+
+function vehicleView(
+  state: MockApiState,
+  vehicle: MockApiState['vehicles'][number],
+) {
+  const { usageRecorded, historyUnknown, ...publicFields } = vehicle
+  const deletionBlockedReason = state.offerings.some(
+    (offering) => offering.vehicleId === vehicle.id,
+  )
+    ? 'IN_USE'
+    : historyUnknown
+      ? 'HISTORY_UNKNOWN'
+      : usageRecorded
+        ? 'PREVIOUSLY_USED'
+        : null
+  return {
+    ...publicFields,
+    deletable: deletionBlockedReason === null,
+    deletionBlockedReason,
+  }
 }
 
 function problem(route: Route, status: number, code: string) {

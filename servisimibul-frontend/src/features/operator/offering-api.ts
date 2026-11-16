@@ -16,6 +16,11 @@ const vehicleSchema = z.object({
   plate: z.string(),
   capacity: z.number().int().positive(),
   active: z.boolean(),
+  // Backend-authoritative D059 eligibility; the client never infers it from offerings.
+  deletable: z.boolean(),
+  deletionBlockedReason: z
+    .enum(['IN_USE', 'PREVIOUSLY_USED', 'HISTORY_UNKNOWN'])
+    .nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 })
@@ -87,7 +92,10 @@ export function deactivateVehicle(id: string): Promise<Vehicle> {
   })
 }
 
-/** Permanently deletes a vehicle; the backend rejects it with 409 while any offering uses it. */
+/**
+ * Permanently deletes a vehicle. The backend answers 409 (`vehicle_in_use`,
+ * `vehicle_previously_used`, `vehicle_history_unknown`) unless no offering has ever used it.
+ */
 export async function deleteVehicle(id: string): Promise<void> {
   await apiRequest(`/operator/vehicles/${id}`, {
     method: 'DELETE',
