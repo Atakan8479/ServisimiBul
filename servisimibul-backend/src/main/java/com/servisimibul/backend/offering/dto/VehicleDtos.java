@@ -81,7 +81,8 @@ public final class VehicleDtos {
             String plate,
             int capacity,
             boolean active,
-            long offeringCount,
+            boolean deletable,
+            String deletionBlockedReason,
             OffsetDateTime createdAt,
             OffsetDateTime updatedAt
     ) {

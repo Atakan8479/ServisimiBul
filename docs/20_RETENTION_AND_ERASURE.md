@@ -44,7 +44,7 @@ Nothing else is deleted automatically. The only other scheduler, `DemandFeedback
 | Operator removes a school relationship | Deletes `operator_school` and cascades its coverage, offerings, and offering coverage; `demand_service_response.operator_school_id` becomes NULL | `OperatorSchoolService`; V5, V6, V8, V11 |
 | Account disablement or operator suspension | Sets `is_enabled=false` and revokes sessions; deletes no data | D022, D056 |
 | Response withdrawal, demand closure | Status changes only; rows and history stay | D049, D051, D053 |
-| Vehicle removal | Hard delete only when no service offering references the vehicle; otherwise deactivation only | D032, D059 |
+| Vehicle removal | Hard delete only for a vehicle with complete history that no service offering has ever referenced; otherwise deactivation only. Pre-V22 vehicles are never operator-deletable | D032, D059, V22 |
 
 ### 2.3 Data that is never deleted today
 
@@ -64,6 +64,8 @@ Deleting an `app_user` row fails while any of these ten `ON DELETE RESTRICT` col
 | `demand_comment.author_id` | Comment author |
 | `content_report.reporter_id` | Reporter |
 | `moderation_case.moderated_by`, `moderation_audit_event.moderator_id` | Admin moderation actions |
+
+Vehicles are reached through `operator_profile`, not `app_user`. Since V22 a `BEFORE DELETE` trigger rejects deleting any used or pre-V22 vehicle. An approved erasure procedure is not silently blocked or bypassed: it must explicitly `SET LOCAL servisimibul.erasure_request_id` to an open, identity-verified ERASURE request of that operator's account in the same transaction (verified by integration tests); without it, the delete fails loudly. No erasure code uses this yet.
 
 Only `in_app_notification.recipient_user_id` cascades. Erasing a person therefore needs a designed sequence: deletion, anonymization, or reassignment of each referencing row. A plain `DELETE` will not work. Designing that sequence is APP-11 ([#218](https://github.com/Atakan8479/ServisimiBul/issues/218)) after this record is approved.
 
@@ -86,7 +88,7 @@ For each category: the retention reason, deadline or trigger, disposal method, o
 | 5 | Sessions | Sign-in | Expiry (verified) | 30 min idle or 90 days absolute (D022) | Automatic delete (verified) | None | `[PENDING]` | — |
 | 6 | Operator public profile | `[PENDING]` | Account erasure; long hidden or suspended state | `[PENDING]` | `[PENDING]` | Responses, reviews, vehicles reference the profile with `RESTRICT` | `[PENDING]` | `[PENDING]` |
 | 7 | Reviews and suspension reasons | `[PENDING]` | Account erasure; time since decision | `[PENDING]` | `[PENDING]` | Admin `reviewed_by` is `RESTRICT` | `[PENDING]` | `[PENDING]` dispute about a suspension |
-| 8 | Operator schools, coverage, vehicles, offerings | `[PENDING]` | Operator removal (partly verified, 2.2); account erasure | `[PENDING]` | `[PENDING]` | Referenced vehicles have no hard delete (D032); unreferenced vehicles may be deleted by the owner (D059) | `[PENDING]` | — |
+| 8 | Operator schools, coverage, vehicles, offerings | `[PENDING]` | Operator removal (partly verified, 2.2); account erasure | `[PENDING]` | `[PENDING]` | Used or pre-V22 vehicles have no operator hard delete (D032, D059); V22 triggers block any other vehicle delete unless an erasure context names an open, identity-verified ERASURE request of the owner | `[PENDING]` | — |
 | 9, 9a | Demands, supports, reasons, lifecycle events | `[PENDING]` | Demand `CLOSED`/`ARCHIVED`; academic year end; parent erasure | `[PENDING]` | `[PENDING]`; a demand is shared by every supporter | `demand.created_by` is `RESTRICT`; `ARCHIVED` is unused | `[PENDING]` | `[PENDING]` other supporters' interest |
 | 10 | Feedback | `[PENDING]` | `evaluated_at` or expiry already stored | `[PENDING]` | `[PENDING]` | Cascades from support and publication | `[PENDING]` | — |
 | 11 | Operator responses and publication events | `[PENDING]` | Withdrawal; demand closure; operator erasure | `[PENDING]` | `[PENDING]` | `moderation_case.service_response_id` is `RESTRICT`; notifications cascade | `[PENDING]` | `[PENDING]` open moderation case |

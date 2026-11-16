@@ -1,0 +1,104 @@
+-- V22 (#295, D059): durable, fail-closed vehicle usage history.
+-- A vehicle that any service offering has ever referenced must never be permanently deleted by
+-- an operator. Usage is recorded by the database itself, so every write path (service code,
+-- offering reassignment, direct SQL) records it, and nothing in the application can clear it.
+
+-- Pre-V22 vehicles get usage_history_complete=false: earlier references (reassigned offerings,
+-- deleted school relationships) were never recorded, so their history is unknown (fail closed).
+ALTER TABLE vehicle
+    ADD COLUMN usage_history_complete BOOLEAN NOT NULL DEFAULT false,
+    ADD COLUMN usage_recorded_at TIMESTAMPTZ NULL;
+
+UPDATE vehicle
+SET usage_recorded_at = now()
+WHERE EXISTS (SELECT 1 FROM service_offering offering WHERE offering.vehicle_id = vehicle.id);
+
+-- Only vehicles created from now on start with complete history.
+ALTER TABLE vehicle ALTER COLUMN usage_history_complete SET DEFAULT true;
+
+-- Record the first reference whenever an offering is created for, or moved to, a vehicle.
+CREATE FUNCTION record_vehicle_usage() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = public, pg_temp
+AS $$
+BEGIN
+    UPDATE vehicle
+    SET usage_recorded_at = now()
+    WHERE id = NEW.vehicle_id
+      AND usage_recorded_at IS NULL;
+    RETURN NULL;
+END
+$$;
+
+CREATE TRIGGER service_offering_records_vehicle_usage
+    AFTER INSERT OR UPDATE OF vehicle_id ON service_offering
+    FOR EACH ROW EXECUTE FUNCTION record_vehicle_usage();
+
+-- Usage history is append-only: it can be recorded but never cleared, rewritten or upgraded.
+CREATE FUNCTION protect_vehicle_usage_history() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = public, pg_temp
+AS $$
+BEGIN
+    IF NEW.usage_history_complete AND NOT OLD.usage_history_complete THEN
+        RAISE EXCEPTION 'vehicle usage history cannot be marked complete after the fact'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    IF OLD.usage_recorded_at IS NOT NULL
+        AND NEW.usage_recorded_at IS DISTINCT FROM OLD.usage_recorded_at THEN
+        RAISE EXCEPTION 'recorded vehicle usage cannot be changed or cleared'
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN NEW;
+END
+$$;
+
+CREATE TRIGGER vehicle_usage_history_append_only
+    BEFORE UPDATE OF usage_history_complete, usage_recorded_at ON vehicle
+    FOR EACH ROW EXECUTE FUNCTION protect_vehicle_usage_history();
+
+-- Database-level deletion guard (backstop for the backend check). The only exception is an
+-- explicit, auditable erasure context: the transaction must SET LOCAL
+-- servisimibul.erasure_request_id to an open, identity-verified ERASURE data-rights request of the
+-- vehicle owner's account. Real erasure stays disabled until LEG-03 is approved; this keeps a
+-- future authorized procedure possible without silently bypassing or blocking it.
+CREATE FUNCTION guard_vehicle_deletion() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path = public, pg_temp
+AS $$
+DECLARE
+    erasure_request TEXT := nullif(current_setting('servisimibul.erasure_request_id', true), '');
+BEGIN
+    IF erasure_request IS NOT NULL THEN
+        IF erasure_request !~ '^[0-9a-fA-F-]{36}$' OR NOT EXISTS (
+            SELECT 1
+            FROM data_rights_request request
+            JOIN operator_profile profile ON profile.user_id = request.requester_id
+            WHERE request.id = erasure_request::uuid
+              AND request.request_type = 'ERASURE'
+              AND request.status IN ('RECEIVED', 'UNDER_REVIEW', 'AWAITING_VERIFICATION')
+              AND request.identity_verified_at IS NOT NULL
+              AND profile.id = OLD.operator_id
+        ) THEN
+            RAISE EXCEPTION 'vehicle deletion erasure context is not an open verified erasure request of the owner'
+                USING ERRCODE = 'integrity_constraint_violation';
+        END IF;
+        RETURN OLD;
+    END IF;
+    IF NOT OLD.usage_history_complete
+        OR OLD.usage_recorded_at IS NOT NULL
+        OR EXISTS (SELECT 1 FROM service_offering offering WHERE offering.vehicle_id = OLD.id) THEN
+        RAISE EXCEPTION 'vehicle % has unknown or recorded offering usage and cannot be deleted', OLD.id
+            USING ERRCODE = 'integrity_constraint_violation';
+    END IF;
+    RETURN OLD;
+END
+$$;
+
+CREATE TRIGGER vehicle_deletion_guard
+    BEFORE DELETE ON vehicle
+    FOR EACH ROW EXECUTE FUNCTION guard_vehicle_deletion();
+
+-- Trigger functions are invoked by the trigger mechanism only; no direct EXECUTE for anyone.
+REVOKE ALL ON FUNCTION record_vehicle_usage(), protect_vehicle_usage_history(),
+    guard_vehicle_deletion() FROM PUBLIC;

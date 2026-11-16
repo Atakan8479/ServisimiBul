@@ -11,6 +11,7 @@ import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository.OwnedReference;
 import com.servisimibul.backend.offering.Vehicle;
+import com.servisimibul.backend.offering.VehicleDeletionBlock;
 import com.servisimibul.backend.offering.VehicleRepository;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CreateRequest;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CoverageReplaceRequest;
@@ -35,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,12 +56,16 @@ public class OfferingService {
     @Transactional(readOnly = true)
     public List<VehicleResponse> listVehicles() {
         OperatorProfile operator = currentOperator();
-        Map<UUID, Long> offeringCounts = new HashMap<>();
-        offeringRepository.countByOperatorVehicles(operator.getId()).forEach(count ->
-                offeringCounts.put(count.getVehicleId(), count.getOfferingCount())
+        Map<UUID, Optional<VehicleDeletionBlock>> blocks = new HashMap<>();
+        vehicleRepository.findDeletionStatesByOperatorId(operator.getId()).forEach(state ->
+                blocks.put(state.getVehicleId(), VehicleDeletionBlock.of(state))
         );
         return vehicleRepository.findAllByOperatorIdOrderByPlateAscIdAsc(operator.getId()).stream()
-                .map(vehicle -> toVehicleResponse(vehicle, offeringCounts.getOrDefault(vehicle.getId(), 0L)))
+                .map(vehicle -> toVehicleResponse(
+                        vehicle,
+                        // Fail closed when eligibility could not be read for a listed vehicle.
+                        blocks.getOrDefault(vehicle.getId(), Optional.of(VehicleDeletionBlock.HISTORY_UNKNOWN))
+                ))
                 .toList();
     }
 
@@ -136,19 +142,18 @@ public class OfferingService {
     }
 
     /**
-     * Permanently deletes an owned vehicle only when no service offering references it (D059).
-     * The owned row lock serializes this with offering create/patch, which lock the same vehicle,
-     * and {@code service_offering_vehicle_fk ON DELETE RESTRICT} remains the integrity backstop.
+     * Permanently deletes an owned vehicle only when its usage history is complete and no service
+     * offering has ever referenced it (D059). The owned row lock serializes this with offering
+     * create/patch and the V22 usage-recording trigger; the V22 delete trigger and
+     * {@code service_offering_vehicle_fk ON DELETE RESTRICT} remain database backstops.
      */
     @Transactional
     public void deleteVehicle(UUID id) {
         OperatorProfile operator = currentOperator();
         Vehicle vehicle = ownedVehicleForUpdate(id, operator.getId());
-        if (offeringRepository.existsByVehicleId(vehicle.getId())) {
-            throw OfferingApiException.conflict(
-                    "vehicle_in_use",
-                    "A vehicle referenced by a service offering cannot be deleted; deactivate it instead"
-            );
+        Optional<VehicleDeletionBlock> block = deletionBlock(vehicle.getId());
+        if (block.isPresent()) {
+            throw OfferingApiException.conflict(block.get().code(), block.get().detail());
         }
         vehicleRepository.delete(vehicle);
         vehicleRepository.flush();
@@ -501,17 +506,24 @@ public class OfferingService {
         );
     }
 
-    private VehicleResponse toVehicleResponse(Vehicle vehicle) {
-        return toVehicleResponse(vehicle, offeringRepository.countByVehicleId(vehicle.getId()));
+    private Optional<VehicleDeletionBlock> deletionBlock(UUID vehicleId) {
+        return vehicleRepository.findDeletionState(vehicleId)
+                .map(VehicleDeletionBlock::of)
+                .orElse(Optional.of(VehicleDeletionBlock.HISTORY_UNKNOWN));
     }
 
-    private VehicleResponse toVehicleResponse(Vehicle vehicle, long offeringCount) {
+    private VehicleResponse toVehicleResponse(Vehicle vehicle) {
+        return toVehicleResponse(vehicle, deletionBlock(vehicle.getId()));
+    }
+
+    private VehicleResponse toVehicleResponse(Vehicle vehicle, Optional<VehicleDeletionBlock> block) {
         return new VehicleResponse(
                 vehicle.getId(),
                 vehicle.getPlate(),
                 vehicle.getCapacity(),
                 vehicle.isActive(),
-                offeringCount,
+                block.isEmpty(),
+                block.map(Enum::name).orElse(null),
                 vehicle.getCreatedAt(),
                 vehicle.getUpdatedAt()
         );

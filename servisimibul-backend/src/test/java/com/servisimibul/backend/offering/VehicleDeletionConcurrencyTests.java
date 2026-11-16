@@ -18,16 +18,20 @@ import com.servisimibul.backend.offering.service.OfferingService;
 import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
 import com.servisimibul.backend.security.AuthenticatedUser;
+import com.servisimibul.backend.support.IsolatedPostgresTestDatabase;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.sql.Connection;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -40,9 +44,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * Proves that a vehicle deletion cannot race an offering that is being created for the same
- * vehicle: both paths lock the owned vehicle row, so deletion waits and then observes the
- * committed reference (D059). Uses committed synthetic fixtures that are removed afterwards.
+ * Proves vehicle deletion and offering creation serialize on the owned vehicle row in both
+ * orders, and that repeated deletions delete once (D059). Uses committed synthetic fixtures that
+ * are removed afterwards.
  */
 @SpringBootTest
 class VehicleDeletionConcurrencyTests {
@@ -53,6 +57,8 @@ class VehicleDeletionConcurrencyTests {
     private TransactionTemplate transactionTemplate;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private Environment environment;
     @Autowired
     private AppUserRepository userRepository;
     @Autowired
@@ -79,30 +85,29 @@ class VehicleDeletionConcurrencyTests {
     private Long provinceId;
 
     @AfterEach
-    void cleanUpCommittedFixture() {
+    void cleanUpCommittedFixture() throws Exception {
         SecurityContextHolder.clearContext();
-        if (vehicleId != null) {
-            jdbcTemplate.update("delete from service_offering where vehicle_id = ?", vehicleId);
-            jdbcTemplate.update("delete from vehicle where id = ?", vehicleId);
-        }
-        if (operatorSchoolId != null) {
-            jdbcTemplate.update("delete from operator_school where id = ?", operatorSchoolId);
-        }
-        if (schoolId != null) {
-            jdbcTemplate.update("delete from school where id = ?", schoolId);
-        }
-        if (neighborhoodId != null) {
-            jdbcTemplate.update("delete from neighborhood where id = ?", neighborhoodId);
-        }
-        if (districtId != null) {
-            jdbcTemplate.update("delete from district where id = ?", districtId);
-        }
-        if (provinceId != null) {
-            jdbcTemplate.update("delete from province where id = ?", provinceId);
-        }
-        if (principal != null) {
-            jdbcTemplate.update("delete from operator_profile where user_id = ?", principal.id());
-            jdbcTemplate.update("delete from app_user where id = ?", principal.id());
+        // A used vehicle is intentionally undeletable through the runtime role (D059), so cleanup
+        // of this synthetic fixture uses the verified disposable administrator connection with
+        // triggers disabled for this one transaction only.
+        try (Connection connection =
+                     IsolatedPostgresTestDatabase.openVerifiedAdministratorConnection(environment)) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.createStatement()) {
+                statement.execute("set local session_replication_role = replica");
+            }
+            delete(connection, "delete from service_offering where operator_school_id = ?", operatorSchoolId);
+            delete(connection, "delete from vehicle where id = ?", vehicleId);
+            delete(connection, "delete from operator_school where id = ?", operatorSchoolId);
+            delete(connection, "delete from school where id = ?", schoolId);
+            delete(connection, "delete from neighborhood where id = ?", neighborhoodId);
+            delete(connection, "delete from district where id = ?", districtId);
+            delete(connection, "delete from province where id = ?", provinceId);
+            if (principal != null) {
+                delete(connection, "delete from operator_profile where user_id = ?", principal.id());
+                delete(connection, "delete from app_user where id = ?", principal.id());
+            }
+            connection.commit();
         }
     }
 
@@ -128,7 +133,7 @@ class VehicleDeletionConcurrencyTests {
             Future<?> deletion = executor.submit(() -> asOperator(
                     () -> offeringService.deleteVehicle(vehicleId)
             ));
-            // Deletion must block on the vehicle row lock instead of passing a stale reference check.
+            // Deletion must block on the vehicle row lock instead of passing a stale check.
             assertThatThrownBy(() -> deletion.get(2, TimeUnit.SECONDS))
                     .isInstanceOf(TimeoutException.class);
 
@@ -144,6 +149,78 @@ class VehicleDeletionConcurrencyTests {
         }
 
         assertThat(vehicleRepository.findById(vehicleId)).isPresent();
+    }
+
+    @Test
+    void offeringWaitsForConcurrentDeletionAndThenFindsNoVehicle() throws Exception {
+        createCommittedFixture();
+        CountDownLatch vehicleDeleted = new CountDownLatch(1);
+        CountDownLatch releaseDeletion = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            // The deletion transaction removes the unused vehicle and stays open.
+            Future<?> deletion = executor.submit(() -> asOperator(() ->
+                    transactionTemplate.executeWithoutResult(status -> {
+                        offeringService.deleteVehicle(vehicleId);
+                        vehicleDeleted.countDown();
+                        awaitQuietly(releaseDeletion);
+                    })
+            ));
+            assertThat(vehicleDeleted.await(10, TimeUnit.SECONDS)).isTrue();
+
+            Future<?> offering = executor.submit(() -> asOperator(() ->
+                    offeringService.createOffering(
+                            new CreateRequest(operatorSchoolId, vehicleId, null, null)
+                    )
+            ));
+            assertThatThrownBy(() -> offering.get(2, TimeUnit.SECONDS))
+                    .isInstanceOf(TimeoutException.class);
+
+            releaseDeletion.countDown();
+            deletion.get(20, TimeUnit.SECONDS);
+            assertThatThrownBy(() -> offering.get(20, TimeUnit.SECONDS))
+                    .isInstanceOf(ExecutionException.class)
+                    .cause()
+                    .isInstanceOfSatisfying(OfferingApiException.class,
+                            exception -> assertThat(exception.code()).isEqualTo("vehicle_not_found"));
+        } finally {
+            releaseDeletion.countDown();
+        }
+
+        assertThat(vehicleRepository.findById(vehicleId)).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from service_offering where operator_school_id = ?",
+                Integer.class,
+                operatorSchoolId
+        )).isZero();
+    }
+
+    @Test
+    void repeatedConcurrentDeletionsDeleteOnceAndReportNotFound() throws Exception {
+        createCommittedFixture();
+        CountDownLatch start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Future<Boolean> first = executor.submit(() -> deleteAfter(start));
+            Future<Boolean> second = executor.submit(() -> deleteAfter(start));
+            start.countDown();
+            assertThat(List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)))
+                    .containsExactlyInAnyOrder(true, false);
+        }
+        assertThat(vehicleRepository.findById(vehicleId)).isEmpty();
+    }
+
+    private boolean deleteAfter(CountDownLatch start) throws InterruptedException {
+        assertThat(start.await(10, TimeUnit.SECONDS)).isTrue();
+        boolean[] deleted = {false};
+        asOperator(() -> {
+            try {
+                offeringService.deleteVehicle(vehicleId);
+                deleted[0] = true;
+            } catch (OfferingApiException exception) {
+                assertThat(exception.code()).isEqualTo("vehicle_not_found");
+            }
+        });
+        return deleted[0];
     }
 
     private void createCommittedFixture() {
@@ -201,6 +278,16 @@ class VehicleDeletionConcurrencyTests {
             action.run();
         } finally {
             SecurityContextHolder.clearContext();
+        }
+    }
+
+    private static void delete(Connection connection, String sql, Object id) throws Exception {
+        if (id == null) {
+            return;
+        }
+        try (var statement = connection.prepareStatement(sql)) {
+            statement.setObject(1, id);
+            statement.executeUpdate();
         }
     }
 
