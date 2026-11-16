@@ -53,7 +53,7 @@ Authentication email remains private. Public contact email is not part of MVP; t
 ## Vehicle and offering contract
 Vehicle and ServiceOffering data are optional details and never gate the base operator discovery result. A ServiceOffering nevertheless requires an active vehicle owned by the same operator as its OperatorSchool. The API canonicalizes a vehicle plate by trimming, uppercasing, and removing spaces/hyphens before applying global uniqueness. Capacity is mandatory and greater than zero; nullable `availableSeats` must be between zero and that vehicle's capacity.
 
-Vehicle hard deletion is not available in MVP. Deactivation transactionally unpublishes all dependent offerings, and reactivation does not publish them again. An offering draft may have no coverage, but publication requires at least one coverage item from the same OperatorSchool's general coverage plus an active owned vehicle. Removing general coverage must not leave an invalid published offering.
+Vehicle hard deletion is limited by D059: `DELETE /api/v1/operator/vehicles/{id}` requires an OPERATOR session and CSRF, resolves ownership only from the principal, locks the owned row, and deletes it only when no ServiceOffering references it. It returns `204` on success, `409 vehicle_in_use` when any offering references the vehicle, and `404 vehicle_not_found` for missing, foreign, or already-deleted vehicles. `service_offering_vehicle_fk ON DELETE RESTRICT` remains the database backstop. Vehicle responses include `offeringCount` so clients can choose between deletion and deactivation; the server still re-checks. Deactivation transactionally unpublishes all dependent offerings, and reactivation does not publish them again. An offering draft may have no coverage, but publication requires at least one coverage item from the same OperatorSchool's general coverage plus an active owned vehicle. Removing general coverage must not leave an invalid published offering.
 
 Vehicle create accepts `{plate,capacity}`. Vehicle PATCH accepts any non-empty subset of `{plate,capacity,active}`; either PATCH with `active=false` or the explicit deactivate endpoint performs the same transactional unpublish operation, while `active=true` reactivates only the vehicle. Offering create accepts `{operatorSchoolId,vehicleId,availableSeats?,description?}` and PATCH accepts any non-empty subset of those fields; explicit `null` clears the optional seat/description value. Relationship changes make an offering a draft, and changing its OperatorSchool clears its now-invalid offering coverage. Offering coverage replacement accepts `{neighborhoodIds:[...]}` and resolves only general coverage rows owned by the offering's OperatorSchool; an empty list is valid for a draft and unpublishes a currently published offering. Publication remains fail-closed unless coverage, active-owned-vehicle, active-school, and active-relationship checks all pass.
 
@@ -193,6 +193,7 @@ APP-08 deliberately uses the manual-response option allowed by the issue; it doe
 - `GET/POST /api/v1/operator/vehicles`
 - `GET/PATCH /api/v1/operator/vehicles/{id}`
 - `POST /api/v1/operator/vehicles/{id}/deactivate`
+- `DELETE /api/v1/operator/vehicles/{id}` (unreferenced vehicles only, D059)
 - `GET/POST /api/v1/operator/offerings`
 - `GET/PATCH /api/v1/operator/offerings/{id}`
 - `PUT /api/v1/operator/offerings/{id}/coverage`

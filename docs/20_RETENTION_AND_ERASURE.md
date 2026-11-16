@@ -44,7 +44,7 @@ Nothing else is deleted automatically. The only other scheduler, `DemandFeedback
 | Operator removes a school relationship | Deletes `operator_school` and cascades its coverage, offerings, and offering coverage; `demand_service_response.operator_school_id` becomes NULL | `OperatorSchoolService`; V5, V6, V8, V11 |
 | Account disablement or operator suspension | Sets `is_enabled=false` and revokes sessions; deletes no data | D022, D056 |
 | Response withdrawal, demand closure | Status changes only; rows and history stay | D049, D051, D053 |
-| Vehicle removal | Deactivation only; no hard delete | D032 |
+| Vehicle removal | Hard delete only when no service offering references the vehicle; otherwise deactivation only | D032, D059 |
 
 ### 2.3 Data that is never deleted today
 
@@ -86,7 +86,7 @@ For each category: the retention reason, deadline or trigger, disposal method, o
 | 5 | Sessions | Sign-in | Expiry (verified) | 30 min idle or 90 days absolute (D022) | Automatic delete (verified) | None | `[PENDING]` | — |
 | 6 | Operator public profile | `[PENDING]` | Account erasure; long hidden or suspended state | `[PENDING]` | `[PENDING]` | Responses, reviews, vehicles reference the profile with `RESTRICT` | `[PENDING]` | `[PENDING]` |
 | 7 | Reviews and suspension reasons | `[PENDING]` | Account erasure; time since decision | `[PENDING]` | `[PENDING]` | Admin `reviewed_by` is `RESTRICT` | `[PENDING]` | `[PENDING]` dispute about a suspension |
-| 8 | Operator schools, coverage, vehicles, offerings | `[PENDING]` | Operator removal (partly verified, 2.2); account erasure | `[PENDING]` | `[PENDING]` | Vehicles have no hard delete (D032) | `[PENDING]` | — |
+| 8 | Operator schools, coverage, vehicles, offerings | `[PENDING]` | Operator removal (partly verified, 2.2); account erasure | `[PENDING]` | `[PENDING]` | Referenced vehicles have no hard delete (D032); unreferenced vehicles may be deleted by the owner (D059) | `[PENDING]` | — |
 | 9, 9a | Demands, supports, reasons, lifecycle events | `[PENDING]` | Demand `CLOSED`/`ARCHIVED`; academic year end; parent erasure | `[PENDING]` | `[PENDING]`; a demand is shared by every supporter | `demand.created_by` is `RESTRICT`; `ARCHIVED` is unused | `[PENDING]` | `[PENDING]` other supporters' interest |
 | 10 | Feedback | `[PENDING]` | `evaluated_at` or expiry already stored | `[PENDING]` | `[PENDING]` | Cascades from support and publication | `[PENDING]` | — |
 | 11 | Operator responses and publication events | `[PENDING]` | Withdrawal; demand closure; operator erasure | `[PENDING]` | `[PENDING]` | `moderation_case.service_response_id` is `RESTRICT`; notifications cascade | `[PENDING]` | `[PENDING]` open moderation case |
