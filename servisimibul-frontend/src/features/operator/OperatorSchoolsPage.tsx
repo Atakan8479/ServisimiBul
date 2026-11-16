@@ -398,7 +398,7 @@ export function OperatorSchoolsPage() {
           tone="error"
         />
       ) : relationships.length === 0 ? (
-        <div className="empty-state">
+        <div className="empty-state operator-schools-empty">
           <h2>Henüz okul eklenmedi</h2>
           <p>
             Hizmet verdiğiniz okulları ekleyin; her okul için mahalleleri ayrı

@@ -3076,7 +3076,7 @@ button:disabled {
   margin-bottom: 0;
 }
 
-.empty-state > p + :is(button, .button-link) {
+.operator-schools-empty > p + button {
   margin-top: var(--space-5);
 }
 
