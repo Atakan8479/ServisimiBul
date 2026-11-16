@@ -14,6 +14,7 @@ import {
   createOffering,
   createVehicle,
   deactivateVehicle,
+  deleteVehicle,
   getOfferings,
   getVehicles,
   replaceOfferingCoverage,
@@ -38,6 +39,7 @@ export function OperatorOfferingsPage() {
   const [notice, setNotice] = useState<string>()
   const [vehicleCreateOpen, setVehicleCreateOpen] = useState(false)
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle>()
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle>()
   const [offeringCreateOpen, setOfferingCreateOpen] = useState(false)
   const [offeringToEdit, setOfferingToEdit] = useState<ServiceOffering>()
 
@@ -64,6 +66,9 @@ export function OperatorOfferingsPage() {
   }, [loadRetry, navigate])
 
   const activeVehicles = vehicles.filter((vehicle) => vehicle.active)
+  const referencedVehicleIds = new Set(
+    offerings.map((offering) => offering.vehicleId),
+  )
   const activeSchools = schools.filter((school) => school.active)
 
   function updateVehicleState(updated: Vehicle) {
@@ -122,6 +127,41 @@ export function OperatorOfferingsPage() {
     } catch (reason) {
       handleSession(reason, navigate, setError)
     } finally {
+      setPending(undefined)
+    }
+  }
+
+  async function removeVehicle(vehicle: Vehicle) {
+    setPending(`vehicle-delete-${vehicle.id}`)
+    setError(undefined)
+    setNotice(undefined)
+    try {
+      await deleteVehicle(vehicle.id)
+      setVehicles((current) => current.filter((item) => item.id !== vehicle.id))
+      setNotice(`${vehicle.plate} plakalı araç kalıcı olarak silindi.`)
+    } catch (reason) {
+      if (
+        reason instanceof ApiError &&
+        reason.problem.code === 'vehicle_in_use'
+      ) {
+        // Another tab may have created an offering; refresh so the card offers deactivation.
+        setOfferings(await getOfferings().catch(() => offerings))
+        setError(
+          'Bu araç bir servis teklifinde kullanıldığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+        )
+      } else if (
+        reason instanceof ApiError &&
+        reason.problem.code === 'vehicle_not_found'
+      ) {
+        setVehicles((current) =>
+          current.filter((item) => item.id !== vehicle.id),
+        )
+        setNotice('Araç zaten silinmiş; liste güncellendi.')
+      } else {
+        handleSession(reason, navigate, setError)
+      }
+    } finally {
+      setVehicleToDelete(undefined)
       setPending(undefined)
     }
   }
@@ -270,6 +310,22 @@ export function OperatorOfferingsPage() {
                             : 'Etkinleştir'}
                         <ArrowIcon />
                       </button>
+                      {referencedVehicleIds.has(vehicle.id) ? (
+                        <p className="operator-vehicle-removal-note">
+                          Servis tekliflerinde kullanıldığı için silinemez;
+                          pasife alabilirsiniz.
+                        </p>
+                      ) : (
+                        <button
+                          aria-label={`${vehicle.plate} aracını kalıcı olarak sil`}
+                          className="operator-text-action operator-text-action-danger"
+                          disabled={pending !== undefined}
+                          onClick={() => setVehicleToDelete(vehicle)}
+                          type="button"
+                        >
+                          Sil
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -454,6 +510,43 @@ export function OperatorOfferingsPage() {
             }}
             vehicle={vehicleToEdit}
           />
+        </ModalDialog>
+      )}
+
+      {vehicleToDelete && (
+        <ModalDialog
+          onClose={() => {
+            if (pending === undefined) setVehicleToDelete(undefined)
+          }}
+          open
+          title="Aracı kalıcı olarak sil"
+        >
+          <div className="operator-dialog-form">
+            <p className="operator-dialog-intro">
+              <strong>{vehicleToDelete.plate}</strong> plakalı araç filonuzdan
+              kalıcı olarak silinecek. Bu işlem geri alınamaz.
+            </p>
+            <div className="operator-dialog-actions">
+              <button
+                className="secondary-button"
+                disabled={pending !== undefined}
+                onClick={() => setVehicleToDelete(undefined)}
+                type="button"
+              >
+                Vazgeç
+              </button>
+              <button
+                className="danger-button"
+                disabled={pending !== undefined}
+                onClick={() => void removeVehicle(vehicleToDelete)}
+                type="button"
+              >
+                {pending === `vehicle-delete-${vehicleToDelete.id}`
+                  ? 'Siliniyor…'
+                  : 'Kalıcı olarak sil'}
+              </button>
+            </div>
+          </div>
         </ModalDialog>
       )}
 

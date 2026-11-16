@@ -87,6 +87,14 @@ export function deactivateVehicle(id: string): Promise<Vehicle> {
   })
 }
 
+/** Permanently deletes a vehicle; the backend rejects it with 409 while any offering uses it. */
+export async function deleteVehicle(id: string): Promise<void> {
+  await apiRequest(`/operator/vehicles/${id}`, {
+    method: 'DELETE',
+    requiresSession: true,
+  })
+}
+
 export function getOfferings(): Promise<ServiceOffering[]> {
   return apiRequest('/operator/offerings', {
     requiresSession: true,

@@ -1,5 +1,10 @@
 # Progress ledger (update only after verification)
 
+## OPERATOR-FLEET safe vehicle removal — 2026-11-16 (PR pending review)
+
+- Branch `feat/issue-295-safe-vehicle-removal` implements issue #295 under owner-approved D059: `DELETE /api/v1/operator/vehicles/{id}` permanently deletes an owned vehicle only when no service offering references it (`204`; `409 vehicle_in_use`; `404 vehicle_not_found` for missing, foreign, or repeated deletes). Vehicle responses add `offeringCount`. The fleet UI offers a confirmed "Sil" action only for unreferenced vehicles and explains why referenced vehicles can only be deactivated. No migration; no live Supabase data touched.
+- Backend `OfferingApiTests` + new `VehicleDeletionConcurrencyTests` passed 12/12 on disposable PostgreSQL 17 (success, repeat 404, draft-reference 409, FK `RESTRICT` backstop, foreign-owner 404, missing-CSRF 403, anonymous 401, and deletion blocking on a concurrent offering transaction then returning 409). Frontend ESLint, `tsc -b`, Vitest 343/343, and mocked Chromium 51/51 (offerings spec at 4 viewports with axe, operator micro-UX, MVP journeys, rollout gate) passed.
+
 ## DISCOVERY-CONTACT-UX phone layout — 2026-11-13
 
 - Branch `fix/issue-293-discovery-phone-wrap` implements issue #293 with a wider proportional desktop contact column and non-wrapping phone digits. Existing `tel:` values, accessible names, focus behavior, anonymous discovery, and operator mapping are unchanged.

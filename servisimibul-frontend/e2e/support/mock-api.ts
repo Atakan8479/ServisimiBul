@@ -583,6 +583,21 @@ export async function installMockApi(page: Page, state: MockApiState) {
         return json(route, vehicle)
       })
     }
+    if (
+      /^\/operator\/vehicles\/[0-9a-f-]+$/.test(path) &&
+      method === 'DELETE'
+    ) {
+      return requireRole(route, role, 'OPERATOR', () => {
+        const id = path.split('/').at(-1)
+        const index = state.vehicles.findIndex((item) => item.id === id)
+        if (index < 0) return problem(route, 404, 'vehicle_not_found')
+        if (state.offerings.some((offering) => offering.vehicleId === id)) {
+          return problem(route, 409, 'vehicle_in_use')
+        }
+        state.vehicles.splice(index, 1)
+        return route.fulfill({ status: 204 })
+      })
+    }
     if (path === '/operator/offerings' && method === 'GET') {
       return requireRole(route, role, 'OPERATOR', () =>
         json(route, state.offerings),
