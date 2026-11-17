@@ -58,7 +58,8 @@ for (const viewport of viewports) {
       const action = await dialog
         .getByRole('button', { name, exact: true })
         .boundingBox()
-      expect(action!.height).toBeGreaterThanOrEqual(44)
+      // 44 px target; the tolerance absorbs sub-pixel layout rounding (e.g. 43.99997 in CI).
+      expect(action!.height).toBeGreaterThanOrEqual(44 - 0.01)
       expect(action!.x + action!.width).toBeLessThanOrEqual(viewport.width)
     }
 
