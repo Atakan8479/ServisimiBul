@@ -81,5 +81,25 @@ CREATE TRIGGER vehicle_deletion_guard
     FOR EACH ROW EXECUTE FUNCTION guard_vehicle_deletion();
 
 -- Trigger functions are invoked by the trigger mechanism only; no direct EXECUTE for anyone.
+-- Firing a trigger does not check EXECUTE, so revoking it changes no write path.
 REVOKE ALL ON FUNCTION record_vehicle_usage(), protect_vehicle_usage_history(),
     guard_vehicle_deletion() FROM PUBLIC;
+
+-- Supabase's postgres default ACL grants EXECUTE on new public functions directly to its API
+-- roles; REVOKE FROM PUBLIC does not remove those grants, so revoke them by name when present.
+DO $$
+DECLARE
+    function_grantee TEXT;
+BEGIN
+    FOREACH function_grantee IN ARRAY ARRAY['anon', 'authenticated', 'service_role', 'servisimibul_app']
+    LOOP
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = function_grantee) THEN
+            EXECUTE format(
+                'REVOKE ALL ON FUNCTION record_vehicle_usage(), protect_vehicle_usage_history(), '
+                    || 'guard_vehicle_deletion() FROM %I',
+                function_grantee
+            );
+        END IF;
+    END LOOP;
+END
+$$;

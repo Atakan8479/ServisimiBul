@@ -104,4 +104,62 @@ class VehicleUsageHistoryMigrationTests {
                 }
         );
     }
+
+    /**
+     * Supabase's {@code postgres} default ACL grants EXECUTE on new public functions directly to
+     * the Data API roles, which {@code REVOKE ... FROM PUBLIC} alone would not remove. V22 must
+     * leave its trigger functions executable by their owner only.
+     */
+    @Test
+    void triggerFunctionsKeepNoExecuteGrantUnderSupabaseStyleDefaultPrivileges() throws Exception {
+        IsolatedPostgresTestDatabase.withScratchDatabase(
+                new StandardEnvironment(),
+                "v22_function_acl",
+                (url, user, password) -> {
+                    Flyway.configure().dataSource(url, user, password).target("21").load().migrate();
+                    try (Connection connection = DriverManager.getConnection(url, user, password)) {
+                        connection.createStatement().execute("""
+                                do $$
+                                declare
+                                    grantee text;
+                                begin
+                                    foreach grantee in array array[
+                                        'anon', 'authenticated', 'service_role', 'servisimibul_app'
+                                    ] loop
+                                        if exists (select 1 from pg_roles where rolname = grantee) then
+                                            execute format(
+                                                'alter default privileges in schema public '
+                                                    || 'grant execute on functions to %I', grantee);
+                                        end if;
+                                    end loop;
+                                end
+                                $$;
+                                """);
+                    }
+
+                    Flyway.configure().dataSource(url, user, password).target("22").load().migrate();
+
+                    try (Connection connection = DriverManager.getConnection(url, user, password)) {
+                        ResultSet grants = connection.createStatement().executeQuery("""
+                                select count(*)
+                                from pg_proc function_info
+                                cross join lateral aclexplode(coalesce(
+                                    function_info.proacl,
+                                    acldefault('f', function_info.proowner)
+                                )) privilege
+                                where function_info.pronamespace = 'public'::regnamespace
+                                  and function_info.proname in (
+                                      'record_vehicle_usage',
+                                      'protect_vehicle_usage_history',
+                                      'guard_vehicle_deletion'
+                                  )
+                                  and privilege.privilege_type = 'EXECUTE'
+                                  and privilege.grantee <> function_info.proowner
+                                """);
+                        assertThat(grants.next()).isTrue();
+                        assertThat(grants.getLong(1)).isZero();
+                    }
+                }
+        );
+    }
 }

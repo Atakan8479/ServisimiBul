@@ -300,8 +300,24 @@ checks(sort_order, check_name, passed, detail) as (
                       'vehicle_usage_history_append_only',
                       'vehicle_deletion_guard'
                   )
-                  and trigger_info.tgenabled = 'O') = 3,
-           'vehicle usage_history_complete/usage_recorded_at; 3 enabled guard triggers'
+                  and trigger_info.tgenabled = 'O') = 3
+           and not exists (
+               select 1
+               from pg_proc function_info
+               cross join lateral aclexplode(coalesce(
+                   function_info.proacl,
+                   acldefault('f', function_info.proowner)
+               )) privilege
+               where function_info.pronamespace = 'public'::regnamespace
+                 and function_info.proname in (
+                     'record_vehicle_usage',
+                     'protect_vehicle_usage_history',
+                     'guard_vehicle_deletion'
+                 )
+                 and privilege.privilege_type = 'EXECUTE'
+                 and privilege.grantee <> function_info.proowner
+           ),
+           'vehicle usage_history_complete/usage_recorded_at; 3 enabled guard triggers; trigger functions executable by owner only'
 )
 select check_name,
        case when passed then 'PASS' else 'FAIL' end as result,
