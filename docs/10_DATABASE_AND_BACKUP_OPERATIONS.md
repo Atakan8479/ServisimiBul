@@ -7,6 +7,7 @@ Originally verified against repository commit `f2ec9ea` and the shared Supabase 
 - The last approved evidence records the shared `ServisimiBul` project on Supabase PostgreSQL 17.11 and the organization on the Free plan; re-verify both before an operation.
 - Flyway history contains twenty-one successful rows, V1 through V21, after the approved APP-07 V21 migration on 2026-11-06 (checksums of V1–V20 re-matched the repository first).
 - **V21 deployment order (APP-07, #214).** A backend built from a commit that contains V21 maps the `data_rights_handler`, `data_rights_request`, and `data_rights_request_event` tables, and Hibernate runs with `ddl-auto=validate`. Against a database still at V20, that backend fails at startup with a schema-validation error. This happens even though `app.data-rights.enabled` stays false. Before the updated backend runs against shared Supabase, V21 must go through the migration runbook below as a separately approved operation: preflight, backup, apply V21 with the migration profile, then run `docs/10_MIGRATION_VERIFICATION.sql`. That operation was approved and completed on 2026-11-06; a deployment still needs a backend build that contains V21 or is otherwise schema-compatible.
+- **V22 deployment order (D059, #295): not applied to shared Supabase.** A backend built with V22 starts and reports ready against a V21 database, because the V22 columns are not Hibernate-mapped. Every operator vehicle endpoint then fails with a database error, so the new backend must not run until V22 is applied and verified. The V21 build runs correctly on a V22 schema, so V22 goes first. The checklist, exact sequence, validation SQL and recovery steps are in [`36_V22_MIGRATION_RUNBOOK.md`](36_V22_MIGRATION_RUNBOOK.md); applying V22 needs separate explicit approval.
 - All 33 application tables have RLS enabled with the expected runtime policies. `flyway_schema_history` intentionally has no RLS, but `PUBLIC`, `anon`, `authenticated`, and the runtime role have no direct privileges on it.
 - `PUBLIC`, `anon`, and `authenticated` have no direct privileges on any current application table or sequence.
 - On 2026-11-06 the shared database held 7 users, 3 operator profiles, 1 school, 1 demand, and 3 in-app notifications immediately after V21, with all three `data_rights*` tables empty. An encrypted pre-V21 logical export (Flyway 20, DPAPI CurrentUser, archive SHA-256 `36faa11d…f40faef`) is retained outside Git next to the earlier exports.
@@ -61,7 +62,7 @@ Run the identity query through the controlled administration connection. The res
 if ($LASTEXITCODE -ne 0) { throw 'Database identity check failed' }
 ```
 
-Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. The repository verifier currently targets V14 and [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) must report all 13 checks as `PASS` on a V14 target. The shared Supabase baseline recorded above remains V12; do not run the V14 verifier there or apply V13–V14 without a fresh reviewed plan and explicit approval. Do not infer current live state solely from this dated document.
+Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. The repository verifier [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) targets the repository head schema (currently V22) and must report all 14 checks as `PASS` on that target. Against a database that is still at an earlier version (shared Supabase is at V21), its version and V22 checks fail by design; use the release-specific preflight instead, such as [`36_V22_VALIDATION.sql`](36_V22_VALIDATION.sql) with `phase=pre`. Never apply a pending migration without a fresh reviewed plan and explicit approval. Do not infer current live state solely from this dated document.
 
 Stop if the target, role, current version, checksums, schema objects, or active incident differs from the reviewed plan.
 
@@ -115,7 +116,7 @@ Official references rechecked on 2026-10-19: [Supabase backups](https://supabase
 
 ### Repeatable disposable recovery drill
 
-From the repository root on Windows with Java 21+, PowerShell 7, and native PostgreSQL 17 tools available:
+From the repository root on Windows with Java 21+, PowerShell 7 or Windows PowerShell 5.1 (the drill itself; CI uses PowerShell 7), and native PostgreSQL 17 tools available:
 
 ```powershell
 .\scripts\Test-BackupRestore.Tests.ps1
@@ -161,7 +162,7 @@ The official Supabase CLI dump/restore guide uses Docker for its containerized P
 2. Preserve the damaged database and logs when possible; do not overwrite the only evidence.
 3. Prefer a new/disposable PostgreSQL 17 target for the first restoration. Provision required roles without reusing exposed passwords.
 4. Verify the archive checksum and inspect `pg_restore --list`.
-5. Restore with `--exit-on-error`, `--single-transaction`, and `--no-owner`. The exact command and target must be reviewed at the time. Never add `--clean` or restore over a populated target by default.
+5. Restore with `--exit-on-error`, `--single-transaction`, and `--no-owner`. The exact command and target must be reviewed at the time. Never add `--clean` or restore over a populated target by default. A `--schema=public` archive contains `CREATE SCHEMA public`, so restoring into a fresh database fails unless its default `public` schema is removed first. Re-verify the target identity, confirm `public` contains no tables, run `drop schema public;` (never `CASCADE`), then restore. This is what the disposable drill does, and the V22 rehearsal confirmed it.
 6. Before starting any restored application, verify and reapply every approved erasure or disposal obligation created after the selected backup point. Fail closed if the external reconciliation source is missing, modified, incomplete, or belongs to another backup. The production source and its retention remain blocked on LEG-03 approval.
 7. Run the migration verification SQL, Flyway validation, Hibernate validation through the runtime role, row-count/business checks, grant/RLS checks, and application smoke tests.
 8. Rebind or rotate custom-role passwords and application secrets. Switch traffic only after the recovery owner signs off.
