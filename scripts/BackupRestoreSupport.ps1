@@ -129,9 +129,15 @@ function Read-SbRestoreReconciliationManifest {
         throw 'Restore reconciliation manifest checksum mismatch.'
     }
 
+    # -NoEnumerate exists only in PowerShell 6+. Windows PowerShell 5.1 already emits a top-level
+    # JSON array as one object, so the array check below rejects it on both editions.
+    $convertParameters = @{ ErrorAction = 'Stop' }
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        $convertParameters.NoEnumerate = $true
+    }
     try {
         $manifest = Get-Content -Raw -LiteralPath $Path |
-            ConvertFrom-Json -NoEnumerate -ErrorAction Stop
+            ConvertFrom-Json @convertParameters
     } catch {
         throw "Restore reconciliation manifest is invalid JSON: $($_.Exception.Message)"
     }
