@@ -4,15 +4,41 @@
 --   psql --no-psqlrc --set ON_ERROR_STOP=1 --set phase=post --file docs/36_V22_VALIDATION.sql
 -- Record the outputs in the release log. Every row with an `ok` column must report `t`.
 -- Outputs are aggregate counts only; no personal data is selected.
+-- Read-only is enforced by the explicit transaction below and verified before any other query.
+-- Do not rely on PGOPTIONS: the Supabase session pooler ignores startup options.
 
 begin transaction read only;
+
+do $$
+begin
+    if current_setting('transaction_read_only') <> 'on' then
+        raise exception 'Refusing to run V22 validation: transaction is not read-only';
+    end if;
+end
+$$;
 
 select current_database() as database_name,
        current_user as execution_role,
        current_setting('server_version') as server_version,
-       pg_is_in_recovery() as is_replica;
+       pg_is_in_recovery() as is_replica,
+       current_setting('transaction_read_only') as transaction_read_only;
 
 select :'phase' = 'pre' as is_pre \gset
+
+-- Write freeze (maintenance window): the runtime backend must be stopped, and no other session
+-- may hold a write transaction. Session details are only trustworthy with pg_read_all_stats.
+select pg_has_role(current_user, 'pg_read_all_stats', 'usage') as ok,
+       'Execution role can see all sessions (pg_read_all_stats)' as check_name
+union all
+select not exists (select 1 from pg_stat_activity
+                   where datname = current_database() and pid <> pg_backend_pid()
+                     and usename = 'servisimibul_app'),
+       'Write freeze: no runtime application (servisimibul_app) sessions'
+union all
+select not exists (select 1 from pg_stat_activity
+                   where datname = current_database() and pid <> pg_backend_pid()
+                     and backend_xid is not null),
+       'Write freeze: no other session holds a write transaction';
 
 -- Aggregate baseline; compare the pre and post values: they must be identical.
 select (select count(*) from vehicle) as vehicles,

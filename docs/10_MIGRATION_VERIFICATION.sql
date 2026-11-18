@@ -4,6 +4,15 @@
 
 begin transaction read only;
 
+-- Verify the effective read-only state before any query (PGOPTIONS is not reliable through poolers).
+do $$
+begin
+    if current_setting('transaction_read_only') <> 'on' then
+        raise exception 'Refusing to run migration verification: transaction is not read-only';
+    end if;
+end
+$$;
+
 select
     current_database() as database_name,
     current_user as execution_role,

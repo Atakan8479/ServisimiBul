@@ -57,10 +57,14 @@ if ($LASTEXITCODE -ne 0) { throw 'Backend verification failed' }
 Run the identity query through the controlled administration connection. The result, not a label in a terminal profile, is the target evidence:
 
 ```powershell
-& psql.exe --no-psqlrc --set ON_ERROR_STOP=1 --command `
-  "select current_database(), current_user, current_setting('server_version'), pg_is_in_recovery();"
+& psql.exe --no-psqlrc --set ON_ERROR_STOP=1 `
+  --command "begin transaction read only" `
+  --command "select current_database(), current_user, current_setting('server_version'), pg_is_in_recovery(), current_setting('transaction_read_only') as transaction_read_only;" `
+  --command "rollback"
 if ($LASTEXITCODE -ne 0) { throw 'Database identity check failed' }
 ```
+
+`transaction_read_only` must report `on`. Do not rely on `PGOPTIONS` (for example `-c default_transaction_read_only=on`) for read-only enforcement: the Supabase session pooler ignores startup options. The checked-in verification and release-validation SQL open their own read-only transaction and abort unless it is effective.
 
 Then inspect `flyway_schema_history`, pending object-name collisions, active sessions/transactions, database free space, and application readiness. The repository verifier [`10_MIGRATION_VERIFICATION.sql`](10_MIGRATION_VERIFICATION.sql) targets the repository head schema (currently V22) and must report all 14 checks as `PASS` on that target. Against a database that is still at an earlier version (shared Supabase is at V21), its version and V22 checks fail by design; use the release-specific preflight instead, such as [`36_V22_VALIDATION.sql`](36_V22_VALIDATION.sql) with `phase=pre`. Never apply a pending migration without a fresh reviewed plan and explicit approval. Do not infer current live state solely from this dated document.
 

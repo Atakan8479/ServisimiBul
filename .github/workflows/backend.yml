@@ -12,6 +12,8 @@ on:
       - "scripts/Test-BackendDeploymentSmoke*.ps1"
       - "docs/07_BACKEND_DEPLOYMENT.md"
       - "docs/10_MIGRATION_VERIFICATION.sql"
+      - "docs/36_V22_VALIDATION.sql"
+      - "scripts/Test-OperationalSqlReadOnly.Tests.ps1"
       - ".github/workflows/backend.yml"
 
 permissions:
@@ -98,3 +100,10 @@ jobs:
             echo "Expected 14 passing migration checks, found $pass_count." >&2
             exit 1
           fi
+      - name: Verify read-only enforcement of operational SQL
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          PGDATABASE: servisimibul_ci
+        run: pwsh -NoProfile -File scripts/Test-OperationalSqlReadOnly.Tests.ps1 -RequireV22Schema
