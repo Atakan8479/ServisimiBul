@@ -27,12 +27,17 @@ select :'phase' = 'pre' as is_pre \gset
 
 -- Write freeze (maintenance window): the runtime backend must be stopped, and no other session
 -- may hold a write transaction. Session details are only trustworthy with pg_read_all_stats.
+-- The Supabase session pooler (Supavisor) keeps released server connections open: they are idle
+-- and their last statement is the pooler's DISCARD ALL. Those carry no client; anything else that
+-- belongs to the runtime role means an application client is still connected.
 select pg_has_role(current_user, 'pg_read_all_stats', 'usage') as ok,
        'Execution role can see all sessions (pg_read_all_stats)' as check_name
 union all
 select not exists (select 1 from pg_stat_activity
                    where datname = current_database() and pid <> pg_backend_pid()
-                     and usename = 'servisimibul_app'),
+                     and usename = 'servisimibul_app'
+                     and not (state = 'idle' and backend_xid is null
+                              and upper(btrim(query, E' \t\r\n;')) = 'DISCARD ALL')),
        'Write freeze: no runtime application (servisimibul_app) sessions'
 union all
 select not exists (select 1 from pg_stat_activity
