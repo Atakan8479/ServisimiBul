@@ -1575,6 +1575,71 @@ describe('demand-specific operator service responses', () => {
     ).toBeInTheDocument()
   })
 
+  it('places and focuses an eligibility error below the publishing action', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      operatorHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(problem(500, 'Uygunluk kontrolü kullanılamıyor.'), {
+          status: 500,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Uygunluk kontrolü kullanılamıyor.')
+    expect(alert).toHaveFocus()
+    expect(alert.previousElementSibling).toHaveClass('demand-service-publish')
+  })
+
+  it('places and focuses a publish error below the response form', async () => {
+    server.use(
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+      emptyServiceResponsesHandler(),
+      operatorHandler(),
+      csrfHandler(),
+      http.get(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(serviceEligibility({ eligible: true })),
+      ),
+      http.post(`/api/v1/operator/demands/${demandId}/response`, () =>
+        HttpResponse.json(problem(500, 'Servis bildirimi yayınlanamadı.'), {
+          status: 500,
+        }),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Bu talep için servis ekle',
+      }),
+    )
+    fireEvent.click(
+      await screen.findByRole('button', {
+        name: 'Servis bildirimini yayınla',
+      }),
+    )
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Servis bildirimi yayınlanamadı.')
+    expect(alert).toHaveFocus()
+    expect(alert.previousElementSibling).toHaveClass(
+      'demand-service-response-form',
+    )
+  })
+
   it('guides an ineligible operator to existing school and coverage management', async () => {
     server.use(
       http.get(`/api/v1/demands/${demandId}`, () =>
