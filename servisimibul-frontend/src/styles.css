@@ -4588,6 +4588,17 @@ button.button-link {
   background: color-mix(in srgb, var(--color-warning) 9%, white);
 }
 
+.demand-service-action-error {
+  width: min(100%, 42rem);
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.demand-service-action-error:focus {
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 32%, transparent);
+  outline-offset: 2px;
+}
+
 .demand-service-guidance ul {
   display: grid;
   gap: 0.45rem;

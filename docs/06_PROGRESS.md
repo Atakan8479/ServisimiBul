@@ -1,5 +1,10 @@
 # Progress ledger (update only after verification)
 
+## DEMAND-UX service-publish error placement — 2026-11-19
+
+- Branch `fix/issue-286-service-publish-errors` implements issue #286 after confirming merged PR #296 already supplies the parent/admin role gates and open PR #304 has no overlapping files. Operator eligibility, publish, and withdrawal failures now render immediately below the action that produced them; the existing alert live region is preserved and receives visible focus. Guest login guidance and parent/admin read-only behavior are unchanged.
+- Focused Vitest passed 2/2, and the focused Chromium regression passed three consecutive runs with focus, axe, spacing, containment, and overflow checks at 320, 390, 768, and 1440 px. ESLint, strict TypeScript, Vite build, changed-file Prettier, `git diff --check`, and all 304 mocked Chromium tests completed successfully; the local Playwright wrapper remained alive after reporting every test and was stopped. The complete Vitest run remains at 343/345 because two pre-existing session-ownership tests issue unhandled response/CSRF mock requests. Repository-wide Prettier still reports the existing Windows line-ending baseline. No backend, API, migration, dependency, Supabase, V22, or production configuration changed.
+
 ## DISCOVERY-CONTACT-UX phone layout — 2026-11-13
 
 - Branch `fix/issue-293-discovery-phone-wrap` implements issue #293 with a wider proportional desktop contact column and non-wrapping phone digits. Existing `tel:` values, accessible names, focus behavior, anonymous discovery, and operator mapping are unchanged.

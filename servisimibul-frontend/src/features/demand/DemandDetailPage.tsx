@@ -35,6 +35,12 @@ import { DemandFeedbackPanel } from './DemandFeedbackPanel'
 import { ReportControl } from '../moderation/ReportControl'
 
 type SupportMode = 'join' | 'edit' | 'reactivate'
+type ServiceErrorContext = 'eligibility' | 'publish' | 'withdraw'
+
+interface ServiceError {
+  context: ServiceErrorContext
+  message: string
+}
 
 export function DemandDetailPage() {
   const { demandId } = useParams()
@@ -63,12 +69,13 @@ export function DemandDetailPage() {
     useState<ServiceResponseEligibility>()
   const [serviceFormOpen, setServiceFormOpen] = useState(false)
   const [servicePending, setServicePending] = useState(false)
-  const [serviceError, setServiceError] = useState<string>()
+  const [serviceError, setServiceError] = useState<ServiceError>()
   const [serviceNotice, setServiceNotice] = useState<string>()
   const [serviceOwnerKey, setServiceOwnerKey] = useState<string>()
   const requestVersion = useRef(0)
   const responseRequestVersion = useRef(0)
   const resumeHandled = useRef(false)
+  const serviceErrorRef = useRef<HTMLDivElement>(null)
   const parentSessionKey =
     authChecked && role === 'PARENT' && userId ? sessionKey : undefined
   const parentSessionKeyRef = useRef(parentSessionKey)
@@ -86,6 +93,12 @@ export function DemandDetailPage() {
     ? serviceEligibility
     : undefined
   const currentServicePending = serviceStateIsCurrent && servicePending
+
+  useEffect(() => {
+    if (serviceStateIsCurrent && serviceError) {
+      serviceErrorRef.current?.focus()
+    }
+  }, [serviceError, serviceStateIsCurrent])
 
   const loadDemand = useCallback(async () => {
     if (!demandId) return
@@ -238,11 +251,13 @@ export function DemandDetailPage() {
         redirectToLogin('response', error.sessionExpired)
         return
       }
-      setServiceError(
-        error instanceof ApiError
-          ? error.problem.detail
-          : 'İşletmeci uygunluğu kontrol edilemedi. Tekrar deneyin.',
-      )
+      setServiceError({
+        context: 'eligibility',
+        message:
+          error instanceof ApiError
+            ? error.problem.detail
+            : 'İşletmeci uygunluğu kontrol edilemedi. Tekrar deneyin.',
+      })
     } finally {
       if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
     }
@@ -285,11 +300,13 @@ export function DemandDetailPage() {
         redirectToLogin('response', true)
         return
       }
-      setServiceError(
-        error instanceof ApiError
-          ? error.problem.detail
-          : 'Servis bildirimi yayınlanamadı. Okul ve mahalle bilgilerinizi yenileyin.',
-      )
+      setServiceError({
+        context: 'publish',
+        message:
+          error instanceof ApiError
+            ? error.problem.detail
+            : 'Servis bildirimi yayınlanamadı. Okul ve mahalle bilgilerinizi yenileyin.',
+      })
     }
   }
 
@@ -322,11 +339,13 @@ export function DemandDetailPage() {
         redirectToLogin('response', true)
         return
       }
-      setServiceError(
-        error instanceof ApiError
-          ? error.problem.detail
-          : 'Servis bildirimi geri çekilemedi. Tekrar deneyin.',
-      )
+      setServiceError({
+        context: 'withdraw',
+        message:
+          error instanceof ApiError
+            ? error.problem.detail
+            : 'Servis bildirimi geri çekilemedi. Tekrar deneyin.',
+      })
     } finally {
       if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
     }
@@ -387,6 +406,21 @@ export function DemandDetailPage() {
       return
     }
     setActionError(error instanceof ApiError ? error.problem.detail : fallback)
+  }
+
+  function renderServiceError(context: ServiceErrorContext) {
+    if (!serviceStateIsCurrent || serviceError?.context !== context) return null
+
+    return (
+      <div
+        className="form-error demand-service-action-error"
+        ref={serviceErrorRef}
+        role="alert"
+        tabIndex={-1}
+      >
+        {serviceError.message}
+      </div>
+    )
   }
 
   if (loading) {
@@ -705,6 +739,7 @@ export function DemandDetailPage() {
                 )}
               </div>
             )}
+            {renderServiceError('eligibility')}
 
             {open && authChecked && !role && (
               <div className="demand-service-publish">
@@ -813,6 +848,7 @@ export function DemandDetailPage() {
                 </button>
               </div>
             )}
+            {renderServiceError('withdraw')}
 
             {serviceStateIsCurrent &&
               serviceFormOpen &&
@@ -832,15 +868,11 @@ export function DemandDetailPage() {
                   onSubmit={submitServiceResponse}
                 />
               )}
+            {renderServiceError('publish')}
 
             {serviceStateIsCurrent && serviceNotice && (
               <div className="status-banner success" role="status">
                 {serviceNotice}
-              </div>
-            )}
-            {serviceStateIsCurrent && serviceError && (
-              <div className="form-error" role="alert">
-                {serviceError}
               </div>
             )}
           </section>
