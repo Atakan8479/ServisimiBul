@@ -294,3 +294,80 @@ test('service publish errors stay with the form at supported widths', async ({
     .analyze()
   expect(accessibility.violations).toEqual([])
 })
+
+test('failed service withdrawal stays actionable on mobile', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.setViewportSize({ width: 320, height: 900 })
+  const state = createMockApiState()
+  state.verified = true
+  state.approvalStatus = 'APPROVED'
+  state.operatorSchoolAdded = true
+  state.generalCoverage = [201]
+  state.demandCreated = true
+  await installMockApi(page, state)
+  let withdrawalAttempts = 0
+  await page.route('**/api/v1/operator/demands/*/response', async (route) => {
+    if (route.request().method() !== 'DELETE' || withdrawalAttempts++ > 0) {
+      await route.fallback()
+      return
+    }
+    await route.fulfill({
+      body: JSON.stringify({
+        type: 'about:blank',
+        title: 'Internal Server Error',
+        status: 500,
+        detail: 'Servis bildirimi geri çekilemedi.',
+      }),
+      contentType: 'application/problem+json',
+      status: 500,
+    })
+  })
+
+  await page.goto(`/demands/481be36b-c8ee-4c03-868e-47bbc19b7735`)
+  await page.getByRole('link', { name: 'İşletmeci olarak giriş yap' }).click()
+  await page.getByLabel('E-posta').fill('operator@example.com')
+  await page.getByLabel('Şifre').fill('operator password')
+  await page.getByRole('button', { name: 'Giriş yap' }).click()
+  await page.getByRole('button', { name: 'Servis bildirimini yayınla' }).click()
+
+  const withdrawal = page.locator('.demand-service-owned')
+  await withdrawal.getByRole('button', { name: 'Bildirimi geri çek' }).click()
+  const alert = page.getByRole('alert')
+  await expect(alert).toBeFocused()
+  await expect(alert).toHaveText('Servis bildirimi geri çekilemedi.')
+  expect(
+    await alert.evaluate((element) =>
+      element.previousElementSibling?.classList.contains(
+        'demand-service-owned',
+      ),
+    ),
+  ).toBe(true)
+
+  const [withdrawalBox, alertBox] = await Promise.all([
+    withdrawal.boundingBox(),
+    alert.boundingBox(),
+  ])
+  expect(withdrawalBox).not.toBeNull()
+  expect(alertBox).not.toBeNull()
+  expect(alertBox!.y).toBeGreaterThanOrEqual(
+    withdrawalBox!.y + withdrawalBox!.height,
+  )
+  expect(alertBox!.x).toBeGreaterThanOrEqual(0)
+  expect(alertBox!.x + alertBox!.width).toBeLessThanOrEqual(320)
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true)
+  const accessibility = await new AxeBuilder({ page })
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
+    .analyze()
+  expect(accessibility.violations).toEqual([])
+
+  await withdrawal.getByRole('button', { name: 'Bildirimi geri çek' }).click()
+  await expect(page.getByText(/Servis bildiriminiz geri çekildi/)).toBeVisible()
+  expect(withdrawalAttempts).toBe(2)
+  expect(state.serviceResponse?.status).toBe('WITHDRAWN')
+})
