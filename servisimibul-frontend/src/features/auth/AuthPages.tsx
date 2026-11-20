@@ -796,7 +796,8 @@ function parentDestination(path: string | null): string {
 }
 
 // Only a same-origin path that is already canonical can pass the prefix check,
-// so `..`, `%2e%2e`, `..%2F`, backslashes and `//host` never escape `root`.
+// so `..`, `%2e%2e`, `%252e%252e`, `..%2F`, backslashes and `//host` never
+// escape `root`.
 function isCanonicalPathUnder(
   path: string | null,
   root: string,
@@ -804,7 +805,13 @@ function isCanonicalPathUnder(
   if (!path?.startsWith('/')) return false
   try {
     const url = new URL(path, window.location.origin)
-    const decoded = decodeURIComponent(url.pathname)
+    // Decode until stable so nested encodings cannot hide `..` or `\`; each
+    // pass that changes the string shortens it, so the loop terminates.
+    let decoded = url.pathname
+    for (let previous = ''; decoded !== previous;) {
+      previous = decoded
+      decoded = decodeURIComponent(decoded)
+    }
     return (
       url.origin === window.location.origin &&
       url.pathname === path.split(/[?#]/, 1)[0] &&

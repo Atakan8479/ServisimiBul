@@ -534,6 +534,13 @@ describe('parent account onboarding', () => {
     ['OPERATOR', '/login', '/operatorx', '/operator', ''],
     ['OPERATOR', '/login', '/operator/..%2Fadmin', '/operator', ''],
     ['ADMIN', '/login', '/admin/%5C..%5Coperator', '/admin', ''],
+    // Double- and triple-encoded traversal and separators.
+    ['OPERATOR', '/login', '/operator/%252e%252e/admin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/..%252Fadmin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/%25252e%25252e/admin', '/operator', ''],
+    ['ADMIN', '/login', '/admin/%252e%252e/operator', '/admin', ''],
+    ['ADMIN', '/login', '/admin/%255C..%255Coperator', '/admin', ''],
+    ['PARENT', '/login', '/demands/%252e%252e/operator', '/demands', ''],
     ['ADMIN', '/login', '/admin/../operator', '/admin', ''],
     ['ADMIN', '/login', '/admin/%2e%2e/operator', '/admin', ''],
     ['ADMIN', '/login', '//evil.example/admin/x', '/admin', ''],
