@@ -199,7 +199,7 @@ describe('parent account onboarding', () => {
             detail: 'One or more request fields are invalid',
             code: 'VALIDATION_FAILED',
             fieldErrors: [
-              { field: 'email', message: 'E-posta kabul edilmedi.' },
+              { field: 'email', message: 'Enter a valid email address' },
             ],
           },
           { status: 400 },
@@ -217,8 +217,11 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText('E-posta kabul edilmedi.'),
+      await screen.findByText('Geçerli bir e-posta adresi girin.'),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByText('Enter a valid email address'),
+    ).not.toBeInTheDocument()
     expect(screen.getByLabelText('E-posta')).toHaveAttribute(
       'aria-invalid',
       'true',
@@ -996,7 +999,10 @@ describe('operator authentication screens', () => {
         screen.getByLabelText('Herkese açık iletişim telefonu'),
       ).toHaveAttribute('aria-invalid', 'true'),
     )
-    expect(screen.getByText('must be a valid E.164 phone')).toBeInTheDocument()
+    expect(screen.getByText('Bu alanı kontrol edin.')).toBeInTheDocument()
+    expect(
+      screen.queryByText('must be a valid E.164 phone'),
+    ).not.toBeInTheDocument()
   })
 })
 

@@ -24,6 +24,20 @@ line-ending-normalized Prettier passed. Plain local format:check reports
 Windows CRLF checkout differences; Linux CI runs the standard check.
 Full regression and browser/CI results are recorded in the PR.
 
-All other issue #269 items, including field-error localization (API-03),
-additional domain mappings (API-05) and the broader copy audit, remain deferred.
+## Second slice: API-03 and API-05
+
+API-03: `normalizeApiProblem` now localizes field-error messages by exact
+backend text (`AuthInputValidator` email, password, business name, phone, plus
+the current-password handler). Field keys are unchanged, so form association
+and error focus work as before; unknown messages show `Bu alanı kontrol edin.`
+Client-side limits and backend validation semantics are unchanged.
+
+API-05: real backend codes from the demand, comment, moderation, operator,
+offering, vehicle and school-catalog handlers now have Turkish details
+(e.g. `duplicate_comment`, `active_support_required`, `demand_not_open`,
+`report_already_open`, `vehicle_plate_conflict`). Codes, statuses, trace IDs
+and HTTP responses are unchanged. Data-rights and tariff-storage codes are not
+mapped and keep the generic fallback.
+
+All other issue #269 items and the broader copy audit remain deferred.
 Unknown codes intentionally receive generic guidance until explicitly mapped.

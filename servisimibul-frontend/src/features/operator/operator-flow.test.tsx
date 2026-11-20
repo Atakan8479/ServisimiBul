@@ -1524,7 +1524,7 @@ describe('operator workspace flows', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'İşlem tamamlanamadı. Tekrar deneyin.',
+      'Bu plakayla kayıtlı bir aracınız zaten var.',
     )
     expect(within(dialog).getByLabelText('Plaka')).toHaveValue('34 ABC 123')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
@@ -1817,7 +1817,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'İşlem tamamlanamadı. Tekrar deneyin.',
+      'Yalnızca bu okul için hizmet verdiğiniz mahalleleri seçin.',
     )
     expect(
       within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }),
