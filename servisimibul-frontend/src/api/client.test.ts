@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { z } from 'zod'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { server } from '../test/server'
 import { ApiError, apiRequest, resetCsrfToken } from './client'
 import { normalizeApiProblem } from './contracts'
@@ -134,7 +134,7 @@ describe('user-facing API messages', () => {
     )
   })
 
-  it('preserves field-specific validation errors and unknown API codes', () => {
+  it('preserves field-specific validation errors', () => {
     const error = normalizeApiProblem(
       {
         code: 'VALIDATION_FAILED',
@@ -150,6 +150,75 @@ describe('user-facing API messages', () => {
         { code: 'CUSTOM_ERROR', detail: 'Güncel bir kullanıcı uyarısı' },
         409,
       ).detail,
-    ).toBe('Güncel bir kullanıcı uyarısı')
+    ).toBe('İşlem tamamlanamadı. Tekrar deneyin.')
   })
+})
+
+describe('safe API error presentation', () => {
+  it.each(['RATE_LIMITED', 'RATE_LIMIT_EXCEEDED'])(
+    'localizes %s without changing the HTTP response or retry header',
+    async (code) => {
+      const response = new Response(
+        JSON.stringify({
+          title: 'Too Many Requests',
+          detail: 'Rate limit exceeded',
+          status: 429,
+          code,
+          traceId: 'trace-429',
+        }),
+        { status: 429, headers: { 'Retry-After': '60' } },
+      )
+      const fetchMock = vi
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValue(response)
+      try {
+        const error = await apiRequest('/schools').catch(
+          (reason: unknown) => reason,
+        )
+        expect(error).toBeInstanceOf(ApiError)
+        expect((error as ApiError).problem).toMatchObject({
+          code,
+          status: 429,
+          traceId: 'trace-429',
+          title: 'Too Many Requests',
+          detail: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
+        })
+        expect((error as ApiError).sessionExpired).toBe(false)
+        expect(response.status).toBe(429)
+        expect(response.headers.get('Retry-After')).toBe('60')
+        expect(fetchMock).toHaveBeenCalledOnce()
+      } finally {
+        fetchMock.mockRestore()
+      }
+    },
+  )
+
+  it.each(['UNKNOWN_ERROR', 'toString', '__proto__', 'constructor', undefined])(
+    'uses a safe fallback for code %s and retains diagnostic metadata',
+    (code) => {
+      expect(
+        normalizeApiProblem(
+          {
+            type: 'about:blank',
+            title: 'Internal Server Error',
+            detail: 'SQL connection failed at internal.example',
+            code,
+            status: 500,
+            traceId: 'trace-unknown',
+            instance: '/api/v1/schools',
+          },
+          500,
+        ),
+      ).toEqual({
+        type: 'about:blank',
+        title: 'Internal Server Error',
+        detail: 'İşlem tamamlanamadı. Tekrar deneyin.',
+        code: code ?? 'HTTP_500',
+        status: 500,
+        traceId: 'trace-unknown',
+        instance: '/api/v1/schools',
+        fieldErrors: undefined,
+      })
+    },
+  )
 })

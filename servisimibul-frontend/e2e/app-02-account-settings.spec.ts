@@ -205,7 +205,7 @@ test('deactivation failure is announced and restores focus to retry', async ({
   await confirm.click()
 
   await expect(dialog.getByRole('alert')).toHaveText(
-    'Hesap işlemi şu anda tamamlanamıyor.',
+    'İşlem tamamlanamadı. Tekrar deneyin.',
   )
   await expect(confirm).toBeFocused()
 })

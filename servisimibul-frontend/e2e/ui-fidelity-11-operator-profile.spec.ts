@@ -111,7 +111,9 @@ test('O02 does not present a rejected visibility update as saved', async ({
   await visibility.click()
   await page.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
 
-  await expect(page.getByText('Profil şu anda kaydedilemiyor.')).toBeVisible()
+  await expect(
+    page.getByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+  ).toBeVisible()
   await expect(visibility).toBeChecked()
   await expect(page.getByText('Profil bilgileriniz kaydedildi.')).toHaveCount(0)
 })

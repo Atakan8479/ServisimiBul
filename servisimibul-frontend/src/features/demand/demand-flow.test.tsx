@@ -1597,7 +1597,7 @@ describe('demand-specific operator service responses', () => {
     )
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Uygunluk kontrolü kullanılamıyor.')
+    expect(alert).toHaveTextContent('İşlem tamamlanamadı. Tekrar deneyin.')
     expect(alert).toHaveFocus()
     expect(alert.previousElementSibling).toHaveClass('demand-service-publish')
   })
@@ -1633,7 +1633,7 @@ describe('demand-specific operator service responses', () => {
     )
 
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Servis bildirimi yayınlanamadı.')
+    expect(alert).toHaveTextContent('İşlem tamamlanamadı. Tekrar deneyin.')
     expect(alert).toHaveFocus()
     expect(alert.previousElementSibling).toHaveClass(
       'demand-service-response-form',

@@ -179,7 +179,9 @@ test('O03 confirms removal, survives Escape and reports failures', async ({
     name: 'Okul kapsamı kaldırılsın mı?',
   })
   await confirm.getByRole('button', { name: 'Kaldır' }).click()
-  await expect(confirm.getByRole('alert')).toHaveText('Okul kaldırılamadı.')
+  await expect(confirm.getByRole('alert')).toHaveText(
+    'İşlem tamamlanamadı. Tekrar deneyin.',
+  )
 
   await confirm.getByRole('button', { name: 'Kaldır' }).click()
   await expect(
@@ -215,7 +217,9 @@ test('O03 filters linked schools and offers a retry when loading fails', async (
     return route.fulfill({ json: relationships })
   })
   await page.goto('/operator/schools')
-  await expect(page.getByText('Okullar alınamadı.')).toBeVisible()
+  await expect(
+    page.getByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+  ).toBeVisible()
   await expect(page.getByText('Henüz okul eklenmedi')).toHaveCount(0)
   failing = false
   await page.getByRole('button', { name: 'Tekrar dene' }).click()

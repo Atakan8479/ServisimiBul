@@ -222,7 +222,7 @@ describe('notification center', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Şu anda işaretlenemiyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByText('Yeni')).toBeInTheDocument()
     expect(
@@ -262,7 +262,7 @@ describe('notification center', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Bildirim bulunamadı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByText('Yeni')).toBeInTheDocument()
     expect(
@@ -342,7 +342,7 @@ describe('notification center', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Servis kullanılamıyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.queryByText('Henüz bildiriminiz yok')).not.toBeInTheDocument()
   })
@@ -373,7 +373,7 @@ describe('notification center', () => {
     )
 
     expect(
-      await screen.findByText('Bildirim servisi geçici olarak kullanılamıyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
     expect(await screen.findByText('Yeni servis talebi')).toBeInTheDocument()
@@ -557,7 +557,7 @@ describe('notification center asynchronous ordering', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Liste alınamadı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.queryByText('Yeni')).not.toBeInTheDocument()
     expect(screen.getByText('0 okunmamış bildirim')).toBeInTheDocument()
@@ -650,7 +650,7 @@ describe('notification center asynchronous ordering', () => {
     })
     fireEvent.click(action)
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Şu anda işaretlenemiyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByText('Yeni')).toBeInTheDocument()
     expect(screen.getByText('1 okunmamış bildirim')).toBeInTheDocument()
@@ -955,7 +955,7 @@ describe('notification action locking', () => {
     fireEvent.click(button('İncele')[0]!)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Bildirim açılamıyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getAllByText('Yeni')).toHaveLength(2)
     expect(screen.getByText('2 okunmamış bildirim')).toBeInTheDocument()

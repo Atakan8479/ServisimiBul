@@ -72,6 +72,7 @@ const localizedProblems: Record<string, string> = {
     'Doğrulama bağlantısı geçersiz, süresi dolmuş veya daha önce kullanılmış.',
   AUTH_SERVICE_UNAVAILABLE:
     'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
+  RATE_LIMITED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
   RATE_LIMIT_EXCEEDED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
   AUTHENTICATION_REQUIRED: 'Devam etmek için giriş yapın.',
   UNAUTHENTICATED: 'Devam etmek için giriş yapın.',
@@ -89,8 +90,10 @@ const localizedProblems: Record<string, string> = {
     'Mahalle seçimi değişti. Sayfayı yenileyip tekrar deneyin.',
 }
 
-function displayProblemDetail(code: string, original: string): string {
-  return localizedProblems[code] ?? original
+function displayProblemDetail(code: string): string {
+  return Object.hasOwn(localizedProblems, code)
+    ? localizedProblems[code]
+    : 'İşlem tamamlanamadı. Tekrar deneyin.'
 }
 
 export function normalizeApiProblem(
@@ -113,10 +116,7 @@ export function normalizeApiProblem(
     type: raw.type,
     title: raw.title || 'İşlem tamamlanamadı',
     status: raw.status || status,
-    detail: displayProblemDetail(
-      raw.code || `HTTP_${status}`,
-      raw.detail || 'İşlem tamamlanamadı. Tekrar deneyin.',
-    ),
+    detail: displayProblemDetail(raw.code || `HTTP_${status}`),
     instance: raw.instance,
     code: raw.code || `HTTP_${status}`,
     fieldErrors,

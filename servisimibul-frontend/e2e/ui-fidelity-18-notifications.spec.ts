@@ -188,7 +188,9 @@ test('N01 keeps keyboard access after failed actions', async ({ page }) => {
   ]) {
     await action.focus()
     await page.keyboard.press('Enter')
-    await expect(page.getByRole('alert')).toContainText('İşlem başarısız.')
+    await expect(page.getByRole('alert')).toContainText(
+      'İşlem tamamlanamadı. Tekrar deneyin.',
+    )
     await expect(action).toBeEnabled()
     await expect(action).toBeFocused()
     await page.keyboard.press('Tab')
@@ -241,7 +243,9 @@ test('N01 retries a failed list and pages through results', async ({
   })
   await page.goto('/notifications')
 
-  await expect(page.getByRole('alert')).toContainText('Servis kullanılamıyor.')
+  await expect(page.getByRole('alert')).toContainText(
+    'İşlem tamamlanamadı. Tekrar deneyin.',
+  )
   await expect(page.getByText('Henüz bildiriminiz yok')).toHaveCount(0)
   await assertAccessibleAndContained(page)
   await page.getByRole('button', { name: 'Tekrar dene' }).click()

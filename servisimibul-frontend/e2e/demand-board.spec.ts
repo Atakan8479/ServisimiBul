@@ -269,7 +269,7 @@ test('service publish errors stay with the form at supported widths', async ({
 
   const alert = page.getByRole('alert')
   await expect(alert).toBeFocused()
-  await expect(alert).toHaveText('Servis bildirimi yayınlanamadı.')
+  await expect(alert).toHaveText('İşlem tamamlanamadı. Tekrar deneyin.')
 
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 })
@@ -336,7 +336,7 @@ test('failed service withdrawal stays actionable on mobile', async ({
   await withdrawal.getByRole('button', { name: 'Bildirimi geri çek' }).click()
   const alert = page.getByRole('alert')
   await expect(alert).toBeFocused()
-  await expect(alert).toHaveText('Servis bildirimi geri çekilemedi.')
+  await expect(alert).toHaveText('İşlem tamamlanamadı. Tekrar deneyin.')
   expect(
     await alert.evaluate((element) =>
       element.previousElementSibling?.classList.contains(

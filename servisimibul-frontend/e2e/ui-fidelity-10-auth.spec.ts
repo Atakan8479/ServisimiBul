@@ -147,7 +147,7 @@ test('A08 keeps the form and shows the backend rejection of a bad token', async 
   await page.getByRole('button', { name: 'Şifreyi yenile' }).click()
 
   await expect(page.getByRole('alert')).toHaveText(
-    'Şifre yenileme bağlantısı geçersiz veya süresi dolmuş.',
+    'İşlem tamamlanamadı. Tekrar deneyin.',
   )
   await expect(page.getByLabel('Yeni şifre', { exact: true })).toHaveValue(
     'yeni guvenli sifre',
