@@ -18,6 +18,11 @@ async function expectBoardIsSound(page: Page, emptyTabs: string[]) {
     // The header shortcut is always there; an empty list adds its own CTA.
     await expect(createLinks, tab).toHaveCount(empty ? 2 : 1)
     await expect(page.locator('.demand-create-shortcut'), tab).toBeVisible()
+    // Only the header shortcut is a primary CTA; the empty-state link is secondary.
+    await expect(
+      page.locator('.button-link', { hasText: 'Yeni talep oluştur' }),
+      tab,
+    ).toHaveCount(1)
     await expect(
       operatorPanel.getByRole('link', { name: /talep/i }),
     ).toHaveCount(0)
@@ -34,12 +39,12 @@ async function expectBoardIsSound(page: Page, emptyTabs: string[]) {
     ).toBe(true)
   }
 
-  // The operator copy sits on an opaque panel, not on the road backdrop.
-  expect(
-    await operatorPanel.evaluate(
-      (node) => getComputedStyle(node).backgroundColor,
-    ),
-  ).toBe('rgba(255, 255, 255, 0.96)')
+  // Demand and operator results sit on matching opaque panels, not on the road backdrop.
+  for (const panel of [page.locator('.demand-results-panel'), operatorPanel]) {
+    expect(
+      await panel.evaluate((node) => getComputedStyle(node).backgroundColor),
+    ).toBe('rgba(255, 255, 255, 0.96)')
+  }
   const accessibility = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
     .analyze()
