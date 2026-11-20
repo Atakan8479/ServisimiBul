@@ -96,7 +96,7 @@ describe('parent account onboarding', () => {
       await screen.findByText('Devam etmek için veli hesabınızla giriş yapın.'),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
+      screen.getByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/doğrulama bağlantısı/i)).not.toBeInTheDocument()
     expect(requestBody).toEqual({
@@ -122,9 +122,7 @@ describe('parent account onboarding', () => {
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Çıkış yap' }))
     expect(
-      await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
-      }),
+      await screen.findByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
   })
@@ -151,7 +149,7 @@ describe('parent account onboarding', () => {
       await screen.findByText(/Devam etmek için veli hesabınızla giriş yapın/),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
+      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
   })
 
@@ -249,24 +247,35 @@ describe('parent account onboarding', () => {
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })
 
-  it('provides a dedicated parent login with password visibility', async () => {
-    renderRoute('/parent/login')
+  it.each(['/login', '/parent/login', '/operator/login'])(
+    'serves the one shared login on %s',
+    async (path) => {
+      renderRoute(path)
+
+      expect(
+        await screen.findByRole('heading', { name: 'Giriş yap' }),
+      ).toBeInTheDocument()
+      expect(screen.queryByText(/girişi/i)).not.toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Kayıt olun' })).toHaveAttribute(
+        'href',
+        '/register',
+      )
+    },
+  )
+
+  it('provides password visibility and recovery on the shared login', async () => {
+    renderRoute('/login')
 
     expect(
-      await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
-      }),
+      await screen.findByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     const password = screen.getByLabelText('Şifre')
     expect(password).toHaveAttribute('type', 'password')
     fireEvent.click(screen.getByRole('button', { name: 'Parolayı göster' }))
     expect(password).toHaveAttribute('type', 'text')
     expect(
-      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
-    ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
-    expect(
       screen.getByRole('link', { name: 'Şifremi unuttum' }),
-    ).toHaveAttribute('href', '/forgot-password?from=parent')
+    ).toHaveAttribute('href', '/forgot-password')
   })
 
   it('requests password recovery without revealing whether the account exists', async () => {
@@ -293,7 +302,7 @@ describe('parent account onboarding', () => {
     expect(requestBody).toEqual({ email: 'parent@example.test' })
     expect(
       screen.getByRole('link', { name: 'Giriş sayfasına dön' }),
-    ).toHaveAttribute('href', '/parent/login')
+    ).toHaveAttribute('href', '/login')
   })
 
   it('resets a password using the token from the recovery link', async () => {
@@ -320,14 +329,13 @@ describe('parent account onboarding', () => {
       token: 'reset-token',
       newPassword: 'new secure password',
     })
-    expect(
-      screen
-        .getAllByRole('link', { name: 'Veli girişi' })
-        .some((link) => link.classList.contains('button-link')),
-    ).toBe(true)
+    expect(screen.getByRole('link', { name: 'Giriş yap' })).toHaveAttribute(
+      'href',
+      '/login',
+    )
   })
 
-  it('presents recovery in the shared auth frame and returns to the originating login', async () => {
+  it('presents recovery in the shared auth frame and returns to the shared login', async () => {
     renderRoute('/forgot-password?from=operator')
 
     expect(
@@ -338,7 +346,7 @@ describe('parent account onboarding', () => {
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Giriş sayfasına dön' }),
-    ).toHaveAttribute('href', '/operator/login')
+    ).toHaveAttribute('href', '/login')
   })
 
   it('shows a recovery backend failure without claiming the link was sent', async () => {
@@ -466,47 +474,127 @@ describe('parent account onboarding', () => {
     clearKnownAuthRole()
     renderRoute('/parent/login?next=https%3A%2F%2Fevil.example')
     expect(
-      await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
+      await screen.findByRole('link', { name: 'Kayıt olun' }),
+    ).toHaveAttribute('href', '/register')
+  })
+
+  it('never carries an unsafe demand return path into parent signup', async () => {
+    renderRoute(
+      `/parent/login?next=${encodeURIComponent('/demands/../operator')}`,
+    )
+
+    expect(
+      await screen.findByRole('link', { name: 'veli hesabı oluşturun' }),
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
   })
 
-  it.each(['/demands/review-target?action=response', '/demands/../operator'])(
-    'rejects an unsafe parent return destination: %s',
-    async (next) => {
-      renderRoute(`/parent/login?next=${encodeURIComponent(next)}`)
+  // #276/#277: the server-confirmed role, never the entry URL, picks the
+  // destination; a successful login is never closed for using a legacy URL.
+  it.each([
+    [
+      'PARENT',
+      '/parent/login',
+      '/demands/x?action=support',
+      '/demands/x',
+      '?action=support',
+    ],
+    ['PARENT', '/login', '/demands/x?action=response', '/demands', ''],
+    ['PARENT', '/operator/login', '/demands/../operator', '/demands', ''],
+    ['PARENT', '/login', 'https://evil.example', '/demands', ''],
+    ['PARENT', '/login', '/admin/schools', '/demands', ''],
+    ['OPERATOR', '/parent/login', '/demands/x?action=support', '/operator', ''],
+    [
+      'OPERATOR',
+      '/login',
+      '/demands/x?action=response',
+      '/demands/x',
+      '?action=response',
+    ],
+    ['OPERATOR', '/login', '/admin/schools', '/operator', ''],
+    ['OPERATOR', '/login', '//evil.example/operator', '/operator', ''],
+    ['ADMIN', '/parent/login', '/demands?status=OPEN', '/admin', ''],
+    ['ADMIN', '/operator/login', '/admin/schools', '/admin/schools', ''],
+    ['ADMIN', '/login', '/operator/profile', '/admin', ''],
+    // Unsafe or cross-role `next` values fall back to the role home.
+    ['PARENT', '/login', '/demands/%2e%2e/operator', '/demands', ''],
+    ['PARENT', '/login', '/demands/..%2Fadmin?action=support', '/demands', ''],
+    ['PARENT', '/login', '//evil.example/demands', '/demands', ''],
+    ['OPERATOR', '/login', '/operator/../admin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/%2e%2e/admin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/%2E%2E/admin/schools', '/operator', ''],
+    ['OPERATOR', '/login', '/operator\\..\\admin', '/operator', ''],
+    ['OPERATOR', '/login', 'https://evil.example/operator/x', '/operator', ''],
+    [
+      'OPERATOR',
+      '/login',
+      '/demands/../admin?action=response',
+      '/operator',
+      '',
+    ],
+    ['OPERATOR', '/login', '/operatorx', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/..%2Fadmin', '/operator', ''],
+    ['ADMIN', '/login', '/admin/%5C..%5Coperator', '/admin', ''],
+    // Double- and triple-encoded traversal and separators.
+    ['OPERATOR', '/login', '/operator/%252e%252e/admin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/..%252Fadmin', '/operator', ''],
+    ['OPERATOR', '/login', '/operator/%25252e%25252e/admin', '/operator', ''],
+    ['ADMIN', '/login', '/admin/%252e%252e/operator', '/admin', ''],
+    ['ADMIN', '/login', '/admin/%255C..%255Coperator', '/admin', ''],
+    ['PARENT', '/login', '/demands/%252e%252e/operator', '/demands', ''],
+    ['ADMIN', '/login', '/admin/../operator', '/admin', ''],
+    ['ADMIN', '/login', '/admin/%2e%2e/operator', '/admin', ''],
+    ['ADMIN', '/login', '//evil.example/admin/x', '/admin', ''],
+    ['ADMIN', '/login', '/admin\\..\\demands', '/admin', ''],
+    ['ADMIN', '/login', '/administrator', '/admin', ''],
+    // Legitimate same-role deep links keep their query.
+    [
+      'OPERATOR',
+      '/login',
+      '/operator/schools?tab=coverage',
+      '/operator/schools',
+      '?tab=coverage',
+    ],
+    ['ADMIN', '/login', '/admin/schools?page=2', '/admin/schools', '?page=2'],
+  ] as const)(
+    'sends a %s signing in on %s with next=%s to %s',
+    async (role, entry, next, pathname, search) => {
+      let logoutCalls = 0
+      server.use(
+        csrfHandler(),
+        http.post('/api/v1/auth/login', () =>
+          HttpResponse.json({ ...parentUser, role }),
+        ),
+        http.post('/api/v1/auth/logout', () => {
+          logoutCalls += 1
+          return new HttpResponse(null, { status: 204 })
+        }),
+      )
+      const router = createMemoryRouter(
+        [
+          { path: entry, Component: LoginPage },
+          { path: '*', element: <h1>Hedef</h1> },
+        ],
+        { initialEntries: [`${entry}?next=${encodeURIComponent(next)}`] },
+      )
+      render(<RouterProvider router={router} />)
+
+      fireEvent.change(await screen.findByLabelText('E-posta'), {
+        target: { value: 'user@example.test' },
+      })
+      fireEvent.change(screen.getByLabelText('Şifre'), {
+        target: { value: 'long password value' },
+      })
+      fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
 
       expect(
-        await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
-      ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
+        await screen.findByRole('heading', { name: 'Hedef' }),
+      ).toBeInTheDocument()
+      expect(router.state.location.pathname).toBe(pathname)
+      expect(router.state.location.search).toBe(search)
+      expect(logoutCalls).toBe(0)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     },
   )
-
-  it('rejects an operator account on the parent login and closes its session', async () => {
-    let logoutCalls = 0
-    server.use(
-      csrfHandler(),
-      http.post('/api/v1/auth/login', () => HttpResponse.json(operatorUser)),
-      http.post('/api/v1/auth/logout', () => {
-        logoutCalls += 1
-        return new HttpResponse(null, { status: 204 })
-      }),
-    )
-
-    renderRoute('/parent/login')
-    fireEvent.change(await screen.findByLabelText('E-posta'), {
-      target: { value: 'operator@example.com' },
-    })
-    fireEvent.change(screen.getByLabelText('Şifre'), {
-      target: { value: 'long password value' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: 'Giriş yap' }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Bu giriş yalnızca veli hesapları içindir.',
-    )
-    expect(logoutCalls).toBe(1)
-    expect(knownAuthRole()).toBeUndefined()
-  })
 })
 
 describe('operator authentication screens', () => {
@@ -851,7 +939,7 @@ describe('operator authentication screens', () => {
       `/parent/login?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,
     )
     expect(
-      await screen.findByRole('link', { name: 'Veli hesabı oluşturun' }),
+      await screen.findByRole('link', { name: 'veli hesabı oluşturun' }),
     ).toHaveAttribute(
       'href',
       `/parent/register?next=${encodeURIComponent(`/demands/${demandId}?action=support`)}`,

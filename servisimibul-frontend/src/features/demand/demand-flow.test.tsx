@@ -107,12 +107,12 @@ describe('public demand board', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
+        name: 'Giriş yap',
       }),
     ).toBeInTheDocument()
     expect(operatorChecks).toBe(1)
     expect(
-      screen.getByRole('link', { name: 'Veli hesabı oluşturun' }),
+      screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
     ).toBeInTheDocument()
   })
 

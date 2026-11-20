@@ -18,7 +18,7 @@ const routes = [
   {
     id: 'A03',
     path: '/parent/login?next=%2Fdemands',
-    heading: 'Yeniden hoş geldiniz.',
+    heading: 'Giriş yap',
   },
 ] as const
 

@@ -74,10 +74,8 @@ test('parent keeps an edited academic year through registration, login and refre
   ).toBeVisible()
   await expect(page.getByLabel('Uygun servis bulamıyorum')).toBeChecked()
   await page.goForward()
-  await expect(
-    page.getByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
-  ).toBeVisible()
-  await page.getByRole('link', { name: 'Veli hesabı oluşturun' }).click()
+  await expect(page.getByRole('heading', { name: 'Giriş yap' })).toBeVisible()
+  await page.getByRole('link', { name: 'veli hesabı oluşturun' }).click()
   await expect(page).toHaveURL(/\/parent\/register\?next=/)
   // The URL updates before the view transition swaps out the login form's same-labelled fields.
   await expect(

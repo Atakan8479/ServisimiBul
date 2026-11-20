@@ -162,7 +162,7 @@ describe('account settings', () => {
     const router = renderRoute('/parent/account')
 
     expect(
-      await screen.findByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
+      await screen.findByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/parent/login')
     expect(router.state.location.search).toContain('next=%2Fparent%2Faccount')

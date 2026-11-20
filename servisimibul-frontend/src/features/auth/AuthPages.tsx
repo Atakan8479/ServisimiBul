@@ -18,7 +18,6 @@ import { ApiError } from '../../api/client'
 import {
   forgotPassword,
   login,
-  logout,
   registerOperator,
   registerParent,
   resetPassword,
@@ -436,7 +435,6 @@ export function VerifyEmailPage() {
 }
 
 export function ForgotPasswordPage() {
-  const [searchParams] = useSearchParams()
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
   const {
@@ -447,8 +445,6 @@ export function ForgotPasswordPage() {
   } = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
   })
-  const loginPath =
-    searchParams.get('from') === 'parent' ? '/parent/login' : '/operator/login'
 
   async function submit({ email }: ForgotPasswordForm) {
     setFormError(undefined)
@@ -474,7 +470,7 @@ export function ForgotPasswordPage() {
           <p>
             Hesap uygunsa şifre yenileme bağlantısı e-posta adresine gönderildi.
           </p>
-          <Link className="button-link" to={loginPath} viewTransition>
+          <Link className="button-link" to="/login" viewTransition>
             Giriş sayfasına dön
           </Link>
         </div>
@@ -511,7 +507,7 @@ export function ForgotPasswordPage() {
             </button>
           </form>
           <p className="auth-back-link">
-            <Link to={loginPath} viewTransition>
+            <Link to="/login" viewTransition>
               <span className="auth-arrow back" aria-hidden="true" />
               Giriş sayfasına dön
             </Link>
@@ -561,18 +557,9 @@ export function ResetPasswordPage() {
           <p>
             Şifreniz yenilendi. Açık oturumlarınız güvenli biçimde kapatıldı.
           </p>
-          <div className="auth-completion-actions">
-            <Link className="button-link" to="/parent/login" viewTransition>
-              Veli girişi
-            </Link>
-            <Link
-              className="secondary-button"
-              to="/operator/login"
-              viewTransition
-            >
-              İşletmeci veya yönetici girişi
-            </Link>
-          </div>
+          <Link className="button-link" to="/login" viewTransition>
+            Giriş yap
+          </Link>
         </div>
       ) : (
         <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
@@ -619,25 +606,8 @@ export function ResetPasswordPage() {
   )
 }
 
+// One login for every role; the server-confirmed role picks the destination (#276).
 export function LoginPage() {
-  return <LoginScreen parentOnly={false} />
-}
-
-export function ParentLoginPage() {
-  return <LoginScreen parentOnly />
-}
-
-export function SharedLoginPage() {
-  return <LoginScreen parentOnly={false} shared />
-}
-
-function LoginScreen({
-  parentOnly,
-  shared = false,
-}: {
-  parentOnly: boolean
-  shared?: boolean
-}) {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const [formError, setFormError] = useState<string>()
@@ -656,19 +626,6 @@ function LoginScreen({
     setFormError(undefined)
     try {
       const user = await login(values)
-      if (parentOnly && user.role !== 'PARENT') {
-        try {
-          await logout()
-          setFormError(
-            'Bu giriş yalnızca veli hesapları içindir. İşletmeci veya yönetici girişini kullanın.',
-          )
-        } catch {
-          setFormError(
-            'Bu hesap veli hesabı değil ve açılan oturum güvenli biçimde kapatılamadı. Sayfayı yenileyip tekrar deneyin.',
-          )
-        }
-        return
-      }
       if (user.role === 'PARENT') {
         const next = searchParams.get('next')
         const destination = parentDestination(next)
@@ -680,19 +637,18 @@ function LoginScreen({
       }
       if (user.role === 'ADMIN') {
         const next = searchParams.get('next')
-        void navigate(next?.startsWith('/admin/') ? next : '/admin', {
+        void navigate(isCanonicalPathUnder(next, '/admin') ? next : '/admin', {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
         })
         return
       }
       const next = searchParams.get('next')
-      const destination =
-        next === '/operator' || next?.startsWith('/operator/')
+      const destination = isCanonicalPathUnder(next, '/operator')
+        ? next
+        : isDemandResponsePath(next)
           ? next
-          : isDemandResponsePath(next)
-            ? next
-            : '/operator'
+          : '/operator'
       void navigate(destination, {
         replace: true,
         viewTransition: typeof document.startViewTransition === 'function',
@@ -755,10 +711,7 @@ function LoginScreen({
           }
         />
         <div className="auth-password-actions">
-          <Link
-            to={`/forgot-password?from=${parentOnly ? 'parent' : 'operator'}`}
-            viewTransition
-          >
+          <Link to="/forgot-password" viewTransition>
             Şifremi unuttum
           </Link>
         </div>
@@ -776,18 +729,8 @@ function LoginScreen({
           {!isSubmitting && <span className="auth-arrow" aria-hidden="true" />}
         </button>
       </form>
-      <div className={parentOnly ? 'auth-context-link' : 'auth-switch'}>
-        {parentOnly ? (
-          <>
-            <span>Hesabınız yok mu?</span>
-            <Link
-              to={`/parent/register?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
-              viewTransition
-            >
-              Veli hesabı oluşturun
-            </Link>
-          </>
-        ) : isDemandResponsePath(searchParams.get('next')) ? (
+      <div className="auth-switch">
+        {isDemandResponsePath(searchParams.get('next')) ? (
           <>
             İşletmeci hesabınız yoksa{' '}
             <Link to="/operator/register" viewTransition>
@@ -799,7 +742,7 @@ function LoginScreen({
           <>
             Veli hesabınız yoksa{' '}
             <Link
-              to={`/parent/register?next=${encodeURIComponent(demandDestination(searchParams.get('next')))}`}
+              to={`/parent/register?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
               viewTransition
             >
               veli hesabı oluşturun
@@ -815,34 +758,10 @@ function LoginScreen({
           </>
         )}
       </div>
-      {parentOnly && (
-        <div className="auth-context-link">
-          <span>İşletmeci veya yönetici misiniz?</span>
-          <Link to="/operator/login" viewTransition>
-            İşletmeci girişi
-          </Link>
-        </div>
-      )}
     </>
   )
 
-  return parentOnly ? (
-    <AuthFrame
-      title="Yeniden hoş geldiniz."
-      subtitle="Servis taleplerinizi ve bildirimlerinizi yönetmek için giriş yapın."
-    >
-      {content}
-    </AuthFrame>
-  ) : shared ? (
-    <AuthFrame title="Giriş yap">{content}</AuthFrame>
-  ) : (
-    <AuthFrame
-      title="İşletmeci paneline giriş"
-      subtitle="Profilinizi, okul kapsamınızı ve bildirimlerinizi yönetin."
-    >
-      {content}
-    </AuthFrame>
-  )
+  return <AuthFrame title="Giriş yap">{content}</AuthFrame>
 }
 
 function isDemandPath(path: string | null): path is string {
@@ -862,7 +781,7 @@ function parentDestination(path: string | null): string {
   if (path === '/notifications' || path?.startsWith('/notifications?')) {
     return path
   }
-  if (!isDemandPath(path)) return '/demands'
+  if (!isCanonicalPathUnder(path, '/demands')) return '/demands'
 
   try {
     const url = new URL(path, window.location.origin)
@@ -876,8 +795,37 @@ function parentDestination(path: string | null): string {
   }
 }
 
+// Only a same-origin path that is already canonical can pass the prefix check,
+// so `..`, `%2e%2e`, `%252e%252e`, `..%2F`, backslashes and `//host` never
+// escape `root`.
+function isCanonicalPathUnder(
+  path: string | null,
+  root: string,
+): path is string {
+  if (!path?.startsWith('/')) return false
+  try {
+    const url = new URL(path, window.location.origin)
+    // Decode until stable so nested encodings cannot hide `..` or `\`; each
+    // pass that changes the string shortens it, so the loop terminates.
+    let decoded = url.pathname
+    for (let previous = ''; decoded !== previous;) {
+      previous = decoded
+      decoded = decodeURIComponent(decoded)
+    }
+    return (
+      url.origin === window.location.origin &&
+      url.pathname === path.split(/[?#]/, 1)[0] &&
+      !decoded.includes('\\') &&
+      !decoded.split('/').includes('..') &&
+      (url.pathname === root || url.pathname.startsWith(`${root}/`))
+    )
+  } catch {
+    return false
+  }
+}
+
 function isDemandResponsePath(path: string | null): path is string {
-  if (!isDemandPath(path)) return false
+  if (!isCanonicalPathUnder(path, '/demands')) return false
   const url = new URL(path, window.location.origin)
   return url.searchParams.get('action') === 'response'
 }

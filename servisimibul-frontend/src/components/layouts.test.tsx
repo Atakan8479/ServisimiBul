@@ -148,7 +148,7 @@ describe('PublicLayout', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await screen.findByRole('link', { name: 'İşletmeci kaydı' })
+    await screen.findByRole('link', { name: 'Kayıt Ol' })
 
     const toggle = screen.getByRole('button', { name: 'Menü' })
     fireEvent.click(toggle)
@@ -159,7 +159,7 @@ describe('PublicLayout', () => {
       name: 'Ana sayfa',
     })
     const lastLink = within(navigation).getByRole('link', {
-      name: 'İşletmeci kaydı',
+      name: 'Kayıt Ol',
     })
     expect(firstLink).toHaveFocus()
     expect(dialog).toHaveAttribute('aria-modal', 'true')
@@ -186,7 +186,7 @@ describe('PublicLayout', () => {
       screen.queryByRole('button', { name: 'Çıkış yap' }),
     ).not.toBeInTheDocument()
     expect(
-      await screen.findByRole('link', { name: 'Veli girişi' }),
+      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
     expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
@@ -208,10 +208,10 @@ describe('PublicLayout', () => {
         mainMenu().getByRole('link', { name: 'Bildirim merkezi' }),
       ).toHaveAttribute('href', notifications)
       expect(
-        mainMenu().queryByRole('link', { name: 'Veli girişi' }),
+        mainMenu().queryByRole('link', { name: 'Giriş Yap' }),
       ).not.toBeInTheDocument()
       expect(
-        mainMenu().queryByRole('link', { name: 'İşletmeci kaydı' }),
+        mainMenu().queryByRole('link', { name: 'Kayıt Ol' }),
       ).not.toBeInTheDocument()
       expect(
         mainMenu().getByRole('button', { name: 'Çıkış yap' }),
@@ -260,7 +260,7 @@ describe('PublicLayout', () => {
     expect(router.state.location.search).toBe('?reason=session')
     expect(knownAuthRole()).toBeUndefined()
     expect(
-      await screen.findByRole('link', { name: 'Veli girişi' }),
+      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
   })
 
@@ -319,7 +319,7 @@ describe('PublicLayout', () => {
         </Routes>
       </MemoryRouter>,
     )
-    await screen.findByRole('link', { name: 'Veli girişi' })
+    await mainMenu().findByRole('link', { name: 'Giriş Yap' })
     act(() => {
       window.dispatchEvent(new Event('focus'))
       document.dispatchEvent(new Event('visibilitychange'))
@@ -328,14 +328,14 @@ describe('PublicLayout', () => {
     renderLayout()
 
     expect(
-      await screen.findByRole('link', { name: 'Veli girişi' }),
+      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
     expect(meRequests).toBe(1)
   })
 
   it('verifies when another tab signs in or out', async () => {
     renderLayout()
-    await screen.findByRole('link', { name: 'Veli girişi' })
+    await mainMenu().findByRole('link', { name: 'Giriş Yap' })
 
     sessionRole = 'OPERATOR'
     announceFromOtherTab()
@@ -346,7 +346,7 @@ describe('PublicLayout', () => {
     sessionRole = undefined
     announceFromOtherTab()
     expect(
-      await screen.findByRole('link', { name: 'Veli girişi' }),
+      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
   })
@@ -376,7 +376,7 @@ describe('PublicLayout', () => {
       window.dispatchEvent(new Event('focus'))
     })
     expect(
-      await screen.findByRole('link', { name: 'Veli girişi' }),
+      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
   })

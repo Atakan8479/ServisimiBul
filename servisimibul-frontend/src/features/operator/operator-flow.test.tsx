@@ -1593,7 +1593,7 @@ describe('operator workspace flows', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
 
     expect(
-      await screen.findByRole('heading', { name: 'İşletmeci paneline giriş' }),
+      await screen.findByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(
       screen.getByText(

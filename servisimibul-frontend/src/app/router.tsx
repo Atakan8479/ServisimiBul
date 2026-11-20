@@ -146,12 +146,12 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        // Legacy alias of the shared login (#276).
         path: 'parent/login',
-        handle: { pageTitle: 'Veli girişi' },
+        handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
-          Component: (await import('../features/auth/AuthPages'))
-            .ParentLoginPage,
+          Component: (await import('../features/auth/AuthPages')).LoginPage,
         }),
       },
       {
@@ -190,6 +190,7 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
+        // Legacy alias of the shared login (#276).
         path: 'operator/login',
         handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,
@@ -198,13 +199,12 @@ const applicationRoutes: RouteObject[] = [
         }),
       },
       {
-        // Shared (non-parent-only) login; admin session expiry lands here.
+        // Shared login for every role; destination follows the server role.
         path: 'login',
         handle: { pageTitle: 'Giriş' },
         HydrateFallback: LoadingPage,
         lazy: async () => ({
-          Component: (await import('../features/auth/AuthPages'))
-            .SharedLoginPage,
+          Component: (await import('../features/auth/AuthPages')).LoginPage,
         }),
       },
       {

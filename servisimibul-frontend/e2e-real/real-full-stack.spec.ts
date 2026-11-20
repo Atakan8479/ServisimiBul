@@ -1863,7 +1863,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(menu).toBeFocused()
         await mobilePage.keyboard.press('Enter')
         await expect(
-          mobilePage.getByRole('link', { name: 'Veli girişi' }),
+          mobilePage
+            .locator('#public-navigation')
+            .getByRole('link', { name: 'Giriş Yap' }),
         ).toBeVisible()
         await expect(mobilePage.locator('#public-navigation')).toHaveCSS(
           'opacity',

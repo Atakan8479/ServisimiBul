@@ -246,8 +246,8 @@ describe('public footer navigation', () => {
       [
         'Hesap',
         [
-          ['Veli kaydı', '/parent/register'],
-          ['İşletmeci kaydı', '/operator/register'],
+          ['Giriş Yap', '/login'],
+          ['Kayıt Ol', '/register'],
         ],
       ],
       [
