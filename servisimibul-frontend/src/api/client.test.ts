@@ -61,7 +61,7 @@ describe('apiRequest', () => {
 
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).problem.fieldErrors).toEqual({
-      query: 'is too short',
+      query: 'Bu alanı kontrol edin.',
     })
   })
 
@@ -134,17 +134,125 @@ describe('user-facing API messages', () => {
     )
   })
 
+  it('localizes known backend field validation messages per field', () => {
+    const error = normalizeApiProblem(
+      {
+        code: 'VALIDATION_FAILED',
+        detail: 'One or more request fields are invalid',
+        traceId: 'trace-400',
+        fieldErrors: [
+          { field: 'email', message: 'Enter a valid email address' },
+          {
+            field: 'newPassword',
+            message:
+              'Password must be 12-64 characters and at most 72 UTF-8 bytes',
+          },
+          {
+            field: 'businessName',
+            message: 'Business name must be 2-120 characters',
+          },
+          {
+            field: 'contactPhone',
+            message: 'Enter a valid international phone number',
+          },
+        ],
+      },
+      400,
+    )
+    expect(error).toMatchObject({
+      code: 'VALIDATION_FAILED',
+      status: 400,
+      traceId: 'trace-400',
+      detail: 'Girilen bilgileri kontrol edin.',
+    })
+    expect(error.fieldErrors).toEqual({
+      email: 'Geçerli bir e-posta adresi girin.',
+      newPassword:
+        'Şifre 12-64 karakter olmalı ve UTF-8 olarak 72 baytı aşmamalıdır.',
+      businessName: 'İşletme adı 2-120 karakter olmalıdır.',
+      contactPhone: 'Geçerli bir telefon numarası girin.',
+    })
+  })
+
+  it('uses a safe Turkish fallback for unknown field messages in both shapes', () => {
+    expect(
+      normalizeApiProblem(
+        {
+          code: 'validation_error',
+          fieldErrors: { contactPhone: 'must be a valid E.164 phone' },
+        },
+        400,
+      ),
+    ).toMatchObject({
+      code: 'validation_error',
+      detail: 'Girilen bilgileri kontrol edin.',
+      fieldErrors: { contactPhone: 'Bu alanı kontrol edin.' },
+    })
+    expect(
+      normalizeApiProblem(
+        {
+          code: 'VALIDATION_FAILED',
+          fieldErrors: [{ field: 'email', message: 'toString' }],
+        },
+        400,
+      ).fieldErrors,
+    ).toEqual({ email: 'Bu alanı kontrol edin.' })
+    expect(
+      normalizeApiProblem({ code: 'VALIDATION_FAILED' }, 400).fieldErrors,
+    ).toBeUndefined()
+  })
+
+  it.each([
+    ['duplicate_comment', 409, 'Bu yorumu kısa süre önce gönderdiniz.'],
+    [
+      'active_support_required',
+      403,
+      'Bu talebe yorum yapmak için etkin destek gerekir.',
+    ],
+    ['demand_not_open', 409, 'Bu talep artık açık değil.'],
+    [
+      'report_already_open',
+      409,
+      'Bu içerik için açık bir bildiriminiz zaten var.',
+    ],
+    [
+      'operator_coverage_required',
+      409,
+      'Servis duyurusu paylaşmak için talebin mahallesini bu okulun mahallelerine ekleyin.',
+    ],
+    [
+      'vehicle_plate_conflict',
+      409,
+      'Bu plakayla kayıtlı bir aracınız zaten var.',
+    ],
+    ['operator_school_duplicate', 409, 'Bu okul zaten listenizde.'],
+  ])(
+    'localizes domain code %s without changing code or status',
+    (code, status, detail) => {
+      expect(
+        normalizeApiProblem(
+          { code, status, detail: 'English backend detail', traceId: 't-1' },
+          status,
+        ),
+      ).toMatchObject({ code, status, detail, traceId: 't-1' })
+    },
+  )
+
   it('preserves field-specific validation errors', () => {
     const error = normalizeApiProblem(
       {
         code: 'VALIDATION_FAILED',
         detail: 'Validation failed',
-        fieldErrors: [{ field: 'email', message: 'Geçerli adres girin.' }],
+        fieldErrors: [
+          { field: 'email', message: 'Enter a valid email address' },
+        ],
       },
       400,
     )
     expect(error.detail).toBe('Girilen bilgileri kontrol edin.')
-    expect(error.fieldErrors).toEqual({ email: 'Geçerli adres girin.' })
+    expect(error.fieldErrors).toEqual({
+      email: 'Geçerli bir e-posta adresi girin.',
+    })
     expect(
       normalizeApiProblem(
         { code: 'CUSTOM_ERROR', detail: 'Güncel bir kullanıcı uyarısı' },
