@@ -120,7 +120,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator')
 
     expect(
-      await screen.findByText('Uygunluk bilgisi şu anda alınamıyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Yeniden dene' }),
@@ -301,7 +301,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(
-      await screen.findByText('Profil şu anda kaydedilemiyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     expect(visibility).toBeChecked()
     expect(
@@ -506,7 +506,7 @@ describe('operator workspace flows', () => {
     fireEvent.click(within(kadikoy).getByRole('button', { name: 'Kadıköy' }))
 
     expect(
-      await screen.findByText('Kadıköy mahalleleri şu anda alınamıyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Yeniden dene' }))
 
@@ -826,7 +826,7 @@ describe('operator workspace flows', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
     expect(
-      await screen.findByText('Okul kataloğu şu anda alınamıyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
 
@@ -994,7 +994,7 @@ describe('operator workspace flows', () => {
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Kaldır' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Okul kaldırılamadı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
 
@@ -1050,7 +1050,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Kapsam kaydedilemedi.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(within(dialog).getByText('Seçili: Moda')).toBeInTheDocument()
   })
@@ -1169,7 +1169,7 @@ describe('operator workspace flows', () => {
         expect(document.activeElement).toBe(toggle)
         if (status !== 200) {
           expect(screen.getByRole('alert')).toHaveTextContent(
-            'Okul güncellenemedi.',
+            'İşlem tamamlanamadı. Tekrar deneyin.',
           )
         }
         expect(
@@ -1524,7 +1524,7 @@ describe('operator workspace flows', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Bu plaka zaten kayıtlı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(within(dialog).getByLabelText('Plaka')).toHaveValue('34 ABC 123')
     fireEvent.click(within(dialog).getByRole('button', { name: 'Aracı ekle' }))
@@ -1546,7 +1546,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Servis taslağı kaydedilemedi.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(
       within(dialog).getByLabelText('Açıklama (isteğe bağlı)'),
@@ -1663,7 +1663,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Plaka değişikliği kaydedilemedi.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(within(dialog).getByLabelText('Plaka')).toHaveValue('34 XYZ 987')
     fireEvent.click(
@@ -1703,7 +1703,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/offerings')
 
     expect(
-      await screen.findByText('Servis bilgileri şu anda alınamıyor.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     expect(screen.queryByText('Henüz araç eklenmedi')).not.toBeInTheDocument()
 
@@ -1817,7 +1817,7 @@ describe('operator workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Servis kapsamı kaydedilemedi.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(
       within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }),

@@ -29,7 +29,7 @@ export function RouteErrorPage() {
 
   if (error instanceof ApiError) {
     return (
-      <StatePage title={error.problem.title} detail={error.problem.detail} />
+      <StatePage title="İşlem tamamlanamadı" detail={error.problem.detail} />
     )
   }
 

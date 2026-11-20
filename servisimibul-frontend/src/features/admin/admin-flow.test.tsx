@@ -225,7 +225,7 @@ describe('admin workspace flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Askıya al' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Hesap zaten askıda.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(
@@ -546,7 +546,7 @@ describe('admin workspace flows', () => {
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
-      'Bu okul zaten kayıtlı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(within(dialog).getByLabelText('Okul adı')).toHaveValue('Örnek Okulu')
   })
@@ -789,7 +789,9 @@ describe('admin workspace flows', () => {
 
     renderRoute('/admin/tariffs')
     expect(await screen.findByText('Tarife yüklenemedi')).toBeInTheDocument()
-    expect(screen.getByText('Tarife okunamadı.')).toBeInTheDocument()
+    expect(
+      screen.getByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+    ).toBeInTheDocument()
     expect(screen.queryByLabelText('Tarife JSON içeriği')).toBeNull()
     expect(screen.queryByText('Henüz yayımlanmış sürüm yok.')).toBeNull()
 
@@ -833,7 +835,7 @@ describe('admin workspace flows', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Tarife okunamadı.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue('taslak')
   })
@@ -1067,13 +1069,13 @@ describe('overlapping tariff loads', () => {
     await waitFor(() => expect(loads.started.count).toBe(3))
     loads.gates[2].resolve()
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Eski veya yeni yükleme hatası.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
 
     await settleLateResponse(loads.gates[1].resolve)
 
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Eski veya yeni yükleme hatası.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.getByLabelText('Tarife JSON içeriği')).toHaveValue(draft)
     expect(screen.getByText(/Yüklü sürüm: v1/)).toBeInTheDocument()
@@ -1204,7 +1206,9 @@ describe('school editor asynchronous ordering', () => {
     gate.resolve()
     await settle(served)
 
-    expect(screen.queryByText('Coğrafya yüklenemedi.')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+    ).not.toBeInTheDocument()
   })
 
   it('shows the latest school when edits overlap', async () => {
@@ -1306,7 +1310,7 @@ describe('school editor asynchronous ordering', () => {
 
     fireEvent.click(editButton('Örnek Okulu'))
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Coğrafya yüklenemedi.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 

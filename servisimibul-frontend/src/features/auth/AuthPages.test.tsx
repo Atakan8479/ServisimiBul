@@ -366,7 +366,7 @@ describe('parent account onboarding', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Çok fazla deneme yapıldı.',
+      'Çok sık denediniz. Biraz sonra tekrar deneyin.',
     )
     expect(
       screen.queryByText(/Hesap uygunsa şifre yenileme bağlantısı/),
@@ -407,7 +407,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Şifreyi yenile' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Bağlantı geçersiz veya süresi dolmuş.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(screen.queryByText(/Şifreniz yenilendi/)).not.toBeInTheDocument()
     expect(screen.getByLabelText('Şifre yenileme kodu')).toHaveValue(
