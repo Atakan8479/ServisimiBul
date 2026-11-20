@@ -221,6 +221,11 @@ describe('user-facing API messages', () => {
       'Servis duyurusu paylaşmak için talebin mahallesini bu okulun mahallelerine ekleyin.',
     ],
     [
+      'demand_feedback_not_pending',
+      409,
+      'Bu servis duyurusu için değerlendirme artık yapılamıyor.',
+    ],
+    [
       'vehicle_plate_conflict',
       409,
       'Bu plakayla kayıtlı bir aracınız zaten var.',

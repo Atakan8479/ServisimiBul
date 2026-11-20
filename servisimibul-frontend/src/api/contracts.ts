@@ -99,7 +99,8 @@ const localizedProblems: Record<string, string> = {
     'Yorum yapmak için e-postası doğrulanmış etkin bir hesap gerekir.',
   comment_role_forbidden:
     'Bu talebe yalnızca destek veren veliler ve işletmeciler yorum yapabilir.',
-  demand_feedback_not_pending: 'Bu servis duyurusunu zaten değerlendirdiniz.',
+  demand_feedback_not_pending:
+    'Bu servis duyurusu için değerlendirme artık yapılamıyor.',
   demand_feedback_stale:
     'Bu servis duyurusu güncel değil. Sayfayı yenileyip tekrar deneyin.',
   school_inactive: 'Bu okul şu anda kullanılamıyor.',
