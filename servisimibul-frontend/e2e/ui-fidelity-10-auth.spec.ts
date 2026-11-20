@@ -50,7 +50,7 @@ for (const viewport of viewports) {
         await expect(page.getByLabel('E-posta')).toBeVisible()
         await expect(
           page.getByRole('link', { name: 'Giriş sayfasına dön' }),
-        ).toHaveAttribute('href', '/parent/login')
+        ).toHaveAttribute('href', '/login')
       } else {
         await expect(page.getByLabel('Şifre yenileme kodu')).toHaveValue(
           'reset-token',
@@ -67,16 +67,16 @@ for (const viewport of viewports) {
   })
 }
 
-for (const role of ['parent', 'operator'] as const) {
-  test(`A07 returns a ${role} to the login that opened recovery`, async ({
+for (const entry of ['/login', '/parent/login', '/operator/login']) {
+  test(`A07 returns recovery from ${entry} to the shared login`, async ({
     page,
   }) => {
-    await page.goto(`/${role}/login`)
+    await page.goto(entry)
     await page.getByRole('link', { name: 'Şifremi unuttum' }).click()
-    await expect(page).toHaveURL(`/forgot-password?from=${role}`)
+    await expect(page).toHaveURL('/forgot-password')
 
     await page.getByRole('link', { name: 'Giriş sayfasına dön' }).click()
-    await expect(page).toHaveURL(`/${role}/login`)
+    await expect(page).toHaveURL('/login')
   })
 }
 
@@ -101,7 +101,7 @@ test('A07 posts the email and shows only the non-enumerating confirmation', asyn
   expect(body).toEqual({ email: 'kisi@example.test' })
   await expect(
     page.getByRole('link', { name: 'Giriş sayfasına dön' }),
-  ).toHaveAttribute('href', '/operator/login')
+  ).toHaveAttribute('href', '/login')
   await assertAccessibleAndContained(page)
   await capture(page, 'state-A07-success-mobile', 'mobile')
 })
@@ -156,7 +156,7 @@ test('A08 keeps the form and shows the backend rejection of a bad token', async 
   await capture(page, 'state-A08-invalid-token-mobile', 'mobile')
 })
 
-test('A08 posts the prefilled token and offers both login paths on success', async ({
+test('A08 posts the prefilled token and offers the shared login on success', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -184,13 +184,10 @@ test('A08 posts the prefilled token and offers both login paths on success', asy
     newPassword: 'yeni guvenli sifre',
   })
   const main = page.getByRole('main')
-  await expect(main.getByRole('link', { name: 'Veli girişi' })).toHaveAttribute(
+  await expect(main.getByRole('link', { name: 'Giriş yap' })).toHaveAttribute(
     'href',
-    '/parent/login',
+    '/login',
   )
-  await expect(
-    main.getByRole('link', { name: 'İşletmeci veya yönetici girişi' }),
-  ).toHaveAttribute('href', '/operator/login')
   await assertAccessibleAndContained(page)
   await capture(page, 'state-A08-success-desktop', 'desktop')
 })

@@ -30,14 +30,14 @@ for (const viewport of viewports) {
       await publicToggle.click()
       await expect(publicToggle).toHaveAttribute('aria-expanded', 'true')
       await expect(
-        publicNavigation.getByRole('link', { name: 'Veli girişi' }),
+        publicNavigation.getByRole('link', { name: 'Giriş Yap' }),
       ).toBeVisible()
       await expect(
-        publicNavigation.getByRole('link', { name: 'Veli kaydı' }),
+        publicNavigation.getByRole('link', { name: 'Kayıt Ol' }),
       ).toBeVisible()
       await expect(
-        publicNavigation.getByRole('link', { name: 'İşletmeci girişi' }),
-      ).toBeVisible()
+        publicNavigation.getByRole('link', { name: /girişi|kaydı/i }),
+      ).toHaveCount(0)
       await publicNavigation
         .getByRole('link', { name: 'Talep panosu', exact: true })
         .click()

@@ -464,11 +464,6 @@ a:focus-visible {
   color: var(--neutral-0);
 }
 
-.site-nav .site-nav-operator {
-  color: var(--neutral-500);
-  font-size: 0.875rem;
-}
-
 .site-nav a.active {
   background: var(--teal-100);
   color: var(--teal-700);

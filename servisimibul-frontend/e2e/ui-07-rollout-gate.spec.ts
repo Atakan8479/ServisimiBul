@@ -79,7 +79,7 @@ const publicScreens: Screen[] = [
   },
   { id: 'A01', path: '/register', heading: 'Nasıl katılmak istersiniz?' },
   { id: 'A02', path: '/parent/register', heading: 'Veli hesabı oluşturun' },
-  { id: 'A03', path: '/parent/login', heading: 'Yeniden hoş geldiniz.' },
+  { id: 'A03', path: '/parent/login', heading: 'Giriş yap' },
   {
     id: 'A04',
     path: '/operator/register',
@@ -88,7 +88,7 @@ const publicScreens: Screen[] = [
   {
     id: 'A05',
     path: '/operator/login',
-    heading: 'İşletmeci paneline giriş',
+    heading: 'Giriş yap',
   },
   {
     id: 'A06',

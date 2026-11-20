@@ -81,20 +81,6 @@
   line-height: 1.65;
 }
 
-.auth-completion-actions {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.auth-completion-actions .secondary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
-
 .signup-choice-card .form-stack {
   gap: 0.75rem;
 }
@@ -122,8 +108,7 @@
     font-size: clamp(2rem, 10vw, 2.6rem);
   }
 
-  .auth-password-actions,
-  .auth-completion-actions {
+  .auth-password-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -133,8 +118,7 @@
   }
 
   .auth-password-actions .text-button,
-  .auth-password-actions a,
-  .auth-completion-actions > * {
+  .auth-password-actions a {
     width: 100%;
     justify-content: flex-start;
   }

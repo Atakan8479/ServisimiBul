@@ -171,9 +171,7 @@ test('O02 remains protected from unauthenticated access', async ({ page }) => {
   await page.goto('/operator/profile')
 
   await expect(page).toHaveURL(/\/operator\/login/)
-  await expect(
-    page.getByRole('heading', { name: 'İşletmeci paneline giriş' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Giriş yap' })).toBeVisible()
 })
 
 function approvedProfileState() {
