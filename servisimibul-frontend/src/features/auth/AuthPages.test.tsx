@@ -93,7 +93,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText('Devam etmek için veli hesabınızla giriş yapın.'),
+      await screen.findByText('İşlem tamamlandı. Hesabınız varsa giriş yapın.'),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Giriş yap' }),
@@ -146,7 +146,7 @@ describe('parent account onboarding', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Veli hesabı oluştur' }))
 
     expect(
-      await screen.findByText(/Devam etmek için veli hesabınızla giriş yapın/),
+      await screen.findByText(/İşlem tamamlandı. Hesabınız varsa giriş yapın./),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'veli hesabı oluşturun' }),
@@ -716,40 +716,61 @@ describe('operator authentication screens', () => {
     })
   })
 
-  it('shows immediate login guidance when local email verification is disabled', async () => {
-    vi.stubEnv('VITE_EMAIL_VERIFICATION_REQUIRED', 'false')
-    server.use(
-      csrfHandler(),
-      http.post(
-        '/api/v1/auth/register',
-        () => new HttpResponse(null, { status: 202 }),
-      ),
-    )
+  it.each([
+    [
+      'true',
+      'E-postanızı kontrol edin',
+      'Doğrulama e-postası geldiyse bağlantıyı açın. Hesabınız zaten varsa giriş yapın.',
+    ],
+    ['false', 'İşlem tamamlandı', 'Hesabınız varsa giriş yapın.'],
+  ])(
+    'shows identical non-enumerating operator outcomes for new and existing emails (verification=%s)',
+    async (verification, heading, body) => {
+      vi.stubEnv('VITE_EMAIL_VERIFICATION_REQUIRED', verification)
+      server.use(
+        csrfHandler(),
+        http.post(
+          '/api/v1/auth/register',
+          () => new HttpResponse(null, { status: 202 }),
+        ),
+      )
 
-    renderRoute('/operator/register')
+      const outcomes: string[] = []
+      for (const email of ['new@example.com', 'existing@example.com']) {
+        const { unmount } = renderRoute('/operator/register')
+        fireEvent.change(await screen.findByLabelText('E-posta'), {
+          target: { value: email },
+        })
+        expect(screen.queryByText(/E-posta doğrulamanızı/) !== null).toBe(
+          verification === 'true',
+        )
+        fireEvent.change(screen.getByLabelText('Şifre'), {
+          target: { value: 'long password value' },
+        })
+        fireEvent.change(
+          screen.getByLabelText('Herkese açık iletişim telefonu'),
+          { target: { value: '0532 123 45 67' } },
+        )
+        fireEvent.click(
+          screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
+        )
 
-    await screen.findByLabelText('E-posta')
-    expect(screen.queryByText(/E-posta doğrulamanız/)).not.toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('E-posta'), {
-      target: { value: 'local-operator@example.com' },
-    })
-    fireEvent.change(screen.getByLabelText('Şifre'), {
-      target: { value: 'long password value' },
-    })
-    fireEvent.change(screen.getByLabelText('Herkese açık iletişim telefonu'), {
-      target: { value: '0532 123 45 67' },
-    })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'İşletmeci hesabı oluştur' }),
-    )
-
-    expect(
-      await screen.findByRole('heading', { name: 'Hesabınız hazır' }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.'),
-    ).toBeInTheDocument()
-  })
+        expect(
+          await screen.findByRole('heading', { name: heading }),
+        ).toBeInTheDocument()
+        expect(screen.getByRole('status')).toHaveTextContent(body)
+        expect(
+          screen.queryByText(/oluşturuldu|hazır|Kayıt tamamlandı/),
+        ).not.toBeInTheDocument()
+        expect(
+          screen.getByRole('link', { name: 'İşletmeci girişine git' }),
+        ).toHaveAttribute('href', '/operator/login')
+        outcomes.push(document.body.textContent ?? '')
+        unmount()
+      }
+      expect(outcomes[0]).toBe(outcomes[1])
+    },
+  )
 
   it('verifies the token supplied by the email link', async () => {
     let token: unknown

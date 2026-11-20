@@ -107,7 +107,7 @@ test('parent keeps an edited academic year through registration, login and refre
 
   await expect(page).toHaveURL(/\/parent\/login\?.*registered=parent/)
   await expect(
-    page.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
+    page.getByText(/İşlem tamamlandı. Hesabınız varsa giriş yapın./),
   ).toBeVisible()
 
   await page.getByLabel('E-posta').fill('parent@example.com')
