@@ -280,10 +280,7 @@ export function ParentSignupPage() {
   }
 
   return (
-    <AuthFrame
-      title="Veli hesabı oluşturun"
-      subtitle="Servis taleplerini takip etmek, desteklemek ve bildirimlerinizi yönetmek için hesabınızı oluşturun."
-    >
+    <AuthFrame title="Veli hesabı oluşturun">
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="E-posta"
@@ -375,7 +372,7 @@ export function VerifyEmailPage() {
   return (
     <AuthFrame
       title="E-posta adresinizi doğrulayın"
-      subtitle="E-postanızdaki bağlantı hesabınıza ait güvenli doğrulama bilgisini bu ekrana taşır."
+      subtitle="E-postanızdaki doğrulama bağlantısını açın."
     >
       {complete ? (
         <div className="auth-completion" role="status">
