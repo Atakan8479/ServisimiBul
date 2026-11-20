@@ -193,16 +193,6 @@
   line-height: 1.6;
 }
 
-.auth-experience-copy > small {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  color: var(--teal-100);
-  font-weight: 700;
-  line-height: 1.45;
-}
-
 .auth-experience-main {
   display: grid;
   min-width: 0;
@@ -307,8 +297,7 @@
   outline-offset: 1px;
 }
 
-.auth-security-note,
-.auth-privacy-note {
+.auth-security-note {
   margin: 0;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-small);
@@ -482,10 +471,6 @@
 .auth-back-link a {
   color: var(--teal-700);
   font-weight: 750;
-}
-
-.auth-privacy-note {
-  margin-top: 1.25rem;
 }
 
 .auth-context-link {

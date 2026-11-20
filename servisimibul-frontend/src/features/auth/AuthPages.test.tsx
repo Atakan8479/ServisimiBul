@@ -29,6 +29,19 @@ describe('parent account onboarding', () => {
     expect(
       screen.getByRole('link', { name: /İşletmeci olarak/ }),
     ).toHaveAttribute('href', '/operator/register')
+    expect(
+      screen.getByText(/Servis aramak için hesap oluşturmanız gerekmez/),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Veli hesabı yalnızca talep ve bildirim/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/Hesap gerektirmeyen keşif/),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Servis aramaya dön' }),
+    ).toHaveAttribute('href', '/')
+    expect(screen.queryByText('Anonim aramaya dön')).not.toBeInTheDocument()
   })
 
   it('links parent registration to the public legal routes', async () => {
@@ -39,6 +52,14 @@ describe('parent account onboarding', () => {
     expect(
       screen.getByRole('link', { name: 'Kullanım koşulları' }),
     ).toHaveAttribute('href', '/terms')
+    expect(
+      await screen.findByText(
+        /Veli hesabı servis aramak için zorunlu değildir/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/Servis taleplerini takip etmek/),
+    ).not.toBeInTheDocument()
   })
 
   it('links operator registration to the public legal routes', async () => {
@@ -783,6 +804,9 @@ describe('operator authentication screens', () => {
     )
 
     renderRoute('/operator/verify-email?token=email-token')
+    expect(
+      await screen.findByText('E-postanızdaki doğrulama bağlantısını açın.'),
+    ).toBeInTheDocument()
     fireEvent.click(
       await screen.findByRole('button', {
         name: 'E-posta adresini doğrula',

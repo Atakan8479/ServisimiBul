@@ -61,10 +61,6 @@ export function SignupChoicePage() {
           </Link>
         </div>
       </div>
-      <p className="auth-privacy-note">
-        Veli hesabı yalnızca talep ve bildirim işlemleri içindir. Okul servisi
-        araması herkese açıktır.
-      </p>
     </AuthFrame>
   )
 }
