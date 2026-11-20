@@ -637,19 +637,18 @@ export function LoginPage() {
       }
       if (user.role === 'ADMIN') {
         const next = searchParams.get('next')
-        void navigate(next?.startsWith('/admin/') ? next : '/admin', {
+        void navigate(isCanonicalPathUnder(next, '/admin') ? next : '/admin', {
           replace: true,
           viewTransition: typeof document.startViewTransition === 'function',
         })
         return
       }
       const next = searchParams.get('next')
-      const destination =
-        next === '/operator' || next?.startsWith('/operator/')
+      const destination = isCanonicalPathUnder(next, '/operator')
+        ? next
+        : isDemandResponsePath(next)
           ? next
-          : isDemandResponsePath(next)
-            ? next
-            : '/operator'
+          : '/operator'
       void navigate(destination, {
         replace: true,
         viewTransition: typeof document.startViewTransition === 'function',
@@ -782,7 +781,7 @@ function parentDestination(path: string | null): string {
   if (path === '/notifications' || path?.startsWith('/notifications?')) {
     return path
   }
-  if (!isDemandPath(path)) return '/demands'
+  if (!isCanonicalPathUnder(path, '/demands')) return '/demands'
 
   try {
     const url = new URL(path, window.location.origin)
@@ -796,8 +795,30 @@ function parentDestination(path: string | null): string {
   }
 }
 
+// Only a same-origin path that is already canonical can pass the prefix check,
+// so `..`, `%2e%2e`, `..%2F`, backslashes and `//host` never escape `root`.
+function isCanonicalPathUnder(
+  path: string | null,
+  root: string,
+): path is string {
+  if (!path?.startsWith('/')) return false
+  try {
+    const url = new URL(path, window.location.origin)
+    const decoded = decodeURIComponent(url.pathname)
+    return (
+      url.origin === window.location.origin &&
+      url.pathname === path.split(/[?#]/, 1)[0] &&
+      !decoded.includes('\\') &&
+      !decoded.split('/').includes('..') &&
+      (url.pathname === root || url.pathname.startsWith(`${root}/`))
+    )
+  } catch {
+    return false
+  }
+}
+
 function isDemandResponsePath(path: string | null): path is string {
-  if (!isDemandPath(path)) return false
+  if (!isCanonicalPathUnder(path, '/demands')) return false
   const url = new URL(path, window.location.origin)
   return url.searchParams.get('action') === 'response'
 }
