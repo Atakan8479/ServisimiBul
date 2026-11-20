@@ -101,19 +101,15 @@ export function RegisterPage() {
         title={
           emailVerificationRequired
             ? 'E-postanızı kontrol edin'
-            : 'Hesabınız hazır'
-        }
-        subtitle={
-          emailVerificationRequired
-            ? 'Doğrulama bağlantısı gönderildiyse hesabınızı etkinleştirmek için bağlantıyı açın.'
-            : 'İşletmeci hesabınız oluşturuldu; şimdi güvenli oturum açabilirsiniz.'
+            : 'İşlem tamamlandı'
         }
       >
+        {/* Duplicate emails get the same 202 response; never confirm an account exists. */}
         <div className="auth-completion" role="status">
           <p>
             {emailVerificationRequired
-              ? 'Hesap varsa doğrulama bağlantısı gönderildi. Bağlantıyı açtıktan sonra giriş yapabilirsiniz.'
-              : 'Kayıt tamamlandı. Şimdi giriş yapabilirsiniz.'}
+              ? 'Doğrulama e-postası geldiyse bağlantıyı açın. Hesabınız zaten varsa giriş yapın.'
+              : 'Hesabınız varsa giriş yapın.'}
           </p>
           <Link className="button-link" to="/operator/login" viewTransition>
             İşletmeci girişine git
@@ -666,7 +662,7 @@ export function LoginPage() {
     <>
       {searchParams.get('registered') === 'parent' && (
         <div className="status-banner success" role="status">
-          Devam etmek için veli hesabınızla giriş yapın.
+          İşlem tamamlandı. Hesabınız varsa giriş yapın.
         </div>
       )}
       {searchParams.get('reason') === 'session' && (
