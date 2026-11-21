@@ -144,6 +144,15 @@ export function DemandComments({
         setActionError('Yorum yazmak için önce bu talebe destek verin.')
         return
       }
+      // Same gate the server applies; avoids a form that can only fail with 403.
+      if (
+        user.role === 'OPERATOR' &&
+        user.operatorApprovalRequired &&
+        user.approvalStatus !== 'APPROVED'
+      ) {
+        setActionError('Bu işlem için yönetici onayı gerekir.')
+        return
+      }
       if (formOwnerKey !== ownerKey) setBody('')
       setFormOwnerKey(ownerKey)
       window.requestAnimationFrame(() => commentBodyRef.current?.focus())

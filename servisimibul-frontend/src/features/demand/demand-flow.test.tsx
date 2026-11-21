@@ -1470,6 +1470,51 @@ describe('demand comments', () => {
       expect(screen.getByRole('button', { name: 'Yorum yaz' })).toHaveFocus(),
     )
   })
+
+  it.each([
+    [true, 'PENDING', false],
+    [true, 'DRAFT', false],
+    [true, 'CHANGES_REQUESTED', false],
+    [false, 'DRAFT', true],
+  ] as const)(
+    'with approvalRequired=%s an operator in %s gets the comment form: %s',
+    async (approvalRequired, approvalStatus, formOpens) => {
+      let commentPosts = 0
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          HttpResponse.json({
+            ...operatorUser(),
+            operatorApprovalRequired: approvalRequired,
+            approvalStatus,
+          }),
+        ),
+        http.get(`/api/v1/demands/${demandId}`, () =>
+          HttpResponse.json(demand()),
+        ),
+        http.get(`/api/v1/demands/${demandId}/comments`, () =>
+          HttpResponse.json(commentPage([comment({ body: 'Herkese açık' })])),
+        ),
+        http.post(`/api/v1/demands/${demandId}/comments`, () => {
+          commentPosts += 1
+          return new HttpResponse(null, { status: 500 })
+        }),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      expect(await screen.findByText('Herkese açık')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Yorum yaz' }))
+
+      if (formOpens) {
+        expect(await screen.findByLabelText('Yorumunuz')).toBeInTheDocument()
+      } else {
+        expect(
+          await screen.findByText('Bu işlem için yönetici onayı gerekir.'),
+        ).toHaveAttribute('role', 'alert')
+        expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+      }
+      expect(commentPosts).toBe(0)
+    },
+  )
 })
 
 describe('demand-specific operator service responses', () => {
