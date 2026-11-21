@@ -238,7 +238,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         const emptyState = parent.locator('.demand-empty-state')
         await expect(emptyState).toBeVisible()
         await emptyState.getByRole('link', { name: createLink }).click()
-        await expectCreatePage(parent, newSchoolId, newSchoolName)
+        await expectCreatePage(parent, newSchoolId, newSchoolName, academicYear)
         await parent.goBack()
         await expect(parent).toHaveURL(/\/demands\?/)
         await expect(
@@ -254,7 +254,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         .locator('.demand-empty-state')
         .getByRole('link', { name: createLink })
         .click()
-      await expectCreatePage(guest, newSchoolId, newSchoolName)
+      await expectCreatePage(guest, newSchoolId, newSchoolName, academicYear)
       await review(guest)
       await expect(guest).toHaveURL(/\/parent\/login\?next=/)
       await guest.getByLabel('E-posta').fill(parentEmail)
@@ -455,6 +455,7 @@ async function expectCreatePage(
   page: Page,
   schoolId: string,
   schoolName: string,
+  expectedYear?: string,
 ) {
   await expect(page).toHaveURL(/\/demands\/new\?/)
   await expect(page.getByRole('heading', { name: createHeading })).toBeVisible()
@@ -466,6 +467,10 @@ async function expectCreatePage(
   await expect(page.getByLabel('Servis alınacak mahalle')).toHaveValue(
     String(neighborhoodId),
   )
+  if (expectedYear !== undefined) {
+    expect(params.get('academicYear')).toBe(expectedYear)
+    await expect(page.getByLabel('Eğitim yılı')).toHaveValue(expectedYear)
+  }
 }
 
 async function review(page: Page) {
