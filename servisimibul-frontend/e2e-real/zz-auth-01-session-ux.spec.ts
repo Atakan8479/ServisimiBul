@@ -84,7 +84,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
   }
 
   await test.step('guest header is accessible at every width', async () => {
-    const context = await browser.newContext()
+    const context = await browser.newContext(stillMotion)
     const page = await context.newPage()
     try {
       await page.goto('/')
@@ -109,7 +109,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
   for (const role of ['PARENT', 'OPERATOR', 'ADMIN'] as const) {
     await test.step(`${role}: role header, 204 logout and same-tab re-login`, async () => {
       const spec = roles[role]
-      const context = await browser.newContext()
+      const context = await browser.newContext(stillMotion)
       const page = await context.newPage()
       try {
         await uiLogin(page, spec.email(), spec.password())
@@ -428,6 +428,10 @@ async function closeMenu(page: Page) {
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   }
 }
+
+// Axe samples computed colours; a nav link mid-transition reports blended,
+// never-final colours. The app's reduced-motion rule makes transitions 0 ms.
+const stillMotion = { reducedMotion: 'reduce' } as const
 
 async function assertLayout(page: Page) {
   expect(

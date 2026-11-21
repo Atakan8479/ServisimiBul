@@ -451,14 +451,20 @@ export function RouteAccessibility() {
     if (focusNewHeading()) return
 
     const observer = new MutationObserver(() => {
-      if (focusNewHeading()) observer.disconnect()
+      if (focusNewHeading()) stopWaiting()
     })
-    observer.observe(document.body, { childList: true, subtree: true })
-    const timeout = window.setTimeout(() => observer.disconnect(), 2_000)
-    return () => {
+    // A late heading must not take focus from a user who already acted.
+    const stopWaiting = () => {
       observer.disconnect()
       window.clearTimeout(timeout)
+      document.removeEventListener('pointerdown', stopWaiting, true)
+      document.removeEventListener('keydown', stopWaiting, true)
     }
+    observer.observe(document.body, { childList: true, subtree: true })
+    const timeout = window.setTimeout(stopWaiting, 2_000)
+    document.addEventListener('pointerdown', stopWaiting, true)
+    document.addEventListener('keydown', stopWaiting, true)
+    return stopWaiting
   }, [location.pathname, navigation.state, pageTitle])
 
   return <Outlet />

@@ -1,4 +1,5 @@
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -1469,6 +1470,124 @@ describe('demand comments', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Yorum yaz' })).toHaveFocus(),
     )
+  })
+
+  it.each([
+    [true, 'PENDING', false],
+    [true, 'DRAFT', false],
+    [true, 'CHANGES_REQUESTED', false],
+    [true, 'APPROVED', true],
+    [false, 'DRAFT', true],
+  ] as const)(
+    'with approvalRequired=%s an operator in %s gets a comment button: %s',
+    async (approvalRequired, approvalStatus, canComment) => {
+      let commentPosts = 0
+      server.use(
+        http.get('/api/v1/auth/me', () =>
+          HttpResponse.json({
+            ...operatorUser(),
+            operatorApprovalRequired: approvalRequired,
+            approvalStatus,
+          }),
+        ),
+        http.get(`/api/v1/demands/${demandId}`, () =>
+          HttpResponse.json(demand()),
+        ),
+        http.get(`/api/v1/demands/${demandId}/comments`, () =>
+          HttpResponse.json(commentPage([comment({ body: 'Herkese açık' })])),
+        ),
+        http.post(`/api/v1/demands/${demandId}/comments`, () => {
+          commentPosts += 1
+          return new HttpResponse(null, { status: 500 })
+        }),
+      )
+
+      renderRoute(`/demands/${demandId}`)
+      expect(await screen.findByText('Herkese açık')).toBeInTheDocument()
+
+      if (canComment) {
+        fireEvent.click(
+          await screen.findByRole('button', { name: 'Yorum yaz' }),
+        )
+        expect(await screen.findByLabelText('Yorumunuz')).toBeInTheDocument()
+        expect(
+          screen.queryByText(/işletme başvurunuzun yönetici tarafından/),
+        ).not.toBeInTheDocument()
+      } else {
+        expect(
+          await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
+        ).toBeInTheDocument()
+        expect(
+          screen.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),
+        ).toHaveAttribute('href', '/operator/profile')
+        expect(
+          screen.queryByRole('button', { name: 'Yorum yaz' }),
+        ).not.toBeInTheDocument()
+        expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+      }
+      expect(commentPosts).toBe(0)
+    },
+  )
+
+  it('moves keyboard focus to approval guidance when approval lapses before the click', async () => {
+    let approvalStatus: 'APPROVED' | 'CHANGES_REQUESTED' = 'APPROVED'
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ ...operatorUser(), approvalStatus }),
+      ),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    const button = await screen.findByRole('button', { name: 'Yorum yaz' })
+    approvalStatus = 'CHANGES_REQUESTED'
+    button.focus()
+    fireEvent.keyDown(button, { key: 'Enter' })
+    fireEvent.click(button)
+
+    const note = await screen.findByText(
+      /işletme başvurunuzun yönetici tarafından/,
+    )
+    await waitFor(() => expect(note).toHaveFocus())
+    expect(
+      screen.queryByRole('button', { name: 'Yorum yaz' }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
+  })
+
+  it('re-checks approval when the signed-in operator changes', async () => {
+    let me = {
+      ...operatorUser(),
+      approvalStatus: 'PENDING' as 'PENDING' | 'APPROVED',
+    }
+    server.use(
+      http.get('/api/v1/auth/me', () => HttpResponse.json(me)),
+      http.get(`/api/v1/demands/${demandId}`, () =>
+        HttpResponse.json(demand()),
+      ),
+    )
+
+    renderRoute(`/demands/${demandId}`)
+    expect(
+      await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
+    ).toBeInTheDocument()
+
+    me = {
+      ...operatorUser('0f4c34c9-7c62-4d8f-9a0b-0b4b8f1f2a11'),
+      approvalStatus: 'APPROVED',
+    }
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+
+    expect(
+      await screen.findByRole('button', { name: 'Yorum yaz' }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(/işletme başvurunuzun yönetici tarafından/),
+    ).not.toBeInTheDocument()
   })
 })
 

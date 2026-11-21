@@ -1,5 +1,19 @@
 # Progress ledger (update only after verification)
 
+## ROLE-UX acceptance verification — 2026-11-21 (issue #272; consolidates #278/#279/#281)
+
+- PR #296 implemented the role-aware UI. The new `e2e-real/zz-role-01-role-ux.spec.ts` runs on disposable PostgreSQL 17 with synthetic users and covers:
+  - **Guest.** Reads the demand and comments and sees only sign-in routes. Support, comment and report writes return `401`.
+  - **Parent without support.** Can join; sees no publish CTA and no comment form; commenting returns `403`.
+  - **Supporting parent.** Can edit or withdraw support and comment.
+  - **Approved operator.** Sees the publish CTA, comment and report controls, but no support controls; support returns `403`.
+  - **Pending and draft operators.** `/operator/schools` and `/operator/offerings` redirect to `/operator/profile`, and the resource API returns `403`.
+  - **Admin.** Reads everything with no authoring or report controls; comment and report writes return `403`.
+- **Defect found and fixed.** An operator still waiting for approval (draft, pending or changes requested) saw "Yorum yaz", and the form could only fail with `403 operator_approval_required`. `DemandComments` now asks `/auth/me` once per session key and, when approval is required and missing, shows approval guidance with a link to `/operator/profile` instead of the button. Approved and approval-exempt operators keep the button. If approval lapses before a click, the click re-checks and moves focus to the guidance. Backend authorization is unchanged.
+- **Focus race fixed.** `RouteAccessibility` still focuses a late page heading after real route changes, but stops waiting once the user presses a pointer or key, so the comment field keeps focus.
+- **Approval-exempt mode.** Covered by the backend `*ApprovalDisabled*` integration tests and the router unit tests, because the real-stack job pins `OPERATOR_APPROVAL_REQUIRED=true`.
+- **Results.** ESLint, `tsc -b` and build pass; Vitest 416 tests (new cases fail without the fixes); real stack 4/4. No backend, migration, Supabase, credential or production change.
+
 ## AUTH-SESSION-UX acceptance verification — 2026-11-21 (issue #273; test-only)
 
 - PR #288 implemented the behaviour. Unit, router, redirect-guard and mocked browser coverage already existed; the remaining gap was real full-stack coverage of the public header. New `e2e-real/zz-auth-01-session-ux.spec.ts` runs on disposable PostgreSQL 17 with synthetic users. It covers: guest, parent, operator and admin header links, with axe and overflow checks at 1440/768/390/320 px; `204` logout followed by two same-tab re-logins without a stale busy state; network and `503` logout failures that keep the session and allow a retry; expired sessions redirecting to each role's login with `reason=session`; cross-tab login, logout and account switch without a reload; a parent blocked from admin and operator workspaces (API `403`); and crafted `next=` values that cannot leave `/demands`. The new spec found no implementation defect, so no app code changed. Real stack: 3/3 specs passed. No backend, migration, Supabase, credential or production change.
