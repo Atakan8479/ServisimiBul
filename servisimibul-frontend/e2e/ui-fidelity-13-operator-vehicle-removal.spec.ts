@@ -208,7 +208,7 @@ test('an unexpected server failure keeps the vehicle and its delete action', asy
     .click()
 
   await expect(page.getByRole('alert')).toContainText(
-    'Araç şu anda silinemedi.',
+    'İşlem tamamlanamadı. Tekrar deneyin.',
   )
   await expect(page.getByRole('dialog', { name: dialogName })).toBeHidden()
   await expect(
