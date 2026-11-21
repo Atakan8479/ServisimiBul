@@ -782,7 +782,7 @@ describe('reporting and moderation flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Kararı kaydet' }))
 
     expect(
-      await screen.findByText('Kayıt başka bir yönetici tarafından kapatıldı.'),
+      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
     ).toBeInTheDocument()
     expect(
       await screen.findByText('Başka yönetici reddetti.'),

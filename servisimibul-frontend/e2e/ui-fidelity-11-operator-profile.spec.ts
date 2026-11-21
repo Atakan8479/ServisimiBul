@@ -111,7 +111,9 @@ test('O02 does not present a rejected visibility update as saved', async ({
   await visibility.click()
   await page.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
 
-  await expect(page.getByText('Profil şu anda kaydedilemiyor.')).toBeVisible()
+  await expect(
+    page.getByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+  ).toBeVisible()
   await expect(visibility).toBeChecked()
   await expect(page.getByText('Profil bilgileriniz kaydedildi.')).toHaveCount(0)
 })
@@ -169,9 +171,7 @@ test('O02 remains protected from unauthenticated access', async ({ page }) => {
   await page.goto('/operator/profile')
 
   await expect(page).toHaveURL(/\/operator\/login/)
-  await expect(
-    page.getByRole('heading', { name: 'İşletmeci paneline giriş' }),
-  ).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Giriş yap' })).toBeVisible()
 })
 
 function approvedProfileState() {

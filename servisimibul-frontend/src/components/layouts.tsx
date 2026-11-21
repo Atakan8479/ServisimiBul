@@ -70,8 +70,8 @@ const footerLinkGroups = [
     id: 'footer-group-account',
     label: 'Hesap',
     links: [
-      { to: '/parent/register', label: 'Veli kaydı' },
-      { to: '/operator/register', label: 'İşletmeci kaydı' },
+      { to: '/login', label: 'Giriş Yap' },
+      { to: '/register', label: 'Kayıt Ol' },
     ],
   },
   {
@@ -324,33 +324,15 @@ export function PublicLayout() {
               </>
             ) : (
               <>
-                <NavLink
-                  className="site-nav-login"
-                  to="/parent/login"
-                  viewTransition
-                >
-                  Veli girişi
+                <NavLink className="site-nav-login" to="/login" viewTransition>
+                  Giriş Yap
                 </NavLink>
                 <NavLink
                   className="site-nav-primary"
-                  to="/parent/register"
+                  to="/register"
                   viewTransition
                 >
-                  Veli kaydı
-                </NavLink>
-                <NavLink
-                  className="site-nav-operator"
-                  to="/operator/login"
-                  viewTransition
-                >
-                  İşletmeci girişi
-                </NavLink>
-                <NavLink
-                  className="site-nav-operator"
-                  to="/operator/register"
-                  viewTransition
-                >
-                  İşletmeci kaydı
+                  Kayıt Ol
                 </NavLink>
               </>
             )}

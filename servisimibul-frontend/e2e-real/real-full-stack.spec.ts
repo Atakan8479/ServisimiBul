@@ -140,7 +140,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('button', { name: 'İşletmeci hesabı oluştur' })
         .click()
       await expect(
-        operatorPage.getByRole('heading', { name: 'Hesabınız hazır' }),
+        operatorPage.getByRole('heading', { name: 'İşlem tamamlandı' }),
       ).toBeVisible()
     })
 
@@ -167,7 +167,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect((await registration).status()).toBe(202)
       await expect(parentPage).toHaveURL(/\/parent\/login\?.*registered=parent/)
       await expect(
-        parentPage.getByText(/Devam etmek için veli hesabınızla giriş yapın/),
+        parentPage.getByText(/İşlem tamamlandı. Hesabınız varsa giriş yapın./),
       ).toBeVisible()
 
       await parentPage.getByLabel('E-posta').fill(parentEmail)
@@ -1863,7 +1863,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(menu).toBeFocused()
         await mobilePage.keyboard.press('Enter')
         await expect(
-          mobilePage.getByRole('link', { name: 'Veli girişi' }),
+          mobilePage
+            .locator('#public-navigation')
+            .getByRole('link', { name: 'Giriş Yap' }),
         ).toBeVisible()
         await expect(mobilePage.locator('#public-navigation')).toHaveCSS(
           'opacity',

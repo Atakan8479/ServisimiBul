@@ -252,7 +252,7 @@ describe('application routes', () => {
 
     expect(
       await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
+        name: 'Giriş yap',
       }),
     ).toBeInTheDocument()
     expect(
@@ -392,23 +392,24 @@ describe('application routes', () => {
         screen.getByRole('navigation', { name: 'Ana menü' }),
       )
       expect(
-        await primaryNavigation.findByRole('link', { name: 'Veli kaydı' }),
-      ).toHaveAttribute('href', '/parent/register')
+        await primaryNavigation.findByRole('link', { name: 'Giriş Yap' }),
+      ).toHaveAttribute('href', '/login')
       expect(
-        primaryNavigation.getByRole('link', { name: 'İşletmeci girişi' }),
-      ).toHaveAttribute('href', '/operator/login')
+        primaryNavigation.getByRole('link', { name: 'Kayıt Ol' }),
+      ).toHaveAttribute('href', '/register')
+      // #276: exactly two guest entry points, no role-specific auth links.
       expect(
-        primaryNavigation.getByRole('link', { name: 'İşletmeci kaydı' }),
-      ).toHaveAttribute('href', '/operator/register')
+        primaryNavigation.queryByRole('link', { name: /girişi|kaydı/i }),
+      ).not.toBeInTheDocument()
       fireEvent.click(
-        primaryNavigation.getByRole('link', { name: 'Veli girişi' }),
+        primaryNavigation.getByRole('link', { name: 'Giriş Yap' }),
       )
 
       const loginHeading = await screen.findByRole('heading', {
-        name: 'Yeniden hoş geldiniz.',
+        name: 'Giriş yap',
       })
       await waitFor(() => expect(loginHeading).toHaveFocus())
-      expect(document.title).toBe('Veli girişi | ServisimiBul')
+      expect(document.title).toBe('Giriş | ServisimiBul')
       expect(startViewTransition).toHaveBeenCalledOnce()
     } finally {
       Reflect.deleteProperty(document, 'startViewTransition')

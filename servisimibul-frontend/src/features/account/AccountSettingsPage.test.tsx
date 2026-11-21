@@ -116,7 +116,7 @@ describe('account settings', () => {
     fireEvent.click(toggle)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Hesap bilgileri şu anda yüklenemiyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(toggle).toBeChecked()
   })
@@ -162,7 +162,7 @@ describe('account settings', () => {
     const router = renderRoute('/parent/account')
 
     expect(
-      await screen.findByRole('heading', { name: 'Yeniden hoş geldiniz.' }),
+      await screen.findByRole('heading', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(router.state.location.pathname).toBe('/parent/login')
     expect(router.state.location.search).toContain('next=%2Fparent%2Faccount')
@@ -769,7 +769,7 @@ describe('sign out of all devices', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Hesap bilgileri şu anda yüklenemiyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(router.state.location.pathname).toBe('/parent/account')
     expect(knownAuthRole()).toBe('PARENT')
@@ -982,7 +982,7 @@ describe('voluntary account deactivation', () => {
     )
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Hesap bilgileri şu anda yüklenemiyor.',
+      'İşlem tamamlanamadı. Tekrar deneyin.',
     )
     expect(router.state.location.pathname).toBe('/parent/account')
     expect(knownAuthRole()).toBe('PARENT')

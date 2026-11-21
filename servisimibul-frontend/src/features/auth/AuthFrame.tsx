@@ -25,7 +25,6 @@ export function AuthFrame({
             Aramanızı okul ve mahalle kapsamına göre yapın; hizmeti işletmeciyle
             doğrudan teyit edin.
           </span>
-          <small>Hesap gerektirmeyen keşif · Doğrudan iletişim</small>
         </div>
       </aside>
 
@@ -46,7 +45,7 @@ export function AuthFrame({
                 Kullanım koşulları
               </Link>
               <Link to="/" viewTransition>
-                Anonim aramaya dön
+                Servis aramaya dön
               </Link>
             </span>
           </footer>

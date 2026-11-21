@@ -17,7 +17,7 @@ const routes = [
   {
     id: 'A05',
     path: '/operator/login',
-    heading: 'İşletmeci paneline giriş',
+    heading: 'Giriş yap',
   },
   {
     id: 'A06',
@@ -69,7 +69,7 @@ for (const viewport of viewports) {
         await expect(page.getByLabel('Beni hatırla')).toBeVisible()
         await expect(
           page.getByRole('link', { name: 'Şifremi unuttum' }),
-        ).toHaveAttribute('href', '/forgot-password?from=operator')
+        ).toHaveAttribute('href', '/forgot-password')
       } else {
         await expect(page.getByLabel('Doğrulama kodu')).toHaveValue(
           'email-token',

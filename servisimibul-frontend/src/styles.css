@@ -464,11 +464,6 @@ a:focus-visible {
   color: var(--neutral-0);
 }
 
-.site-nav .site-nav-operator {
-  color: var(--neutral-500);
-  font-size: 0.875rem;
-}
-
 .site-nav a.active {
   background: var(--teal-100);
   color: var(--teal-700);
@@ -4586,6 +4581,17 @@ button.button-link {
   padding: 1rem;
   border-radius: var(--radius-small);
   background: color-mix(in srgb, var(--color-warning) 9%, white);
+}
+
+.demand-service-action-error {
+  width: min(100%, 42rem);
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.demand-service-action-error:focus {
+  outline: 3px solid color-mix(in srgb, var(--color-focus) 32%, transparent);
+  outline-offset: 2px;
 }
 
 .demand-service-guidance ul {

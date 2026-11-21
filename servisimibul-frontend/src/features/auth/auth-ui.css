@@ -81,20 +81,6 @@
   line-height: 1.65;
 }
 
-.auth-completion-actions {
-  display: flex;
-  align-items: stretch;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.auth-completion-actions .secondary-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-}
-
 .signup-choice-card .form-stack {
   gap: 0.75rem;
 }
@@ -122,8 +108,7 @@
     font-size: clamp(2rem, 10vw, 2.6rem);
   }
 
-  .auth-password-actions,
-  .auth-completion-actions {
+  .auth-password-actions {
     align-items: stretch;
     flex-direction: column;
   }
@@ -133,8 +118,7 @@
   }
 
   .auth-password-actions .text-button,
-  .auth-password-actions a,
-  .auth-completion-actions > * {
+  .auth-password-actions a {
     width: 100%;
     justify-content: flex-start;
   }
@@ -207,16 +191,6 @@
   color: rgba(255, 255, 255, 0.86);
   font-size: 1.05rem;
   line-height: 1.6;
-}
-
-.auth-experience-copy > small {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-  color: var(--teal-100);
-  font-weight: 700;
-  line-height: 1.45;
 }
 
 .auth-experience-main {
@@ -323,8 +297,7 @@
   outline-offset: 1px;
 }
 
-.auth-security-note,
-.auth-privacy-note {
+.auth-security-note {
   margin: 0;
   padding: 0.85rem 1rem;
   border-radius: var(--radius-small);
@@ -498,10 +471,6 @@
 .auth-back-link a {
   color: var(--teal-700);
   font-weight: 750;
-}
-
-.auth-privacy-note {
-  margin-top: 1.25rem;
 }
 
 .auth-context-link {
