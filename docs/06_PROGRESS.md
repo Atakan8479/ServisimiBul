@@ -1,5 +1,19 @@
 # Progress ledger (update only after verification)
 
+## DEMAND-UX acceptance verification — 2026-11-21 (issue #270; consolidates #271/#274/#284/#285; test-only)
+
+- PR #289 implemented the journey. The new `e2e-real/zz-demand-01-demand-ux.spec.ts` runs on disposable PostgreSQL 17 with synthetic users and found no application defect. It covers:
+  - **Authorization.** The backend returns `401` for guest demand POSTs and `403` for operators and admins. In the UI, operators and admins stop before the confirmation step.
+  - **Tabs and counts.** All four tabs match backend counts and labels, and every tab, empty or populated, keeps creation reachable. School, pickup district, neighborhood and academic year survive into `/demands/new` and back navigation.
+  - **Guest sign-in.** A guest signs in and returns to the prefilled draft, which then creates a demand (`201`).
+  - **Deduplication.** An existing open demand returns `200` and opens its detail page, with no duplicate.
+  - **Public search.** A zero-result search leads to a prefilled create page.
+  - **Discovery failure.** A failed operator lookup (the only intercepted request) shows a retryable error, never a zero result, and keeps creation available. The retry gets the genuine backend answer.
+  - **Tampered links.** Unknown school, mismatched district and malformed IDs fail safely.
+  - **Layout and keyboard.** No horizontal overflow and no axe violations at 1440, 768, 390 and 320 px; keyboard activation of the create shortcut works.
+- **Limitation.** Populated Fulfilled and Closed lists stay covered by mocked Playwright and Vitest only; the real spec sees them empty for its own schools.
+- **Results.** ESLint, `tsc -b` and build pass; Vitest 416 tests (known load-related timeouts in unrelated tests); real stack 5/5, twice.
+
 ## ROLE-UX acceptance verification — 2026-11-21 (issue #272; consolidates #278/#279/#281)
 
 - PR #296 implemented the role-aware UI. The new `e2e-real/zz-role-01-role-ux.spec.ts` runs on disposable PostgreSQL 17 with synthetic users and covers:
