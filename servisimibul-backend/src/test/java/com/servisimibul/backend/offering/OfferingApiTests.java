@@ -16,12 +16,15 @@ import com.servisimibul.backend.operatorschool.OperatorSchool;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverage;
 import com.servisimibul.backend.operatorschool.OperatorSchoolCoverageRepository;
 import com.servisimibul.backend.operatorschool.OperatorSchoolRepository;
+import com.jayway.jsonpath.JsonPath;
 import com.servisimibul.backend.security.AuthenticatedUser;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,8 +32,10 @@ import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -468,6 +473,256 @@ class OfferingApiTests {
                 .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/v1/operator/vehicles"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void ownerCanPermanentlyDeleteUnreferencedVehicleOnce() throws Exception {
+        Fixture fixture = createFixture("delete-free@example.com", "Delete Free", "34FFF006");
+        fixture.vehicle().deactivate();
+        vehicleRepository.saveAndFlush(fixture.vehicle());
+
+        mockMvc.perform(get("/api/v1/operator/vehicles").with(asOperator(fixture.user())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].deletable").value(true))
+                .andExpect(jsonPath("$[0].deletionBlockedReason").isEmpty());
+
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", fixture.vehicle().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+
+        entityManager.clear();
+        assertThat(vehicleRepository.findById(fixture.vehicle().getId())).isEmpty();
+
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", fixture.vehicle().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("vehicle_not_found"));
+    }
+
+    @Test
+    void vehicleReferencedByAnyOfferingCannotBeDeleted() throws Exception {
+        Fixture fixture = createFixture("delete-used@example.com", "Delete Used", "34GGG007");
+        ServiceOffering draft = offeringRepository.saveAndFlush(new ServiceOffering(
+                fixture.operatorSchool(),
+                fixture.vehicle(),
+                null,
+                null
+        ));
+        entityManager.clear();
+
+        mockMvc.perform(get("/api/v1/operator/vehicles/{id}", fixture.vehicle().getId())
+                        .with(asOperator(fixture.user())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletable").value(false))
+                .andExpect(jsonPath("$.deletionBlockedReason").value("IN_USE"));
+
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", fixture.vehicle().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("vehicle_in_use"));
+
+        entityManager.clear();
+        assertThat(vehicleRepository.findById(fixture.vehicle().getId())).isPresent();
+        assertThat(offeringRepository.findById(draft.getId())).isPresent();
+    }
+
+    @Test
+    void reassignedOfferingLeavesPreviousVehiclePermanentlyUndeletable() throws Exception {
+        Fixture fixture = createFixture("delete-moved@example.com", "Delete Moved", "34KKK010");
+        OperatorProfile profile = profileRepository.findByUserId(fixture.user().getId()).orElseThrow();
+        Vehicle replacement = vehicleRepository.saveAndFlush(new Vehicle(profile, "34KKK011", 12));
+        String created = mockMvc.perform(post("/api/v1/operator/offerings")
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"operatorSchoolId\":\"" + fixture.operatorSchool().getId()
+                                + "\",\"vehicleId\":\"" + fixture.vehicle().getId() + "\"}"))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        String offeringId = JsonPath.read(created, "$.id");
+
+        mockMvc.perform(patch("/api/v1/operator/offerings/{id}", offeringId)
+                        .with(asOperator(fixture.user()))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"vehicleId\":\"" + replacement.getId() + "\"}"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/operator/vehicles").with(asOperator(fixture.user())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].plate").value("34KKK010"))
+                .andExpect(jsonPath("$[0].deletable").value(false))
+                .andExpect(jsonPath("$[0].deletionBlockedReason").value("PREVIOUSLY_USED"))
+                .andExpect(jsonPath("$[1].deletionBlockedReason").value("IN_USE"));
+        expectDeleteConflict(fixture, fixture.vehicle(), "vehicle_previously_used");
+    }
+
+    @Test
+    void deletingSchoolRelationshipDoesNotEraseVehicleUsage() throws Exception {
+        Fixture fixture = createFixture("delete-school@example.com", "Delete School", "34LLL012");
+        offeringRepository.saveAndFlush(new ServiceOffering(
+                fixture.operatorSchool(),
+                fixture.vehicle(),
+                null,
+                null
+        ));
+        mockMvc.perform(delete("/api/v1/operator/schools/{id}", fixture.operatorSchool().getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isNoContent());
+        entityManager.clear();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from service_offering where vehicle_id = ?",
+                Integer.class,
+                fixture.vehicle().getId()
+        )).isZero();
+
+        expectDeleteConflict(fixture, fixture.vehicle(), "vehicle_previously_used");
+    }
+
+    @Test
+    void vehicleWithUnknownHistoryCannotBeDeleted() throws Exception {
+        Fixture fixture = createFixture("delete-unknown@example.com", "Delete Unknown", "34MMM013");
+        // Simulates a pre-V22 vehicle; downgrading to unknown history is allowed, upgrading is not.
+        jdbcTemplate.update(
+                "update vehicle set usage_history_complete = false where id = ?",
+                fixture.vehicle().getId()
+        );
+
+        mockMvc.perform(get("/api/v1/operator/vehicles/{id}", fixture.vehicle().getId())
+                        .with(asOperator(fixture.user())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deletable").value(false))
+                .andExpect(jsonPath("$.deletionBlockedReason").value("HISTORY_UNKNOWN"));
+        expectDeleteConflict(fixture, fixture.vehicle(), "vehicle_history_unknown");
+    }
+
+    @Test
+    void directSqlCannotResetUsageHistoryOrBypassDeletionGuard() {
+        Fixture fixture = createFixture("delete-sql@example.com", "Delete Sql", "34NNN014");
+        UUID vehicleId = fixture.vehicle().getId();
+        jdbcTemplate.update(
+                "insert into service_offering (id, operator_school_id, vehicle_id) values (gen_random_uuid(), ?, ?)",
+                fixture.operatorSchool().getId(),
+                vehicleId
+        );
+        jdbcTemplate.update("delete from service_offering where vehicle_id = ?", vehicleId);
+        assertThat(jdbcTemplate.queryForObject(
+                "select usage_recorded_at is not null from vehicle where id = ?",
+                Boolean.class,
+                vehicleId
+        )).isTrue();
+
+        expectSqlRejected("update vehicle set usage_recorded_at = null where id = ?", vehicleId);
+        expectSqlRejected("update vehicle set usage_recorded_at = now() - interval '1 day' where id = ?", vehicleId);
+        expectSqlRejected("delete from vehicle where id = ?", vehicleId);
+
+        // A session setting is not an authorization boundary: even one naming an open,
+        // identity-verified ERASURE request of the owner must not bypass the guard (D059).
+        UUID requestId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                insert into data_rights_request (id, requester_id, request_type, details, status,
+                    received_at, response_due_at, identity_verified_at, identity_verified_by,
+                    version, updated_at)
+                values (?, ?, 'ERASURE', 'synthetic erasure request', 'UNDER_REVIEW',
+                    now(), now() + interval '720 hours', now(), ?, 0, now())
+                """, requestId, fixture.user().getId(), fixture.user().getId());
+        jdbcTemplate.execute("select set_config('servisimibul.erasure_request_id', '" + requestId + "', true)");
+        expectSqlRejected("delete from vehicle where id = ?", vehicleId);
+        jdbcTemplate.execute("select set_config('servisimibul.erasure_request_id', '', true)");
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from vehicle where id = ?", Integer.class, vehicleId
+        )).isOne();
+    }
+
+    @Test
+    void runtimeRoleCannotDisableOrBypassVehicleGuards() {
+        assertThat(jdbcTemplate.queryForObject(
+                "select rolsuper or rolbypassrls from pg_roles where rolname = current_user",
+                Boolean.class
+        )).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from pg_class c join pg_roles r on r.oid = c.relowner"
+                        + " where c.relname in ('vehicle', 'service_offering') and r.rolname = current_user",
+                Integer.class
+        )).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select has_function_privilege(current_user, 'guard_vehicle_deletion()', 'EXECUTE')",
+                Boolean.class
+        )).isFalse();
+        expectSqlDenied("set local session_replication_role = replica");
+        expectSqlDenied("alter table vehicle disable trigger vehicle_deletion_guard");
+        expectSqlDenied("drop trigger vehicle_deletion_guard on vehicle");
+        expectSqlDenied("create or replace function guard_vehicle_deletion() returns trigger"
+                + " language plpgsql as $$ begin return old; end $$");
+        assertThat(jdbcTemplate.queryForObject(
+                "select pg_get_functiondef('guard_vehicle_deletion()'::regprocedure) ilike '%erasure%'",
+                Boolean.class
+        )).isFalse();
+    }
+
+    @Test
+    void databaseRestrictsDeletingReferencedVehicle() {
+        Fixture fixture = createFixture("delete-fk@example.com", "Delete Fk", "34HHH008");
+        offeringRepository.saveAndFlush(new ServiceOffering(
+                fixture.operatorSchool(),
+                fixture.vehicle(),
+                null,
+                null
+        ));
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                        "delete from vehicle where id = ?",
+                        fixture.vehicle().getId()
+                ))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void vehicleDeletionRequiresOwnershipCsrfAndOperatorSession() throws Exception {
+        Fixture owner = createFixture("delete-owner@example.com", "Delete Owner", "34JJJ009");
+        AppUser intruder = createOperator("delete-intruder@example.com", "Delete Intruder");
+
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", owner.vehicle().getId())
+                        .with(asOperator(intruder))
+                        .with(csrf()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("vehicle_not_found"));
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", owner.vehicle().getId())
+                        .with(asOperator(owner.user())))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", owner.vehicle().getId())
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+
+        entityManager.clear();
+        assertThat(vehicleRepository.findById(owner.vehicle().getId())).isPresent();
+    }
+
+    private void expectDeleteConflict(Fixture fixture, Vehicle vehicle, String code) throws Exception {
+        mockMvc.perform(delete("/api/v1/operator/vehicles/{id}", vehicle.getId())
+                        .with(asOperator(fixture.user()))
+                        .with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value(code));
+        entityManager.clear();
+        assertThat(vehicleRepository.findById(vehicle.getId())).isPresent();
+    }
+
+    private void expectSqlDenied(String sql) {
+        jdbcTemplate.execute("savepoint vehicle_guard_probe");
+        assertThatThrownBy(() -> jdbcTemplate.execute(sql)).isInstanceOf(DataAccessException.class);
+        jdbcTemplate.execute("rollback to savepoint vehicle_guard_probe");
+    }
+
+    private void expectSqlRejected(String sql, Object... arguments) {
+        jdbcTemplate.execute("savepoint vehicle_guard_probe");
+        assertThatThrownBy(() -> jdbcTemplate.update(sql, arguments))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        jdbcTemplate.execute("rollback to savepoint vehicle_guard_probe");
     }
 
     private Fixture createFixture(String email, String businessName, String plate) {

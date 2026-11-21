@@ -1529,6 +1529,21 @@
   opacity: 0.65;
 }
 
+.operator-text-action-danger {
+  color: var(--color-danger);
+}
+
+.operator-text-action-danger:hover:not(:disabled) {
+  color: var(--color-danger);
+}
+
+.operator-vehicle-removal-note {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
 .operator-offerings-table-wrap {
   overflow: hidden;
   border: 1px solid var(--color-border);

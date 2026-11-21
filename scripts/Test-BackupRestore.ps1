@@ -315,7 +315,7 @@ try {
     Assert-SbDisposableClusterIdentity -Cluster $sourceCluster
     Assert-SbDisposableClusterIdentity -Cluster $targetCluster
 
-    Write-Host 'Applying Flyway V1-V21 to the isolated source...'
+    Write-Host 'Applying Flyway V1-V22 to the isolated source...'
     Invoke-A13Migration -Cluster $sourceCluster -JavaRuntime $javaRuntime `
         -TariffDirectory $tariffSourceDirectory
 
@@ -502,8 +502,8 @@ select count(*) from deleted;
         -File $migrationVerification)
     $verificationText = $verificationOutput -join [Environment]::NewLine
     $passCount = @($verificationOutput | Where-Object { $_.ToString() -match '\|PASS\|' }).Count
-    if ($passCount -ne 13 -or $verificationText -match '\|FAIL\|') {
-        throw "Migration verification expected 13 PASS rows and no failures.`n$verificationText"
+    if ($passCount -ne 14 -or $verificationText -match '\|FAIL\|') {
+        throw "Migration verification expected 14 PASS rows and no failures.`n$verificationText"
     }
     $relationalRows = @(
         @(Invoke-SbPsql -Cluster $targetCluster -Database $targetCluster.Database `

@@ -1984,6 +1984,8 @@ function vehicle(id: string, plate: string, active: boolean) {
     plate,
     capacity: 16,
     active,
+    deletable: false,
+    deletionBlockedReason: 'IN_USE' as const,
     createdAt: '2026-10-15T10:00:00Z',
     updatedAt: '2026-10-15T10:00:00Z',
   }
