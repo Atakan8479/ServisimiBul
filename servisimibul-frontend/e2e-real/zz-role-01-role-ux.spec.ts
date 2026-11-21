@@ -243,8 +243,25 @@ test('ROLE-01 shows only the actions each real role may take', async ({
       await expect(
         approved.getByRole('button', { name: publishButton }),
       ).toBeVisible()
-      await approved.getByRole('button', { name: commentButton }).click()
-      await expect(approved.getByLabel('Yorumunuz')).toBeVisible()
+      // Client-side return to the page re-arms the delayed heading focus; a
+      // keyboard user who acts first must keep focus in the comment field.
+      await approved
+        .getByRole('navigation', { name: 'Ana menü' })
+        .getByRole('link', { name: 'Talep panosu' })
+        .click()
+      await expect(approved).toHaveURL(/\/demands$/)
+      await approved.goBack()
+      const commentTrigger = approved.getByRole('button', {
+        name: commentButton,
+      })
+      await commentTrigger.focus()
+      await approved.keyboard.press('Enter')
+      const commentField = approved.getByLabel('Yorumunuz')
+      await expect(commentField).toBeFocused()
+      await approved.keyboard.type('Klavye')
+      await approved.waitForTimeout(2_100)
+      await expect(commentField).toBeFocused()
+      await expect(commentField).toHaveValue('Klavye')
       await expect(
         approved.getByRole('button', { name: 'Talebi bildir' }),
       ).toBeVisible()
@@ -276,15 +293,14 @@ test('ROLE-01 shows only the actions each real role may take', async ({
       await test.step(`a ${label} operator gets approval guidance instead of a dead-end form`, async () => {
         await page.goto(demandPath)
         await expectPublicContent(page)
-        const comment = page.getByRole('button', { name: commentButton })
-        if (await comment.count()) {
-          await comment.click()
-          await expect(
-            page.getByText('Bu işlem için yönetici onayı gerekir.'),
-          ).toBeVisible()
-          await expect(page.getByLabel('Yorumunuz')).toHaveCount(0)
-        }
-        await expectNoButton(page, joinButton)
+        await expect(
+          page.getByText(/işletme başvurunuzun yönetici tarafından/),
+        ).toBeVisible()
+        await expect(
+          page.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),
+        ).toHaveAttribute('href', '/operator/profile')
+        await expectNoButton(page, commentButton, joinButton)
+        await expect(page.getByLabel('Yorumunuz')).toHaveCount(0)
 
         for (const path of ['/operator/schools', '/operator/offerings']) {
           await page.goto(path)

@@ -1,4 +1,11 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import {
   MemoryRouter,
   RouterProvider,
@@ -7,6 +14,7 @@ import {
   createMemoryRouter,
 } from 'react-router-dom'
 import { http, HttpResponse, delay } from 'msw'
+import { useEffect, useState } from 'react'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { server } from '../test/server'
 import {
@@ -17,7 +25,7 @@ import {
   type AuthRole,
   type AuthUser,
 } from '../features/auth/auth-api'
-import { PublicLayout } from './layouts'
+import { PublicLayout, RouteAccessibility } from './layouts'
 
 const users: Record<AuthRole, AuthUser> = {
   PARENT: {
@@ -410,4 +418,75 @@ describe('refreshAuthRole', () => {
 
     expect(knownAuthRole()).toBe('PARENT')
   })
+})
+
+function LateHeadingPage() {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    const timer = window.setTimeout(() => setReady(true), 80)
+    return () => window.clearTimeout(timer)
+  }, [])
+  return (
+    <>
+      <button type="button">Yorum yaz</button>
+      {ready && <h1>Geç başlık</h1>}
+    </>
+  )
+}
+
+function renderAccessibleRoutes() {
+  const router = createMemoryRouter(
+    [
+      {
+        Component: RouteAccessibility,
+        children: [
+          {
+            path: '/',
+            Component: PublicLayout,
+            children: [
+              { index: true, element: <h1>Okulunu seç</h1> },
+              { path: 'late', element: <LateHeadingPage /> },
+            ],
+          },
+        ],
+      },
+    ],
+    { initialEntries: ['/'] },
+  )
+  render(<RouterProvider router={router} />)
+  return router
+}
+
+describe('RouteAccessibility', () => {
+  it('focuses a late page heading after genuine navigation', async () => {
+    const router = renderAccessibleRoutes()
+    await screen.findByRole('heading', { name: 'Okulunu seç' })
+    await act(() => router.navigate('/late'))
+
+    const heading = await screen.findByRole('heading', { name: 'Geç başlık' })
+    await waitFor(() => expect(heading).toHaveFocus())
+  })
+
+  it.each([
+    ['pointer', (target: HTMLElement) => fireEvent.pointerDown(target)],
+    [
+      'keyboard',
+      (target: HTMLElement) => fireEvent.keyDown(target, { key: 'Tab' }),
+    ],
+  ])(
+    'does not steal focus from a %s interaction made before the heading loads',
+    async (_, interact) => {
+      const router = renderAccessibleRoutes()
+      await screen.findByRole('heading', { name: 'Okulunu seç' })
+      await act(() => router.navigate('/late'))
+
+      const button = screen.getByRole('button', { name: 'Yorum yaz' })
+      interact(button)
+      button.focus()
+
+      await screen.findByRole('heading', { name: 'Geç başlık' })
+      await new Promise((resolve) => window.setTimeout(resolve, 20))
+      expect(button).toHaveFocus()
+    },
+  )
 })

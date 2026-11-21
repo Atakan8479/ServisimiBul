@@ -6,7 +6,12 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
+import {
+  currentUser,
+  knownAuthRole,
+  type AuthRole,
+  type AuthUser,
+} from '../auth/auth-api'
 import { ReportControl } from '../moderation/ReportControl'
 import {
   createDemandComment,
@@ -56,6 +61,45 @@ export function DemandComments({
   const resumeHandled = useRef(false)
   const commentButtonRef = useRef<HTMLButtonElement>(null)
   const commentBodyRef = useRef<HTMLTextAreaElement>(null)
+  const approvalNoteRef = useRef<HTMLParagraphElement>(null)
+  // Server-confirmed operator comment access for one session key; a stale
+  // session's answer never applies to the next account.
+  const [operatorAccess, setOperatorAccess] = useState<{
+    key: string
+    access: 'allowed' | 'approval-required' | 'unverified'
+  }>()
+  const operatorSessionKey =
+    open && authChecked && role === 'OPERATOR' && userId
+      ? sessionKey
+      : undefined
+
+  useEffect(() => {
+    if (!operatorSessionKey || !userId) return
+    const ownerKey = operatorSessionKey
+    let cancelled = false
+    currentUser()
+      .then((user) => {
+        if (cancelled || sessionKeyRef.current !== ownerKey) return
+        if (user.id !== userId || user.role !== 'OPERATOR') return
+        setOperatorAccess({
+          key: ownerKey,
+          access: operatorNeedsApproval(user) ? 'approval-required' : 'allowed',
+        })
+      })
+      .catch(() => {
+        // The click path re-verifies the session and handles 401 itself.
+        if (cancelled || sessionKeyRef.current !== ownerKey) return
+        setOperatorAccess({ key: ownerKey, access: 'unverified' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [operatorSessionKey, userId])
+
+  const currentOperatorAccess =
+    operatorSessionKey && operatorAccess?.key === operatorSessionKey
+      ? operatorAccess.access
+      : undefined
 
   const loadFirstPage = useCallback(async () => {
     const request = ++requestVersion.current
@@ -102,7 +146,11 @@ export function DemandComments({
     open &&
     authChecked &&
     Boolean(sessionKey && userId) &&
-    (role === 'OPERATOR' || (role === 'PARENT' && parentHasActiveSupport))
+    ((role === 'OPERATOR' &&
+      (currentOperatorAccess === 'allowed' ||
+        currentOperatorAccess === 'unverified')) ||
+      (role === 'PARENT' && parentHasActiveSupport))
+  const operatorAwaitingApproval = currentOperatorAccess === 'approval-required'
   const formOpen = canComment && formOwnerKey === sessionKey
   const currentCommentOwnership =
     authChecked &&
@@ -145,12 +193,10 @@ export function DemandComments({
         return
       }
       // Same gate the server applies; avoids a form that can only fail with 403.
-      if (
-        user.role === 'OPERATOR' &&
-        user.operatorApprovalRequired &&
-        user.approvalStatus !== 'APPROVED'
-      ) {
-        setActionError('Bu işlem için yönetici onayı gerekir.')
+      if (user.role === 'OPERATOR' && operatorNeedsApproval(user)) {
+        setOperatorAccess({ key: ownerKey, access: 'approval-required' })
+        // The button disappears; keep keyboard focus on the guidance.
+        window.requestAnimationFrame(() => approvalNoteRef.current?.focus())
         return
       }
       if (formOwnerKey !== ownerKey) setBody('')
@@ -279,6 +325,19 @@ export function DemandComments({
       {open && authChecked && role === 'PARENT' && !parentHasActiveSupport && (
         <p className="comment-state">
           Yorum yazmak için önce bu talebe destek verin.
+        </p>
+      )}
+
+      {operatorAwaitingApproval && (
+        <p
+          className="comment-state"
+          id="comment-approval-note"
+          ref={approvalNoteRef}
+          tabIndex={-1}
+        >
+          Yorum yazabilmek için işletme başvurunuzun yönetici tarafından
+          onaylanması gerekir.{' '}
+          <Link to="/operator/profile">Başvuru durumunu görüntüle</Link>
         </p>
       )}
 
@@ -431,4 +490,8 @@ function formatCommentDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function operatorNeedsApproval(user: AuthUser) {
+  return user.operatorApprovalRequired && user.approvalStatus !== 'APPROVED'
 }

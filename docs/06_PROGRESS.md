@@ -9,9 +9,10 @@
   - **Approved operator.** Sees the publish CTA, comment and report controls, but no support controls; support returns `403`.
   - **Pending and draft operators.** `/operator/schools` and `/operator/offerings` redirect to `/operator/profile`, and the resource API returns `403`.
   - **Admin.** Reads everything with no authoring or report controls; comment and report writes return `403`.
-- **Defect found and fixed.** An operator still waiting for approval (draft, pending or changes requested) saw "Yorum yaz", and the form could only fail with `403 operator_approval_required`. `DemandComments` now applies the server's approval gate on click and shows the existing "Bu işlem için yönetici onayı gerekir." message. Approval-exempt operators still get the form. A new Vitest case fails without the fix and passes with it.
+- **Defect found and fixed.** An operator still waiting for approval (draft, pending or changes requested) saw "Yorum yaz", and the form could only fail with `403 operator_approval_required`. `DemandComments` now asks `/auth/me` once per session key and, when approval is required and missing, shows approval guidance with a link to `/operator/profile` instead of the button. Approved and approval-exempt operators keep the button. If approval lapses before a click, the click re-checks and moves focus to the guidance. Backend authorization is unchanged.
+- **Focus race fixed.** `RouteAccessibility` still focuses a late page heading after real route changes, but stops waiting once the user presses a pointer or key, so the comment field keeps focus.
 - **Approval-exempt mode.** Covered by the backend `*ApprovalDisabled*` integration tests and the router unit tests, because the real-stack job pins `OPERATOR_APPROVAL_REQUIRED=true`.
-- **Results.** ESLint, `tsc -b` and build pass; Vitest 410/410; real stack 4/4. No backend, migration, Supabase, credential or production change.
+- **Results.** ESLint, `tsc -b` and build pass; Vitest 416 tests (new cases fail without the fixes); real stack 4/4. No backend, migration, Supabase, credential or production change.
 
 ## AUTH-SESSION-UX acceptance verification — 2026-11-21 (issue #273; test-only)
 
