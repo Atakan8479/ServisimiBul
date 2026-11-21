@@ -62,6 +62,7 @@ export function DemandComments({
   const commentButtonRef = useRef<HTMLButtonElement>(null)
   const commentBodyRef = useRef<HTMLTextAreaElement>(null)
   const approvalNoteRef = useRef<HTMLParagraphElement>(null)
+  const pendingFocus = useRef<'body' | 'approval'>(undefined)
   // Server-confirmed operator comment access for one session key; a stale
   // session's answer never applies to the next account.
   const [operatorAccess, setOperatorAccess] = useState<{
@@ -152,6 +153,22 @@ export function DemandComments({
       (role === 'PARENT' && parentHasActiveSupport))
   const operatorAwaitingApproval = currentOperatorAccess === 'approval-required'
   const formOpen = canComment && formOwnerKey === sessionKey
+
+  // Focus after the target is committed; an animation frame can run before
+  // React renders an update made outside an event handler.
+  useEffect(() => {
+    if (pendingFocus.current === 'body' && formOpen) {
+      commentBodyRef.current?.focus()
+    } else if (
+      pendingFocus.current === 'approval' &&
+      operatorAwaitingApproval
+    ) {
+      approvalNoteRef.current?.focus()
+    } else {
+      return
+    }
+    pendingFocus.current = undefined
+  }, [formOpen, operatorAwaitingApproval])
   const currentCommentOwnership =
     authChecked &&
     Boolean(userId) &&
@@ -196,12 +213,12 @@ export function DemandComments({
       if (user.role === 'OPERATOR' && operatorNeedsApproval(user)) {
         setOperatorAccess({ key: ownerKey, access: 'approval-required' })
         // The button disappears; keep keyboard focus on the guidance.
-        window.requestAnimationFrame(() => approvalNoteRef.current?.focus())
+        pendingFocus.current = 'approval'
         return
       }
       if (formOwnerKey !== ownerKey) setBody('')
       setFormOwnerKey(ownerKey)
-      window.requestAnimationFrame(() => commentBodyRef.current?.focus())
+      pendingFocus.current = 'body'
     } catch (error) {
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin(error.sessionExpired, knownRole)

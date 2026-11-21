@@ -250,7 +250,18 @@ test('ROLE-01 shows only the actions each real role may take', async ({
         .getByRole('link', { name: 'Talep panosu' })
         .click()
       await expect(approved).toHaveURL(/\/demands$/)
+      // The URL changes before the view transition swaps the page; going back
+      // earlier would act on the outgoing demand page's controls.
+      await expect(
+        approved.getByRole('heading', {
+          level: 1,
+          name: 'Servis talep panosu',
+        }),
+      ).toBeVisible()
       await approved.goBack()
+      await expect(
+        approved.getByRole('heading', { level: 1, name: 'ROLE-01 Rol Okulu' }),
+      ).toBeVisible()
       const commentTrigger = approved.getByRole('button', {
         name: commentButton,
       })
