@@ -441,7 +441,10 @@ export function DemandBoardPage() {
 
       <div className="demand-board-layout">
         <div className="demand-results-stack">
-          <section className="demand-board-results" aria-live="polite">
+          <section
+            className="demand-board-results demand-results-panel"
+            aria-live="polite"
+          >
             <div className="section-heading">
               <div>
                 <h2>{statusFilter.title}</h2>
@@ -503,11 +506,15 @@ export function DemandBoardPage() {
                   kontrol edebilirsiniz.
                 </p>
                 {createPath && resultsMatchDraft ? (
-                  <Link className="button-link" to={createPath} viewTransition>
+                  <Link
+                    className="secondary-button"
+                    to={createPath}
+                    viewTransition
+                  >
                     Yeni talep oluştur
                   </Link>
                 ) : !createPath ? (
-                  <a className="button-link" href="#demand-filters">
+                  <a className="secondary-button" href="#demand-filters">
                     Okul ve mahalle seç
                   </a>
                 ) : null}
