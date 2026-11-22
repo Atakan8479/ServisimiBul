@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from 'react-router-dom'
+import { operatorDemandDestination } from './auth-redirects'
 import { AuthFrame } from './AuthFrame'
 import './auth-ui.css'
 
@@ -11,7 +12,9 @@ function nextForDemand(next: string | null): string {
 
 export function SignupChoicePage() {
   const [params] = useSearchParams()
-  const next = encodeURIComponent(nextForDemand(params.get('next')))
+  const requestedNext = params.get('next')
+  const next = encodeURIComponent(nextForDemand(requestedNext))
+  const operatorNext = operatorDemandDestination(requestedNext)
 
   return (
     <AuthFrame
@@ -37,7 +40,11 @@ export function SignupChoicePage() {
         </Link>
         <Link
           className="account-type-option"
-          to="/operator/register"
+          to={
+            operatorNext
+              ? `/operator/register?next=${encodeURIComponent(operatorNext)}`
+              : '/operator/register'
+          }
           viewTransition
         >
           <span className="account-type-mark operator" aria-hidden="true">

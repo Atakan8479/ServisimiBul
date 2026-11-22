@@ -44,6 +44,35 @@ describe('parent account onboarding', () => {
     expect(screen.queryByText('Anonim aramaya dön')).not.toBeInTheDocument()
   })
 
+  it.each(['comment', 'response'])(
+    'forwards a safe operator demand %s action from the role choice',
+    async (action) => {
+      const next = `/demands/demand-id?action=${action}`
+      renderRoute(`/register?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: /İşletmeci olarak/ }),
+      ).toHaveAttribute(
+        'href',
+        `/operator/register?next=${encodeURIComponent(next)}`,
+      )
+    },
+  )
+
+  it.each([
+    'https://evil.example/demands/x?action=response',
+    '/demands/../admin?action=response',
+    '/demands/%252e%252e/admin?action=response',
+    '/admin/operators',
+    '/demands/%?action=response',
+  ])('rejects an unsafe operator signup destination: %s', async (next) => {
+    renderRoute(`/register?next=${encodeURIComponent(next)}`)
+
+    expect(
+      await screen.findByRole('link', { name: /İşletmeci olarak/ }),
+    ).toHaveAttribute('href', '/operator/register')
+  })
+
   it('links parent registration to the public legal routes', async () => {
     renderRoute('/parent/register')
     expect(
@@ -697,7 +726,7 @@ describe('operator authentication screens', () => {
     ['/operator/login', '/register'],
     [
       `/operator/login?next=${encodeURIComponent('/demands/review-target?action=response')}`,
-      '/operator/register',
+      `/operator/register?next=${encodeURIComponent('/demands/review-target?action=response')}`,
     ],
   ])('routes the signup link on %s to %s', async (path, expectedHref) => {
     renderRoute(path)
@@ -706,6 +735,36 @@ describe('operator authentication screens', () => {
       await screen.findByRole('link', { name: /kayıt olun/i }),
     ).toHaveAttribute('href', expectedHref)
   })
+
+  it.each(['comment', 'response'])(
+    'preserves a safe demand %s action in operator registration login links',
+    async (action) => {
+      const next = `/demands/demand-id?action=${action}`
+      renderRoute(`/operator/register?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: 'İşletmeci girişi' }),
+      ).toHaveAttribute(
+        'href',
+        `/operator/login?next=${encodeURIComponent(next)}`,
+      )
+    },
+  )
+
+  it.each([
+    'https://evil.example/demands/x?action=response',
+    '/demands/../admin?action=response',
+    '/operator/profile',
+  ])(
+    'drops an unsafe or cross-role registration destination: %s',
+    async (next) => {
+      renderRoute(`/operator/register?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: 'İşletmeci girişi' }),
+      ).toHaveAttribute('href', '/operator/login')
+    },
+  )
 
   it('preserves the operator response action after login', async () => {
     const router = createMemoryRouter(
@@ -798,8 +857,11 @@ describe('operator authentication screens', () => {
       )
 
       const outcomes: string[] = []
+      const next = '/demands/demand-id?action=response'
       for (const email of ['new@example.com', 'existing@example.com']) {
-        const { unmount } = renderRoute('/operator/register')
+        const { unmount } = renderRoute(
+          `/operator/register?next=${encodeURIComponent(next)}`,
+        )
         fireEvent.change(await screen.findByLabelText('E-posta'), {
           target: { value: email },
         })
@@ -826,7 +888,10 @@ describe('operator authentication screens', () => {
         ).not.toBeInTheDocument()
         expect(
           screen.getByRole('link', { name: 'İşletmeci girişine git' }),
-        ).toHaveAttribute('href', '/operator/login')
+        ).toHaveAttribute(
+          'href',
+          `/operator/login?next=${encodeURIComponent(next)}`,
+        )
         outcomes.push(document.body.textContent ?? '')
         unmount()
       }

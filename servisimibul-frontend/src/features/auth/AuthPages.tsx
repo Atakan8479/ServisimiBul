@@ -23,6 +23,16 @@ import {
   resetPassword,
   verifyEmail,
 } from './auth-api'
+import {
+  demandDestination,
+  isCanonicalPathUnder,
+  isDemandCommentPath,
+  isDemandPath,
+  isDemandResponsePath,
+  operatorDemandDestination,
+  operatorDestination,
+  parentDestination,
+} from './auth-redirects'
 import { AuthFrame } from './AuthFrame'
 import { passwordSchema } from './password-policy'
 import './auth-ui.css'
@@ -73,8 +83,13 @@ type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>
 type ResetPasswordForm = z.infer<typeof resetPasswordSchema>
 
 export function RegisterPage() {
+  const [searchParams] = useSearchParams()
   const emailVerificationRequired =
     import.meta.env.VITE_EMAIL_VERIFICATION_REQUIRED !== 'false'
+  const next = operatorDemandDestination(searchParams.get('next'))
+  const operatorLoginPath = next
+    ? `/operator/login?next=${encodeURIComponent(next)}`
+    : '/operator/login'
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
   const [showPassword, setShowPassword] = useState(false)
@@ -111,7 +126,7 @@ export function RegisterPage() {
               ? 'Doğrulama e-postası geldiyse bağlantıyı açın. Hesabınız zaten varsa giriş yapın.'
               : 'Hesabınız varsa giriş yapın.'}
           </p>
-          <Link className="button-link" to="/operator/login" viewTransition>
+          <Link className="button-link" to={operatorLoginPath} viewTransition>
             İşletmeci girişine git
           </Link>
         </div>
@@ -208,7 +223,7 @@ export function RegisterPage() {
       </form>
       <div className="auth-context-link">
         <span>Zaten hesabınız var mı?</span>
-        <Link to="/operator/login" viewTransition>
+        <Link to={operatorLoginPath} viewTransition>
           İşletmeci girişi
         </Link>
       </div>
@@ -720,7 +735,10 @@ export function LoginPage() {
         {isDemandResponsePath(searchParams.get('next')) ? (
           <>
             İşletmeci hesabınız yoksa{' '}
-            <Link to="/operator/register" viewTransition>
+            <Link
+              to={`/operator/register?next=${encodeURIComponent(operatorDestination(searchParams.get('next')))}`}
+              viewTransition
+            >
               kayıt olun
             </Link>
             .
@@ -760,91 +778,6 @@ export function LoginPage() {
   )
 
   return <AuthFrame title="Giriş yap">{content}</AuthFrame>
-}
-
-function isDemandPath(path: string | null): path is string {
-  return Boolean(
-    path &&
-    (path === '/demands' ||
-      path.startsWith('/demands?') ||
-      path.startsWith('/demands/')),
-  )
-}
-
-function demandDestination(path: string | null): string {
-  return isDemandPath(path) ? path : '/demands'
-}
-
-function parentDestination(path: string | null): string {
-  if (path === '/notifications' || path?.startsWith('/notifications?')) {
-    return path
-  }
-  if (!isCanonicalPathUnder(path, '/demands')) return '/demands'
-
-  try {
-    const url = new URL(path, window.location.origin)
-    const action = url.searchParams.get('action')
-    return isDemandPath(url.pathname) &&
-      (action === null || action === 'support' || action === 'comment')
-      ? path
-      : '/demands'
-  } catch {
-    return '/demands'
-  }
-}
-
-// Only a same-origin path that is already canonical can pass the prefix check,
-// so `..`, `%2e%2e`, `%252e%252e`, `..%2F`, backslashes and `//host` never
-// escape `root`.
-function isCanonicalPathUnder(
-  path: string | null,
-  root: string,
-): path is string {
-  if (!path?.startsWith('/')) return false
-  try {
-    const url = new URL(path, window.location.origin)
-    // Decode until stable so nested encodings cannot hide `..` or `\`; each
-    // pass that changes the string shortens it, so the loop terminates.
-    let decoded = url.pathname
-    for (let previous = ''; decoded !== previous;) {
-      previous = decoded
-      decoded = decodeURIComponent(decoded)
-    }
-    return (
-      url.origin === window.location.origin &&
-      url.pathname === path.split(/[?#]/, 1)[0] &&
-      !decoded.includes('\\') &&
-      !decoded.split('/').includes('..') &&
-      (url.pathname === root || url.pathname.startsWith(`${root}/`))
-    )
-  } catch {
-    return false
-  }
-}
-
-// Operators resume a demand service response or comment; anything else that
-// is not under /operator falls back to the operator home.
-function operatorDestination(path: string | null): string {
-  if (isCanonicalPathUnder(path, '/operator')) return path
-  if (!isCanonicalPathUnder(path, '/demands')) return '/operator'
-  const url = new URL(path, window.location.origin)
-  const action = url.searchParams.get('action')
-  return isDemandPath(url.pathname) &&
-    (action === 'response' || action === 'comment')
-    ? path
-    : '/operator'
-}
-
-function isDemandResponsePath(path: string | null): path is string {
-  if (!isCanonicalPathUnder(path, '/demands')) return false
-  const url = new URL(path, window.location.origin)
-  return url.searchParams.get('action') === 'response'
-}
-
-function isDemandCommentPath(path: string | null): path is string {
-  if (!isCanonicalPathUnder(path, '/demands')) return false
-  const url = new URL(path, window.location.origin)
-  return url.searchParams.get('action') === 'comment'
 }
 
 const registrationFields = [
