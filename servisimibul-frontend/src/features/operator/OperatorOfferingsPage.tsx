@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -28,14 +29,26 @@ import {
 } from './offering-api'
 import { exitDialog } from '../../components/dialog-exit'
 
+type ResourceKey = 'vehicles' | 'offerings' | 'schools'
+type LoadStatus = 'loading' | 'error' | 'ready'
+const resourceKeys: ResourceKey[] = ['vehicles', 'offerings', 'schools']
+
 export function OperatorOfferingsPage() {
   const navigate = useNavigate()
   const [vehicles, setVehicles] = useState<Vehicle[]>([])
   const [offerings, setOfferings] = useState<ServiceOffering[]>([])
   const [schools, setSchools] = useState<OperatorSchool[]>([])
-  const [loading, setLoading] = useState(true)
-  const [loadFailed, setLoadFailed] = useState(false)
-  const [loadRetry, setLoadRetry] = useState(0)
+  // Each initial read is independent so one failure never hides or empties the others.
+  const [loadStatus, setLoadStatus] = useState<Record<ResourceKey, LoadStatus>>(
+    { vehicles: 'loading', offerings: 'loading', schools: 'loading' },
+  )
+  // Latest request per resource; older or post-unmount responses are ignored.
+  const loadRequests = useRef<Record<ResourceKey, number>>({
+    vehicles: 0,
+    offerings: 0,
+    schools: 0,
+  })
+  const sessionRedirected = useRef(false)
   const [pending, setPending] = useState<string>()
   const [error, setError] = useState<string>()
   const [notice, setNotice] = useState<string>()
@@ -45,34 +58,78 @@ export function OperatorOfferingsPage() {
   // True when vehicle eligibility could not be re-read after a change; hides deletion (fail closed).
   const [eligibilityStale, setEligibilityStale] = useState(false)
   const vehiclesHeadingRef = useRef<HTMLHeadingElement>(null)
+  const offeringsHeadingRef = useRef<HTMLHeadingElement>(null)
   const cancelDeleteRef = useRef<HTMLButtonElement>(null)
   const [offeringCreateOpen, setOfferingCreateOpen] = useState(false)
   const [offeringToEdit, setOfferingToEdit] = useState<ServiceOffering>()
 
-  useEffect(() => {
-    let active = true
-    void Promise.all([getVehicles(), getOfferings(), getOperatorSchools()])
-      .then(([nextVehicles, nextOfferings, nextSchools]) => {
-        if (!active) return
-        setVehicles(nextVehicles)
-        setOfferings(nextOfferings)
-        setSchools(nextSchools)
-      })
-      .catch((reason: unknown) => {
-        if (!active) return
-        setLoadFailed(true)
-        handleSession(reason, navigate, setError)
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [loadRetry, navigate])
+  const loadResource = useCallback(
+    (key: ResourceKey) => {
+      const request = ++loadRequests.current[key]
+      const read: Promise<() => void> =
+        key === 'vehicles'
+          ? getVehicles().then((data) => () => {
+              setVehicles(data)
+              setEligibilityStale(false)
+            })
+          : key === 'offerings'
+            ? getOfferings().then((data) => () => setOfferings(data))
+            : getOperatorSchools().then((data) => () => setSchools(data))
+      void read.then(
+        (apply) => {
+          if (loadRequests.current[key] !== request) return
+          apply()
+          setLoadStatus((current) => ({ ...current, [key]: 'ready' }))
+        },
+        (reason: unknown) => {
+          if (loadRequests.current[key] !== request) return
+          if (reason instanceof ApiError && reason.sessionExpired) {
+            if (!sessionRedirected.current) {
+              sessionRedirected.current = true
+              void navigate('/operator/login?reason=session', {
+                replace: true,
+              })
+            }
+            return
+          }
+          // Never treat a failed read as an empty list.
+          setLoadStatus((current) => ({ ...current, [key]: 'error' }))
+        },
+      )
+    },
+    [navigate],
+  )
 
+  useEffect(() => {
+    const requests = loadRequests.current
+    for (const key of resourceKeys) loadResource(key)
+    return () => {
+      for (const key of resourceKeys) requests[key] += 1
+    }
+  }, [loadResource])
+
+  function retryLoad(key: ResourceKey) {
+    setLoadStatus((current) => ({ ...current, [key]: 'loading' }))
+    // The retry button unmounts while loading; keep focus in the same section.
+    ;(key === 'vehicles'
+      ? vehiclesHeadingRef
+      : offeringsHeadingRef
+    ).current?.focus()
+    loadResource(key)
+  }
+
+  const vehiclesReady = loadStatus.vehicles === 'ready'
+  const schoolsReady = loadStatus.schools === 'ready'
+  const offeringsReady = loadStatus.offerings === 'ready'
+  // Editing and publishing need verified vehicle and school options.
+  const prerequisitesVerified = vehiclesReady && schoolsReady
   const activeVehicles = vehicles.filter((vehicle) => vehicle.active)
   const activeSchools = schools.filter((school) => school.active)
+  const canCreateOffering =
+    prerequisitesVerified &&
+    offeringsReady &&
+    activeSchools.length > 0 &&
+    activeVehicles.length > 0
 
   function updateVehicleState(updated: Vehicle) {
     setVehicles((current) =>
@@ -121,7 +178,12 @@ export function OperatorOfferingsPage() {
             active: true,
           })
       updateVehicleState(updated)
-      if (vehicle.active) setOfferings(await getOfferings())
+      // An unloaded offerings section is re-read by its own retry instead.
+      if (vehicle.active && offeringsReady) {
+        const request = ++loadRequests.current.offerings
+        const next = await getOfferings()
+        if (loadRequests.current.offerings === request) setOfferings(next)
+      }
       setNotice(
         vehicle.active
           ? 'Araç pasife alındı; bağlı servislerin yayın durumu yenilendi.'
@@ -136,10 +198,14 @@ export function OperatorOfferingsPage() {
 
   /** Re-reads backend-authoritative deletion eligibility after offerings change. */
   async function refreshVehicles() {
+    const request = ++loadRequests.current.vehicles
     try {
-      setVehicles(await getVehicles())
+      const next = await getVehicles()
+      if (loadRequests.current.vehicles !== request) return
+      setVehicles(next)
       setEligibilityStale(false)
     } catch {
+      if (loadRequests.current.vehicles !== request) return
       setEligibilityStale(true)
     }
   }
@@ -199,8 +265,6 @@ export function OperatorOfferingsPage() {
     }
   }
 
-  if (loading) return <InlineLoading label="Araçlar ve servisler yükleniyor" />
-
   return (
     <section className="workspace-page operator-workspace-page operator-offerings-page">
       <header className="operator-page-header operator-offerings-header">
@@ -223,20 +287,6 @@ export function OperatorOfferingsPage() {
       {error && (
         <div className="form-error" role="alert">
           <span>{error}</span>
-          {loadFailed && (
-            <button
-              className="secondary-button"
-              onClick={() => {
-                setLoading(true)
-                setLoadFailed(false)
-                setError(undefined)
-                setLoadRetry((current) => current + 1)
-              }}
-              type="button"
-            >
-              Yeniden dene
-            </button>
-          )}
         </div>
       )}
       {notice && (
@@ -248,256 +298,289 @@ export function OperatorOfferingsPage() {
         </div>
       )}
 
-      {!loadFailed && (
-        <>
-          <section
-            aria-labelledby="vehicles-title"
-            className="operator-offerings-section"
-          >
-            <div className="operator-offerings-section-heading">
-              <div>
-                <h2 id="vehicles-title" ref={vehiclesHeadingRef} tabIndex={-1}>
-                  Filo bilgileri
-                </h2>
-                <p>Servis tekliflerinizde kullanacağınız araçları yönetin.</p>
-              </div>
+      <section
+        aria-labelledby="vehicles-title"
+        className="operator-offerings-section"
+      >
+        <div className="operator-offerings-section-heading">
+          <div>
+            <h2 id="vehicles-title" ref={vehiclesHeadingRef} tabIndex={-1}>
+              Filo bilgileri
+            </h2>
+            <p>Servis tekliflerinizde kullanacağınız araçları yönetin.</p>
+          </div>
+          {vehiclesReady && (
+            <button
+              className="secondary-button operator-add-button"
+              onClick={() => setVehicleCreateOpen(true)}
+              type="button"
+            >
+              <PlusIcon />
+              Araç ekle
+            </button>
+          )}
+        </div>
+
+        {loadStatus.vehicles === 'loading' ? (
+          <InlineLoading label="Araçlar yükleniyor" />
+        ) : loadStatus.vehicles === 'error' ? (
+          <LoadErrorPanel
+            detail="Filo bilgileriniz şu anda alınamadı. Araç ekleme ve silme, bilgiler yüklenene kadar kapalıdır."
+            onRetry={() => retryLoad('vehicles')}
+            title="Araç bilgileri yüklenemedi"
+          />
+        ) : vehicles.length === 0 ? (
+          <StatePanel
+            action={
               <button
-                className="secondary-button operator-add-button"
+                className="primary-button"
                 onClick={() => setVehicleCreateOpen(true)}
                 type="button"
               >
-                <PlusIcon />
-                Araç ekle
+                İlk aracı ekle
               </button>
-            </div>
-
-            {vehicles.length === 0 ? (
-              <StatePanel
-                action={
+            }
+            detail="Servis teklifi paylaşmak isterseniz önce plaka ve kapasite bilgisiyle bir araç ekleyin."
+            title="Henüz araç eklenmedi"
+          />
+        ) : (
+          <div className="operator-vehicle-grid">
+            {vehicles.map((vehicle) => (
+              <article className="operator-vehicle-card" key={vehicle.id}>
+                <div className="operator-vehicle-visual" aria-hidden="true">
+                  <BusIcon />
+                </div>
+                <div className="operator-vehicle-body">
+                  <div className="operator-vehicle-status-row">
+                    <StatusBadge tone={vehicle.active ? 'success' : 'neutral'}>
+                      {vehicle.active ? 'Etkin' : 'Pasif'}
+                    </StatusBadge>
+                    <button
+                      aria-label={`${vehicle.plate} aracını düzenle`}
+                      className="operator-icon-button"
+                      onClick={() => setVehicleToEdit(vehicle)}
+                      type="button"
+                    >
+                      <EditIcon />
+                    </button>
+                  </div>
+                  <h3>{vehicle.plate}</h3>
+                  <p className="operator-vehicle-capacity">
+                    <SeatIcon /> {vehicle.capacity} kişilik kapasite
+                  </p>
                   <button
-                    className="primary-button"
-                    onClick={() => setVehicleCreateOpen(true)}
+                    className="operator-text-action"
+                    disabled={pending === `vehicle-${vehicle.id}`}
+                    onClick={() => void toggleVehicle(vehicle)}
                     type="button"
                   >
-                    İlk aracı ekle
+                    {pending === `vehicle-${vehicle.id}`
+                      ? 'Güncelleniyor…'
+                      : vehicle.active
+                        ? 'Pasife al'
+                        : 'Etkinleştir'}
+                    <ArrowIcon />
                   </button>
-                }
-                detail="Servis teklifi paylaşmak isterseniz önce plaka ve kapasite bilgisiyle bir araç ekleyin."
-                title="Henüz araç eklenmedi"
-              />
-            ) : (
-              <div className="operator-vehicle-grid">
-                {vehicles.map((vehicle) => (
-                  <article className="operator-vehicle-card" key={vehicle.id}>
-                    <div className="operator-vehicle-visual" aria-hidden="true">
-                      <BusIcon />
-                    </div>
-                    <div className="operator-vehicle-body">
-                      <div className="operator-vehicle-status-row">
-                        <StatusBadge
-                          tone={vehicle.active ? 'success' : 'neutral'}
-                        >
-                          {vehicle.active ? 'Etkin' : 'Pasif'}
-                        </StatusBadge>
-                        <button
-                          aria-label={`${vehicle.plate} aracını düzenle`}
-                          className="operator-icon-button"
-                          onClick={() => setVehicleToEdit(vehicle)}
-                          type="button"
-                        >
-                          <EditIcon />
-                        </button>
-                      </div>
-                      <h3>{vehicle.plate}</h3>
-                      <p className="operator-vehicle-capacity">
-                        <SeatIcon /> {vehicle.capacity} kişilik kapasite
-                      </p>
-                      <button
-                        className="operator-text-action"
-                        disabled={pending === `vehicle-${vehicle.id}`}
-                        onClick={() => void toggleVehicle(vehicle)}
-                        type="button"
-                      >
-                        {pending === `vehicle-${vehicle.id}`
-                          ? 'Güncelleniyor…'
-                          : vehicle.active
-                            ? 'Pasife al'
-                            : 'Etkinleştir'}
-                        <ArrowIcon />
-                      </button>
-                      {!vehicle.deletable || eligibilityStale ? (
-                        <p className="operator-vehicle-removal-note">
-                          {eligibilityStale
-                            ? 'Silme uygunluğu doğrulanamadı; sayfayı yenileyin.'
-                            : deletionBlockedNotes[
-                                vehicle.deletionBlockedReason ??
-                                  'HISTORY_UNKNOWN'
-                              ]}
-                        </p>
-                      ) : (
-                        <button
-                          aria-label={`${vehicle.plate} aracını kalıcı olarak sil`}
-                          className="operator-text-action operator-text-action-danger"
-                          disabled={pending !== undefined}
-                          onClick={() => setVehicleToDelete(vehicle)}
-                          type="button"
-                        >
-                          Sil
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-          </section>
+                  {!vehicle.deletable || eligibilityStale ? (
+                    <p className="operator-vehicle-removal-note">
+                      {eligibilityStale
+                        ? 'Silme uygunluğu doğrulanamadı; sayfayı yenileyin.'
+                        : deletionBlockedNotes[
+                            vehicle.deletionBlockedReason ?? 'HISTORY_UNKNOWN'
+                          ]}
+                    </p>
+                  ) : (
+                    <button
+                      aria-label={`${vehicle.plate} aracını kalıcı olarak sil`}
+                      className="operator-text-action operator-text-action-danger"
+                      disabled={pending !== undefined}
+                      onClick={() => setVehicleToDelete(vehicle)}
+                      type="button"
+                    >
+                      Sil
+                    </button>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
-          <section
-            aria-labelledby="offerings-title"
-            className="operator-offerings-section"
-          >
-            <div className="operator-offerings-section-heading">
-              <div>
-                <h2 id="offerings-title">Paylaşılan hizmetler</h2>
-                <p>
-                  Okul ve mahalle kapsamıyla ilişkilendirilmiş servis
-                  teklifleri.
-                </p>
-              </div>
-              {activeSchools.length > 0 && activeVehicles.length > 0 && (
+      <section
+        aria-labelledby="offerings-title"
+        className="operator-offerings-section"
+      >
+        <div className="operator-offerings-section-heading">
+          <div>
+            <h2 id="offerings-title" ref={offeringsHeadingRef} tabIndex={-1}>
+              Paylaşılan hizmetler
+            </h2>
+            <p>
+              Okul ve mahalle kapsamıyla ilişkilendirilmiş servis teklifleri.
+            </p>
+          </div>
+          {canCreateOffering && (
+            <button
+              className="primary-button operator-add-button"
+              onClick={() => setOfferingCreateOpen(true)}
+              type="button"
+            >
+              <PlusIcon />
+              Teklif oluştur
+            </button>
+          )}
+        </div>
+
+        {loadStatus.schools === 'error' ? (
+          <LoadErrorPanel
+            detail="Teklif oluşturmak, düzenlemek ve yayımlamak için okul bağlantılarınızın yüklenmesi gerekir."
+            onRetry={() => retryLoad('schools')}
+            title="Okul bağlantıları yüklenemedi"
+          />
+        ) : (
+          loadStatus.vehicles === 'error' &&
+          schoolsReady && (
+            <StatePanel
+              detail="Araç bilgileri yüklenene kadar teklif oluşturma, düzenleme ve yayımlama kapalıdır."
+              title="Teklif işlemleri şu an kullanılamıyor"
+            />
+          )
+        )}
+
+        {prerequisitesVerified &&
+          (activeSchools.length === 0 || activeVehicles.length === 0) && (
+            <StatePanel
+              action={
+                activeSchools.length === 0 ? (
+                  <Link
+                    className="secondary-button button-link"
+                    to="/operator/schools"
+                    viewTransition
+                  >
+                    Okullara git
+                  </Link>
+                ) : undefined
+              }
+              detail={
+                activeSchools.length === 0
+                  ? 'Servis teklifi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
+                  : 'Servis teklifi oluşturmak için en az bir etkin aracınız olmalıdır.'
+              }
+              title="Önce gerekli bilgileri tamamlayın"
+            />
+          )}
+
+        {loadStatus.offerings === 'loading' ? (
+          <InlineLoading label="Servis teklifleri yükleniyor" />
+        ) : loadStatus.offerings === 'error' ? (
+          <LoadErrorPanel
+            detail="Teklifleriniz şu anda alınamadı. Mevcut teklifler doğrulanana kadar yeni teklif oluşturulamaz."
+            onRetry={() => retryLoad('offerings')}
+            title="Servis teklifleri yüklenemedi"
+          />
+        ) : offerings.length === 0 ? (
+          canCreateOffering && (
+            <StatePanel
+              action={
                 <button
-                  className="primary-button operator-add-button"
+                  className="primary-button"
                   onClick={() => setOfferingCreateOpen(true)}
                   type="button"
                 >
-                  <PlusIcon />
-                  Teklif oluştur
+                  İlk teklifi oluştur
                 </button>
-              )}
-            </div>
-
-            {(activeSchools.length === 0 || activeVehicles.length === 0) && (
-              <StatePanel
-                action={
-                  activeSchools.length === 0 ? (
-                    <Link
-                      className="secondary-button button-link"
-                      to="/operator/schools"
-                      viewTransition
-                    >
-                      Okullara git
-                    </Link>
-                  ) : undefined
-                }
-                detail={
-                  activeSchools.length === 0
-                    ? 'Servis teklifi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
-                    : 'Servis teklifi oluşturmak için en az bir etkin aracınız olmalıdır.'
-                }
-                title="Önce gerekli bilgileri tamamlayın"
-              />
-            )}
-
-            {offerings.length === 0 ? (
-              activeSchools.length > 0 &&
-              activeVehicles.length > 0 && (
-                <StatePanel
-                  action={
-                    <button
-                      className="primary-button"
-                      onClick={() => setOfferingCreateOpen(true)}
-                      type="button"
-                    >
-                      İlk teklifi oluştur
-                    </button>
-                  }
-                  detail="Taslak oluşturduktan sonra servis mahallelerini seçip teklifi yayımlayabilirsiniz."
-                  title="Henüz servis teklifi yok"
-                />
-              )
-            ) : (
-              <div className="operator-offerings-table-wrap">
-                <table className="operator-offerings-table">
-                  <thead>
-                    <tr>
-                      <th>Hizmet</th>
-                      <th>Kapsam</th>
-                      <th>Durum</th>
-                      <th>İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {offerings.map((offering) => (
-                      <tr key={offering.id}>
-                        <td data-label="Hizmet">
-                          <div className="operator-offering-name">
-                            <span aria-hidden="true">
-                              <BusIcon />
-                            </span>
-                            <div>
-                              <strong>{offering.schoolName}</strong>
-                              <small>{offering.vehiclePlate}</small>
-                              {offering.description && (
-                                <small>{offering.description}</small>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td data-label="Kapsam">
-                          <strong>{offering.coverage.length} mahalle</strong>
-                          <small>
-                            {offering.coverage.length > 0
-                              ? offering.coverage
-                                  .map((item) => item.neighborhoodName)
-                                  .join(', ')
-                              : 'Yayın için kapsam ekleyin'}
-                          </small>
-                          {offering.availableSeats !== null && (
-                            <small>
-                              Uygun koltuk: {offering.availableSeats}/
-                              {offering.vehicleCapacity}
-                            </small>
+              }
+              detail="Taslak oluşturduktan sonra servis mahallelerini seçip teklifi yayımlayabilirsiniz."
+              title="Henüz servis teklifi yok"
+            />
+          )
+        ) : (
+          <div className="operator-offerings-table-wrap">
+            <table className="operator-offerings-table">
+              <thead>
+                <tr>
+                  <th>Hizmet</th>
+                  <th>Kapsam</th>
+                  <th>Durum</th>
+                  <th>İşlem</th>
+                </tr>
+              </thead>
+              <tbody>
+                {offerings.map((offering) => (
+                  <tr key={offering.id}>
+                    <td data-label="Hizmet">
+                      <div className="operator-offering-name">
+                        <span aria-hidden="true">
+                          <BusIcon />
+                        </span>
+                        <div>
+                          <strong>{offering.schoolName}</strong>
+                          <small>{offering.vehiclePlate}</small>
+                          {offering.description && (
+                            <small>{offering.description}</small>
                           )}
-                        </td>
-                        <td data-label="Durum">
-                          <StatusBadge
-                            tone={offering.published ? 'success' : 'warning'}
-                          >
-                            {offering.published ? 'Yayında' : 'Taslak'}
-                          </StatusBadge>
-                        </td>
-                        <td data-label="İşlem">
-                          <div className="operator-offering-actions">
-                            <button
-                              className="operator-text-action"
-                              onClick={() => setOfferingToEdit(offering)}
-                              type="button"
-                            >
-                              Düzenle
-                            </button>
-                            <button
-                              className="operator-text-action"
-                              disabled={pending === `offering-${offering.id}`}
-                              onClick={() => void toggleOffering(offering)}
-                              type="button"
-                            >
-                              {pending === `offering-${offering.id}`
-                                ? 'Güncelleniyor…'
-                                : offering.published
-                                  ? 'Taslağa al'
-                                  : 'Yayımla'}
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-        </>
-      )}
+                        </div>
+                      </div>
+                    </td>
+                    <td data-label="Kapsam">
+                      <strong>{offering.coverage.length} mahalle</strong>
+                      <small>
+                        {offering.coverage.length > 0
+                          ? offering.coverage
+                              .map((item) => item.neighborhoodName)
+                              .join(', ')
+                          : 'Yayın için kapsam ekleyin'}
+                      </small>
+                      {offering.availableSeats !== null && (
+                        <small>
+                          Uygun koltuk: {offering.availableSeats}/
+                          {offering.vehicleCapacity}
+                        </small>
+                      )}
+                    </td>
+                    <td data-label="Durum">
+                      <StatusBadge
+                        tone={offering.published ? 'success' : 'warning'}
+                      >
+                        {offering.published ? 'Yayında' : 'Taslak'}
+                      </StatusBadge>
+                    </td>
+                    <td data-label="İşlem">
+                      <div className="operator-offering-actions">
+                        <button
+                          className="operator-text-action"
+                          disabled={!prerequisitesVerified}
+                          onClick={() => setOfferingToEdit(offering)}
+                          type="button"
+                        >
+                          Düzenle
+                        </button>
+                        <button
+                          className="operator-text-action"
+                          disabled={
+                            pending === `offering-${offering.id}` ||
+                            // Withdrawing stays available; publishing needs verified prerequisites.
+                            (!offering.published && !prerequisitesVerified)
+                          }
+                          onClick={() => void toggleOffering(offering)}
+                          type="button"
+                        >
+                          {pending === `offering-${offering.id}`
+                            ? 'Güncelleniyor…'
+                            : offering.published
+                              ? 'Taslağa al'
+                              : 'Yayımla'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
 
       <ModalDialog
         onClose={() => setVehicleCreateOpen(false)}
@@ -1314,6 +1397,30 @@ function messageFor(reason: unknown): string {
   return reason instanceof ApiError
     ? reason.problem.detail
     : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.'
+}
+
+/** Section-scoped read failure with a localized message; never shows server text. */
+function LoadErrorPanel({
+  detail,
+  onRetry,
+  title,
+}: {
+  detail: string
+  onRetry: () => void
+  title: string
+}) {
+  return (
+    <StatePanel
+      action={
+        <button className="secondary-button" onClick={onRetry} type="button">
+          Yeniden dene
+        </button>
+      }
+      detail={detail}
+      title={title}
+      tone="error"
+    />
+  )
 }
 
 function InlineLoading({ label }: { label: string }) {
