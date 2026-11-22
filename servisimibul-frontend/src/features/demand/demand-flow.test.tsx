@@ -533,6 +533,62 @@ describe('demand location filter regression', () => {
     ).toBeDisabled()
   })
 
+  it('ends the filter form with a separate primary apply action (#319)', async () => {
+    const requests: URLSearchParams[] = []
+    let releaseApply: (() => void) | undefined
+    server.use(
+      http.get('/api/v1/provinces', () => HttpResponse.json([])),
+      http.get('/api/v1/demands', async ({ request }) => {
+        requests.push(new URL(request.url).searchParams)
+        if (requests.length > 1) {
+          await new Promise<void>((resolve) => {
+            releaseApply = resolve
+          })
+        }
+        return HttpResponse.json(demandPage([demand()]))
+      }),
+    )
+
+    renderRoute('/demands')
+    await screen.findByRole('heading', { name: school.name })
+    const apply = screen.getByRole('button', { name: 'Talepleri göster' })
+    const panel = document.getElementById('demand-filters')!
+    const preferences = screen.getByRole('group', { name: 'Sonuç tercihleri' })
+
+    // The action sits in its own final row, outside every filter group.
+    expect(apply).toHaveClass('primary-button')
+    expect(apply.parentElement).toHaveClass('demand-filter-actions')
+    expect(panel.lastElementChild).toBe(apply.parentElement)
+    expect(preferences).not.toContainElement(apply)
+
+    fireEvent.change(within(preferences).getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2028' },
+    })
+    fireEvent.click(apply)
+    const error = screen.getByText(/Eğitim yılını 2026-2027 biçiminde/)
+    expect(error).toHaveAttribute('role', 'alert')
+    // The error stays next to the inputs, before the action row.
+    expect(
+      error.compareDocumentPosition(apply) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(requests).toHaveLength(1)
+
+    fireEvent.change(within(preferences).getByLabelText('Eğitim yılı'), {
+      target: { value: '2026-2027' },
+    })
+    fireEvent.click(apply)
+    const loading = await screen.findByRole('button', {
+      name: 'Talepler yükleniyor…',
+    })
+    expect(loading).toBeDisabled()
+    expect(loading.parentElement).toHaveClass('demand-filter-actions')
+    releaseApply?.()
+    expect(
+      await screen.findByRole('button', { name: 'Talepleri göster' }),
+    ).toBeEnabled()
+    expect(requests.at(-1)?.get('academicYear')).toBe('2026-2027')
+  })
+
   it('keeps a cleared school as an incomplete draft until filters are explicitly reset', async () => {
     const requests: URLSearchParams[] = []
     server.use(
