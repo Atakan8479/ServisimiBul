@@ -1,5 +1,15 @@
 # Progress ledger (update only after verification)
 
+## V22 shared Supabase migration — 2026-11-22 (#295, D059; owner-approved)
+
+- **Target and artifact.** Shared `ServisimiBul` Supabase project, database `postgres`, PostgreSQL 17.11, migration identity `postgres`. Release commit `3d8fccd`; JAR built with JDK 21.0.2, SHA-256 `c4db5bd4…2464`. All 22 migration files in the JAR are byte-identical to Git, and V22 hashes to `78aaf6cb…28dd` (LF). A Windows `core.autocrlf=true` checkout holds the same file with CRLF (`5ddfdbad…8f62`); Flyway's checksum ignores line endings. A V21 rollback JAR (commit `333e61c`, SHA-256 `f77a009f…28d1`) is retained outside Git.
+- **Window and freeze.** No runtime backend was running, and the in-window `phase=pre` reported 10/10 `t`, including all three write-freeze checks. Baseline: 2 vehicles, 0 inactive, 1 referenced, 1 offering, 0 published.
+- **Backup and restore test.** A fresh pre-V22 `--schema=public` logical backup (Flyway 21; 348 TOC entries, 34 table-data entries) passed `pg_restore --list` and recorded its SHA-256. It is encrypted with DPAPI CurrentUser and passed a decrypt round trip. Restored into a throwaway loopback PostgreSQL 17 database (locale `C`, since `initdb` rejects the host's non-ASCII Windows locale name), it passed `phase=pre` 10/10 with an equal baseline, 34 public tables and Flyway 21; the database was then removed. **Limitation:** no second, machine-independent encrypted copy on separate media exists. The owner explicitly accepted this exception for the test-data pilot, so the archive is recoverable only on the original Windows account.
+- **Migration.** V22 was applied exactly once with the release JAR and the `migration` profile, Flyway reporting "Current version 21 → Successfully applied 1 migration, now at v22 (1.11 s)". No target, `repair` or `baselineOnMigrate` was used.
+- **Verification.** `phase=post` reported 10/10 `t` with `transaction_read_only = on` and a baseline equal to `phase=pre`: 2 vehicles with unknown history, 1 with recorded usage, and `deletable_candidates = 0`. `10_MIGRATION_VERIFICATION.sql` reported 14/14 `PASS`.
+- **Backend smoke.** The local `dev-supabase.ps1` workflow (runtime identity only, Flyway disabled, loopback only) started the `3d8fccd` backend without Flyway activity. `/livez` and `/readyz` returned `UP`, and an unauthenticated `GET /api/v1/operator/vehicles` returned `401` with no server error; the stack was stopped afterwards. **Not verified:** the authenticated fleet list, the UI's "history unknown" note and the missing **Sil** action, because no authorized test-operator session was available. No account or data was created or changed.
+- **Not done.** No production deployment, because no approved production environment exists. No new migration and no schema or data change beyond V22.
+
 ## DEMAND-UX acceptance verification — 2026-11-21 (issue #270; consolidates #271/#274/#284/#285; test-only)
 
 - PR #289 implemented the journey. The new `e2e-real/zz-demand-01-demand-ux.spec.ts` runs on disposable PostgreSQL 17 with synthetic users and found no application defect. It covers:
