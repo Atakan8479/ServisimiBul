@@ -725,6 +725,17 @@ export function LoginPage() {
             </Link>
             .
           </>
+        ) : isDemandCommentPath(searchParams.get('next')) ? (
+          // Parents and operators can both comment, so offer the role choice.
+          <>
+            Hesabınız yok mu?{' '}
+            <Link
+              to={`/register?next=${encodeURIComponent(parentDestination(searchParams.get('next')))}`}
+              viewTransition
+            >
+              Kayıt olun
+            </Link>
+          </>
         ) : isDemandPath(searchParams.get('next')) ? (
           <>
             Veli hesabınız yoksa{' '}
@@ -828,6 +839,12 @@ function isDemandResponsePath(path: string | null): path is string {
   if (!isCanonicalPathUnder(path, '/demands')) return false
   const url = new URL(path, window.location.origin)
   return url.searchParams.get('action') === 'response'
+}
+
+function isDemandCommentPath(path: string | null): path is string {
+  if (!isCanonicalPathUnder(path, '/demands')) return false
+  const url = new URL(path, window.location.origin)
+  return url.searchParams.get('action') === 'comment'
 }
 
 const registrationFields = [

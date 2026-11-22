@@ -512,6 +512,23 @@ describe('parent account onboarding', () => {
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
   })
 
+  // Parents and operators can both comment, so a comment link must not
+  // steer an operator into parent-only registration.
+  it.each(['/login', '/parent/login', '/operator/login'])(
+    'offers the role choice for a comment link on %s',
+    async (entry) => {
+      const next = '/demands/x?action=comment'
+      renderRoute(`${entry}?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: 'Kayıt olun' }),
+      ).toHaveAttribute('href', `/register?next=${encodeURIComponent(next)}`)
+      expect(
+        screen.queryByRole('link', { name: 'veli hesabı oluşturun' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   // #276/#277: the server-confirmed role, never the entry URL, picks the
   // destination; a successful login is never closed for using a legacy URL.
   it.each([
