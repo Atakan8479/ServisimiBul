@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react'
 import {
   Link,
   useLocation,
@@ -94,7 +100,7 @@ export function DemandDetailPage() {
     : undefined
   const currentServicePending = serviceStateIsCurrent && servicePending
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (serviceStateIsCurrent && serviceError) {
       serviceErrorRef.current?.focus()
     }
