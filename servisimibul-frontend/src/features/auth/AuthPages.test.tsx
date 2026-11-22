@@ -512,6 +512,23 @@ describe('parent account onboarding', () => {
     ).toHaveAttribute('href', '/parent/register?next=%2Fdemands')
   })
 
+  // Parents and operators can both comment, so a comment link must not
+  // steer an operator into parent-only registration.
+  it.each(['/login', '/parent/login', '/operator/login'])(
+    'offers the role choice for a comment link on %s',
+    async (entry) => {
+      const next = '/demands/x?action=comment'
+      renderRoute(`${entry}?next=${encodeURIComponent(next)}`)
+
+      expect(
+        await screen.findByRole('link', { name: 'Kayıt olun' }),
+      ).toHaveAttribute('href', `/register?next=${encodeURIComponent(next)}`)
+      expect(
+        screen.queryByRole('link', { name: 'veli hesabı oluşturun' }),
+      ).not.toBeInTheDocument()
+    },
+  )
+
   // #276/#277: the server-confirmed role, never the entry URL, picks the
   // destination; a successful login is never closed for using a legacy URL.
   it.each([
@@ -534,6 +551,30 @@ describe('parent account onboarding', () => {
       '/demands/x',
       '?action=response',
     ],
+    // An operator resumes a comment from a guest or expired-session link.
+    [
+      'OPERATOR',
+      '/operator/login',
+      '/demands/x?action=comment',
+      '/demands/x',
+      '?action=comment',
+    ],
+    [
+      'OPERATOR',
+      '/login',
+      '/demands/x?action=comment',
+      '/demands/x',
+      '?action=comment',
+    ],
+    ['OPERATOR', '/login', '/demands/new?schoolId=1', '/operator', ''],
+    [
+      'OPERATOR',
+      '/login',
+      '/demands/%2e%2e/admin?action=comment',
+      '/operator',
+      '',
+    ],
+    ['ADMIN', '/login', '/demands/x?action=comment', '/admin', ''],
     ['OPERATOR', '/login', '/admin/schools', '/operator', ''],
     ['OPERATOR', '/login', '//evil.example/operator', '/operator', ''],
     ['ADMIN', '/parent/login', '/demands?status=OPEN', '/admin', ''],
