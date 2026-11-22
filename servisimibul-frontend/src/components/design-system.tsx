@@ -5,6 +5,7 @@ import type {
   ReactNode,
 } from 'react'
 import { cloneElement } from 'react'
+import brandMarkUrl from '../assets/servisimibul-mark.png'
 
 type ButtonTone = 'primary' | 'secondary' | 'danger' | 'quiet'
 type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
@@ -12,9 +13,14 @@ type StatusTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger'
 export function BrandLockup({ compact = false }: { compact?: boolean }) {
   return (
     <span className={`brand-lockup${compact ? ' brand-lockup-compact' : ''}`}>
-      <span className="brand-mark" aria-hidden="true">
-        <span />
-      </span>
+      <img
+        className="brand-mark"
+        src={brandMarkUrl}
+        alt=""
+        width={44}
+        height={44}
+        draggable={false}
+      />
       <span className="brand-wordmark">
         Servisimi<span>Bul</span>
       </span>

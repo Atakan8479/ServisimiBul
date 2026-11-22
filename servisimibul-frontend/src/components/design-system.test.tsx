@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import {
+  BrandLockup,
   Button,
   FormField,
   SectionShell,
@@ -9,6 +10,20 @@ import {
 } from './design-system'
 
 describe('shared design-system primitives', () => {
+  it('renders the approved brand mark image beside the wordmark (#320)', () => {
+    const { container } = render(<BrandLockup />)
+
+    const mark = container.querySelector('img.brand-mark')
+    expect(mark).not.toBeNull()
+    expect(mark).toHaveAttribute('alt', '')
+    expect(mark).toHaveAttribute('width', '44')
+    expect(mark).toHaveAttribute('height', '44')
+    expect(mark?.getAttribute('src')).toMatch(/servisimibul-mark.*\.png/)
+    expect(container.querySelectorAll('.brand-mark')).toHaveLength(1)
+    expect(container.querySelector('.brand-mark > span')).toBeNull()
+    expect(container.textContent).toBe('ServisimiBul')
+  })
+
   it('keeps headings, controls, and field labels semantic', () => {
     render(
       <SectionShell title="Hizmet alanı" description="Okul ve mahalle seçin.">

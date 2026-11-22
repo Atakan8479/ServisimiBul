@@ -128,37 +128,11 @@ a {
 }
 
 .brand-mark {
-  position: relative;
-  display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
   flex: 0 0 auto;
-  place-items: center;
-  border-radius: 0.7rem;
-  background: var(--navy-900);
-}
-
-.brand-mark::before,
-.brand-mark::after,
-.brand-mark > span {
-  position: absolute;
-  content: '';
-}
-
-.brand-mark::before {
-  width: 0.9rem;
-  height: 0.9rem;
-  border: 0.2rem solid var(--neutral-0);
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-}
-
-.brand-mark::after {
-  bottom: 0.34rem;
-  width: 0.3rem;
-  height: 0.3rem;
-  border-radius: 50%;
-  background: var(--yellow-500);
+  object-fit: contain;
 }
 
 .brand-wordmark {
@@ -174,8 +148,8 @@ a {
 }
 
 .brand-lockup-compact .brand-mark {
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: 2.5rem;
 }
 
 .brand-lockup-compact .brand-wordmark {
@@ -6138,15 +6112,13 @@ dialog[data-closing] {
 }
 
 @media (max-width: 24rem) {
-  .site-header .brand-wordmark,
-  .workspace-mobile-bar .brand-wordmark {
+  .site-header .brand-wordmark {
     display: none;
   }
 
-  .site-header .brand-mark,
-  .workspace-mobile-bar .brand-mark {
-    width: 36px;
-    height: 36px;
+  .site-header .brand-mark {
+    width: 2.5rem;
+    height: 2.5rem;
   }
 
   .site-header,
