@@ -636,13 +636,7 @@ export function LoginPage() {
         })
         return
       }
-      const next = searchParams.get('next')
-      const destination = isCanonicalPathUnder(next, '/operator')
-        ? next
-        : isDemandResponsePath(next)
-          ? next
-          : '/operator'
-      void navigate(destination, {
+      void navigate(operatorDestination(searchParams.get('next')), {
         replace: true,
         viewTransition: typeof document.startViewTransition === 'function',
       })
@@ -815,6 +809,19 @@ function isCanonicalPathUnder(
   } catch {
     return false
   }
+}
+
+// Operators resume a demand service response or comment; anything else that
+// is not under /operator falls back to the operator home.
+function operatorDestination(path: string | null): string {
+  if (isCanonicalPathUnder(path, '/operator')) return path
+  if (!isCanonicalPathUnder(path, '/demands')) return '/operator'
+  const url = new URL(path, window.location.origin)
+  const action = url.searchParams.get('action')
+  return isDemandPath(url.pathname) &&
+    (action === 'response' || action === 'comment')
+    ? path
+    : '/operator'
 }
 
 function isDemandResponsePath(path: string | null): path is string {
