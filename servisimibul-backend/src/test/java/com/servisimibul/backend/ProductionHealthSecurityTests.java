@@ -68,6 +68,6 @@ class ProductionHealthSecurityTests {
         assertThat(environment.getProperty("management.endpoint.health.group.liveness.include"))
                 .isEqualTo("livenessState");
         assertThat(environment.getProperty("management.endpoint.health.group.readiness.include"))
-                .isEqualTo("readinessState,db");
+                .isEqualTo("readinessState,db,vehicleUsageSchema");
     }
 }

@@ -3,7 +3,10 @@ package com.servisimibul.backend.offering;
 import com.servisimibul.backend.support.IsolatedPostgresTestDatabase;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.health.contributor.Status;
 import org.springframework.core.env.StandardEnvironment;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -55,9 +58,23 @@ class VehicleUsageHistoryMigrationTests {
                     Flyway.configure().dataSource(url, user, password).target("21").load().migrate();
                     try (Connection connection = DriverManager.getConnection(url, user, password)) {
                         connection.createStatement().execute(SEED);
+
+                        assertThatThrownBy(() -> connection.createStatement().executeQuery(
+                                VehicleRepository.DELETION_STATE_SELECT + " where false"
+                        )).isInstanceOf(SQLException.class)
+                                .hasMessageContaining("usage_history_complete")
+                                .hasMessageContaining("does not exist");
                     }
 
+                    var dataSource = new DriverManagerDataSource(url, user, password);
+                    var schemaHealth = new VehicleUsageSchemaHealthIndicator(
+                            new JdbcTemplate(dataSource)
+                    );
+                    assertThat(schemaHealth.health().getStatus()).isEqualTo(Status.DOWN);
+
                     Flyway.configure().dataSource(url, user, password).target("22").load().migrate();
+
+                    assertThat(schemaHealth.health().getStatus()).isEqualTo(Status.UP);
 
                     try (Connection connection = DriverManager.getConnection(url, user, password)) {
                         var statement = connection.createStatement();
