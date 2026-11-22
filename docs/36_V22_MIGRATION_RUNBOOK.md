@@ -1,6 +1,6 @@
 # V22 vehicle usage history: shared Supabase migration runbook (#295, D059)
 
-This runbook prepares the **separately approved** application of Flyway V22 to the shared Supabase database. It does not authorize that operation. As of this document, V22 has **not** been applied to shared Supabase, which remains at V1–V21. Every step that touches the shared database needs fresh, explicit human approval for the exact target, operator, recovery point, and command. General rules, roles, and secret handling follow [`10_DATABASE_AND_BACKUP_OPERATIONS.md`](10_DATABASE_AND_BACKUP_OPERATIONS.md).
+This runbook prepares the **separately approved** application of Flyway V22 to the shared Supabase database. It does not authorize that operation. **Status: V22 was applied to shared Supabase on 2026-11-22** under this runbook (evidence in `06_PROGRESS.md`); shared Supabase is at V1–V22. Keep this runbook as the record and as the template for future releases. Every step that touches the shared database needs fresh, explicit human approval for the exact target, operator, recovery point, and command. General rules, roles, and secret handling follow [`10_DATABASE_AND_BACKUP_OPERATIONS.md`](10_DATABASE_AND_BACKUP_OPERATIONS.md).
 
 ## What V22 changes
 
