@@ -736,9 +736,15 @@ describe('operator authentication screens', () => {
     ).toHaveAttribute('href', expectedHref)
   })
 
-  it.each(['comment', 'response'])(
-    'preserves a safe demand %s action in operator registration login links',
-    async (action) => {
+  it.each([
+    ['true', 'comment'],
+    ['true', 'response'],
+    ['false', 'comment'],
+    ['false', 'response'],
+  ])(
+    'preserves operator registration links (verification=%s, action=%s)',
+    async (verification, action) => {
+      vi.stubEnv('VITE_EMAIL_VERIFICATION_REQUIRED', verification)
       const next = `/demands/demand-id?action=${action}`
       renderRoute(`/operator/register?next=${encodeURIComponent(next)}`)
 
@@ -748,21 +754,45 @@ describe('operator authentication screens', () => {
         'href',
         `/operator/login?next=${encodeURIComponent(next)}`,
       )
+      const verificationLink = screen.queryByRole('link', {
+        name: 'E-postayı doğrulayın',
+      })
+      if (verification === 'true') {
+        expect(verificationLink).toHaveAttribute(
+          'href',
+          `/operator/verify-email?next=${encodeURIComponent(next)}`,
+        )
+      } else {
+        expect(verificationLink).not.toBeInTheDocument()
+      }
     },
   )
 
   it.each([
-    'https://evil.example/demands/x?action=response',
-    '/demands/../admin?action=response',
-    '/operator/profile',
+    ['true', 'https://evil.example/demands/x?action=response'],
+    ['false', '/demands/%?action=response'],
+    ['true', '/demands/%252e%252e/admin?action=response'],
+    ['false', '/operator/profile'],
   ])(
-    'drops an unsafe or cross-role registration destination: %s',
-    async (next) => {
+    'drops an unsafe or cross-role registration destination (verification=%s): %s',
+    async (verification, next) => {
+      vi.stubEnv('VITE_EMAIL_VERIFICATION_REQUIRED', verification)
       renderRoute(`/operator/register?next=${encodeURIComponent(next)}`)
 
       expect(
         await screen.findByRole('link', { name: 'İşletmeci girişi' }),
       ).toHaveAttribute('href', '/operator/login')
+      const verificationLink = screen.queryByRole('link', {
+        name: 'E-postayı doğrulayın',
+      })
+      if (verification === 'true') {
+        expect(verificationLink).toHaveAttribute(
+          'href',
+          '/operator/verify-email',
+        )
+      } else {
+        expect(verificationLink).not.toBeInTheDocument()
+      }
     },
   )
 
@@ -901,6 +931,7 @@ describe('operator authentication screens', () => {
 
   it('verifies the token supplied by the email link', async () => {
     let token: unknown
+    const next = '/demands/demand-id?action=comment'
     server.use(
       csrfHandler(),
       http.post('/api/v1/auth/verify-email', async ({ request }) => {
@@ -909,10 +940,18 @@ describe('operator authentication screens', () => {
       }),
     )
 
-    renderRoute('/operator/verify-email?token=email-token')
+    renderRoute(
+      `/operator/verify-email?token=email-token&next=${encodeURIComponent(next)}`,
+    )
     expect(
       await screen.findByText('E-postanızdaki doğrulama bağlantısını açın.'),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'Kayıt adımına dönün' }),
+    ).toHaveAttribute(
+      'href',
+      `/operator/register?next=${encodeURIComponent(next)}`,
+    )
     fireEvent.click(
       await screen.findByRole('button', {
         name: 'E-posta adresini doğrula',
@@ -925,6 +964,12 @@ describe('operator authentication screens', () => {
       ),
     ).toBeInTheDocument()
     expect(token).toEqual({ token: 'email-token' })
+    const loginLink = screen.getByRole('link', { name: 'İşletmeci girişi' })
+    expect(loginLink).toHaveAttribute(
+      'href',
+      `/operator/login?next=${encodeURIComponent(next)}`,
+    )
+    expect(loginLink.getAttribute('href')).not.toContain('email-token')
   })
 
   it('submits an opaque generated token from the verification link unchanged', async () => {
@@ -938,7 +983,10 @@ describe('operator authentication screens', () => {
       }),
     )
 
-    renderRoute(`/operator/verify-email?token=${opaqueToken}`)
+    const next = '/demands/demand-id?action=response'
+    renderRoute(
+      `/operator/verify-email?token=${opaqueToken}&next=${encodeURIComponent(next)}`,
+    )
     expect(await screen.findByLabelText('Doğrulama kodu')).toHaveValue(
       opaqueToken,
     )
@@ -948,6 +996,41 @@ describe('operator authentication screens', () => {
 
     await screen.findByText(/E-posta adresiniz doğrulandı/)
     expect(body).toEqual({ token: opaqueToken })
+    expect(
+      screen.getByRole('link', { name: 'İşletmeci girişi' }),
+    ).toHaveAttribute(
+      'href',
+      `/operator/login?next=${encodeURIComponent(next)}`,
+    )
+  })
+
+  it.each([
+    'https://evil.example/demands/x?action=response',
+    '/demands/%?action=response',
+    '/demands/%252e%252e/admin?action=response',
+    '/operator/profile',
+  ])('drops an unsafe verification return destination: %s', async (next) => {
+    server.use(
+      csrfHandler(),
+      http.post(
+        '/api/v1/auth/verify-email',
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    )
+
+    renderRoute(
+      `/operator/verify-email?token=email-token&next=${encodeURIComponent(next)}`,
+    )
+    expect(
+      await screen.findByRole('link', { name: 'Kayıt adımına dönün' }),
+    ).toHaveAttribute('href', '/operator/register')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'E-posta adresini doğrula' }),
+    )
+
+    expect(
+      await screen.findByRole('link', { name: 'İşletmeci girişi' }),
+    ).toHaveAttribute('href', '/operator/login')
   })
 
   it('logs in with remember me and enters the operator workspace', async () => {

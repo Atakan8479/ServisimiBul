@@ -90,6 +90,9 @@ export function RegisterPage() {
   const operatorLoginPath = next
     ? `/operator/login?next=${encodeURIComponent(next)}`
     : '/operator/login'
+  const verificationPath = next
+    ? `/operator/verify-email?next=${encodeURIComponent(next)}`
+    : '/operator/verify-email'
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
   const [showPassword, setShowPassword] = useState(false)
@@ -230,7 +233,7 @@ export function RegisterPage() {
       {emailVerificationRequired && (
         <div className="auth-context-link">
           <span>Doğrulama bağlantınız var mı?</span>
-          <Link to="/operator/verify-email" viewTransition>
+          <Link to={verificationPath} viewTransition>
             E-postayı doğrulayın
           </Link>
         </div>
@@ -362,6 +365,13 @@ export function ParentSignupPage() {
 
 export function VerifyEmailPage() {
   const [searchParams] = useSearchParams()
+  const next = operatorDemandDestination(searchParams.get('next'))
+  const operatorLoginPath = next
+    ? `/operator/login?next=${encodeURIComponent(next)}`
+    : '/operator/login'
+  const registrationPath = next
+    ? `/operator/register?next=${encodeURIComponent(next)}`
+    : '/operator/register'
   const [complete, setComplete] = useState(false)
   const [formError, setFormError] = useState<string>()
   const {
@@ -395,7 +405,7 @@ export function VerifyEmailPage() {
             E-posta adresiniz doğrulandı. Artık işletmeci hesabınızla güvenli
             şekilde giriş yapabilirsiniz.
           </p>
-          <Link className="button-link" to="/operator/login" viewTransition>
+          <Link className="button-link" to={operatorLoginPath} viewTransition>
             İşletmeci girişi
           </Link>
         </div>
@@ -427,7 +437,7 @@ export function VerifyEmailPage() {
       {!complete && (
         <div className="auth-context-link">
           <span>Bağlantınız çalışmıyor mu?</span>
-          <Link to="/operator/register" viewTransition>
+          <Link to={registrationPath} viewTransition>
             Kayıt adımına dönün
           </Link>
         </div>
