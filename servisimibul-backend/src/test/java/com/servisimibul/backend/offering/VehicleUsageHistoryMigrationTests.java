@@ -1,13 +1,21 @@
 package com.servisimibul.backend.offering;
 
+import com.servisimibul.backend.ServisimibulBackendApplication;
 import com.servisimibul.backend.support.IsolatedPostgresTestDatabase;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.health.contributor.Status;
+import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
@@ -71,6 +79,7 @@ class VehicleUsageHistoryMigrationTests {
                             new JdbcTemplate(dataSource)
                     );
                     assertThat(schemaHealth.health().getStatus()).isEqualTo(Status.DOWN);
+                    assertV21ProbeContract(url, user, password);
 
                     Flyway.configure().dataSource(url, user, password).target("22").load().migrate();
 
@@ -120,6 +129,47 @@ class VehicleUsageHistoryMigrationTests {
                     }
                 }
         );
+    }
+
+    private void assertV21ProbeContract(String url, String user, String password) throws Exception {
+        try (var application = new SpringApplicationBuilder(ServisimibulBackendApplication.class)
+                .web(WebApplicationType.SERVLET)
+                .run(
+                        "--spring.profiles.active=local",
+                        "--server.address=127.0.0.1",
+                        "--server.port=0",
+                        "--SB_DB_JDBC_URL=" + url,
+                        "--SB_DB_USER=" + user,
+                        "--SB_DB_PASSWORD=" + password,
+                        "--spring.datasource.url=" + url,
+                        "--spring.datasource.username=" + user,
+                        "--spring.datasource.password=" + password,
+                        "--spring.flyway.enabled=false",
+                        "--SB_DEMAND_FEEDBACK_SCHEDULER_ENABLED=false",
+                        "--SB_MAIL_ENABLED=false",
+                        "--SB_ADMIN_BOOTSTRAP_ENABLED=false",
+                        "--management.health.mail.enabled=false"
+                )) {
+            int port = ((WebServerApplicationContext) application).getWebServer().getPort();
+            HttpClient client = HttpClient.newHttpClient();
+            assertProbe(client, port, "/readyz", 503, "{\"status\":\"DOWN\"}");
+            assertProbe(client, port, "/livez", 200, "{\"status\":\"UP\"}");
+        }
+    }
+
+    private void assertProbe(
+            HttpClient client,
+            int port,
+            String path,
+            int expectedStatus,
+            String expectedBody
+    ) throws Exception {
+        HttpResponse<String> response = client.send(
+                HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),
+                HttpResponse.BodyHandlers.ofString()
+        );
+        assertThat(response.statusCode()).isEqualTo(expectedStatus);
+        assertThat(response.body()).isEqualTo(expectedBody);
     }
 
     /**
