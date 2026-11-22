@@ -105,5 +105,10 @@ class ObservabilityEndpointTests {
         HealthIndicator dbHealthIndicator() {
             return () -> Health.up().build();
         }
+
+        @Bean
+        HealthIndicator vehicleUsageSchemaHealthIndicator() {
+            return () -> Health.up().build();
+        }
     }
 }
