@@ -468,6 +468,71 @@ describe('demand location filter regression', () => {
     expect(screen.getByLabelText('Eğitim yılı')).toHaveValue('')
   })
 
+  it('separates school, pickup and result preference sections (#318)', async () => {
+    server.use(
+      ...locationHandlers(),
+      http.get('/api/v1/schools', () =>
+        HttpResponse.json({
+          content: [school],
+          page: 0,
+          size: 10,
+          totalElements: 1,
+          totalPages: 1,
+        }),
+      ),
+      http.get('/api/v1/demands', () => HttpResponse.json(demandPage([]))),
+    )
+
+    renderRoute('/demands')
+    const schoolStep = await screen.findByRole('group', { name: 'Okul seçimi' })
+    const pickupStep = screen.getByRole('group', {
+      name: 'Servis alınacak konum',
+    })
+    const preferences = screen.getByRole('group', { name: 'Sonuç tercihleri' })
+    expect(
+      within(schoolStep).getByLabelText('Okulun bulunduğu il'),
+    ).toBeInTheDocument()
+    expect(within(pickupStep).getByText(/Önce okulu seçin/)).toBeInTheDocument()
+    expect(
+      within(preferences).getByLabelText('Eğitim yılı'),
+    ).toBeInTheDocument()
+    expect(within(preferences).getByLabelText('Sıralama')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(
+        within(schoolStep).getByLabelText('Okulun bulunduğu il'),
+      ).not.toBeDisabled(),
+    )
+
+    fireEvent.change(within(schoolStep).getByLabelText('Okulun bulunduğu il'), {
+      target: { value: '34' },
+    })
+    fireEvent.click(
+      await screen.findByRole('button', { name: `${school.name} okulunu seç` }),
+    )
+    await waitFor(() =>
+      expect(
+        within(pickupStep).getByLabelText('Servis alınacak ilçe'),
+      ).not.toBeDisabled(),
+    )
+    // The selected school replaces the search controls until it is changed.
+    expect(within(schoolStep).getByText('Seçilen okul')).toBeInTheDocument()
+    expect(
+      within(schoolStep).queryByLabelText('Okul adında ara'),
+    ).not.toBeInTheDocument()
+    expect(pickupStep).toHaveAttribute('data-complete', 'false')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Okulu değiştir' }))
+    expect(
+      await screen.findByRole('button', { name: `${school.name} okulunu seç` }),
+    ).toBeInTheDocument()
+    expect(
+      within(schoolStep).getByLabelText('Okul adında ara'),
+    ).toBeInTheDocument()
+    expect(
+      within(pickupStep).getByLabelText('Servis alınacak ilçe'),
+    ).toBeDisabled()
+  })
+
   it('keeps a cleared school as an incomplete draft until filters are explicitly reset', async () => {
     const requests: URLSearchParams[] = []
     server.use(

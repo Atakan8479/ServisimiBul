@@ -55,6 +55,22 @@ export function DemandLocationPicker({
   const [loadingPickup, setLoadingPickup] = useState(false)
   const [error, setError] = useState<string>()
   const requestVersion = useRef(0)
+  const selectedSchoolRef = useRef<HTMLDivElement>(null)
+  const schoolResultsRef = useRef<HTMLHeadingElement>(null)
+  const provinceSelectRef = useRef<HTMLSelectElement>(null)
+  // The clicked control unmounts when the school list collapses; move focus to its replacement.
+  const pendingFocus = useRef<'selected' | 'results'>(undefined)
+  useEffect(() => {
+    const pending = pendingFocus.current
+    // Wait for a reloaded list (e.g. after a deep link) before focusing its heading.
+    if (!pending || (pending === 'results' && loadingSchools)) return
+    pendingFocus.current = undefined
+    const target =
+      pending === 'selected'
+        ? selectedSchoolRef.current
+        : (schoolResultsRef.current ?? provinceSelectRef.current)
+    target?.focus()
+  }, [selectedSchool, schoolPage, loadingSchools])
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onLocationDraftChangeRef = useRef(onLocationDraftChange)
   useEffect(() => {
@@ -194,6 +210,21 @@ export function DemandLocationPicker({
     onLocationDraftChange?.(Boolean(provinceId))
   }
 
+  function changeSchool() {
+    pendingFocus.current = 'results'
+    clearSchool()
+    // A school hydrated from the URL has no loaded result page to return to.
+    if (!schoolPage && provinceId) {
+      void loadSchoolPage(
+        Number(provinceId),
+        0,
+        schoolDistrictId,
+        schoolQuery,
+        schoolSort,
+      )
+    }
+  }
+
   async function selectProvince(nextProvinceId: string) {
     requestVersion.current += 1
     setProvinceId(nextProvinceId)
@@ -273,6 +304,7 @@ export function DemandLocationPicker({
   }
 
   async function chooseSchool(school: School) {
+    pendingFocus.current = 'selected'
     setSelectedSchool(school)
     setPickupDistrictId('')
     setNeighborhoods([])
@@ -330,201 +362,262 @@ export function DemandLocationPicker({
   }
 
   const pageNumber = schoolPage?.page ?? 0
+  const pickupComplete = Boolean(selectedSchool && neighborhoodId)
 
   return (
     <div className="demand-location-picker">
-      <div className="demand-filter-grid">
-        <label className="form-field">
-          Okulun bulunduğu il
-          <select
-            value={provinceId}
-            disabled={loadingProvinces || provinces.length === 0}
-            onChange={(event) => void selectProvince(event.target.value)}
-          >
-            <option value="">İl seçin</option>
-            {provinces.map((province) => (
-              <option key={province.id} value={province.id}>
-                {province.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          Okulun ilçesi
-          <select
-            value={schoolDistrictId}
-            disabled={!provinceId || loadingSchools}
-            onChange={(event) => void changeSchoolDistrict(event.target.value)}
-          >
-            <option value="">Tüm ilçeler</option>
-            {schoolDistricts.map((district) => (
-              <option key={district.id} value={district.id}>
-                {district.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          Okul sıralaması
-          <select
-            value={schoolSort}
-            disabled={!provinceId || loadingSchools}
-            onChange={(event) =>
-              void changeSchoolSort(event.target.value as SchoolSort)
-            }
-          >
-            <option value="name-asc">A'dan Z'ye</option>
-            <option value="name-desc">Z'den A'ya</option>
-          </select>
-        </label>
-      </div>
-
-      <form className="school-search-row" onSubmit={applySchoolFilters}>
-        <label className="form-field grow">
-          Okul adında ara
-          <input
-            value={schoolQueryInput}
-            disabled={!provinceId}
-            onChange={(event) => setSchoolQueryInput(event.target.value)}
-          />
-        </label>
-        <button
-          className="secondary-button"
-          disabled={!provinceId || loadingSchools}
-          type="submit"
-        >
-          Okullarda ara
-        </button>
-      </form>
-
-      {loadingSchools && (
-        <div className="school-result-loading" role="status">
-          Okullar yükleniyor…
-          <div aria-hidden="true">
-            <i />
-            <i />
-          </div>
-        </div>
-      )}
-
-      {!loadingSchools && schoolPage && (
-        <div className="school-results">
-          <div className="school-result-summary">
-            <div>
-              <h3>{schoolPage.totalElements} okul bulundu</h3>
-              <p>
-                {schoolQuery
-                  ? `“${schoolQuery}” araması`
-                  : 'Aktif okul kataloğu'}
-              </p>
-            </div>
-          </div>
-          {schoolPage.content.length > 0 ? (
-            <ul className="school-result-list">
-              {schoolPage.content.map((school) => (
-                <li key={school.id}>
-                  <div>
-                    <strong>{school.name}</strong>
-                    <span>
-                      {school.districtName} · {school.neighborhoodName}
-                    </span>
-                  </div>
-                  <button
-                    className="secondary-button"
-                    type="button"
-                    onClick={() => void chooseSchool(school)}
-                  >
-                    {school.name} okulunu seç
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="school-browser-empty">
-              <h3>Bu filtrelerle eşleşen okul yok</h3>
-              <p>Okul adını veya ilçeyi değiştirerek tekrar deneyin.</p>
-            </div>
-          )}
-          {schoolPage.totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="secondary-button"
-                disabled={pageNumber === 0}
-                type="button"
-                onClick={() => void changeSchoolPage(pageNumber - 1)}
-              >
-                Önceki sayfa
-              </button>
-              <span>
-                Sayfa {pageNumber + 1} / {schoolPage.totalPages}
-              </span>
-              <button
-                className="secondary-button"
-                disabled={pageNumber + 1 >= schoolPage.totalPages}
-                type="button"
-                onClick={() => void changeSchoolPage(pageNumber + 1)}
-              >
-                Sonraki sayfa
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {selectedSchool && (
-        <div className="selected-school-summary" role="status">
+      <div
+        aria-labelledby="demand-step-school"
+        className="demand-filter-step"
+        data-complete={Boolean(selectedSchool)}
+        role="group"
+      >
+        <div className="demand-step-heading">
+          <span aria-hidden="true">1</span>
           <div>
-            <span>Seçilen okul</span>
-            <strong>{selectedSchool.name}</strong>
-            <span>
-              {selectedSchool.districtName} · {selectedSchool.neighborhoodName}
-            </span>
+            <h3 id="demand-step-school">Okul seçimi</h3>
+            <p>Öğrencinin gittiği okulu ili ve ilçesiyle bulun.</p>
           </div>
-          <button className="text-button" type="button" onClick={clearSchool}>
-            Okulu değiştir
-          </button>
         </div>
-      )}
 
-      <div className="demand-filter-grid demand-pickup-grid">
-        <label className="form-field">
-          Servis alınacak ilçe
-          <select
-            value={pickupDistrictId}
-            disabled={!selectedSchool || loadingPickup}
-            onChange={(event) => void choosePickupDistrict(event.target.value)}
+        {selectedSchool ? (
+          <div
+            className="selected-school-summary"
+            ref={selectedSchoolRef}
+            role="status"
+            tabIndex={-1}
           >
-            <option value="">İlçe seçin</option>
-            {pickupDistricts.map((district) => (
-              <option key={district.id} value={district.id}>
-                {district.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="form-field">
-          Servis alınacak mahalle
-          <select
-            value={neighborhoodId}
-            disabled={!pickupDistrictId || loadingPickup}
-            onChange={(event) => chooseNeighborhood(event.target.value)}
-          >
-            <option value="">Mahalle seçin</option>
-            {neighborhoods.map((neighborhood) => (
-              <option key={neighborhood.id} value={neighborhood.id}>
-                {neighborhood.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            <div>
+              <span>Seçilen okul</span>
+              <strong>{selectedSchool.name}</strong>
+              <span>
+                Okulun konumu: {selectedSchool.districtName} ·{' '}
+                {selectedSchool.neighborhoodName}
+              </span>
+            </div>
+            <button
+              className="text-button"
+              type="button"
+              onClick={changeSchool}
+            >
+              Okulu değiştir
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="demand-filter-grid">
+              <label className="form-field">
+                Okulun bulunduğu il
+                <select
+                  ref={provinceSelectRef}
+                  value={provinceId}
+                  disabled={loadingProvinces || provinces.length === 0}
+                  onChange={(event) => void selectProvince(event.target.value)}
+                >
+                  <option value="">İl seçin</option>
+                  {provinces.map((province) => (
+                    <option key={province.id} value={province.id}>
+                      {province.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="form-field">
+                Okulun ilçesi
+                <select
+                  value={schoolDistrictId}
+                  disabled={!provinceId || loadingSchools}
+                  onChange={(event) =>
+                    void changeSchoolDistrict(event.target.value)
+                  }
+                >
+                  <option value="">Tüm ilçeler</option>
+                  {schoolDistricts.map((district) => (
+                    <option key={district.id} value={district.id}>
+                      {district.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <form className="school-search-row" onSubmit={applySchoolFilters}>
+              <label className="form-field grow">
+                Okul adında ara
+                <input
+                  value={schoolQueryInput}
+                  disabled={!provinceId}
+                  onChange={(event) => setSchoolQueryInput(event.target.value)}
+                />
+              </label>
+              <label className="form-field school-sort-field">
+                Okul sıralaması
+                <select
+                  value={schoolSort}
+                  disabled={!provinceId || loadingSchools}
+                  onChange={(event) =>
+                    void changeSchoolSort(event.target.value as SchoolSort)
+                  }
+                >
+                  <option value="name-asc">A'dan Z'ye</option>
+                  <option value="name-desc">Z'den A'ya</option>
+                </select>
+              </label>
+              <button
+                className="secondary-button"
+                disabled={!provinceId || loadingSchools}
+                type="submit"
+              >
+                Okullarda ara
+              </button>
+            </form>
+
+            {!provinceId && !loadingProvinces && (
+              <p className="demand-step-hint">
+                Okul listesini görmek için önce okulun bulunduğu ili seçin.
+              </p>
+            )}
+
+            {loadingSchools && (
+              <div className="school-result-loading" role="status">
+                Okullar yükleniyor…
+                <div aria-hidden="true">
+                  <i />
+                  <i />
+                </div>
+              </div>
+            )}
+
+            {!loadingSchools && schoolPage && (
+              <div className="school-results">
+                <div className="school-result-summary">
+                  <div>
+                    <h4 ref={schoolResultsRef} tabIndex={-1}>
+                      {schoolPage.totalElements} okul bulundu
+                    </h4>
+                    <p>
+                      {schoolQuery
+                        ? `“${schoolQuery}” araması`
+                        : 'Aktif okul kataloğu'}
+                    </p>
+                  </div>
+                </div>
+                {schoolPage.content.length > 0 ? (
+                  <ul className="school-result-list">
+                    {schoolPage.content.map((school) => (
+                      <li key={school.id}>
+                        <div>
+                          <strong>{school.name}</strong>
+                          <span>
+                            {school.districtName} · {school.neighborhoodName}
+                          </span>
+                        </div>
+                        <button
+                          className="secondary-button"
+                          type="button"
+                          onClick={() => void chooseSchool(school)}
+                        >
+                          {school.name} okulunu seç
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="school-browser-empty">
+                    <h4>Bu filtrelerle eşleşen okul yok</h4>
+                    <p>Okul adını veya ilçeyi değiştirerek tekrar deneyin.</p>
+                  </div>
+                )}
+                {schoolPage.totalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      className="secondary-button"
+                      disabled={pageNumber === 0}
+                      type="button"
+                      onClick={() => void changeSchoolPage(pageNumber - 1)}
+                    >
+                      Önceki sayfa
+                    </button>
+                    <span>
+                      Sayfa {pageNumber + 1} / {schoolPage.totalPages}
+                    </span>
+                    <button
+                      className="secondary-button"
+                      disabled={pageNumber + 1 >= schoolPage.totalPages}
+                      type="button"
+                      onClick={() => void changeSchoolPage(pageNumber + 1)}
+                    >
+                      Sonraki sayfa
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </div>
 
-      {loadingPickup && (
-        <p className="inline-loading" role="status">
-          <span className="loading-dot" aria-hidden="true" /> Konum seçenekleri
-          yükleniyor…
-        </p>
-      )}
+      <div
+        aria-labelledby="demand-step-pickup"
+        className="demand-filter-step"
+        data-complete={pickupComplete}
+        data-disabled={!selectedSchool}
+        role="group"
+      >
+        <div className="demand-step-heading">
+          <span aria-hidden="true">2</span>
+          <div>
+            <h3 id="demand-step-pickup">Servis alınacak konum</h3>
+            <p>
+              {selectedSchool
+                ? 'Öğrencinin servise bineceği ilçe ve mahalle. Okulun ilçesinden farklı olabilir.'
+                : 'Önce okulu seçin; servis alınacak ilçe ve mahalle buna göre açılır.'}
+            </p>
+          </div>
+        </div>
+        <div className="demand-filter-grid">
+          <label className="form-field">
+            Servis alınacak ilçe
+            <select
+              value={pickupDistrictId}
+              disabled={!selectedSchool || loadingPickup}
+              onChange={(event) =>
+                void choosePickupDistrict(event.target.value)
+              }
+            >
+              <option value="">İlçe seçin</option>
+              {pickupDistricts.map((district) => (
+                <option key={district.id} value={district.id}>
+                  {district.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="form-field">
+            Servis alınacak mahalle
+            <select
+              value={neighborhoodId}
+              disabled={!pickupDistrictId || loadingPickup}
+              onChange={(event) => chooseNeighborhood(event.target.value)}
+            >
+              <option value="">Mahalle seçin</option>
+              {neighborhoods.map((neighborhood) => (
+                <option key={neighborhood.id} value={neighborhood.id}>
+                  {neighborhood.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        {loadingPickup && (
+          <p className="inline-loading" role="status">
+            <span className="loading-dot" aria-hidden="true" /> Konum
+            seçenekleri yükleniyor…
+          </p>
+        )}
+      </div>
+
       {error && (
         <div className="form-error" role="alert">
           {error}

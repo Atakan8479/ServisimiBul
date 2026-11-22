@@ -386,38 +386,55 @@ export function DemandBoardPage() {
           onSelectionChange={handleSelectionChange}
         />
 
-        <div className="demand-board-controls">
-          <label className="form-field">
-            Eğitim yılı
-            <input
-              inputMode="numeric"
-              placeholder="Güncel yıl veya 2026-2027"
-              value={academicYear}
-              aria-invalid={Boolean(filterError)}
-              aria-describedby={filterError ? 'academic-year-error' : undefined}
-              onChange={(event) => setAcademicYear(event.target.value)}
-            />
-          </label>
-          <label className="form-field">
-            Sıralama
-            <select
-              value={sort}
-              onChange={(event) =>
-                void changeSort(event.target.value as DemandSort)
-              }
+        <div
+          aria-labelledby="demand-step-preferences"
+          className="demand-filter-step"
+          role="group"
+        >
+          <div className="demand-step-heading">
+            <span aria-hidden="true">3</span>
+            <div>
+              <h3 id="demand-step-preferences">Sonuç tercihleri</h3>
+              <p>
+                Listelenecek talepleri eğitim yılına göre daraltın ve sıralayın.
+              </p>
+            </div>
+          </div>
+          <div className="demand-board-controls">
+            <label className="form-field">
+              Eğitim yılı
+              <input
+                inputMode="numeric"
+                placeholder="Güncel yıl veya 2026-2027"
+                value={academicYear}
+                aria-invalid={Boolean(filterError)}
+                aria-describedby={
+                  filterError ? 'academic-year-error' : undefined
+                }
+                onChange={(event) => setAcademicYear(event.target.value)}
+              />
+            </label>
+            <label className="form-field">
+              Sıralama
+              <select
+                value={sort}
+                onChange={(event) =>
+                  void changeSort(event.target.value as DemandSort)
+                }
+              >
+                <option value="newest">En yeni talepler</option>
+                <option value="most-supported">En çok desteklenenler</option>
+              </select>
+            </label>
+            <button
+              className="primary-button"
+              disabled={loadingDemands}
+              type="button"
+              onClick={() => void applyFilters()}
             >
-              <option value="newest">En yeni talepler</option>
-              <option value="most-supported">En çok desteklenenler</option>
-            </select>
-          </label>
-          <button
-            className="primary-button"
-            disabled={loadingDemands}
-            type="button"
-            onClick={() => void applyFilters()}
-          >
-            {loadingDemands ? 'Talepler yükleniyor…' : 'Talepleri göster'}
-          </button>
+              {loadingDemands ? 'Talepler yükleniyor…' : 'Talepleri göster'}
+            </button>
+          </div>
         </div>
         {filterError && (
           <small className="field-error" id="academic-year-error" role="alert">
