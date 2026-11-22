@@ -426,14 +426,6 @@ export function DemandBoardPage() {
                 <option value="most-supported">En çok desteklenenler</option>
               </select>
             </label>
-            <button
-              className="primary-button"
-              disabled={loadingDemands}
-              type="button"
-              onClick={() => void applyFilters()}
-            >
-              {loadingDemands ? 'Talepler yükleniyor…' : 'Talepleri göster'}
-            </button>
           </div>
         </div>
         {filterError && (
@@ -441,6 +433,16 @@ export function DemandBoardPage() {
             {filterError}
           </small>
         )}
+        <div className="demand-filter-actions">
+          <button
+            className="primary-button"
+            disabled={loadingDemands}
+            type="button"
+            onClick={() => void applyFilters()}
+          >
+            {loadingDemands ? 'Talepler yükleniyor…' : 'Talepleri göster'}
+          </button>
+        </div>
       </section>
 
       {returnNotice && (

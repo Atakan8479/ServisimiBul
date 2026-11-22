@@ -3852,6 +3852,22 @@ button:disabled {
   align-items: end;
 }
 
+/* #319: the apply action closes the filter form in its own row. */
+.demand-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.demand-filter-actions > .primary-button {
+  min-width: 14rem;
+  min-height: 3rem;
+  padding-inline: 1.5rem;
+  font-size: 1rem;
+}
+
 .demand-location-picker,
 .operator-check-result,
 .demand-inline-form {
@@ -6081,7 +6097,7 @@ dialog[data-closing] {
 
   .demand-summary-card > .button-link,
   .existing-demand-callout > .button-link,
-  .demand-board-controls > button {
+  .demand-filter-actions > .primary-button {
     width: 100%;
     justify-content: center;
   }
