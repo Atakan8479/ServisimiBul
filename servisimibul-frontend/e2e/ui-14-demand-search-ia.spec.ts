@@ -138,3 +138,43 @@ test('IA318 groups school, pickup and result preferences in reading order', asyn
   ).toBeFocused()
   await expect(pickup.getByLabel('Servis alınacak ilçe')).toBeDisabled()
 })
+
+for (const path of ['/demands', '/demands/new']) {
+  test(`IA318 recovers school results after changing a deep-linked school on ${path}`, async ({
+    page,
+  }) => {
+    await installMockApi(page, createMockApiState())
+    await page.goto(
+      `${path}?schoolId=6de54e65-6e04-4168-a1cb-967a98d7ec12&pickupDistrictId=11&neighborhoodId=201&academicYear=2026-2027`,
+    )
+    await expect(page.getByLabel('Servis alınacak mahalle')).toHaveValue('201')
+
+    await page.getByRole('button', { name: 'Okulu değiştir' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: /okul bulundu/ }),
+    ).toBeFocused()
+    await expect(page.getByLabel('Okulun bulunduğu il')).toHaveValue('34')
+    await expect(page.getByLabel('Servis alınacak ilçe')).toBeDisabled()
+
+    await page
+      .getByRole('button', { name: 'Zübeyde Hanım İlkokulu okulunu seç' })
+      .click()
+    await expect(page.locator('.selected-school-summary')).toContainText(
+      'Zübeyde Hanım İlkokulu',
+    )
+    await page.getByLabel('Servis alınacak ilçe').selectOption('11')
+    await page.getByLabel('Servis alınacak mahalle').selectOption('201')
+    await expect(
+      page.getByRole('group', { name: /Servis alınacak konum/ }),
+    ).toHaveAttribute('data-complete', 'true')
+    await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
+
+    if (path === '/demands') {
+      await page.getByRole('button', { name: 'Talepleri göster' }).click()
+      await expect(page).toHaveURL(
+        /schoolId=10000000-0000-4000-8000-000000000003&pickupDistrictId=11&neighborhoodId=201&academicYear=2026-2027/,
+      )
+    }
+  })
+}

@@ -57,19 +57,20 @@ export function DemandLocationPicker({
   const requestVersion = useRef(0)
   const selectedSchoolRef = useRef<HTMLDivElement>(null)
   const schoolResultsRef = useRef<HTMLHeadingElement>(null)
+  const provinceSelectRef = useRef<HTMLSelectElement>(null)
   // The clicked control unmounts when the school list collapses; move focus to its replacement.
   const pendingFocus = useRef<'selected' | 'results'>(undefined)
   useEffect(() => {
-    const target =
-      pendingFocus.current === 'selected'
-        ? selectedSchoolRef.current
-        : pendingFocus.current === 'results'
-          ? schoolResultsRef.current
-          : null
-    if (!target) return
+    const pending = pendingFocus.current
+    // Wait for a reloaded list (e.g. after a deep link) before focusing its heading.
+    if (!pending || (pending === 'results' && loadingSchools)) return
     pendingFocus.current = undefined
-    target.focus()
-  }, [selectedSchool])
+    const target =
+      pending === 'selected'
+        ? selectedSchoolRef.current
+        : (schoolResultsRef.current ?? provinceSelectRef.current)
+    target?.focus()
+  }, [selectedSchool, schoolPage, loadingSchools])
   const onSelectionChangeRef = useRef(onSelectionChange)
   const onLocationDraftChangeRef = useRef(onLocationDraftChange)
   useEffect(() => {
@@ -212,6 +213,16 @@ export function DemandLocationPicker({
   function changeSchool() {
     pendingFocus.current = 'results'
     clearSchool()
+    // A school hydrated from the URL has no loaded result page to return to.
+    if (!schoolPage && provinceId) {
+      void loadSchoolPage(
+        Number(provinceId),
+        0,
+        schoolDistrictId,
+        schoolQuery,
+        schoolSort,
+      )
+    }
   }
 
   async function selectProvince(nextProvinceId: string) {
@@ -398,6 +409,7 @@ export function DemandLocationPicker({
               <label className="form-field">
                 Okulun bulunduğu il
                 <select
+                  ref={provinceSelectRef}
                   value={provinceId}
                   disabled={loadingProvinces || provinces.length === 0}
                   onChange={(event) => void selectProvince(event.target.value)}
