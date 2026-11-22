@@ -1034,8 +1034,10 @@ a:focus-visible {
 }
 
 .school-result-summary h3,
+.school-result-summary h4,
 .school-result-summary p,
 .school-browser-empty h3,
+.school-browser-empty h4,
 .school-browser-empty p {
   margin: 0;
 }
@@ -3805,7 +3807,13 @@ button:disabled {
   scroll-margin-top: 6rem;
 }
 
-.demand-filter-panel .section-heading p,
+.demand-filter-panel .section-heading p {
+  max-width: 62ch;
+  margin: 0.45rem 0 0;
+  color: var(--color-muted);
+  line-height: 1.55;
+}
+
 .demand-status-filter {
   display: flex;
   flex-wrap: wrap;
@@ -3876,9 +3884,98 @@ button:disabled {
   margin-top: 1.5rem;
 }
 
-.demand-pickup-grid {
-  padding-top: 0.25rem;
+.demand-filter-step {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.demand-filter-step > * {
+  margin-block: 0;
+}
+
+/* Divide sections without nesting cards: every step after the first gets a rule. */
+.demand-filter-step + .demand-filter-step,
+.demand-location-picker + .demand-filter-step,
+.demand-location-picker > .form-error {
+  margin-top: 1.5rem;
+}
+
+.demand-filter-step + .demand-filter-step,
+.demand-location-picker + .demand-filter-step {
+  padding-top: 1.5rem;
   border-top: 1px solid var(--color-border);
+}
+
+.demand-step-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.demand-step-heading > span {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-soft);
+  color: var(--teal-700);
+  font-size: 0.85rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color var(--motion-fast) ease,
+    color var(--motion-fast) ease;
+}
+
+.demand-filter-step[data-complete='true'] .demand-step-heading > span {
+  background: var(--teal-700);
+  color: var(--neutral-0);
+}
+
+.demand-step-heading h3 {
+  margin: 0.15rem 0 0;
+  color: var(--navy-950);
+  font-size: 1.02rem;
+  line-height: 1.3;
+}
+
+.demand-step-heading p,
+.demand-step-hint {
+  margin: 0.25rem 0 0;
+  color: var(--color-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.demand-step-hint {
+  margin: 0;
+}
+
+.demand-filter-step .school-result-summary {
+  padding: 0.25rem 0 0.75rem;
+}
+
+.demand-filter-step .school-result-summary h4 {
+  font-size: 1rem;
+}
+
+.school-sort-field {
+  flex: 0 1 12rem;
+}
+
+.demand-filter-step .selected-school-summary {
+  flex-wrap: wrap;
+}
+
+.demand-filter-step .selected-school-summary > div > span:first-child {
+  color: var(--teal-700);
+  font-size: 0.78rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .demand-summary-list {
