@@ -5,7 +5,9 @@ import {
   useState,
   type FormEvent,
   type ReactNode,
+  type RefObject,
 } from 'react'
+import { flushSync } from 'react-dom'
 import { Link, useNavigate } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { StatePanel, StatusBadge } from '../../components/design-system'
@@ -14,6 +16,7 @@ import {
   createOffering,
   createVehicle,
   deactivateVehicle,
+  deleteVehicle,
   getOfferings,
   getVehicles,
   replaceOfferingCoverage,
@@ -38,6 +41,11 @@ export function OperatorOfferingsPage() {
   const [notice, setNotice] = useState<string>()
   const [vehicleCreateOpen, setVehicleCreateOpen] = useState(false)
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle>()
+  const [vehicleToDelete, setVehicleToDelete] = useState<Vehicle>()
+  // True when vehicle eligibility could not be re-read after a change; hides deletion (fail closed).
+  const [eligibilityStale, setEligibilityStale] = useState(false)
+  const vehiclesHeadingRef = useRef<HTMLHeadingElement>(null)
+  const cancelDeleteRef = useRef<HTMLButtonElement>(null)
   const [offeringCreateOpen, setOfferingCreateOpen] = useState(false)
   const [offeringToEdit, setOfferingToEdit] = useState<ServiceOffering>()
 
@@ -126,6 +134,51 @@ export function OperatorOfferingsPage() {
     }
   }
 
+  /** Re-reads backend-authoritative deletion eligibility after offerings change. */
+  async function refreshVehicles() {
+    try {
+      setVehicles(await getVehicles())
+      setEligibilityStale(false)
+    } catch {
+      setEligibilityStale(true)
+    }
+  }
+
+  async function removeVehicle(vehicle: Vehicle) {
+    setPending(`vehicle-delete-${vehicle.id}`)
+    setError(undefined)
+    setNotice(undefined)
+    let moveFocusToFleet = true
+    try {
+      await deleteVehicle(vehicle.id)
+      setVehicles((current) => current.filter((item) => item.id !== vehicle.id))
+      setNotice(`${vehicle.plate} plakalı araç kalıcı olarak silindi.`)
+    } catch (reason) {
+      const code = reason instanceof ApiError ? reason.problem.code : undefined
+      if (code && code in deletionConflictMessages) {
+        // Eligibility changed elsewhere (for example another tab); show the server's answer.
+        await refreshVehicles()
+        setError(deletionConflictMessages[code])
+      } else if (code === 'vehicle_not_found') {
+        setVehicles((current) =>
+          current.filter((item) => item.id !== vehicle.id),
+        )
+        setNotice('Araç zaten silinmiş; liste güncellendi.')
+      } else {
+        moveFocusToFleet = false
+        handleSession(reason, navigate, setError)
+      }
+    } finally {
+      // Commit synchronously so the modal is gone before focus moves.
+      flushSync(() => {
+        setVehicleToDelete(undefined)
+        setPending(undefined)
+      })
+    }
+    // The opener may no longer exist, so keep keyboard focus in the fleet section.
+    if (moveFocusToFleet) vehiclesHeadingRef.current?.focus()
+  }
+
   async function toggleOffering(offering: ServiceOffering) {
     setPending(`offering-${offering.id}`)
     setError(undefined)
@@ -203,7 +256,9 @@ export function OperatorOfferingsPage() {
           >
             <div className="operator-offerings-section-heading">
               <div>
-                <h2 id="vehicles-title">Filo bilgileri</h2>
+                <h2 id="vehicles-title" ref={vehiclesHeadingRef} tabIndex={-1}>
+                  Filo bilgileri
+                </h2>
                 <p>Servis tekliflerinizde kullanacağınız araçları yönetin.</p>
               </div>
               <button
@@ -270,6 +325,26 @@ export function OperatorOfferingsPage() {
                             : 'Etkinleştir'}
                         <ArrowIcon />
                       </button>
+                      {!vehicle.deletable || eligibilityStale ? (
+                        <p className="operator-vehicle-removal-note">
+                          {eligibilityStale
+                            ? 'Silme uygunluğu doğrulanamadı; sayfayı yenileyin.'
+                            : deletionBlockedNotes[
+                                vehicle.deletionBlockedReason ??
+                                  'HISTORY_UNKNOWN'
+                              ]}
+                        </p>
+                      ) : (
+                        <button
+                          aria-label={`${vehicle.plate} aracını kalıcı olarak sil`}
+                          className="operator-text-action operator-text-action-danger"
+                          disabled={pending !== undefined}
+                          onClick={() => setVehicleToDelete(vehicle)}
+                          type="button"
+                        >
+                          Sil
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))}
@@ -457,6 +532,44 @@ export function OperatorOfferingsPage() {
         </ModalDialog>
       )}
 
+      {vehicleToDelete && (
+        <ModalDialog
+          dismissible={pending === undefined}
+          initialFocusRef={cancelDeleteRef}
+          onClose={() => setVehicleToDelete(undefined)}
+          open
+          title="Aracı kalıcı olarak sil"
+        >
+          <div className="operator-dialog-form">
+            <p className="operator-dialog-intro">
+              <strong>{vehicleToDelete.plate}</strong> plakalı araç filonuzdan
+              kalıcı olarak silinecek. Bu işlem geri alınamaz.
+            </p>
+            <div className="operator-dialog-actions">
+              <button
+                className="secondary-button"
+                disabled={pending !== undefined}
+                onClick={() => setVehicleToDelete(undefined)}
+                ref={cancelDeleteRef}
+                type="button"
+              >
+                Vazgeç
+              </button>
+              <button
+                className="danger-button"
+                disabled={pending !== undefined}
+                onClick={() => void removeVehicle(vehicleToDelete)}
+                type="button"
+              >
+                {pending === `vehicle-delete-${vehicleToDelete.id}`
+                  ? 'Siliniyor…'
+                  : 'Kalıcı olarak sil'}
+              </button>
+            </div>
+          </div>
+        </ModalDialog>
+      )}
+
       <ModalDialog
         onClose={() => setOfferingCreateOpen(false)}
         open={offeringCreateOpen}
@@ -467,6 +580,7 @@ export function OperatorOfferingsPage() {
             setOfferings((current) => [...current, offering])
             setNotice('Servis taslağı oluşturuldu.')
             setOfferingCreateOpen(false)
+            void refreshVehicles()
           }}
           onError={(reason) => dialogErrorFor(reason, navigate)}
           schools={activeSchools}
@@ -488,6 +602,7 @@ export function OperatorOfferingsPage() {
               updateOfferingState(updated)
               setOfferingToEdit(updated)
               setNotice(message)
+              void refreshVehicles()
             }}
             schools={activeSchools}
             vehicles={activeVehicles}
@@ -1018,28 +1133,68 @@ function OfferingEditor({
   )
 }
 
+const deletionConflictMessages: Record<string, string> = {
+  vehicle_in_use:
+    'Bu araç bir servis teklifinde kullanıldığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+  vehicle_previously_used:
+    'Bu araç daha önce bir servis teklifinde kullanıldığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+  vehicle_history_unknown:
+    'Bu aracın kullanım geçmişi doğrulanamadığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+}
+
+const deletionBlockedNotes: Record<
+  NonNullable<Vehicle['deletionBlockedReason']>,
+  string
+> = {
+  IN_USE:
+    'Servis tekliflerinde kullanıldığı için silinemez; pasife alabilirsiniz.',
+  PREVIOUSLY_USED:
+    'Daha önce bir servis teklifinde kullanıldığı için silinemez; pasife alabilirsiniz.',
+  HISTORY_UNKNOWN:
+    'Kullanım geçmişi doğrulanamadığı için silinemez; pasife alabilirsiniz.',
+}
+
 function ModalDialog({
   children,
+  dismissible = true,
+  initialFocusRef,
   onClose,
   open,
   title,
   wide = false,
 }: {
   children: ReactNode
+  dismissible?: boolean
+  initialFocusRef?: RefObject<HTMLElement | null>
   onClose: () => void
   open: boolean
   title: string
   wide?: boolean
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const openerRef = useRef<Element | null>(null)
 
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
-    if (open && !dialog.open) dialog.showModal()
+    if (open && !dialog.open) {
+      openerRef.current = document.activeElement
+      dialog.showModal()
+      initialFocusRef?.current?.focus()
+    }
     if (!open && dialog.open) dialog.close()
     if (!open) delete dialog.dataset.closing
-  }, [open])
+  }, [initialFocusRef, open])
+
+  // Conditionally rendered dialogs unmount instead of closing, which skips the browser's own
+  // focus restoration; return focus to the opener when it still exists.
+  useEffect(
+    () => () => {
+      const opener = openerRef.current
+      if (opener instanceof HTMLElement && opener.isConnected) opener.focus()
+    },
+    [],
+  )
 
   return (
     <dialog
@@ -1047,7 +1202,7 @@ function ModalDialog({
       className={`operator-dialog${wide ? ' operator-dialog-wide' : ''}`}
       onCancel={(event) => {
         event.preventDefault()
-        exitDialog(dialogRef.current, onClose)
+        if (dismissible) exitDialog(dialogRef.current, onClose)
       }}
       ref={dialogRef}
     >
@@ -1059,6 +1214,7 @@ function ModalDialog({
         <button
           aria-label={`${title} penceresini kapat`}
           className="operator-dialog-close"
+          disabled={!dismissible}
           onClick={() => exitDialog(dialogRef.current, onClose)}
           type="button"
         >

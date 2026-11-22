@@ -1,8 +1,17 @@
--- A-09 read-only post-migration verification for the repository's V1-V21 schema.
+-- A-09 read-only post-migration verification for the repository's V1-V22 schema.
 -- Run as the controlled migration/administration identity against the explicitly
 -- confirmed target. Every row must report PASS. This script changes no state.
 
 begin transaction read only;
+
+-- Verify the effective read-only state before any query (PGOPTIONS is not reliable through poolers).
+do $$
+begin
+    if current_setting('transaction_read_only') <> 'on' then
+        raise exception 'Refusing to run migration verification: transaction is not read-only';
+    end if;
+end
+$$;
 
 select
     current_database() as database_name,
@@ -74,12 +83,12 @@ checks(sort_order, check_name, passed, detail) as (
 
     union all
     select 20,
-           'Flyway versions V1-V21 applied successfully',
+           'Flyway versions V1-V22 applied successfully',
            coalesce((
                select array_agg(version order by installed_rank) filter (where success)
                from public.flyway_schema_history
                where version is not null
-           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21']::varchar[]
+           ), array[]::varchar[]) = array['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']::varchar[]
            and not exists (
                select 1 from public.flyway_schema_history where not success
            ),
@@ -286,6 +295,38 @@ checks(sort_order, check_name, passed, detail) as (
            'session expiry cleanup index exists',
            to_regclass('public.spring_session_expiry_time_idx') is not null,
            'public.spring_session_expiry_time_idx'
+
+    union all
+    select 140,
+           'D059 vehicle usage history columns and guard triggers exist',
+           (select count(*) from information_schema.columns
+            where table_schema = 'public' and table_name = 'vehicle'
+              and column_name in ('usage_history_complete', 'usage_recorded_at')) = 2
+           and (select count(*) from pg_trigger trigger_info
+                where not trigger_info.tgisinternal
+                  and trigger_info.tgname in (
+                      'service_offering_records_vehicle_usage',
+                      'vehicle_usage_history_append_only',
+                      'vehicle_deletion_guard'
+                  )
+                  and trigger_info.tgenabled = 'O') = 3
+           and not exists (
+               select 1
+               from pg_proc function_info
+               cross join lateral aclexplode(coalesce(
+                   function_info.proacl,
+                   acldefault('f', function_info.proowner)
+               )) privilege
+               where function_info.pronamespace = 'public'::regnamespace
+                 and function_info.proname in (
+                     'record_vehicle_usage',
+                     'protect_vehicle_usage_history',
+                     'guard_vehicle_deletion'
+                 )
+                 and privilege.privilege_type = 'EXECUTE'
+                 and privilege.grantee <> function_info.proowner
+           ),
+           'vehicle usage_history_complete/usage_recorded_at; 3 enabled guard triggers; trigger functions executable by owner only'
 )
 select check_name,
        case when passed then 'PASS' else 'FAIL' end as result,

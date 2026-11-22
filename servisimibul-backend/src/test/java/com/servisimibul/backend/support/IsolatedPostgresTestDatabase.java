@@ -90,6 +90,50 @@ public final class IsolatedPostgresTestDatabase {
         }
     }
 
+    /**
+     * Runs {@code action} against a brand-new empty database created next to the verified
+     * disposable test database on the same loopback cluster, then drops it. Used to exercise a
+     * migration against data that existed before it (for example a backfill).
+     */
+    public static void withScratchDatabase(
+            Environment environment,
+            String suffix,
+            ScratchDatabaseAction action
+    ) throws Exception {
+        requireSafeIdentifier(suffix, "scratch database suffix");
+        String expectedDatabase = requiredSafeIdentifier(environment, "SB_TEST_DATABASE_NAME");
+        String scratchDatabase = expectedDatabase + "_" + suffix;
+        ConnectionSettings administrator = settings(
+                environment,
+                "SB_TEST_DB_ADMIN_JDBC_URL",
+                "SB_TEST_DB_ADMIN_USER",
+                "SB_TEST_DB_ADMIN_PASSWORD"
+        );
+        String scratchUrl = administrator.url().replaceFirst(
+                "/" + expectedDatabase + "(?=$|\\?)",
+                "/" + scratchDatabase
+        );
+        requireLoopbackUrl(scratchUrl, scratchDatabase);
+        try (Connection connection = openVerifiedAdministratorConnection(environment);
+             var statement = connection.createStatement()) {
+            statement.execute("drop database if exists \"" + scratchDatabase + "\" with (force)");
+            statement.execute("create database \"" + scratchDatabase + "\"");
+        }
+        try {
+            action.run(scratchUrl, administrator.username(), administrator.password());
+        } finally {
+            try (Connection connection = openVerifiedAdministratorConnection(environment);
+                 var statement = connection.createStatement()) {
+                statement.execute("drop database if exists \"" + scratchDatabase + "\" with (force)");
+            }
+        }
+    }
+
+    @FunctionalInterface
+    public interface ScratchDatabaseAction {
+        void run(String jdbcUrl, String username, String password) throws Exception;
+    }
+
     public static String requiredSafeIdentifier(Environment environment, String property) {
         String value = required(environment, property);
         requireSafeIdentifier(value, property);

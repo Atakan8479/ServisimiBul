@@ -6,7 +6,12 @@ import {
   useSearchParams,
 } from 'react-router-dom'
 import { ApiError } from '../../api/client'
-import { currentUser, knownAuthRole, type AuthRole } from '../auth/auth-api'
+import {
+  currentUser,
+  knownAuthRole,
+  type AuthRole,
+  type AuthUser,
+} from '../auth/auth-api'
 import { ReportControl } from '../moderation/ReportControl'
 import {
   createDemandComment,
@@ -56,6 +61,46 @@ export function DemandComments({
   const resumeHandled = useRef(false)
   const commentButtonRef = useRef<HTMLButtonElement>(null)
   const commentBodyRef = useRef<HTMLTextAreaElement>(null)
+  const approvalNoteRef = useRef<HTMLParagraphElement>(null)
+  const pendingFocus = useRef<'body' | 'approval'>(undefined)
+  // Server-confirmed operator comment access for one session key; a stale
+  // session's answer never applies to the next account.
+  const [operatorAccess, setOperatorAccess] = useState<{
+    key: string
+    access: 'allowed' | 'approval-required' | 'unverified'
+  }>()
+  const operatorSessionKey =
+    open && authChecked && role === 'OPERATOR' && userId
+      ? sessionKey
+      : undefined
+
+  useEffect(() => {
+    if (!operatorSessionKey || !userId) return
+    const ownerKey = operatorSessionKey
+    let cancelled = false
+    currentUser()
+      .then((user) => {
+        if (cancelled || sessionKeyRef.current !== ownerKey) return
+        if (user.id !== userId || user.role !== 'OPERATOR') return
+        setOperatorAccess({
+          key: ownerKey,
+          access: operatorNeedsApproval(user) ? 'approval-required' : 'allowed',
+        })
+      })
+      .catch(() => {
+        // The click path re-verifies the session and handles 401 itself.
+        if (cancelled || sessionKeyRef.current !== ownerKey) return
+        setOperatorAccess({ key: ownerKey, access: 'unverified' })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [operatorSessionKey, userId])
+
+  const currentOperatorAccess =
+    operatorSessionKey && operatorAccess?.key === operatorSessionKey
+      ? operatorAccess.access
+      : undefined
 
   const loadFirstPage = useCallback(async () => {
     const request = ++requestVersion.current
@@ -102,8 +147,28 @@ export function DemandComments({
     open &&
     authChecked &&
     Boolean(sessionKey && userId) &&
-    (role === 'OPERATOR' || (role === 'PARENT' && parentHasActiveSupport))
+    ((role === 'OPERATOR' &&
+      (currentOperatorAccess === 'allowed' ||
+        currentOperatorAccess === 'unverified')) ||
+      (role === 'PARENT' && parentHasActiveSupport))
+  const operatorAwaitingApproval = currentOperatorAccess === 'approval-required'
   const formOpen = canComment && formOwnerKey === sessionKey
+
+  // Focus after the target is committed; an animation frame can run before
+  // React renders an update made outside an event handler.
+  useEffect(() => {
+    if (pendingFocus.current === 'body' && formOpen) {
+      commentBodyRef.current?.focus()
+    } else if (
+      pendingFocus.current === 'approval' &&
+      operatorAwaitingApproval
+    ) {
+      approvalNoteRef.current?.focus()
+    } else {
+      return
+    }
+    pendingFocus.current = undefined
+  }, [formOpen, operatorAwaitingApproval])
   const currentCommentOwnership =
     authChecked &&
     Boolean(userId) &&
@@ -144,9 +209,16 @@ export function DemandComments({
         setActionError('Yorum yazmak için önce bu talebe destek verin.')
         return
       }
+      // Same gate the server applies; avoids a form that can only fail with 403.
+      if (user.role === 'OPERATOR' && operatorNeedsApproval(user)) {
+        setOperatorAccess({ key: ownerKey, access: 'approval-required' })
+        // The button disappears; keep keyboard focus on the guidance.
+        pendingFocus.current = 'approval'
+        return
+      }
       if (formOwnerKey !== ownerKey) setBody('')
       setFormOwnerKey(ownerKey)
-      window.requestAnimationFrame(() => commentBodyRef.current?.focus())
+      pendingFocus.current = 'body'
     } catch (error) {
       if (error instanceof ApiError && error.problem.status === 401) {
         redirectToLogin(error.sessionExpired, knownRole)
@@ -270,6 +342,19 @@ export function DemandComments({
       {open && authChecked && role === 'PARENT' && !parentHasActiveSupport && (
         <p className="comment-state">
           Yorum yazmak için önce bu talebe destek verin.
+        </p>
+      )}
+
+      {operatorAwaitingApproval && (
+        <p
+          className="comment-state"
+          id="comment-approval-note"
+          ref={approvalNoteRef}
+          tabIndex={-1}
+        >
+          Yorum yazabilmek için işletme başvurunuzun yönetici tarafından
+          onaylanması gerekir.{' '}
+          <Link to="/operator/profile">Başvuru durumunu görüntüle</Link>
         </p>
       )}
 
@@ -422,4 +507,8 @@ function formatCommentDate(value: string) {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value))
+}
+
+function operatorNeedsApproval(user: AuthUser) {
+  return user.operatorApprovalRequired && user.approvalStatus !== 'APPROVED'
 }

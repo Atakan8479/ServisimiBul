@@ -11,6 +11,7 @@ import com.servisimibul.backend.offering.ServiceOfferingCoverageRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository;
 import com.servisimibul.backend.offering.ServiceOfferingRepository.OwnedReference;
 import com.servisimibul.backend.offering.Vehicle;
+import com.servisimibul.backend.offering.VehicleDeletionBlock;
 import com.servisimibul.backend.offering.VehicleRepository;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CreateRequest;
 import com.servisimibul.backend.offering.dto.ServiceOfferingDtos.CoverageReplaceRequest;
@@ -35,6 +36,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -54,8 +56,16 @@ public class OfferingService {
     @Transactional(readOnly = true)
     public List<VehicleResponse> listVehicles() {
         OperatorProfile operator = currentOperator();
+        Map<UUID, Optional<VehicleDeletionBlock>> blocks = new HashMap<>();
+        vehicleRepository.findDeletionStatesByOperatorId(operator.getId()).forEach(state ->
+                blocks.put(state.getVehicleId(), VehicleDeletionBlock.of(state))
+        );
         return vehicleRepository.findAllByOperatorIdOrderByPlateAscIdAsc(operator.getId()).stream()
-                .map(this::toVehicleResponse)
+                .map(vehicle -> toVehicleResponse(
+                        vehicle,
+                        // Fail closed when eligibility could not be read for a listed vehicle.
+                        blocks.getOrDefault(vehicle.getId(), Optional.of(VehicleDeletionBlock.HISTORY_UNKNOWN))
+                ))
                 .toList();
     }
 
@@ -129,6 +139,24 @@ public class OfferingService {
         deactivateVehicleAndOfferings(vehicle);
         vehicleRepository.flush();
         return toVehicleResponse(vehicle);
+    }
+
+    /**
+     * Permanently deletes an owned vehicle only when its usage history is complete and no service
+     * offering has ever referenced it (D059). The owned row lock serializes this with offering
+     * create/patch and the V22 usage-recording trigger; the V22 delete trigger and
+     * {@code service_offering_vehicle_fk ON DELETE RESTRICT} remain database backstops.
+     */
+    @Transactional
+    public void deleteVehicle(UUID id) {
+        OperatorProfile operator = currentOperator();
+        Vehicle vehicle = ownedVehicleForUpdate(id, operator.getId());
+        Optional<VehicleDeletionBlock> block = deletionBlock(vehicle.getId());
+        if (block.isPresent()) {
+            throw OfferingApiException.conflict(block.get().code(), block.get().detail());
+        }
+        vehicleRepository.delete(vehicle);
+        vehicleRepository.flush();
     }
 
     @Transactional(readOnly = true)
@@ -478,12 +506,24 @@ public class OfferingService {
         );
     }
 
+    private Optional<VehicleDeletionBlock> deletionBlock(UUID vehicleId) {
+        return vehicleRepository.findDeletionState(vehicleId)
+                .map(VehicleDeletionBlock::of)
+                .orElse(Optional.of(VehicleDeletionBlock.HISTORY_UNKNOWN));
+    }
+
     private VehicleResponse toVehicleResponse(Vehicle vehicle) {
+        return toVehicleResponse(vehicle, deletionBlock(vehicle.getId()));
+    }
+
+    private VehicleResponse toVehicleResponse(Vehicle vehicle, Optional<VehicleDeletionBlock> block) {
         return new VehicleResponse(
                 vehicle.getId(),
                 vehicle.getPlate(),
                 vehicle.getCapacity(),
                 vehicle.isActive(),
+                block.isEmpty(),
+                block.map(Enum::name).orElse(null),
                 vehicle.getCreatedAt(),
                 vehicle.getUpdatedAt()
         );
