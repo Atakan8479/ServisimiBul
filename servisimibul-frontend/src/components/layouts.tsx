@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   NavLink,
   Outlet,
@@ -67,19 +67,27 @@ function AccountMenu({
   session: (typeof sessionNavigation)[AuthRole]
 }) {
   const [open, setOpen] = useState(false)
+  const [present, setPresent] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  const close = useCallback(() => {
+    setOpen(false)
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setPresent(false)
+    }
+  }, [])
 
   useEffect(() => {
     if (!open) return
 
     const handlePointerDown = (event: PointerEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!menuRef.current?.contains(event.target as Node)) close()
     }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
       event.preventDefault()
-      setOpen(false)
+      close()
       buttonRef.current?.focus()
     }
 
@@ -89,7 +97,7 @@ function AccountMenu({
       document.removeEventListener('pointerdown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [open])
+  }, [close, open])
 
   return (
     <div className="account-menu" ref={menuRef}>
@@ -99,20 +107,39 @@ function AccountMenu({
         className="account-menu-trigger"
         data-keep-navigation-open
         id="account-menu-trigger"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          if (open) {
+            close()
+          } else {
+            setPresent(true)
+            setOpen(true)
+          }
+        }}
         ref={buttonRef}
         type="button"
       >
         Hesabım
         <span aria-hidden="true" className="account-menu-chevron" />
       </button>
-      {open && (
+      {present && (
         <div
+          aria-hidden={!open}
           aria-labelledby="account-menu-trigger"
           className="account-menu-panel"
+          data-state={open ? 'open' : 'closed'}
           id="account-menu-panel"
+          inert={!open}
           onClick={(event) => {
-            if ((event.target as HTMLElement).closest('a')) setOpen(false)
+            if ((event.target as HTMLElement).closest('a')) close()
+          }}
+          onTransitionEnd={(event) => {
+            if (
+              event.target === event.currentTarget &&
+              event.propertyName === 'opacity' &&
+              !open
+            ) {
+              setPresent(false)
+            }
           }}
           role="group"
         >

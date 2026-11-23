@@ -38,6 +38,13 @@ for (const viewport of viewports) {
     await page.keyboard.press('Enter')
     const accountMenu = navigation.getByRole('group', { name: 'Hesabım' })
     await expect(accountMenu.getByText('Veli oturumu açık')).toBeVisible()
+    expect(
+      await accountMenu.evaluate((element) =>
+        getComputedStyle(element)
+          .transitionDuration.split(',')
+          .map((duration) => duration.trim()),
+      ),
+    ).toContain('0.2s')
     await expect(
       accountMenu.getByRole('link', { name: 'Hesap ve gizlilik' }),
     ).toHaveAttribute('href', '/parent/account')
@@ -70,6 +77,29 @@ test('desktop account menu closes on outside click', async ({ page }) => {
   await expect(accountMenu).toBeVisible()
   await page.getByRole('heading', { level: 1 }).click()
   await expect(accountMenu).toBeHidden()
+})
+
+test('reduced motion opens and closes the account menu without a transition', async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await installMockApi(page, createMockApiState())
+  await signIn(page)
+
+  const trigger = page.getByRole('button', { name: 'Hesabım' })
+  await trigger.click()
+  const accountMenu = page.getByRole('group', { name: 'Hesabım' })
+  await expect(accountMenu).toBeVisible()
+  expect(
+    await accountMenu.evaluate((element) =>
+      getComputedStyle(element)
+        .transitionDuration.split(',')
+        .every((duration) => duration.trim() === '0s'),
+    ),
+  ).toBe(true)
+
+  await trigger.click()
+  await expect(page.locator('#account-menu-panel')).toHaveCount(0)
 })
 
 async function signIn(page: Page) {

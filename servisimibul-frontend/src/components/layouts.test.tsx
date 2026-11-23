@@ -283,9 +283,15 @@ describe('PublicLayout', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
 
     expect(trigger).toHaveFocus()
+    const closingPanel = document.getElementById('account-menu-panel')
+    expect(closingPanel).toHaveAttribute('data-state', 'closed')
+    expect(closingPanel).toHaveAttribute('aria-hidden', 'true')
+    expect(closingPanel).toHaveAttribute('inert')
     expect(
       screen.queryByRole('group', { name: 'Hesabım' }),
     ).not.toBeInTheDocument()
+    fireEvent.transitionEnd(closingPanel!, { propertyName: 'opacity' })
+    expect(closingPanel).not.toBeInTheDocument()
 
     menu = await openAccountMenu()
     expect(menu.getByText('Veli oturumu açık')).toBeInTheDocument()
@@ -293,6 +299,27 @@ describe('PublicLayout', () => {
     expect(
       screen.queryByRole('group', { name: 'Hesabım' }),
     ).not.toBeInTheDocument()
+  })
+
+  it('reverses an interrupted close without stale account controls', async () => {
+    signIn('PARENT')
+    renderLayout()
+
+    const trigger = await screen.findByRole('button', { name: 'Hesabım' })
+    const menu = await openAccountMenu()
+    const panel = menu.getByText('Veli oturumu açık').parentElement!
+
+    expect(panel).toHaveAttribute('data-state', 'open')
+    expect(panel).not.toHaveAttribute('inert')
+
+    fireEvent.click(trigger)
+    expect(panel).toHaveAttribute('data-state', 'closed')
+    expect(panel).toHaveAttribute('inert')
+
+    fireEvent.click(trigger)
+    expect(panel).toHaveAttribute('data-state', 'open')
+    expect(panel).not.toHaveAttribute('inert')
+    expect(screen.getByRole('group', { name: 'Hesabım' })).toBeInTheDocument()
   })
 
   it('re-enables sign out after parent logout and a new login in the same tab', async () => {
