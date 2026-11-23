@@ -1,5 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { createMockApiState, installMockApi } from './support/mock-api'
 
 const viewports = [
@@ -130,6 +130,50 @@ test('reduced motion opens and closes the account menu without a transition', as
 
   await trigger.click()
   await expect(page.locator('#account-menu-panel')).toHaveCount(0)
+})
+
+test('account menu shows one focus ring for keyboard users only', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await installMockApi(page, createMockApiState())
+  await signIn(page)
+
+  const trigger = page.getByRole('button', { name: 'Hesabım' })
+  const ring = (locator: Locator) =>
+    locator.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return {
+        visible: element.matches(':focus-visible'),
+        outline: `${style.outlineStyle} ${style.outlineWidth} ${style.outlineColor}`,
+        userSelect: style.userSelect,
+      }
+    })
+
+  await trigger.click()
+  await page.keyboard.press('Control')
+  expect((await ring(trigger)).visible).toBe(false)
+
+  const accountMenu = page.getByRole('group', { name: 'Hesabım' })
+  const link = accountMenu.getByRole('link', { name: 'Hesap ve gizlilik' })
+  const signOut = accountMenu.getByRole('button', { name: 'Çıkış yap' })
+  const separator = () =>
+    signOut.evaluate((element) => getComputedStyle(element).borderTopColor)
+  const restingSeparator = await separator()
+  await link.focus()
+  await page.keyboard.press('Tab')
+  await expect(signOut).toBeFocused()
+  const buttonRing = await ring(signOut)
+  const focusedSeparator = await separator()
+  await page.keyboard.press('Shift+Tab')
+  await expect(link).toBeFocused()
+  const linkRing = await ring(link)
+
+  expect(buttonRing.visible).toBe(true)
+  expect(buttonRing.outline).toMatch(/^solid 2px/)
+  expect(linkRing.outline).toBe(buttonRing.outline)
+  expect(buttonRing.userSelect).toBe('none')
+  expect(focusedSeparator).toBe(restingSeparator)
 })
 
 async function signIn(page: Page) {

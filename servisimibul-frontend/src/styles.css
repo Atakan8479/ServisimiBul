@@ -519,16 +519,35 @@ a:focus-visible {
 
 .account-menu-status {
   margin: 0;
-  padding: 0.65rem 0.75rem;
-  color: var(--color-accent-strong);
+  padding: 0.55rem 0.75rem;
+  color: var(--color-muted);
   font-size: 0.875rem;
-  font-weight: 750;
+  font-weight: 600;
 }
 
 .account-menu-panel a,
 .account-menu-panel button {
   width: 100%;
   justify-content: flex-start;
+}
+
+/* Labels of menu controls are not content; a stray double-click should not select them. */
+.account-menu-trigger,
+.account-menu-panel a,
+.account-menu-panel button {
+  user-select: none;
+}
+
+/* One focus ring for the trigger and every menu row (links otherwise get the heavier global ring). */
+.site-nav .account-menu-trigger:focus-visible,
+.account-menu-panel a:focus-visible,
+.account-menu-panel button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.account-menu-panel button:focus-visible {
+  border-color: var(--color-border);
 }
 
 .account-menu-panel button {
