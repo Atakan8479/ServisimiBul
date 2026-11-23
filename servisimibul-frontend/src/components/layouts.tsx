@@ -119,7 +119,21 @@ function AccountMenu({
         type="button"
       >
         Hesabım
-        <span aria-hidden="true" className="account-menu-chevron" />
+        <svg
+          aria-hidden="true"
+          className="account-menu-chevron"
+          fill="none"
+          focusable="false"
+          viewBox="0 0 16 16"
+        >
+          <path
+            d="M4 6l4 4 4-4"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+          />
+        </svg>
       </button>
       {present && (
         <div

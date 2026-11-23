@@ -380,8 +380,9 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
+  --site-header-gutter: clamp(1rem, 5vw, 4rem);
   min-height: 4.5rem;
-  padding: 0.75rem clamp(1rem, 5vw, 4rem);
+  padding: 0.75rem var(--site-header-gutter);
   border-bottom: 1px solid rgba(215, 223, 220, 0.9);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(0.75rem);
@@ -453,8 +454,8 @@ a:focus-visible {
   cursor: pointer;
 }
 
+/* Not positioned: the panel anchors to the sticky header so it clears its bottom edge. */
 .account-menu {
-  position: relative;
   margin-inline-start: var(--space-2);
 }
 
@@ -466,23 +467,22 @@ a:focus-visible {
 }
 
 .account-menu-chevron {
-  width: 0.45rem;
-  height: 0.45rem;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  rotate: 45deg;
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  transform-origin: center;
   transition: rotate var(--motion-fast) var(--ease-out);
 }
 
 .account-menu-trigger[aria-expanded='true'] .account-menu-chevron {
-  rotate: 225deg;
+  rotate: 180deg;
 }
 
 .account-menu-panel {
   position: absolute;
   z-index: 10;
-  top: calc(100% + var(--space-2));
-  inset-inline-end: 0;
+  top: calc(100% + var(--space-3));
+  inset-inline-end: var(--site-header-gutter);
   display: grid;
   min-width: 15rem;
   gap: var(--space-1);

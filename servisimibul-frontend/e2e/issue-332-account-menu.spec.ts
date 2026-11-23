@@ -34,10 +34,40 @@ for (const viewport of viewports) {
     await expect(page.locator('.nav-session')).toHaveCount(0)
 
     const trigger = navigation.getByRole('button', { name: 'Hesabım' })
+    // Measured against the trigger so the mobile drawer's slide-in does not count.
+    const chevronCenter = () =>
+      trigger.evaluate((button) => {
+        const box = button.getBoundingClientRect()
+        const path = button.querySelector('path')!.getBoundingClientRect()
+        return {
+          x: path.x + path.width / 2 - box.x,
+          y: path.y + path.height / 2 - box.y,
+        }
+      })
+    const closedChevron = await chevronCenter()
     await trigger.focus()
     await page.keyboard.press('Enter')
     const accountMenu = navigation.getByRole('group', { name: 'Hesabım' })
     await expect(accountMenu.getByText('Veli oturumu açık')).toBeVisible()
+    await expect(accountMenu).toHaveCSS('opacity', '1')
+    const openChevron = await chevronCenter()
+    expect(Math.abs(openChevron.x - closedChevron.x)).toBeLessThan(0.5)
+    expect(Math.abs(openChevron.y - closedChevron.y)).toBeLessThan(0.5)
+
+    const panelBox = (await accountMenu.boundingBox())!
+    expect(panelBox.x + panelBox.width).toBeLessThanOrEqual(viewport.width)
+    if (viewport.width > 1024) {
+      const headerBox = (await page.locator('.site-header').boundingBox())!
+      const triggerBox = (await trigger.boundingBox())!
+      const gap = panelBox.y - (headerBox.y + headerBox.height)
+      expect(gap).toBeGreaterThanOrEqual(8)
+      expect(gap).toBeLessThanOrEqual(12)
+      expect(
+        Math.abs(
+          panelBox.x + panelBox.width - (triggerBox.x + triggerBox.width),
+        ),
+      ).toBeLessThan(1)
+    }
     expect(
       await accountMenu.evaluate((element) =>
         getComputedStyle(element)
