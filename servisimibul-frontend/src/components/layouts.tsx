@@ -57,6 +57,85 @@ const sessionNavigation: Record<
   },
 }
 
+function AccountMenu({
+  loggingOut,
+  onSignOut,
+  session,
+}: {
+  loggingOut: boolean
+  onSignOut: () => void
+  session: (typeof sessionNavigation)[AuthRole]
+}) {
+  const [open, setOpen] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setOpen(false)
+      buttonRef.current?.focus()
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open])
+
+  return (
+    <div className="account-menu" ref={menuRef}>
+      <button
+        aria-controls="account-menu-panel"
+        aria-expanded={open}
+        className="account-menu-trigger"
+        data-keep-navigation-open
+        id="account-menu-trigger"
+        onClick={() => setOpen((current) => !current)}
+        ref={buttonRef}
+        type="button"
+      >
+        Hesabım
+        <span aria-hidden="true" className="account-menu-chevron" />
+      </button>
+      {open && (
+        <div
+          aria-labelledby="account-menu-trigger"
+          className="account-menu-panel"
+          id="account-menu-panel"
+          onClick={(event) => {
+            if ((event.target as HTMLElement).closest('a')) setOpen(false)
+          }}
+          role="group"
+        >
+          <p className="account-menu-status">{session.label}</p>
+          {session.account && (
+            <NavLink to={session.account} viewTransition>
+              Hesap ve gizlilik
+            </NavLink>
+          )}
+          <button
+            data-keep-navigation-open
+            disabled={loggingOut}
+            onClick={onSignOut}
+            type="button"
+          >
+            {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const footerLinkGroups = [
   {
     id: 'footer-group-discover',
@@ -195,6 +274,13 @@ export function PublicLayout() {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if (
+          navigation?.querySelector(
+            '.account-menu-trigger[aria-expanded="true"]',
+          )
+        ) {
+          return
+        }
         event.preventDefault()
         setMenuOpen(false)
         return
@@ -228,16 +314,21 @@ export function PublicLayout() {
     setLogoutError(undefined)
     try {
       await logout()
+      restoreMenuFocusRef.current = false
+      setMenuOpen(false)
       void navigate(session.afterLogout, {
         replace: true,
         viewTransition: true,
       })
     } catch (error) {
       if (error instanceof ApiError && error.sessionExpired) {
+        restoreMenuFocusRef.current = false
+        setMenuOpen(false)
         void navigate(session.loginOnExpiry, { replace: true })
         return
       }
       setLogoutError('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+      setMenuOpen(false)
     } finally {
       // The layout stays mounted across logout → login, so always release the busy state.
       setLoggingOut(false)
@@ -287,7 +378,12 @@ export function PublicLayout() {
           id="public-navigation"
           role={menuOpen ? 'dialog' : undefined}
           onClick={(event) => {
-            if ((event.target as HTMLElement).closest('a, button')) {
+            const target = event.target as HTMLElement
+            if (
+              menuOpen &&
+              target.closest('a, button') &&
+              !target.closest('[data-keep-navigation-open]')
+            ) {
               restoreMenuFocusRef.current = false
               setMenuOpen(false)
             }
@@ -302,25 +398,18 @@ export function PublicLayout() {
             </NavLink>
             {!authChecked ? null : session ? (
               <>
-                <span className="nav-session">{session.label}</span>
                 {session.home && (
                   <NavLink to={session.home.to} viewTransition>
                     {session.home.label}
                   </NavLink>
                 )}
                 <NotificationNavLink key={role} to={session.notifications} />
-                {session.account && (
-                  <NavLink to={session.account} viewTransition>
-                    Hesap ve gizlilik
-                  </NavLink>
-                )}
-                <button
-                  disabled={loggingOut}
-                  onClick={() => void signOut(session)}
-                  type="button"
-                >
-                  {loggingOut ? 'Çıkış yapılıyor…' : 'Çıkış yap'}
-                </button>
+                <AccountMenu
+                  key={authSession.key}
+                  loggingOut={loggingOut}
+                  onSignOut={() => void signOut(session)}
+                  session={session}
+                />
               </>
             ) : (
               <>

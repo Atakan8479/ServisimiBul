@@ -62,9 +62,10 @@ describe('account settings', () => {
     expect(
       screen.getByRole('link', { name: 'Talep panosuna dön' }),
     ).toHaveAttribute('href', '/demands')
+    fireEvent.click(screen.getByRole('button', { name: 'Hesabım' }))
     expect(
-      screen.getByRole('navigation', { name: 'Ana menü' }),
-    ).toHaveTextContent('Hesap ve gizlilik')
+      screen.getByRole('link', { name: 'Hesap ve gizlilik' }),
+    ).toHaveAttribute('href', '/parent/account')
   })
 
   it('lets operators turn the optional new-demand notification off and on', async () => {

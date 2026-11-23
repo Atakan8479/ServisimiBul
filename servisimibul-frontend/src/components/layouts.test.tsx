@@ -145,6 +145,13 @@ function renderLayout(initialEntry = '/') {
 const mainMenu = () =>
   within(screen.getByRole('navigation', { name: 'Ana menü' }))
 
+async function openAccountMenu() {
+  const trigger = await screen.findByRole('button', { name: 'Hesabım' })
+  if (trigger.getAttribute('aria-expanded') === 'false')
+    fireEvent.click(trigger)
+  return within(screen.getByRole('group', { name: 'Hesabım' }))
+}
+
 describe('PublicLayout', () => {
   it('contains mobile menu focus and restores it after dismissal', async () => {
     render(
@@ -189,7 +196,9 @@ describe('PublicLayout', () => {
     sessionStorage.setItem('servisimibul.auth-role', 'PARENT')
     renderLayout()
 
-    expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Hesabım' }),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByRole('button', { name: 'Çıkış yap' }),
     ).not.toBeInTheDocument()
@@ -197,23 +206,49 @@ describe('PublicLayout', () => {
       await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
-    expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Hesabım' }),
+    ).not.toBeInTheDocument()
   })
 
   it.each([
-    ['OPERATOR', 'İşletmeci paneli', '/operator', '/operator/notifications'],
-    ['ADMIN', 'Yönetim paneli', '/admin', '/admin/notifications'],
+    [
+      'PARENT',
+      'Veli oturumu açık',
+      undefined,
+      undefined,
+      '/notifications',
+      '/parent/account',
+    ],
+    [
+      'OPERATOR',
+      'İşletmeci oturumu açık',
+      'İşletmeci paneli',
+      '/operator',
+      '/operator/notifications',
+      '/operator/account',
+    ],
+    [
+      'ADMIN',
+      'Yönetici oturumu açık',
+      'Yönetim paneli',
+      '/admin',
+      '/admin/notifications',
+      undefined,
+    ],
   ] as const)(
-    'shows the %s workspace instead of guest links',
-    async (role, homeLabel, homePath, notifications) => {
+    'shows the correct %s navigation and account menu',
+    async (role, status, homeLabel, homePath, notifications, account) => {
       signIn(role)
       renderLayout()
 
+      if (homeLabel) {
+        expect(
+          await screen.findByRole('link', { name: homeLabel }),
+        ).toHaveAttribute('href', homePath)
+      }
       expect(
-        await screen.findByRole('link', { name: homeLabel }),
-      ).toHaveAttribute('href', homePath)
-      expect(
-        mainMenu().getByRole('link', { name: 'Bildirim merkezi' }),
+        await mainMenu().findByRole('link', { name: 'Bildirim merkezi' }),
       ).toHaveAttribute('href', notifications)
       expect(
         mainMenu().queryByRole('link', { name: 'Giriş Yap' }),
@@ -221,11 +256,44 @@ describe('PublicLayout', () => {
       expect(
         mainMenu().queryByRole('link', { name: 'Kayıt Ol' }),
       ).not.toBeInTheDocument()
-      expect(
-        mainMenu().getByRole('button', { name: 'Çıkış yap' }),
-      ).toBeEnabled()
+      expect(screen.queryByText(status)).not.toBeInTheDocument()
+
+      const menu = await openAccountMenu()
+      expect(menu.getByText(status)).toBeInTheDocument()
+      expect(menu.getByRole('button', { name: 'Çıkış yap' })).toBeEnabled()
+      if (account) {
+        expect(
+          menu.getByRole('link', { name: 'Hesap ve gizlilik' }),
+        ).toHaveAttribute('href', account)
+      } else {
+        expect(
+          menu.queryByRole('link', { name: 'Hesap ve gizlilik' }),
+        ).not.toBeInTheDocument()
+      }
     },
   )
+
+  it('closes the account menu on Escape or outside click and restores Escape focus', async () => {
+    signIn('PARENT')
+    renderLayout()
+
+    const trigger = await screen.findByRole('button', { name: 'Hesabım' })
+    let menu = await openAccountMenu()
+    menu.getByRole('link', { name: 'Hesap ve gizlilik' }).focus()
+    fireEvent.keyDown(document, { key: 'Escape' })
+
+    expect(trigger).toHaveFocus()
+    expect(
+      screen.queryByRole('group', { name: 'Hesabım' }),
+    ).not.toBeInTheDocument()
+
+    menu = await openAccountMenu()
+    expect(menu.getByText('Veli oturumu açık')).toBeInTheDocument()
+    fireEvent.pointerDown(screen.getByRole('heading', { name: 'Okulunu seç' }))
+    expect(
+      screen.queryByRole('group', { name: 'Hesabım' }),
+    ).not.toBeInTheDocument()
+  })
 
   it('re-enables sign out after parent logout and a new login in the same tab', async () => {
     signIn('PARENT')
@@ -238,16 +306,19 @@ describe('PublicLayout', () => {
     )
     const router = renderLayout()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Çıkış yap' }))
+    fireEvent.click(
+      (await openAccountMenu()).getByRole('button', { name: 'Çıkış yap' }),
+    )
     expect(
       screen.getByRole('button', { name: 'Çıkış yapılıyor…' }),
     ).toBeDisabled()
     fireEvent.click(await screen.findByRole('button', { name: 'Test girişi' }))
     expect(router.state.location.pathname).toBe('/parent/login')
 
-    const signOut = await screen.findByRole('button', { name: 'Çıkış yap' })
+    const nextMenu = await openAccountMenu()
+    const signOut = nextMenu.getByRole('button', { name: 'Çıkış yap' })
     expect(signOut).toBeEnabled()
-    expect(screen.getByText('Veli oturumu açık')).toBeInTheDocument()
+    expect(nextMenu.getByText('Veli oturumu açık')).toBeInTheDocument()
     expect(knownAuthRole()).toBe('PARENT')
   })
 
@@ -260,7 +331,9 @@ describe('PublicLayout', () => {
     )
     const router = renderLayout()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Çıkış yap' }))
+    fireEvent.click(
+      (await openAccountMenu()).getByRole('button', { name: 'Çıkış yap' }),
+    )
 
     expect(
       await screen.findByRole('heading', { name: 'Ortak giriş' }),
@@ -285,10 +358,16 @@ describe('PublicLayout', () => {
     )
     const router = renderLayout()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Çıkış yap' }))
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Çıkış yapılamadı. Lütfen tekrar deneyin.',
-    )
+    const navigationToggle = screen.getByRole('button', { name: 'Menü' })
+    fireEvent.click(navigationToggle)
+    const menu = await openAccountMenu()
+    fireEvent.click(menu.getByRole('button', { name: 'Çıkış yap' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+    expect(alert).not.toHaveAttribute('inert')
+    expect(navigationToggle).toHaveAttribute('aria-expanded', 'false')
+
+    fireEvent.click(navigationToggle)
     const retry = screen.getByRole('button', { name: 'Çıkış yap' })
     expect(retry).toBeEnabled()
     expect(knownAuthRole()).toBe('OPERATOR')
@@ -304,7 +383,8 @@ describe('PublicLayout', () => {
   it('follows an account switch made in another tab when focused', async () => {
     signIn('PARENT')
     renderLayout()
-    await screen.findByText('Veli oturumu açık')
+    const parentMenu = await openAccountMenu()
+    expect(parentMenu.getByText('Veli oturumu açık')).toBeInTheDocument()
 
     signIn('OPERATOR')
     act(() => {
@@ -314,7 +394,12 @@ describe('PublicLayout', () => {
     expect(
       await screen.findByRole('link', { name: 'İşletmeci paneli' }),
     ).toBeInTheDocument()
-    expect(screen.queryByText('Veli oturumu açık')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('group', { name: 'Hesabım' }),
+    ).not.toBeInTheDocument()
+    expect(
+      (await openAccountMenu()).getByText('İşletmeci oturumu açık'),
+    ).toBeInTheDocument()
   })
 
   it('asks once per page load for a guest and not again on focus or remount', async () => {
@@ -376,7 +461,9 @@ describe('PublicLayout', () => {
     meStatus = 503
     renderLayout()
 
-    expect(await screen.findByText('Veli oturumu açık')).toBeInTheDocument()
+    expect(
+      (await openAccountMenu()).getByText('Veli oturumu açık'),
+    ).toBeInTheDocument()
     expect(knownAuthRole()).toBe('PARENT')
 
     meStatus = 200

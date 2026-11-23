@@ -1784,6 +1784,7 @@ describe('demand-specific operator service responses', () => {
 
       renderRoute(`/demands/${demandId}`)
 
+      fireEvent.click(await screen.findByRole('button', { name: 'Hesabım' }))
       expect(await screen.findByText(sessionLabel)).toBeInTheDocument()
       expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
       expect(
@@ -2063,7 +2064,11 @@ describe('demand session ownership changes', () => {
       announceAuthChangeFromOtherTab()
 
       if (nextSession) {
-        await screen.findByText('Yönetici oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/admin/notifications'),
+        )
       } else {
         await screen.findByRole('link', { name: 'Veli olarak giriş yap' })
       }
@@ -2200,9 +2205,17 @@ describe('demand session ownership changes', () => {
       announceAuthChangeFromOtherTab()
 
       if (nextSession?.role === 'PARENT') {
-        await screen.findByText('Veli oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/notifications'),
+        )
       } else if (nextSession?.role === 'ADMIN') {
-        await screen.findByText('Yönetici oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/admin/notifications'),
+        )
       } else {
         await screen.findByRole('link', { name: 'İşletmeci olarak giriş yap' })
       }

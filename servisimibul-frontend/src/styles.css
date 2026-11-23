@@ -403,9 +403,12 @@ a:focus-visible {
   gap: var(--space-2);
 }
 
+.site-nav > nav {
+  align-items: center;
+}
+
 .site-nav a,
 .site-nav button,
-.site-nav .nav-session,
 .workspace-sidebar nav a {
   display: inline-flex;
   align-items: center;
@@ -449,9 +452,63 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.site-nav .nav-session {
+.account-menu {
+  position: relative;
+  margin-inline-start: var(--space-2);
+}
+
+.site-nav .account-menu-trigger {
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  background: var(--neutral-0);
+  color: var(--navy-900);
+}
+
+.account-menu-chevron {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  rotate: 45deg;
+  transition: rotate var(--motion-fast) var(--ease-out);
+}
+
+.account-menu-trigger[aria-expanded='true'] .account-menu-chevron {
+  rotate: 225deg;
+}
+
+.account-menu-panel {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-2));
+  inset-inline-end: 0;
+  display: grid;
+  min-width: 15rem;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--neutral-0);
+  box-shadow: var(--shadow-raised);
+}
+
+.account-menu-status {
+  margin: 0;
+  padding: 0.65rem 0.75rem;
   color: var(--color-accent-strong);
+  font-size: 0.875rem;
   font-weight: 750;
+}
+
+.account-menu-panel a,
+.account-menu-panel button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.account-menu-panel button {
+  border-top: 1px solid var(--color-border);
+  border-radius: 0;
 }
 
 .site-alert {
@@ -5706,10 +5763,22 @@ dialog[data-closing] {
   }
 
   .site-nav a,
-  .site-nav button,
-  .site-nav .nav-session {
+  .site-nav button {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .account-menu {
+    margin-inline-start: 0;
+  }
+
+  .account-menu-panel {
+    position: static;
+    min-width: 0;
+    margin-top: var(--space-1);
+    border: 0;
+    background: var(--neutral-50);
+    box-shadow: none;
   }
 
   .site-nav .site-nav-login {
