@@ -507,7 +507,7 @@ export function PublicLayout() {
       </main>
       <footer className="site-footer" inert={menuOpen || undefined}>
         <div className="site-footer-inner">
-          <div>
+          <div className="site-footer-brand">
             <BrandLockup />
             <p className="site-footer-tagline">
               Okul servisi aramanın daha açık yolu.

@@ -65,6 +65,30 @@ for (const viewport of viewports) {
       footerNav.getByRole('link', { name: 'Ana sayfa' }),
     ).toHaveAttribute('aria-current', 'page')
 
+    // Footer density (#324): bounded content width, no wide brand/nav gap,
+    // and single-line links from tablet up.
+    const density = await page.evaluate(() => {
+      const inner = document.querySelector('.site-footer-inner')!
+      const brand = document.querySelector('.site-footer-brand')!
+      const nav = document.querySelector('.site-footer-nav')!
+      return {
+        innerWidth: inner.getBoundingClientRect().width,
+        brandToNav:
+          nav.getBoundingClientRect().left -
+          brand.getBoundingClientRect().right,
+        linkHeights: [...nav.querySelectorAll('a')].map(
+          (link) => link.getBoundingClientRect().height,
+        ),
+      }
+    })
+    expect(density.innerWidth).toBeLessThanOrEqual(960)
+    if (viewport.width >= 768) {
+      expect(density.brandToNav).toBeLessThanOrEqual(240)
+      for (const height of density.linkHeights) {
+        expect(height).toBeLessThanOrEqual(40)
+      }
+    }
+
     // Footer links stay quieter than the primary heading and not fixed.
     const styles = await footerNav
       .getByRole('link', { name: 'Talep panosu' })

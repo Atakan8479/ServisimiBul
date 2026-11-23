@@ -591,12 +591,19 @@ a:focus-visible {
 
 .site-footer-inner {
   display: flex;
-  width: min(72rem, 100%);
+  flex-wrap: wrap;
+  width: min(60rem, 100%);
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--space-8);
+  gap: var(--space-6) clamp(var(--space-8), 6vw, 5rem);
   margin: 0 auto;
-  padding: var(--space-10) clamp(1rem, 5vw, 4rem);
+  padding: var(--space-8) clamp(1rem, 5vw, 4rem);
+}
+
+/* Brand grows into spare width; the nav never shrinks, so tight widths wrap it below instead of squeezing links. */
+.site-footer-brand {
+  flex: 1 1 14rem;
+  max-width: 20rem;
 }
 
 .site-footer-tagline {
@@ -608,8 +615,9 @@ a:focus-visible {
 .site-footer-nav {
   display: grid;
   min-width: 0;
+  flex: 0 0 auto;
   grid-template-columns: repeat(3, minmax(0, max-content));
-  gap: var(--space-5) var(--space-10);
+  gap: var(--space-5) var(--space-8);
 }
 
 .site-footer-group-label {
@@ -5957,6 +5965,11 @@ dialog[data-closing] {
     align-items: flex-start;
     flex-direction: column;
     padding-block: var(--space-8);
+  }
+
+  /* Column direction: the desktop 14rem basis would become a height. */
+  .site-footer-brand {
+    flex: none;
   }
 
   .site-footer-nav {
