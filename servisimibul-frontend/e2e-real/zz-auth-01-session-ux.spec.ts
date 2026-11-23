@@ -119,7 +119,6 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         for (const viewport of viewports) {
           await page.setViewportSize(viewport)
           const menu = await openMenu(page)
-          await expect(menu.getByText(spec.sessionLabel)).toBeVisible()
           if (spec.home) {
             await expect(
               menu.getByRole('link', { name: spec.home }),
@@ -132,7 +131,13 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
             menu.getByRole('link', { name: 'Kayıt Ol' }),
           ).toHaveCount(0)
           await expect(
-            menu.getByRole('button', { name: 'Çıkış yap' }),
+            menu.getByRole('button', { name: 'Hesabım' }),
+          ).toBeVisible()
+          await expect(menu.getByText(spec.sessionLabel)).toHaveCount(0)
+          const accountMenu = await openAccountMenu(page)
+          await expect(accountMenu.getByText(spec.sessionLabel)).toBeVisible()
+          await expect(
+            accountMenu.getByRole('button', { name: 'Çıkış yap' }),
           ).toBeEnabled()
           await assertLayout(page)
           await closeMenu(page)
@@ -142,7 +147,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         for (let round = 0; round < 2; round += 1) {
           const logout = page.waitForResponse(isLogout)
           await (
-            await openMenu(page)
+            await openAccountMenu(page)
           )
             .getByRole('button', { name: 'Çıkış yap' })
             .click()
@@ -159,13 +164,13 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
           await uiLogin(page, spec.email(), spec.password())
           await expect(page).toHaveURL(spec.landing)
           await page.goto('/')
-          const menu = await openMenu(page)
-          await expect(menu.getByText(spec.sessionLabel)).toBeVisible()
+          const accountMenu = await openAccountMenu(page)
+          await expect(accountMenu.getByText(spec.sessionLabel)).toBeVisible()
           await expect(
-            menu.getByRole('button', { name: 'Çıkış yapılıyor…' }),
+            accountMenu.getByRole('button', { name: 'Çıkış yapılıyor…' }),
           ).toHaveCount(0)
           await expect(
-            menu.getByRole('button', { name: 'Çıkış yap' }),
+            accountMenu.getByRole('button', { name: 'Çıkış yap' }),
           ).toBeEnabled()
           await closeMenu(page)
         }
@@ -196,7 +201,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
               }),
         )
         await (
-          await openMenu(page)
+          await openAccountMenu(page)
         )
           .getByRole('button', { name: 'Çıkış yap' })
           .click()
@@ -205,10 +210,12 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         )
         await expect(page).toHaveURL(/\/$/)
         expect((await page.request.get('/api/v1/auth/me')).status()).toBe(200)
-        const menu = await openMenu(page)
-        await expect(menu.getByText(roles.OPERATOR.sessionLabel)).toBeVisible()
+        const accountMenu = await openAccountMenu(page)
         await expect(
-          menu.getByRole('button', { name: 'Çıkış yap' }),
+          accountMenu.getByText(roles.OPERATOR.sessionLabel),
+        ).toBeVisible()
+        await expect(
+          accountMenu.getByRole('button', { name: 'Çıkış yap' }),
         ).toBeEnabled()
         await closeMenu(page)
         await page.unroute('**/api/v1/auth/logout')
@@ -216,7 +223,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
 
       const retry = page.waitForResponse(isLogout)
       await (
-        await openMenu(page)
+        await openAccountMenu(page)
       )
         .getByRole('button', { name: 'Çıkış yap' })
         .click()
@@ -236,7 +243,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         await uiLogin(page, spec.email(), spec.password())
         await page.goto('/')
         await expect(
-          (await openMenu(page)).getByText(spec.sessionLabel),
+          (await openAccountMenu(page)).getByText(spec.sessionLabel),
         ).toBeVisible()
         await closeMenu(page)
 
@@ -244,7 +251,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         await context.clearCookies()
 
         await (
-          await openMenu(page)
+          await openAccountMenu(page)
         )
           .getByRole('button', { name: 'Çıkış yap' })
           .click()
@@ -283,13 +290,17 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
       await expect(
         second
           .getByRole('navigation', { name: 'Ana menü' })
-          .getByText(roles.PARENT.sessionLabel),
+          .getByRole('button', { name: 'Hesabım' }),
       ).toBeVisible()
+      await expect(
+        (await openAccountMenu(second)).getByText(roles.PARENT.sessionLabel),
+      ).toBeVisible()
+      await closeMenu(second)
 
       await first.goto('/')
       const logout = first.waitForResponse(isLogout)
       await (
-        await openMenu(first)
+        await openAccountMenu(first)
       )
         .getByRole('button', { name: 'Çıkış yap' })
         .click()
@@ -310,11 +321,14 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
       await expect(
         second
           .getByRole('navigation', { name: 'Ana menü' })
-          .getByText(roles.OPERATOR.sessionLabel),
+          .getByRole('link', { name: roles.OPERATOR.home! }),
+      ).toBeVisible()
+      await expect(
+        (await openAccountMenu(second)).getByText(roles.OPERATOR.sessionLabel),
       ).toBeVisible()
       await expect(
         second
-          .getByRole('navigation', { name: 'Ana menü' })
+          .getByRole('group', { name: 'Hesabım' })
           .getByText(roles.PARENT.sessionLabel),
       ).toHaveCount(0)
     } finally {
@@ -418,7 +432,28 @@ async function openMenu(page: Page) {
   return page.getByRole('navigation', { name: 'Ana menü' })
 }
 
+async function openAccountMenu(page: Page) {
+  const navigation = await openMenu(page)
+  const trigger = navigation.getByRole('button', { name: 'Hesabım' })
+  await expect(trigger).toBeVisible()
+  if ((await trigger.getAttribute('aria-expanded')) !== 'true') {
+    await trigger.click()
+  }
+  const accountMenu = navigation.getByRole('group', { name: 'Hesabım' })
+  await expect(accountMenu).toBeVisible()
+  return accountMenu
+}
+
 async function closeMenu(page: Page) {
+  const accountTrigger = page.getByRole('button', { name: 'Hesabım' })
+  if (
+    (await accountTrigger.isVisible()) &&
+    (await accountTrigger.getAttribute('aria-expanded')) === 'true'
+  ) {
+    await page.keyboard.press('Escape')
+    await expect(accountTrigger).toHaveAttribute('aria-expanded', 'false')
+    await expect(accountTrigger).toBeFocused()
+  }
   const toggle = page.getByRole('button', { name: 'Menü' })
   if (
     (await toggle.isVisible()) &&

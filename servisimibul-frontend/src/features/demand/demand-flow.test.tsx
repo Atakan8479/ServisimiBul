@@ -1679,12 +1679,16 @@ describe('demand comments', () => {
   })
 
   it('re-checks approval when the signed-in operator changes', async () => {
+    let authChecks = 0
     let me = {
       ...operatorUser(),
       approvalStatus: 'PENDING' as 'PENDING' | 'APPROVED',
     }
     server.use(
-      http.get('/api/v1/auth/me', () => HttpResponse.json(me)),
+      http.get('/api/v1/auth/me', () => {
+        authChecks += 1
+        return HttpResponse.json(me)
+      }),
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand()),
       ),
@@ -1694,6 +1698,7 @@ describe('demand comments', () => {
     expect(
       await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
     ).toBeInTheDocument()
+    await waitFor(() => expect(authChecks).toBeGreaterThanOrEqual(2))
 
     me = {
       ...operatorUser('0f4c34c9-7c62-4d8f-9a0b-0b4b8f1f2a11'),
@@ -1784,6 +1789,7 @@ describe('demand-specific operator service responses', () => {
 
       renderRoute(`/demands/${demandId}`)
 
+      fireEvent.click(await screen.findByRole('button', { name: 'Hesabım' }))
       expect(await screen.findByText(sessionLabel)).toBeInTheDocument()
       expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
       expect(
@@ -2063,7 +2069,11 @@ describe('demand session ownership changes', () => {
       announceAuthChangeFromOtherTab()
 
       if (nextSession) {
-        await screen.findByText('Yönetici oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/admin/notifications'),
+        )
       } else {
         await screen.findByRole('link', { name: 'Veli olarak giriş yap' })
       }
@@ -2200,9 +2210,17 @@ describe('demand session ownership changes', () => {
       announceAuthChangeFromOtherTab()
 
       if (nextSession?.role === 'PARENT') {
-        await screen.findByText('Veli oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/notifications'),
+        )
       } else if (nextSession?.role === 'ADMIN') {
-        await screen.findByText('Yönetici oturumu açık')
+        await waitFor(() =>
+          expect(
+            screen.getByRole('link', { name: 'Bildirim merkezi' }),
+          ).toHaveAttribute('href', '/admin/notifications'),
+        )
       } else {
         await screen.findByRole('link', { name: 'İşletmeci olarak giriş yap' })
       }

@@ -2046,12 +2046,14 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     await test.step('persist and securely end the parent session', async () => {
       await parentPage.goto('/demands')
       await parentPage.reload()
-      await expect(parentPage.getByText('Veli oturumu açık')).toBeVisible()
+      await parentPage.getByRole('button', { name: 'Hesabım' }).click()
+      const accountMenu = parentPage.getByRole('group', { name: 'Hesabım' })
+      await expect(accountMenu.getByText('Veli oturumu açık')).toBeVisible()
       expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
         200,
       )
 
-      await parentPage.getByRole('button', { name: 'Çıkış yap' }).click()
+      await accountMenu.getByRole('button', { name: 'Çıkış yap' }).click()
       await expect(parentPage).toHaveURL(/\/parent\/login$/)
       expect((await parentPage.request.get('/api/v1/auth/me')).status()).toBe(
         401,

@@ -60,6 +60,7 @@
   --shadow-soft: 0 1.25rem 3.25rem rgba(10, 28, 48, 0.09);
   --shadow-raised: 0 1rem 2rem rgba(10, 28, 48, 0.13);
   --motion-fast: 160ms;
+  --motion-menu: 200ms;
   --motion-page: 280ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   font-family:
@@ -379,8 +380,9 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: var(--space-6);
+  --site-header-gutter: clamp(1rem, 5vw, 4rem);
   min-height: 4.5rem;
-  padding: 0.75rem clamp(1rem, 5vw, 4rem);
+  padding: 0.75rem var(--site-header-gutter);
   border-bottom: 1px solid rgba(215, 223, 220, 0.9);
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(0.75rem);
@@ -403,9 +405,12 @@ a:focus-visible {
   gap: var(--space-2);
 }
 
+.site-nav > nav {
+  align-items: center;
+}
+
 .site-nav a,
 .site-nav button,
-.site-nav .nav-session,
 .workspace-sidebar nav a {
   display: inline-flex;
   align-items: center;
@@ -449,9 +454,110 @@ a:focus-visible {
   cursor: pointer;
 }
 
-.site-nav .nav-session {
-  color: var(--color-accent-strong);
-  font-weight: 750;
+/* Not positioned: the panel anchors to the sticky header so it clears its bottom edge. */
+.account-menu {
+  margin-inline-start: var(--space-2);
+}
+
+.site-nav .account-menu-trigger {
+  gap: var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  background: var(--neutral-0);
+  color: var(--navy-900);
+}
+
+.account-menu-chevron {
+  flex: none;
+  width: 1rem;
+  height: 1rem;
+  transform-origin: center;
+  transition: rotate var(--motion-fast) var(--ease-out);
+}
+
+.account-menu-trigger[aria-expanded='true'] .account-menu-chevron {
+  rotate: 180deg;
+}
+
+.account-menu-panel {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + var(--space-3));
+  inset-inline-end: var(--site-header-gutter);
+  display: grid;
+  min-width: 15rem;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-medium);
+  background: var(--neutral-0);
+  box-shadow: var(--shadow-raised);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-0.375rem) scale(0.985);
+  transform-origin: top right;
+  visibility: hidden;
+  transition:
+    opacity var(--motion-menu) var(--ease-out),
+    transform var(--motion-menu) var(--ease-out),
+    visibility 0s linear var(--motion-menu);
+}
+
+.account-menu-panel[data-state='open'] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+@starting-style {
+  .account-menu-panel[data-state='open'] {
+    opacity: 0;
+    transform: translateY(-0.375rem) scale(0.985);
+  }
+}
+
+.account-menu-status {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.account-menu-panel a,
+.account-menu-panel button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+/* Labels of menu controls are not content; a stray double-click should not select them. */
+.account-menu-trigger,
+.account-menu-panel a,
+.account-menu-panel button {
+  user-select: none;
+}
+
+/* One focus ring for the trigger and every menu row (links otherwise get the heavier global ring). */
+.site-nav .account-menu-trigger:focus-visible,
+.account-menu-panel a:focus-visible,
+.account-menu-panel button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* The separator sits in the row gap so the row keeps rounded corners for its hover fill. */
+.account-menu-panel button {
+  position: relative;
+  margin-top: var(--space-1);
+}
+
+.account-menu-panel button::before {
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 0.5px);
+  inset-inline: 0;
+  border-top: 1px solid var(--color-border);
+  content: '';
 }
 
 .site-alert {
@@ -5520,6 +5626,11 @@ dialog[data-closing] {
     background: color-mix(in srgb, var(--color-accent) 7%, transparent);
   }
 
+  .account-menu-panel button:hover:not(:disabled) {
+    background: var(--red-100);
+    color: var(--red-700);
+  }
+
   /* Brightness keeps hover feedback correct on every colour variant. */
   .button-link:hover,
   .primary-button:hover,
@@ -5706,10 +5817,22 @@ dialog[data-closing] {
   }
 
   .site-nav a,
-  .site-nav button,
-  .site-nav .nav-session {
+  .site-nav button {
     width: 100%;
     justify-content: flex-start;
+  }
+
+  .account-menu {
+    margin-inline-start: 0;
+  }
+
+  .account-menu-panel {
+    position: static;
+    min-width: 0;
+    margin-top: var(--space-1);
+    border: 0;
+    background: var(--neutral-50);
+    box-shadow: none;
   }
 
   .site-nav .site-nav-login {
@@ -6162,6 +6285,7 @@ dialog[data-closing] {
 @media (prefers-reduced-motion: reduce) {
   :root {
     --motion-fast: 0ms;
+    --motion-menu: 0ms;
     --motion-page: 0ms;
   }
 

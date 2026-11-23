@@ -166,6 +166,7 @@ describe('parent account onboarding', () => {
     expect(
       await screen.findByRole('heading', { name: 'Servis talep panosu' }),
     ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Hesabım' }))
     expect(screen.getByText('Veli oturumu açık')).toBeInTheDocument()
     expect(
       await screen.findByLabelText('3 okunmamış bildirim'),
