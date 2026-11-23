@@ -546,13 +546,18 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-.account-menu-panel button:focus-visible {
-  border-color: var(--color-border);
+/* The separator sits in the row gap so the row keeps rounded corners for its hover fill. */
+.account-menu-panel button {
+  position: relative;
+  margin-top: var(--space-1);
 }
 
-.account-menu-panel button {
+.account-menu-panel button::before {
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 0.5px);
+  inset-inline: 0;
   border-top: 1px solid var(--color-border);
-  border-radius: 0;
+  content: '';
 }
 
 .site-alert {
@@ -5619,6 +5624,11 @@ dialog[data-closing] {
 
   nav a:hover {
     background: color-mix(in srgb, var(--color-accent) 7%, transparent);
+  }
+
+  .account-menu-panel button:hover:not(:disabled) {
+    background: var(--red-100);
+    color: var(--red-700);
   }
 
   /* Brightness keeps hover feedback correct on every colour variant. */

@@ -158,7 +158,9 @@ test('account menu shows one focus ring for keyboard users only', async ({
   const link = accountMenu.getByRole('link', { name: 'Hesap ve gizlilik' })
   const signOut = accountMenu.getByRole('button', { name: 'Çıkış yap' })
   const separator = () =>
-    signOut.evaluate((element) => getComputedStyle(element).borderTopColor)
+    signOut.evaluate(
+      (element) => getComputedStyle(element, '::before').borderTopColor,
+    )
   const restingSeparator = await separator()
   await link.focus()
   await page.keyboard.press('Tab')
@@ -174,6 +176,30 @@ test('account menu shows one focus ring for keyboard users only', async ({
   expect(linkRing.outline).toBe(buttonRing.outline)
   expect(buttonRing.userSelect).toBe('none')
   expect(focusedSeparator).toBe(restingSeparator)
+})
+
+test('sign out row turns red on hover', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 })
+  await installMockApi(page, createMockApiState())
+  await signIn(page)
+
+  await page.getByRole('button', { name: 'Hesabım' }).click()
+  const signOut = page
+    .getByRole('group', { name: 'Hesabım' })
+    .getByRole('button', { name: 'Çıkış yap' })
+  const colors = () =>
+    signOut.evaluate((element) => {
+      const style = getComputedStyle(element)
+      return [style.backgroundColor, style.color, style.transitionDuration]
+    })
+  const [restingBackground] = await colors()
+  expect(restingBackground).toBe('rgba(0, 0, 0, 0)')
+
+  await signOut.hover()
+  await expect(signOut).toHaveCSS('background-color', 'rgb(252, 233, 231)')
+  await expect(signOut).toHaveCSS('color', 'rgb(154, 49, 43)')
+  const [, , duration] = await colors()
+  expect(duration.split(',').map((value) => value.trim())).toContain('0.16s')
 })
 
 async function signIn(page: Page) {
