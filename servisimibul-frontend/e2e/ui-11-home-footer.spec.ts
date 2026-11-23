@@ -65,27 +65,54 @@ for (const viewport of viewports) {
       footerNav.getByRole('link', { name: 'Ana sayfa' }),
     ).toHaveAttribute('aria-current', 'page')
 
-    // Footer density (#324): bounded content width, no wide brand/nav gap,
-    // and single-line links from tablet up.
-    const density = await page.evaluate(() => {
-      const inner = document.querySelector('.site-footer-inner')!
-      const brand = document.querySelector('.site-footer-brand')!
-      const nav = document.querySelector('.site-footer-nav')!
+    // Footer layout (#324): header-aligned gutter, text on shared column
+    // edges, four evenly spread desktop columns, single-line links.
+    const layout = await page.evaluate(() => {
+      const textLeft = (element: Element) => {
+        const range = document.createRange()
+        range.selectNodeContents(element)
+        return range.getBoundingClientRect().left
+      }
+      const groups = [...document.querySelectorAll('.site-footer-group')]
       return {
-        innerWidth: inner.getBoundingClientRect().width,
-        brandToNav:
-          nav.getBoundingClientRect().left -
-          brand.getBoundingClientRect().right,
-        linkHeights: [...nav.querySelectorAll('a')].map(
-          (link) => link.getBoundingClientRect().height,
+        headerBrand: document
+          .querySelector('.site-header .brand')!
+          .getBoundingClientRect().left,
+        footerBrand: document
+          .querySelector('.site-footer-brand')!
+          .getBoundingClientRect().left,
+        tagline: textLeft(document.querySelector('.site-footer-tagline')!),
+        labels: groups.map((group) =>
+          textLeft(group.querySelector('.site-footer-group-label')!),
+        ),
+        firstLinks: groups.map((group) => textLeft(group.querySelector('a')!)),
+        linkHeights: groups.flatMap((group) =>
+          [...group.querySelectorAll('a')].map(
+            (link) => link.getBoundingClientRect().height,
+          ),
         ),
       }
     })
-    expect(density.innerWidth).toBeLessThanOrEqual(960)
+    layout.labels.forEach((labelLeft, index) =>
+      expect(Math.abs(labelLeft - layout.firstLinks[index])).toBeLessThan(1),
+    )
     if (viewport.width >= 768) {
-      expect(density.brandToNav).toBeLessThanOrEqual(240)
-      for (const height of density.linkHeights) {
+      expect(
+        Math.abs(layout.footerBrand - layout.headerBrand),
+      ).toBeLessThanOrEqual(2)
+      for (const height of layout.linkHeights) {
         expect(height).toBeLessThanOrEqual(40)
+      }
+    } else {
+      // Stacked: group text shares the brand/tagline edge.
+      expect(Math.abs(layout.labels[0] - layout.tagline)).toBeLessThan(1)
+    }
+    if (viewport.width >= 1440) {
+      const columns = [layout.tagline, ...layout.labels]
+      const steps = columns.slice(1).map((left, i) => left - columns[i])
+      for (const step of steps) {
+        expect(step).toBeGreaterThan(viewport.width * 0.2)
+        expect(Math.abs(step - steps[0])).toBeLessThanOrEqual(8)
       }
     }
 

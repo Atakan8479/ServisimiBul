@@ -589,21 +589,33 @@ a:focus-visible {
   background: rgba(255, 255, 255, 0.94);
 }
 
+/* Four even columns (brand + three nav groups) on the header's gutter; the nav grid repeats the outer column gap so all four line up. */
 .site-footer-inner {
-  display: flex;
-  flex-wrap: wrap;
-  width: min(60rem, 100%);
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-6) clamp(var(--space-8), 6vw, 5rem);
+  --site-footer-gap: clamp(var(--space-6), 3vw, var(--space-12));
+  display: grid;
+  width: min(100rem, 100%);
+  /* Nav = three of four equal tracks plus its two inner gaps. */
+  grid-template-columns: minmax(0, 1fr) calc(75% - var(--site-footer-gap) / 4);
+  align-items: start;
+  gap: var(--space-8) var(--site-footer-gap);
   margin: 0 auto;
-  padding: var(--space-8) clamp(1rem, 5vw, 4rem);
+  padding: var(--space-10) clamp(1rem, 5vw, 4rem);
 }
 
-/* Brand grows into spare width; the nav never shrinks, so tight widths wrap it below instead of squeezing links. */
 .site-footer-brand {
-  flex: 1 1 14rem;
   max-width: 20rem;
+}
+
+/* Below 64rem the four columns get too narrow for the legal labels: brand stacks above the nav. */
+@media (max-width: 64rem) {
+  .site-footer-inner {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: clamp(
+      1rem,
+      4vw,
+      2rem
+    ); /* matches the compact header gutter */
+  }
 }
 
 .site-footer-tagline {
@@ -615,9 +627,10 @@ a:focus-visible {
 .site-footer-nav {
   display: grid;
   min-width: 0;
-  flex: 0 0 auto;
-  grid-template-columns: repeat(3, minmax(0, max-content));
-  gap: var(--space-5) var(--space-8);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5) var(--site-footer-gap);
+  /* Pull back the link padding so label/link text sits on the column edge, like the brand. */
+  margin-inline-start: -0.6rem;
 }
 
 .site-footer-group-label {
@@ -5962,18 +5975,10 @@ dialog[data-closing] {
   }
 
   .site-footer-inner {
-    align-items: flex-start;
-    flex-direction: column;
     padding-block: var(--space-8);
   }
 
-  /* Column direction: the desktop 14rem basis would become a height. */
-  .site-footer-brand {
-    flex: none;
-  }
-
   .site-footer-nav {
-    width: 100%;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
     gap: var(--space-5);
   }
