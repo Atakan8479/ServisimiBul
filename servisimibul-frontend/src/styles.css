@@ -771,6 +771,8 @@ a:focus-visible {
 
 .discovery-hero-copy {
   max-width: 43rem;
+  /* Optical centering: the arched image carries its weight low, so lift the copy above geometric centre. */
+  padding-bottom: clamp(2rem, 5vw, 5rem);
 }
 
 .discovery-hero h1 {
@@ -1078,6 +1080,7 @@ a:focus-visible {
 
   .discovery-hero-copy {
     max-width: 48rem;
+    padding-bottom: 0;
   }
 
   .discovery-hero h1 {
