@@ -1679,12 +1679,16 @@ describe('demand comments', () => {
   })
 
   it('re-checks approval when the signed-in operator changes', async () => {
+    let authChecks = 0
     let me = {
       ...operatorUser(),
       approvalStatus: 'PENDING' as 'PENDING' | 'APPROVED',
     }
     server.use(
-      http.get('/api/v1/auth/me', () => HttpResponse.json(me)),
+      http.get('/api/v1/auth/me', () => {
+        authChecks += 1
+        return HttpResponse.json(me)
+      }),
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand()),
       ),
@@ -1694,6 +1698,7 @@ describe('demand comments', () => {
     expect(
       await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
     ).toBeInTheDocument()
+    await waitFor(() => expect(authChecks).toBeGreaterThanOrEqual(2))
 
     me = {
       ...operatorUser('0f4c34c9-7c62-4d8f-9a0b-0b4b8f1f2a11'),
