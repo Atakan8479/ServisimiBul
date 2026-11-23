@@ -834,15 +834,6 @@ export function PublicDiscoveryPage() {
           provinceCode={selectedSchool?.provinceCode}
         />
       </div>
-
-      <section className="discovery-closing-cta" aria-label="Aramaya başla">
-        <div>
-          <strong>İlk adım okulunuzu seçmek.</strong>
-          <a className="primary-button" href="#school-search">
-            Aramaya başla
-          </a>
-        </div>
-      </section>
     </section>
   )
 }

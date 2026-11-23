@@ -1313,24 +1313,9 @@ a:focus-visible {
   padding-top: clamp(1rem, 3vw, 2rem);
 }
 
-.discovery-closing-cta {
-  background: var(--navy-900);
-  color: var(--neutral-0);
-}
-
-.discovery-closing-cta > div {
-  display: flex;
-  width: min(72rem, calc(100% - 2rem));
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin: 0 auto;
-  padding: 1.5rem 0;
-}
-
-.discovery-closing-cta .primary-button {
-  background: var(--yellow-500);
-  color: var(--navy-950);
+/* Before a school is chosen the tariff renders nothing; drop its padding so the promo meets the footer cleanly. */
+.discovery-tariff-rail:empty {
+  display: none;
 }
 
 .pickup-heading {
@@ -5941,17 +5926,6 @@ dialog[data-closing] {
 
   .discovery-demand-promo .secondary-button {
     grid-column: 1 / -1;
-    width: 100%;
-    justify-content: center;
-  }
-
-  .discovery-closing-cta > div {
-    width: min(100% - 1.5rem, 72rem);
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .discovery-closing-cta .primary-button {
     width: 100%;
     justify-content: center;
   }
