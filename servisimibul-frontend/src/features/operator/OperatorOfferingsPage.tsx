@@ -270,19 +270,14 @@ export function OperatorOfferingsPage() {
       <header className="operator-page-header operator-offerings-header">
         <h1>Araçlar ve servis teklifleri</h1>
         <p>Paylaşmak istediğiniz araç ve hizmet ayrıntılarını düzenleyin.</p>
-        <p className="operator-offerings-optional-note">
-          Araç ve ayrıntılı servis teklifi eklemek arama görünürlüğü için
-          zorunlu değildir.
+        <p className="operator-offerings-note">
+          <InfoIcon />
+          <span>
+            Araç ve servis teklifi eklemek isteğe bağlıdır. Bunlar olmadan da
+            okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.
+          </span>
         </p>
       </header>
-
-      <div className="operator-offerings-callout">
-        <InfoIcon />
-        <p>
-          <strong>Bu bölüm isteğe bağlıdır.</strong> Araç veya teklif eklemeden
-          de okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.
-        </p>
-      </div>
 
       {error && (
         <div className="form-error" role="alert">

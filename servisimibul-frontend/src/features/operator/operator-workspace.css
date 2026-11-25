@@ -1312,51 +1312,24 @@
   letter-spacing: -0.03em;
 }
 
-.operator-offerings-optional-note {
-  position: relative;
-  padding-left: 1.1rem;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-.operator-offerings-optional-note::before {
-  position: absolute;
-  top: 0.55em;
-  left: 0;
-  width: 0.45rem;
-  height: 0.45rem;
-  border-radius: 999px;
-  background: #eab43e;
-  box-shadow: 0 0.2rem 0.55rem rgba(234, 180, 62, 0.25);
-  content: '';
-}
-
-.operator-offerings-callout {
+.operator-offerings-header .operator-offerings-note {
   display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  padding: 1rem 1.15rem;
-  border: 1px solid #f0d39a;
-  border-radius: var(--radius-medium);
-  background: #fff9ed;
-  color: #6f4b11;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
 }
 
-.operator-offerings-callout > svg {
+.operator-offerings-note > svg {
   flex: 0 0 auto;
-  width: 1.4rem;
-  height: 1.4rem;
-  stroke: #a66c0a;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.15rem;
+  stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
   fill: none;
-}
-
-.operator-offerings-callout p {
-  margin: 0;
-  font-size: 0.9rem;
-  line-height: 1.55;
 }
 
 .operator-offerings-section {
@@ -1566,6 +1539,7 @@
 }
 
 .operator-offerings-table th {
+  white-space: nowrap;
   color: var(--color-muted);
   font-size: 0.72rem;
   letter-spacing: 0.06em;
@@ -1637,6 +1611,10 @@
   fill: none;
 }
 
+.operator-offerings-table td[data-label='Durum'] {
+  white-space: nowrap;
+}
+
 .operator-offering-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1689,54 +1667,8 @@
   .operator-vehicle-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-}
 
-@media (max-width: 44rem) {
-  .operator-offerings-page {
-    gap: 1.75rem;
-  }
-
-  .operator-offerings-header h1 {
-    font-size: clamp(2.15rem, 11vw, 2.8rem);
-  }
-
-  .operator-offerings-callout {
-    align-items: flex-start;
-  }
-
-  .operator-offerings-section-heading {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .operator-add-button {
-    width: 100%;
-  }
-
-  .operator-vehicle-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.65rem;
-  }
-
-  .operator-vehicle-visual {
-    min-height: 4.8rem;
-  }
-
-  .operator-vehicle-visual svg {
-    width: 3.25rem;
-    height: 3.25rem;
-    padding: 0.7rem;
-  }
-
-  .operator-vehicle-body {
-    gap: 0.6rem;
-    padding: 0.85rem;
-  }
-
-  .operator-vehicle-status-row {
-    gap: 0.35rem;
-  }
-
+  /* Below 64rem the four-column table is too narrow beside the sidebar. */
   .operator-offerings-table-wrap {
     overflow: visible;
     border: 0;
@@ -1793,6 +1725,49 @@
 
   .operator-offerings-table td::before {
     display: none;
+  }
+}
+
+@media (max-width: 44rem) {
+  .operator-offerings-page {
+    gap: 1.75rem;
+  }
+
+  .operator-offerings-header h1 {
+    font-size: clamp(2.15rem, 11vw, 2.8rem);
+  }
+
+  .operator-offerings-section-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .operator-add-button {
+    width: 100%;
+  }
+
+  .operator-vehicle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+
+  .operator-vehicle-visual {
+    min-height: 4.8rem;
+  }
+
+  .operator-vehicle-visual svg {
+    width: 3.25rem;
+    height: 3.25rem;
+    padding: 0.7rem;
+  }
+
+  .operator-vehicle-body {
+    gap: 0.6rem;
+    padding: 0.85rem;
+  }
+
+  .operator-vehicle-status-row {
+    gap: 0.35rem;
   }
 
   .operator-dialog-content {
