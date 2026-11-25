@@ -2042,6 +2042,29 @@ describe('operator offerings partial load failures (#327)', () => {
     expect(screen.queryByText(/yüklenemedi/)).not.toBeInTheDocument()
   })
 
+  it('explains once, as a calm header note, that fleet and offerings are optional (#328)', async () => {
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+    )
+    renderRoute('/operator/offerings')
+
+    const heading = await screen.findByRole('heading', {
+      level: 1,
+      name: 'Araçlar ve servis teklifleri',
+    })
+    expect(await screen.findByText('Henüz araç eklenmedi')).toBeInTheDocument()
+    const notes = screen.getAllByText(/isteğe bağlıdır|zorunlu değildir/)
+    expect(notes).toHaveLength(1)
+    expect(notes[0]).toHaveTextContent(
+      'Araç ve servis teklifi eklemek isteğe bağlıdır. Bunlar olmadan da okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.',
+    )
+    expect(heading.closest('header')).toContainElement(notes[0])
+    expect(notes[0].closest('[role="alert"], [role="status"]')).toBeNull()
+  })
+
   it('redirects once to login when the session expires during the initial reads', async () => {
     let redirects = 0
     server.use(
