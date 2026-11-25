@@ -37,6 +37,7 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('region', { name: 'Paylaşılan hizmetler' }),
     ).toBeVisible()
+    await expectTableLabelsOnOneLine(page)
     await expectNoOverflow(page)
     await expectAxeClean(page)
   })
@@ -97,6 +98,7 @@ test('COPY328 note stays put through loading, partial failure and retry', async 
     'Araç bilgileri yüklenemedi',
   )
   await shoot(page, 'partial-failure-768')
+  await expectTableLabelsOnOneLine(page)
   await expectSingleCalmNote(page)
   await expect(page.getByRole('alert')).toHaveCount(1)
 
@@ -168,6 +170,33 @@ async function login(page: Page) {
   await page.getByLabel('Şifre').fill('Password123!')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   await expect(page.getByRole('heading', { name: 'Genel bakış' })).toBeVisible()
+}
+
+// Status heading, status badge and action labels must never wrap mid-word.
+async function expectTableLabelsOnOneLine(page: Page) {
+  const table = page.locator('.operator-offerings-table')
+  const labels = [
+    table.getByText('Taslak', { exact: true }),
+    table.getByRole('button', { name: 'Düzenle', exact: true }),
+    table.getByRole('button', { name: 'Yayımla', exact: true }),
+  ]
+  const statusHeading = table.getByRole('columnheader', { name: 'Durum' })
+  // The header row is visually hidden (1px clip) in the stacked card layout.
+  const headingBox = await statusHeading.boundingBox()
+  if (headingBox && headingBox.width > 1) labels.push(statusHeading)
+  for (const label of labels) {
+    const lines = await label.evaluate((element) => {
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const tops = new Set(
+        [...range.getClientRects()]
+          .filter((rect) => rect.width > 0)
+          .map((rect) => Math.round(rect.top)),
+      )
+      return tops.size
+    })
+    expect(lines).toBe(1)
+  }
 }
 
 async function expectNoOverflow(page: Page) {
