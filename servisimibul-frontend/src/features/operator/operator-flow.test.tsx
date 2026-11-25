@@ -1703,7 +1703,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/offerings')
 
     expect(
-      await screen.findByText('İşlem tamamlanamadı. Tekrar deneyin.'),
+      await screen.findByText('Araç bilgileri yüklenemedi'),
     ).toBeInTheDocument()
     expect(screen.queryByText('Henüz araç eklenmedi')).not.toBeInTheDocument()
 
@@ -1838,6 +1838,237 @@ describe('operator workspace flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Yayımla' }))
     expect(await screen.findByText('Servis yayımlandı.')).toBeInTheDocument()
     expect(published).toBe(true)
+  })
+})
+
+describe('operator offerings partial load failures (#327)', () => {
+  const activeVehicle = vehicle(
+    '11111111-1111-4111-8111-111111111111',
+    '34 ABC 123',
+    true,
+  )
+  const leakedDetail =
+    'ERROR: column v.deletion_blocked_reason does not exist (SQL 42703)'
+
+  function serverError() {
+    return HttpResponse.json(
+      {
+        title: 'Internal Server Error',
+        status: 500,
+        detail: leakedDetail,
+        code: 'internal_error',
+      },
+      { status: 500 },
+    )
+  }
+
+  function loadHandlers(failures: {
+    vehicles?: number
+    offerings?: number
+    schools?: number
+  }) {
+    const calls = { vehicles: 0, offerings: 0, schools: 0 }
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        ++calls.vehicles <= (failures.vehicles ?? 0)
+          ? serverError()
+          : HttpResponse.json([activeVehicle]),
+      ),
+      http.get('/api/v1/operator/offerings', () =>
+        ++calls.offerings <= (failures.offerings ?? 0)
+          ? serverError()
+          : HttpResponse.json([offering(false, [])]),
+      ),
+      http.get('/api/v1/operator/schools', () =>
+        ++calls.schools <= (failures.schools ?? 0)
+          ? serverError()
+          : HttpResponse.json([operatorSchool([])]),
+      ),
+    )
+    return calls
+  }
+
+  it('keeps offerings visible but blocks unsafe actions when only vehicles fail', async () => {
+    const calls = loadHandlers({ vehicles: 1 })
+    renderRoute('/operator/offerings')
+
+    const fleet = await screen.findByRole('region', { name: 'Filo bilgileri' })
+    expect(
+      await within(fleet).findByText('Araç bilgileri yüklenemedi'),
+    ).toBeInTheDocument()
+    const offerings = screen.getByRole('region', {
+      name: 'Paylaşılan hizmetler',
+    })
+    expect(
+      await within(offerings).findByText('Sabah ve akşam servisi'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(screen.queryByText(leakedDetail)).not.toBeInTheDocument()
+    expect(screen.queryByText('Henüz araç eklenmedi')).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Araç ekle' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(offerings).getByText('Teklif işlemleri şu an kullanılamıyor'),
+    ).toBeInTheDocument()
+    expect(
+      within(offerings).queryByRole('button', { name: 'Teklif oluştur' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(offerings).getByRole('button', { name: 'Düzenle' }),
+    ).toBeDisabled()
+    expect(
+      within(offerings).getByRole('button', { name: 'Yayımla' }),
+    ).toBeDisabled()
+
+    const retry = within(fleet).getByRole('button', { name: 'Yeniden dene' })
+    fireEvent.click(retry)
+    // The button leaves while loading, so a second activation cannot fire again.
+    fireEvent.click(retry)
+    expect(
+      screen.getByRole('heading', { name: 'Filo bilgileri' }),
+    ).toHaveFocus()
+
+    expect(await within(fleet).findByText('34 ABC 123')).toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(
+      within(offerings).getByRole('button', { name: 'Teklif oluştur' }),
+    ).toBeInTheDocument()
+    expect(
+      within(offerings).getByRole('button', { name: 'Yayımla' }),
+    ).toBeEnabled()
+    expect(calls).toEqual({ vehicles: 2, offerings: 1, schools: 1 })
+  })
+
+  it('shows a school prerequisite error instead of a false missing-school state', async () => {
+    const calls = loadHandlers({ schools: 1 })
+    renderRoute('/operator/offerings')
+
+    const offerings = await screen.findByRole('region', {
+      name: 'Paylaşılan hizmetler',
+    })
+    expect(
+      await within(offerings).findByText('Okul bağlantıları yüklenemedi'),
+    ).toBeInTheDocument()
+    expect(
+      await within(
+        screen.getByRole('region', { name: 'Filo bilgileri' }),
+      ).findByText('34 ABC 123'),
+    ).toBeInTheDocument()
+    expect(
+      await within(offerings).findByText('Sabah ve akşam servisi'),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText('Önce gerekli bilgileri tamamlayın'),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole('button', { name: 'Teklif oluştur' }),
+    ).not.toBeInTheDocument()
+    expect(
+      within(offerings).getByRole('button', { name: 'Düzenle' }),
+    ).toBeDisabled()
+
+    fireEvent.click(
+      within(offerings).getByRole('button', { name: 'Yeniden dene' }),
+    )
+    expect(
+      screen.getByRole('heading', { name: 'Paylaşılan hizmetler' }),
+    ).toHaveFocus()
+    expect(
+      await screen.findByRole('button', { name: 'Teklif oluştur' }),
+    ).toBeInTheDocument()
+    expect(
+      within(offerings).getByRole('button', { name: 'Düzenle' }),
+    ).toBeEnabled()
+    expect(calls).toEqual({ vehicles: 1, offerings: 1, schools: 2 })
+  })
+
+  it('isolates simultaneous failures and retries only the chosen resource', async () => {
+    const calls = loadHandlers({ vehicles: 2, offerings: 1 })
+    renderRoute('/operator/offerings')
+
+    const fleet = await screen.findByRole('region', { name: 'Filo bilgileri' })
+    const offerings = screen.getByRole('region', {
+      name: 'Paylaşılan hizmetler',
+    })
+    expect(
+      await within(offerings).findByText('Servis teklifleri yüklenemedi'),
+    ).toBeInTheDocument()
+    expect(
+      await within(fleet).findByText('Araç bilgileri yüklenemedi'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('alert')).toHaveLength(2)
+    expect(
+      screen.queryByText('Henüz servis teklifi yok'),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(
+      within(offerings).getByRole('button', { name: 'Yeniden dene' }),
+    )
+    expect(
+      await within(offerings).findByText('Sabah ve akşam servisi'),
+    ).toBeInTheDocument()
+    expect(
+      within(offerings).getByRole('button', { name: 'Yayımla' }),
+    ).toBeDisabled()
+    expect(
+      within(fleet).getByText('Araç bilgileri yüklenemedi'),
+    ).toBeInTheDocument()
+    expect(calls).toEqual({ vehicles: 1, offerings: 2, schools: 1 })
+
+    fireEvent.click(within(fleet).getByRole('button', { name: 'Yeniden dene' }))
+    expect(
+      await within(fleet).findByText('Araç bilgileri yüklenemedi'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(calls.vehicles).toBe(2)
+  })
+
+  it('shows genuine empty states only after every read succeeds', async () => {
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/offerings', () => HttpResponse.json([])),
+      http.get('/api/v1/operator/schools', () => HttpResponse.json([])),
+    )
+    renderRoute('/operator/offerings')
+
+    expect(await screen.findByText('Henüz araç eklenmedi')).toBeInTheDocument()
+    expect(
+      await screen.findByText('Önce gerekli bilgileri tamamlayın'),
+    ).toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(screen.queryByText(/yüklenemedi/)).not.toBeInTheDocument()
+  })
+
+  it('redirects once to login when the session expires during the initial reads', async () => {
+    let redirects = 0
+    server.use(
+      authHandler(),
+      http.get('/api/v1/operator/vehicles', () =>
+        HttpResponse.json({ status: 401 }, { status: 401 }),
+      ),
+      http.get('/api/v1/operator/offerings', () =>
+        HttpResponse.json({ status: 401 }, { status: 401 }),
+      ),
+      http.get('/api/v1/operator/schools', () =>
+        HttpResponse.json([operatorSchool([])]),
+      ),
+    )
+    const router = createMemoryRouter(routes, {
+      initialEntries: ['/operator/offerings'],
+    })
+    router.subscribe((state) => {
+      if (state.location.search === '?reason=session') redirects += 1
+    })
+    render(<RouterProvider router={router} />)
+
+    await waitFor(() =>
+      expect(router.state.location.pathname).toBe('/operator/login'),
+    )
+    expect(router.state.location.search).toBe('?reason=session')
+    expect(redirects).toBe(1)
   })
 })
 
