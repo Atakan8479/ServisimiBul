@@ -485,6 +485,7 @@ export function DemandBoardPage() {
               {statusFilters.map((item) => (
                 <button
                   aria-pressed={status === item.value}
+                  disabled={loadingDemands}
                   key={item.value}
                   onClick={() => void changeStatus(item.value)}
                   type="button"

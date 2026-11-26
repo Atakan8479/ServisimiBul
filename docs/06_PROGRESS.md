@@ -21,8 +21,10 @@
   - **Discovery failure.** A failed operator lookup (the only intercepted request) shows a retryable error, never a zero result, and keeps creation available. The retry gets the genuine backend answer.
   - **Tampered links.** Unknown school, mismatched district and malformed IDs fail safely.
   - **Layout and keyboard.** No horizontal overflow and no axe violations at 1440, 768, 390 and 320 px; keyboard activation of the create shortcut works.
-- **Limitation.** Populated Fulfilled and Closed lists stay covered by mocked Playwright and Vitest only; the real spec sees them empty for its own schools.
-- **Results.** ESLint, `tsc -b` and build pass; Vitest 416 tests (known load-related timeouts in unrelated tests); real stack 5/5, twice.
+- **Final acceptance follow-up (2026-11-26).** The real spec now creates separate synthetic OPEN, FULFILLED and inactivity-CLOSED demands through the public APIs on its disposable PostgreSQL 17 database. The populated FULFILLED and CLOSED tabs verify their backend counts, filter labels, visible lifecycle labels, academic year and create-entry availability; the existing OPEN fixture still proves canonical `200` deduplication. No direct SQL forces demand lifecycle state.
+- **Finding and fix.** Acceptance reproduced a current-main race: selecting a status while the URL-prefilled demand list was still hydrating could permanently load an unfiltered global list under the selected-school UI. Status tabs are now disabled for the duration of demand loading, covering initial hydration and later status transitions without changing backend or authorization behavior.
+- **Results.** The final disposable PostgreSQL 17.4 full-stack run passed 6/6, including DEMAND-01 and the real session-ownership suite; targeted mocked Chromium passed 5/5. ESLint, `tsc -b`, build, scoped Prettier and `git diff --check` pass. Full Vitest passed 458/460 (focused demand: 64/66) and reproduced the two documented unrelated session-ownership failures with their existing unhandled MSW response/CSRF requests; they were not weakened or changed.
+- **Remaining limitations.** No DEMAND-UX acceptance coverage gap remains. The fixtures are synthetic and isolated; shared Supabase and production data were not accessed. The unrelated session-ownership Vitest flakiness remains documented for separate work.
 
 ## ROLE-UX acceptance verification — 2026-11-21 (issue #272; consolidates #278/#279/#281)
 
