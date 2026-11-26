@@ -498,7 +498,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         .click()
       await expect(
         page.getByRole('heading', {
-          name: 'Bu bölgede henüz servis işletmecisi bulunamadı.',
+          name: 'Eşleşen işletmeci bulunamadı',
         }),
       ).toBeVisible()
       await page.getByRole('link', { name: 'Servis talebi oluştur' }).click()

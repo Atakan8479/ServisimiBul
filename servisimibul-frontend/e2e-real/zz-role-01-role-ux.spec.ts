@@ -305,7 +305,7 @@ test('ROLE-01 shows only the actions each real role may take', async ({
         await page.goto(demandPath)
         await expectPublicContent(page)
         await expect(
-          page.getByText(/işletme başvurunuzun yönetici tarafından/),
+          page.getByText(/işletmeci başvurunuzun yönetici tarafından/),
         ).toBeVisible()
         await expect(
           page.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),

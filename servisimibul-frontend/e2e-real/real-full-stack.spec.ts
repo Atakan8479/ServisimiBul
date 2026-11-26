@@ -450,7 +450,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
         publicPage.getByText(
-          'Mesafe kademelerine göre azami tutarları inceleyin. Kesin ücret ve hizmet koşulları için işletmeciyle görüşün.',
+          'Tutarlar resmî azami ücrettir, kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
         ),
       ).toBeVisible()
       await expect(publicPage.getByText('₺12.000,00')).toBeVisible()
