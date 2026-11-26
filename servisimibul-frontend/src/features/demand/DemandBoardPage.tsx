@@ -417,6 +417,7 @@ export function DemandBoardPage() {
             <label className="form-field">
               Sıralama
               <select
+                disabled={loadingDemands}
                 value={sort}
                 onChange={(event) =>
                   void changeSort(event.target.value as DemandSort)
