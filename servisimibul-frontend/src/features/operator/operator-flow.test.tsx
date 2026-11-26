@@ -974,7 +974,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/schools')
     fireEvent.click(await screen.findByRole('button', { name: 'Kaldır' }))
     let dialog = screen.getByRole('dialog', {
-      name: 'Okul kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Vazgeç' }))
     expect(deletes).toBe(0)
@@ -982,7 +982,7 @@ describe('operator workspace flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kaldır' }))
     dialog = screen.getByRole('dialog', {
-      name: 'Okul kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Kaldır' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
@@ -992,7 +992,9 @@ describe('operator workspace flows', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Kaldır' }))
     expect(
-      await screen.findByText('Okul ve hizmet mahalleleri kaldırıldı.'),
+      await screen.findByText(
+        'Okul ve hizmet mahalleleri listenizden kaldırıldı.',
+      ),
     ).toBeInTheDocument()
     expect(screen.queryByText('Örnek Okulu')).not.toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

@@ -18,14 +18,16 @@ describe('public operator discovery', () => {
 
     expect(
       screen.getByRole('heading', {
-        name: 'Okul servisini birlikte bulalım.',
+        name: 'Okul servisinizi bulun.',
       }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: 'Okulunuzu seçin' }),
     ).toHaveAttribute('href', '#school-search')
     expect(
-      screen.getByRole('link', { name: 'Talep panosunu keşfet' }),
+      within(
+        screen.getByRole('region', { name: 'Okul servisinizi bulun.' }),
+      ).getByRole('link', { name: 'Talep panosuna git' }),
     ).toHaveAttribute('href', '/demands')
     expect(
       screen.queryByRole('heading', { name: 'Üç adımda servis keşfi' }),
@@ -280,7 +282,11 @@ describe('public operator discovery', () => {
     expect(emptyLink?.getAttribute('href')).not.toContain('pickupDistrictId=10')
     // The unrelated promotional link keeps its plain destination.
     expect(
-      screen.getByRole('link', { name: 'Talep panosuna git' }),
+      within(
+        screen.getByRole('complementary', {
+          name: 'Okulunuzda servis seçeneği bulamadınız mı?',
+        }),
+      ).getByRole('link', { name: 'Talep panosuna git' }),
     ).toHaveAttribute('href', '/demands')
 
     // Unsubmitted edits never produce a link for the unexecuted selection.

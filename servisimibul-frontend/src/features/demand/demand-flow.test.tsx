@@ -1732,11 +1732,15 @@ describe('demand comments', () => {
         )
         expect(await screen.findByLabelText('Yorumunuz')).toBeInTheDocument()
         expect(
-          screen.queryByText(/Yorum yazmak için işletmeci onayı gerekir/),
+          screen.queryByText(
+            /işletmeci başvurunuzun yönetici tarafından onaylanması/,
+          ),
         ).not.toBeInTheDocument()
       } else {
         expect(
-          await screen.findByText(/Yorum yazmak için işletmeci onayı gerekir/),
+          await screen.findByText(
+            /işletmeci başvurunuzun yönetici tarafından onaylanması/,
+          ),
         ).toBeInTheDocument()
         expect(
           screen.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),
@@ -1769,7 +1773,7 @@ describe('demand comments', () => {
     fireEvent.click(button)
 
     const note = await screen.findByText(
-      /Yorum yazmak için işletmeci onayı gerekir/,
+      /işletmeci başvurunuzun yönetici tarafından onaylanması/,
     )
     await waitFor(() => expect(note).toHaveFocus())
     expect(
@@ -1796,7 +1800,9 @@ describe('demand comments', () => {
 
     renderRoute(`/demands/${demandId}`)
     expect(
-      await screen.findByText(/Yorum yazmak için işletmeci onayı gerekir/),
+      await screen.findByText(
+        /işletmeci başvurunuzun yönetici tarafından onaylanması/,
+      ),
     ).toBeInTheDocument()
     await waitFor(() => expect(authChecks).toBeGreaterThanOrEqual(2))
 
@@ -1812,7 +1818,9 @@ describe('demand comments', () => {
       await screen.findByRole('button', { name: 'Yorum yaz' }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText(/Yorum yazmak için işletmeci onayı gerekir/),
+      screen.queryByText(
+        /işletmeci başvurunuzun yönetici tarafından onaylanması/,
+      ),
     ).not.toBeInTheDocument()
   })
 })

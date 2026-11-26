@@ -166,7 +166,7 @@ describe('user-facing API messages', () => {
     expect(error.fieldErrors).toEqual({
       email: 'Geçerli bir e-posta adresi girin.',
       newPassword:
-        'Şifre 12-64 karakter olmalıdır. Çok sayıda özel karakter varsa daha kısa bir şifre seçin.',
+        'Şifre 12-64 karakter olmalı ve 72 baytı aşmamalıdır. Türkçe harf veya emoji kullandıysanız şifreyi kısaltın.',
       businessName: 'İşletme adı 2-120 karakter olmalıdır.',
       contactPhone: 'Geçerli bir telefon numarası girin.',
     })

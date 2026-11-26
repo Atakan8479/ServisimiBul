@@ -474,7 +474,8 @@ export function ForgotPasswordPage() {
       {complete ? (
         <div className="auth-completion" role="status">
           <p>
-            Bu adresle bir hesap varsa şifre yenileme bağlantısı gönderildi.
+            Bu adrese ait uygun bir hesap varsa şifre yenileme bağlantısı
+            gönderilir.
           </p>
           <Link className="button-link" to="/login" viewTransition>
             Giriş sayfasına dön

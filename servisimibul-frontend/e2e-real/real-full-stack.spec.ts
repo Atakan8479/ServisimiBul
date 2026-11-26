@@ -541,13 +541,13 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
 
       await operatorPage.getByRole('button', { name: 'Etkinleştir' }).click()
       await expect(
-        operatorPage.getByText('Okul etkinleştirildi.'),
+        operatorPage.getByText('Okul hizmet listenizde etkinleştirildi.'),
       ).toBeVisible()
       expect(await contributes()).toBe(true)
 
       await operatorPage.getByRole('button', { name: 'Kaldır' }).click()
       await operatorPage
-        .getByRole('dialog', { name: 'Okul kaldırılsın mı?' })
+        .getByRole('dialog', { name: 'Okul listenizden kaldırılsın mı?' })
         .getByRole('button', { name: 'Kaldır' })
         .click()
       await expect(
@@ -1860,7 +1860,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(skipLink).toBeAttached()
         await expect(
           mobilePage.getByRole('heading', {
-            name: 'Okul servisini birlikte bulalım.',
+            name: 'Okul servisinizi bulun.',
           }),
         ).toBeVisible()
         await mobilePage.bringToFront()

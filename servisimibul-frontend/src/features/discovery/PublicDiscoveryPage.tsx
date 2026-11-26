@@ -462,23 +462,21 @@ export function PublicDiscoveryPage() {
           <div className="discovery-hero-copy">
             <p className="discovery-kicker">İstanbul okulları için</p>
             <h1 id="discovery-title">
-              Okul servisini <em>birlikte bulalım.</em>
+              Okul servisinizi <em>bulun.</em>
             </h1>
             <p className="discovery-hero-lede">
-              Okulunuzu ve mahallenizi seçin, servis işletmecilerini bulun.
+              Okulunuzu ve servise bineceğiniz mahalleyi seçin.
             </p>
             <div className="discovery-hero-actions">
               <a className="primary-button" href="#school-search">
                 Okulunuzu seçin
               </a>
               <Link className="secondary-button" to="/demands" viewTransition>
-                Talep panosunu keşfet
+                Talep panosuna git
               </Link>
             </div>
             <ul className="discovery-principles" aria-label="Arama özellikleri">
               <li>Üyelik gerekmez</li>
-              <li>Okul ve mahalle ayrı seçilir</li>
-              <li>Adres garantisi değildir</li>
             </ul>
           </div>
           <figure className="discovery-hero-visual">

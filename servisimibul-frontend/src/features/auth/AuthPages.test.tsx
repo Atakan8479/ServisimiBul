@@ -357,7 +357,7 @@ describe('parent account onboarding', () => {
 
     expect(
       await screen.findByText(
-        /Bu adresle bir hesap varsa şifre yenileme bağlantısı/,
+        /Bu adrese ait uygun bir hesap varsa şifre yenileme bağlantısı/,
       ),
     ).toBeInTheDocument()
     expect(requestBody).toEqual({ email: 'parent@example.test' })
@@ -440,7 +440,7 @@ describe('parent account onboarding', () => {
     )
     expect(
       screen.queryByText(
-        /Bu adresle bir hesap varsa şifre yenileme bağlantısı/,
+        /Bu adrese ait uygun bir hesap varsa şifre yenileme bağlantısı/,
       ),
     ).not.toBeInTheDocument()
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')

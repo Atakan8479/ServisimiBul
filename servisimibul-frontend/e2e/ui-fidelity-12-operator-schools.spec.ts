@@ -65,7 +65,7 @@ for (const viewport of viewports) {
     const removeButton = row.getByRole('button', { name: 'Kaldır' })
     await removeButton.click()
     const confirm = page.getByRole('dialog', {
-      name: 'Okul kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     await expect(confirm.getByRole('button', { name: 'Vazgeç' })).toBeFocused()
     await assertAccessibleAndContained(page)
@@ -148,7 +148,9 @@ test('O03 activation changes O01 readiness and keeps keyboard focus', async ({
 
   await page.goto('/operator/schools')
   await activate.click()
-  await expect(page.getByText('Okul etkinleştirildi.')).toBeVisible()
+  await expect(
+    page.getByText('Okul hizmet listenizde etkinleştirildi.'),
+  ).toBeVisible()
   await page.goto('/operator')
   await expect(ready).toBeVisible()
 })
@@ -180,7 +182,7 @@ test('O03 confirms removal, survives Escape and reports failures', async ({
   await page.goto('/operator/schools')
   await page.getByRole('button', { name: 'Kaldır' }).click()
   const confirm = page.getByRole('dialog', {
-    name: 'Okul kaldırılsın mı?',
+    name: 'Okul listenizden kaldırılsın mı?',
   })
   await confirm.getByRole('button', { name: 'Kaldır' }).click()
   await expect(confirm.getByRole('alert')).toHaveText(
@@ -198,7 +200,7 @@ test('O03 confirms removal, survives Escape and reports failures', async ({
   release()
   await expect(confirm).toHaveCount(0)
   await expect(
-    page.getByText('Okul ve hizmet mahalleleri kaldırıldı.'),
+    page.getByText('Okul ve hizmet mahalleleri listenizden kaldırıldı.'),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Okul ekle' })).toBeFocused()
   expect(state.operatorSchoolAdded).toBe(false)

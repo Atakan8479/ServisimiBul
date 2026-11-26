@@ -60,7 +60,7 @@ test('disabled delivery keeps the account action unavailable', async ({
   await page.goto(roles[1].account)
 
   await expect(
-    page.getByText(/E-posta gönderimi açılana kadar kullanılamaz/),
+    page.getByText(/E-posta değişikliği şu anda kullanılamıyor\./),
   ).toBeVisible()
   await expect(
     page.getByRole('button', { name: 'Kullanılamıyor' }).first(),

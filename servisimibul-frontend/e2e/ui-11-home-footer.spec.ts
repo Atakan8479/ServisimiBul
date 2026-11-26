@@ -28,7 +28,7 @@ for (const viewport of viewports) {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', { name: 'Okul servisini birlikte bulalım.' }),
+      page.getByRole('heading', { name: 'Okul servisinizi bulun.' }),
     ).toBeVisible()
     await expect(
       page.getByRole('heading', { name: 'Üç adımda servis keşfi' }),

@@ -223,8 +223,8 @@ export function OperatorSchoolsPage() {
       updateRelationship(updated)
       setNotice({
         message: updated.active
-          ? 'Okul etkinleştirildi.'
-          : 'Okul pasife alındı; artık aramalarda kullanılmaz.',
+          ? 'Okul hizmet listenizde etkinleştirildi.'
+          : 'Okul hizmet listenizde pasife alındı; aramalarda kullanılmaz.',
         tone: updated.active ? 'success' : 'warning',
       })
     } catch (reason) {
@@ -248,7 +248,7 @@ export function OperatorSchoolsPage() {
       focusAddAfterRemoval.current = true
       setRemoveTarget(undefined)
       setNotice({
-        message: 'Okul ve hizmet mahalleleri kaldırıldı.',
+        message: 'Okul ve hizmet mahalleleri listenizden kaldırıldı.',
         tone: 'warning',
       })
     } catch (reason) {
@@ -653,10 +653,10 @@ export function OperatorSchoolsPage() {
 
       {removeTarget && (
         <SchoolDialog
-          description={`${removeTarget.schoolName} ve hizmet mahalleleri kaldırılacak.`}
+          description={`${removeTarget.schoolName} ve hizmet mahalleleri listenizden kaldırılacak.`}
           onCancel={() => setRemoveTarget(undefined)}
           pending={pending === removeTarget.id}
-          title="Okul kaldırılsın mı?"
+          title="Okul listenizden kaldırılsın mı?"
         >
           {removeError && (
             <div className="form-error" role="alert">
@@ -828,7 +828,7 @@ function SchoolRow({
         )}
         {relationship.schoolActive && !relationship.active && (
           <p className="school-warning">
-            Etkinleştirene kadar bu okul aramalarda kullanılmaz.
+            Listenizde etkinleştirene kadar bu okul aramalarda kullanılmaz.
           </p>
         )}
         {relationship.schoolActive &&

@@ -352,7 +352,8 @@ export function DemandComments({
           ref={approvalNoteRef}
           tabIndex={-1}
         >
-          Yorum yazmak için işletmeci onayı gerekir.{' '}
+          Yorum yazmak için işletmeci başvurunuzun yönetici tarafından
+          onaylanması gerekir.{' '}
           <Link to="/operator/profile">Başvuru durumunu görüntüle</Link>
         </p>
       )}

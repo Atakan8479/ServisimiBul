@@ -25,7 +25,7 @@ describe('email change', () => {
     renderRoute('/parent/account')
 
     expect(
-      await screen.findByText(/E-posta gönderimi açılana kadar kullanılamaz/),
+      await screen.findByText(/E-posta değişikliği şu anda kullanılamıyor\./),
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Değiştir' })).toHaveAttribute(
       'href',

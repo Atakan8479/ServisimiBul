@@ -22,11 +22,13 @@ for (const viewport of viewports) {
 
     await expect(
       page.getByRole('heading', {
-        name: 'Okul servisini birlikte bulalım.',
+        name: 'Okul servisinizi bulun.',
       }),
     ).toBeVisible()
     await expect(
-      page.getByRole('link', { name: 'Talep panosunu keşfet' }),
+      page
+        .getByRole('region', { name: 'Okul servisinizi bulun.' })
+        .getByRole('link', { name: 'Talep panosuna git' }),
     ).toHaveAttribute('href', '/demands')
     await expect(
       page.getByRole('img', {

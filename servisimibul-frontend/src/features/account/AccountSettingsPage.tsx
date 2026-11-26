@@ -137,7 +137,7 @@ export function AccountSettingsPage() {
               />
             ) : (
               <FutureAction
-                description="E-posta gönderimi açılana kadar kullanılamaz."
+                description="E-posta değişikliği şu anda kullanılamıyor."
                 title="E-posta adresini değiştir"
               />
             )}

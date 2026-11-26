@@ -80,6 +80,8 @@ test('hero CTAs keep their keyboard order', async ({ page }) => {
   await page.getByRole('link', { name: 'Okulunuzu seçin' }).focus()
   await page.keyboard.press('Tab')
   await expect(
-    page.getByRole('link', { name: 'Talep panosunu keşfet' }),
+    page
+      .getByRole('region', { name: 'Okul servisinizi bulun.' })
+      .getByRole('link', { name: 'Talep panosuna git' }),
   ).toBeFocused()
 })

@@ -1120,7 +1120,7 @@ function serviceResponseBlockerMessage(blocker: ServiceResponseBlocker) {
     case 'SCHOOL_NOT_LINKED':
       return 'Bu okulu önce işletmeci hesabınıza ekleyin.'
     case 'SCHOOL_RELATIONSHIP_INACTIVE':
-      return 'Bu okulu hesabınızda etkinleştirin.'
+      return 'Bu okulu hizmet listenizde etkinleştirin.'
     case 'COVERAGE_MISSING':
       return 'Talebin mahallesini bu okulun hizmet mahallelerine ekleyin.'
   }

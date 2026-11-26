@@ -154,7 +154,7 @@ const localizedProblems: Record<string, string> = {
 const localizedFieldMessages: Record<string, string> = {
   'Enter a valid email address': 'Geçerli bir e-posta adresi girin.',
   'Password must be 12-64 characters and at most 72 UTF-8 bytes':
-    'Şifre 12-64 karakter olmalıdır. Çok sayıda özel karakter varsa daha kısa bir şifre seçin.',
+    'Şifre 12-64 karakter olmalı ve 72 baytı aşmamalıdır. Türkçe harf veya emoji kullandıysanız şifreyi kısaltın.',
   'Business name must be 2-120 characters':
     'İşletme adı 2-120 karakter olmalıdır.',
   'Enter a valid international phone number':

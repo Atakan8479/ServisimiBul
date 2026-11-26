@@ -438,7 +438,7 @@ function schoolReadinessMessage(school: DiscoveryReadiness['schools'][number]) {
     return 'Okul yönetici tarafından pasife alındı; aramalarda kullanılmaz.'
   }
   if (!school.relationshipActive) {
-    return 'Okul pasif; aramalarda görünmek için etkinleştirin.'
+    return 'Okul listenizde pasif; aramalarda görünmek için etkinleştirin.'
   }
   if (school.validCoverageCount === 0) {
     return 'Henüz hizmet mahallesi seçilmedi.'
