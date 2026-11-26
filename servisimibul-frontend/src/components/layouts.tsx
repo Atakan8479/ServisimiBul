@@ -9,6 +9,7 @@ import {
 } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { RoadBackdrop } from './RoadBackdrop'
+import { RoutePendingIndicator } from './RoutePendingIndicator'
 import { BrandLockup } from './design-system'
 import {
   AUTH_ROLE_CHANGED_EVENT,
@@ -597,5 +598,10 @@ export function RouteAccessibility() {
     return stopWaiting
   }, [location.pathname, navigation.state, pageTitle])
 
-  return <Outlet />
+  return (
+    <>
+      <RoutePendingIndicator />
+      <Outlet />
+    </>
+  )
 }
