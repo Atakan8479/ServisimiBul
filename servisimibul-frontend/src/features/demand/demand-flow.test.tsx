@@ -738,6 +738,108 @@ describe('demand location filter regression', () => {
 })
 
 describe('demand board status filters', () => {
+  it('locks status and sort until filtered requests settle, then recovers from failure', async () => {
+    const requests: URLSearchParams[] = []
+    let releaseHydration: (() => void) | undefined
+    let releaseInitial: (() => void) | undefined
+    let releaseStatus: (() => void) | undefined
+    let releaseSort: (() => void) | undefined
+    server.use(
+      ...locationHandlers(),
+      emptyOperatorHandler(),
+      http.get('/api/v1/demands', async ({ request }) => {
+        const parameters = new URL(request.url).searchParams
+        requests.push(new URLSearchParams(parameters))
+        const requestNumber = requests.length
+        if (requestNumber === 1) {
+          await new Promise<void>((resolve) => {
+            releaseInitial = resolve
+          })
+        } else if (requestNumber === 2) {
+          await new Promise<void>((resolve) => {
+            releaseStatus = resolve
+          })
+        } else if (requestNumber === 3) {
+          await new Promise<void>((resolve) => {
+            releaseSort = resolve
+          })
+          return HttpResponse.json(problem(500, 'boom'), { status: 500 })
+        }
+        return HttpResponse.json(demandPage([demand()]))
+      }),
+    )
+    // A later server.use call takes precedence over locationHandlers.
+    server.use(
+      http.get(`/api/v1/schools/${school.id}`, async () => {
+        await new Promise<void>((resolve) => {
+          releaseHydration = resolve
+        })
+        return HttpResponse.json(school)
+      }),
+    )
+
+    renderRoute(`${filteredBoardPath}&academicYear=2026-2027`)
+    await screen.findByRole('heading', { name: 'Servis talep panosu' })
+    const fulfilled = screen.getByRole('button', { name: 'Karşılandı' })
+    const sort = screen.getByLabelText('Sıralama')
+    expect(fulfilled).toBeDisabled()
+    expect(sort).toBeDisabled()
+
+    await waitFor(() => expect(releaseHydration).toBeTypeOf('function'))
+    releaseHydration?.()
+    await waitFor(() => expect(releaseInitial).toBeTypeOf('function'))
+    expect(fulfilled).toBeDisabled()
+    expect(sort).toBeDisabled()
+    expectRequestFilters(requests[0]!, null, 'newest')
+    releaseInitial?.()
+    await waitFor(() => expect(fulfilled).toBeEnabled())
+    expect(sort).toBeEnabled()
+
+    fireEvent.click(fulfilled)
+    await waitFor(() => expect(releaseStatus).toBeTypeOf('function'))
+    expect(fulfilled).toBeDisabled()
+    expect(sort).toBeDisabled()
+    expectRequestFilters(requests[1]!, 'FULFILLED', 'newest')
+    releaseStatus?.()
+    expect(
+      await screen.findByText('1 karşılanan talep', {
+        selector: '.count-badge',
+      }),
+    ).toBeInTheDocument()
+    expect(sort).toBeEnabled()
+
+    fireEvent.change(sort, { target: { value: 'most-supported' } })
+    await waitFor(() => expect(releaseSort).toBeTypeOf('function'))
+    expect(fulfilled).toBeDisabled()
+    expect(sort).toBeDisabled()
+    expectRequestFilters(requests[2]!, 'FULFILLED', 'most-supported')
+    releaseSort?.()
+    expect(await screen.findByText('Talepler yüklenemedi')).toBeInTheDocument()
+    expect(fulfilled).toBeEnabled()
+    expect(sort).toBeEnabled()
+
+    fireEvent.change(sort, { target: { value: 'newest' } })
+    await waitFor(() => expect(requests).toHaveLength(4))
+    expectRequestFilters(requests[3]!, 'FULFILLED', 'newest')
+    expect(
+      await screen.findByText('1 karşılanan talep', {
+        selector: '.count-badge',
+      }),
+    ).toBeInTheDocument()
+
+    function expectRequestFilters(
+      parameters: URLSearchParams,
+      status: string | null,
+      expectedSort: string,
+    ) {
+      expect(parameters.get('schoolId')).toBe(school.id)
+      expect(parameters.get('neighborhoodId')).toBe('201')
+      expect(parameters.get('academicYear')).toBe('2026-2027')
+      expect(parameters.get('status')).toBe(status)
+      expect(parameters.get('sort')).toBe(expectedSort)
+    }
+  })
+
   it('filters on the server and keeps the applied year while resetting the page', async () => {
     const requests: URLSearchParams[] = []
     server.use(
@@ -2155,11 +2257,12 @@ describe('demand session ownership changes', () => {
     'removes operator-owned controls after switching to a %s session',
     async (_label, nextSession, initialState) => {
       let session: TestAuthUser | undefined = operatorUser()
-      let demandRequests = 0
+      const demandOwners: Array<string | undefined> = []
       server.use(
         sessionHandler(() => session),
+        csrfHandler(),
         http.get(`/api/v1/demands/${demandId}`, () => {
-          demandRequests += 1
+          demandOwners.push(session?.id)
           return HttpResponse.json(demand())
         }),
         http.get(`/api/v1/demands/${demandId}/responses`, () =>
@@ -2237,7 +2340,7 @@ describe('demand session ownership changes', () => {
       expect(
         screen.queryByRole('button', { name: 'Bildirimi geri çek' }),
       ).not.toBeInTheDocument()
-      await waitFor(() => expect(demandRequests).toBeGreaterThan(1))
+      await waitFor(() => expect(demandOwners).toContain(nextSession?.id))
       await screen.findByRole('heading', { name: school.name })
       expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
     },
@@ -2250,9 +2353,11 @@ describe('demand session ownership changes', () => {
     'closes parent comment controls and refreshes ownership for a %s session',
     async (_label, nextSession) => {
       let session: TestAuthUser | undefined = parentUser()
-      let commentRequests = 0
+      const commentOwners: Array<string | undefined> = []
       server.use(
         sessionHandler(() => session),
+        csrfHandler(),
+        emptyServiceResponsesHandler(),
         http.get(`/api/v1/demands/${demandId}`, () =>
           HttpResponse.json(
             demand({
@@ -2262,7 +2367,7 @@ describe('demand session ownership changes', () => {
           ),
         ),
         http.get(`/api/v1/demands/${demandId}/comments`, () => {
-          commentRequests += 1
+          commentOwners.push(session?.id)
           return HttpResponse.json(
             commentPage([
               comment({
@@ -2280,13 +2385,13 @@ describe('demand session ownership changes', () => {
         target: { value: 'Önceki hesaba ait taslak' },
       })
       expect(
-        screen.getByRole('button', { name: 'Yorumumu sil' }),
+        await screen.findByRole('button', { name: 'Yorumumu sil' }),
       ).toBeInTheDocument()
 
       session = nextSession
       announceAuthChangeFromOtherTab()
 
-      await waitFor(() => expect(commentRequests).toBeGreaterThan(1))
+      await waitFor(() => expect(commentOwners).toContain(nextSession?.id))
       expect(screen.queryByLabelText('Yorumunuz')).not.toBeInTheDocument()
       expect(
         screen.queryByRole('button', { name: 'Yorumumu sil' }),
@@ -2345,14 +2450,16 @@ describe('demand session ownership changes', () => {
   it('refreshes delete ownership and clears a draft for a new parent account', async () => {
     const firstParent = parentUser()
     let session: TestAuthUser | undefined = firstParent
-    let commentRequests = 0
+    const commentOwners: string[] = []
     server.use(
       sessionHandler(() => session),
+      csrfHandler(),
+      emptyServiceResponsesHandler(),
       http.get(`/api/v1/demands/${demandId}`, () =>
         HttpResponse.json(demand({ currentUserSupport: activeSupport })),
       ),
       http.get(`/api/v1/demands/${demandId}/comments`, () => {
-        commentRequests += 1
+        if (session) commentOwners.push(session.id)
         return HttpResponse.json(
           commentPage([
             comment({
@@ -2369,13 +2476,14 @@ describe('demand session ownership changes', () => {
       target: { value: 'Önceki veli taslağı' },
     })
     expect(
-      screen.getByRole('button', { name: 'Yorumumu sil' }),
+      await screen.findByRole('button', { name: 'Yorumumu sil' }),
     ).toBeInTheDocument()
 
-    session = parentUser('0980a654-6643-4e86-a2ac-b9fcdb9bf31d')
+    const nextParent = parentUser('0980a654-6643-4e86-a2ac-b9fcdb9bf31d')
+    session = nextParent
     announceAuthChangeFromOtherTab()
 
-    await waitFor(() => expect(commentRequests).toBeGreaterThan(1))
+    await waitFor(() => expect(commentOwners).toContain(nextParent.id))
     expect(
       screen.queryByRole('button', { name: 'Yorumumu sil' }),
     ).not.toBeInTheDocument()

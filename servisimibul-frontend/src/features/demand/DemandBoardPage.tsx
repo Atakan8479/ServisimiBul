@@ -417,6 +417,7 @@ export function DemandBoardPage() {
             <label className="form-field">
               Sıralama
               <select
+                disabled={loadingDemands}
                 value={sort}
                 onChange={(event) =>
                   void changeSort(event.target.value as DemandSort)
@@ -485,6 +486,7 @@ export function DemandBoardPage() {
               {statusFilters.map((item) => (
                 <button
                   aria-pressed={status === item.value}
+                  disabled={loadingDemands}
                   key={item.value}
                   onClick={() => void changeStatus(item.value)}
                   type="button"

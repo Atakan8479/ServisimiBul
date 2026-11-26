@@ -14,6 +14,8 @@ const districtId = 3401
 const neighborhoodId = 340101
 const academicYear = '2026-2027'
 const openSchoolName = 'DEMAND-01 Açık Okulu'
+const fulfilledSchoolName = 'DEMAND-01 Karşılanan Okulu'
+const closedSchoolName = 'DEMAND-01 Kapalı Okulu'
 const newSchoolName = 'DEMAND-01 Yeni Okulu'
 const createHeading = 'Yeni servis talebi oluştur'
 const createLink = 'Yeni talep oluştur'
@@ -54,6 +56,8 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
     const schoolIds: string[] = []
     for (const [name, code] of [
       [openSchoolName, 'DEMAND01-OPEN'],
+      [fulfilledSchoolName, 'DEMAND01-FULFILLED'],
+      [closedSchoolName, 'DEMAND01-CLOSED'],
       [newSchoolName, 'DEMAND01-NEW'],
     ]) {
       const school = await admin.request.post('/api/v1/admin/schools', {
@@ -70,12 +74,13 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
       expect(school.status()).toBe(201)
       schoolIds.push(((await school.json()) as { id: string }).id)
     }
-    const [openSchoolId, newSchoolId] = schoolIds as [string, string]
+    const [openSchoolId, fulfilledSchoolId, closedSchoolId, newSchoolId] =
+      schoolIds as [string, string, string, string]
     const boardPath = (schoolId: string, extra = '') =>
       `/demands?schoolId=${schoolId}&pickupDistrictId=${districtId}&neighborhoodId=${neighborhoodId}${extra}`
 
-    // One approved operator covers only the "open" school, so the other school
-    // has a genuine zero-operator result.
+    // One approved operator covers the open and fulfilled fixtures. The new
+    // school retains a genuine zero-operator result.
     await register(operator, '/api/v1/auth/register', {
       email: 'demand01.operator@example.test',
       password: operatorPassword,
@@ -107,24 +112,26 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         )
       ).status(),
     ).toBe(200)
-    const operatorSchool = await operator.request.post(
-      '/api/v1/operator/schools',
-      { headers: operatorHeaders, data: { schoolId: openSchoolId } },
-    )
-    expect(operatorSchool.status()).toBe(201)
-    const operatorSchoolId = ((await operatorSchool.json()) as { id: string })
-      .id
-    expect(
-      (
-        await operator.request.put(
-          `/api/v1/operator/schools/${operatorSchoolId}/coverage`,
-          {
-            headers: operatorHeaders,
-            data: { neighborhoodIds: [neighborhoodId] },
-          },
-        )
-      ).status(),
-    ).toBe(200)
+    for (const schoolId of [openSchoolId, fulfilledSchoolId]) {
+      const operatorSchool = await operator.request.post(
+        '/api/v1/operator/schools',
+        { headers: operatorHeaders, data: { schoolId } },
+      )
+      expect(operatorSchool.status()).toBe(201)
+      const operatorSchoolId = ((await operatorSchool.json()) as { id: string })
+        .id
+      expect(
+        (
+          await operator.request.put(
+            `/api/v1/operator/schools/${operatorSchoolId}/coverage`,
+            {
+              headers: operatorHeaders,
+              data: { neighborhoodIds: [neighborhoodId] },
+            },
+          )
+        ).status(),
+      ).toBe(200)
+    }
     expect(await operatorCount(guest, openSchoolId)).toBe(1)
     expect(await operatorCount(guest, newSchoolId)).toBe(0)
 
@@ -146,7 +153,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
     const created = await supporter.request.post('/api/v1/demands', {
       headers: { [supporterCsrf.headerName]: supporterCsrf.token },
       data: {
-        schoolId: openSchoolId,
+        schoolId: fulfilledSchoolId,
         neighborhoodId,
         needsMorning: true,
         needsAfternoon: false,
@@ -154,7 +161,80 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
       },
     })
     expect(created.status()).toBe(201)
-    const openDemandId = ((await created.json()) as { demand: { id: string } })
+    const firstDemandId = ((await created.json()) as { demand: { id: string } })
+      .demand.id
+
+    // Build one real demand for every public list status through the same APIs
+    // used by the application. No SQL or intercepted lifecycle request is used.
+    const published = await operator.request.post(
+      `/api/v1/operator/demands/${firstDemandId}/response`,
+      {
+        headers: operatorHeaders,
+        data: { offersMorning: true, offersAfternoon: false },
+      },
+    )
+    expect(published.status()).toBe(200)
+    const publicationEventId = (
+      (await published.json()) as {
+        response: { publicationEventId: string }
+      }
+    ).response.publicationEventId
+    const opened = await supporter.request.post(
+      `/api/v1/demands/${firstDemandId}/feedback/open`,
+      { headers: { [supporterCsrf.headerName]: supporterCsrf.token } },
+    )
+    expect(opened.status()).toBe(200)
+    expect(
+      (
+        (await opened.json()) as {
+          feedback: Array<{ publicationEventId: string; canEvaluate: boolean }>
+        }
+      ).feedback,
+    ).toContainEqual(
+      expect.objectContaining({ publicationEventId, canEvaluate: true }),
+    )
+    expect(
+      (
+        await supporter.request.put(
+          `/api/v1/demands/${firstDemandId}/feedback/${publicationEventId}`,
+          {
+            headers: { [supporterCsrf.headerName]: supporterCsrf.token },
+            data: { satisfied: true },
+          },
+        )
+      ).status(),
+    ).toBe(200)
+
+    const demandBody = {
+      schoolId: closedSchoolId,
+      neighborhoodId,
+      needsMorning: true,
+      needsAfternoon: false,
+      reasons: ['NO_SUITABLE_SERVICE'],
+    }
+    const inactive = await supporter.request.post('/api/v1/demands', {
+      headers: { [supporterCsrf.headerName]: supporterCsrf.token },
+      data: demandBody,
+    })
+    expect(inactive.status()).toBe(201)
+    const inactiveDemandId = (
+      (await inactive.json()) as { demand: { id: string } }
+    ).demand.id
+    expect(
+      (
+        await supporter.request.delete(
+          `/api/v1/demands/${inactiveDemandId}/support`,
+          { headers: { [supporterCsrf.headerName]: supporterCsrf.token } },
+        )
+      ).status(),
+    ).toBe(204)
+
+    const current = await supporter.request.post('/api/v1/demands', {
+      headers: { [supporterCsrf.headerName]: supporterCsrf.token },
+      data: { ...demandBody, schoolId: openSchoolId },
+    })
+    expect(current.status()).toBe(201)
+    const openDemandId = ((await current.json()) as { demand: { id: string } })
       .demand.id
 
     await test.step('backend rejects demand creation for guests and non-parents', async () => {
@@ -189,7 +269,11 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
     })
 
     await test.step('status tabs show backend counts and keep creation reachable', async () => {
-      await guest.goto(boardPath(openSchoolId))
+      expect(await demandCount(guest, 'ALL', openSchoolId)).toBe(1)
+      expect(await demandCount(guest, 'OPEN', openSchoolId)).toBe(1)
+      expect(await demandCount(guest, 'FULFILLED', openSchoolId)).toBe(0)
+      expect(await demandCount(guest, 'CLOSED', openSchoolId)).toBe(0)
+      await guest.goto(boardPath(openSchoolId, `&academicYear=${academicYear}`))
       await expect(
         guest.getByRole('heading', { name: '1 mevcut servis bulundu' }),
       ).toBeVisible()
@@ -213,6 +297,51 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
             expected,
           )
         }
+        await expect(
+          guest.locator('.demand-summary-card', { hasText: academicYear }),
+        ).toHaveCount(expected)
+        await expect(
+          guest.getByRole('link', { name: createLink }).first(),
+        ).toBeVisible()
+      }
+    })
+
+    await test.step('fulfilled and closed filters render populated real lists', async () => {
+      for (const fixture of [
+        {
+          schoolId: fulfilledSchoolId,
+          tab: 'Karşılandı',
+          status: 'FULFILLED',
+          countLabel: 'karşılanan talep',
+          stateLabel: 'İhtiyaç karşılandı',
+        },
+        {
+          schoolId: closedSchoolId,
+          tab: 'Kapalı',
+          status: 'CLOSED',
+          countLabel: 'kapalı talep',
+          stateLabel: 'Hareketsizlik nedeniyle kapandı',
+        },
+      ] as const) {
+        await guest.goto(
+          boardPath(fixture.schoolId, `&academicYear=${academicYear}`),
+        )
+        await guest
+          .getByRole('button', { name: fixture.tab, exact: true })
+          .click()
+        expect(await demandCount(guest, fixture.status, fixture.schoolId)).toBe(
+          1,
+        )
+        await expect(
+          guest.locator('.count-badge', {
+            hasText: `1 ${fixture.countLabel}`,
+          }),
+        ).toBeVisible()
+        await expect(guest.locator('.demand-summary-card')).toHaveCount(1)
+        await expect(guest.getByText(fixture.stateLabel)).toBeVisible()
+        await expect(
+          guest.locator('.demand-summary-card', { hasText: academicYear }),
+        ).toHaveCount(1)
         await expect(
           guest.getByRole('link', { name: createLink }).first(),
         ).toBeVisible()
@@ -298,6 +427,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         guest.getByText(/Bu okul ve mahalle için zaten bir talep var/),
       ).toBeVisible()
       expect(await demandCount(guest, 'ALL', openSchoolId)).toBe(1)
+      expect(await demandCount(guest, 'OPEN', openSchoolId)).toBe(1)
     })
 
     await test.step('only parents reach the confirmation step in the UI', async () => {
