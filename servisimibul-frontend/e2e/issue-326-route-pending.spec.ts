@@ -95,8 +95,24 @@ async function watchBarMounts(page: Page) {
     page.evaluate(() => (window as unknown as { barMounts: number }).barMounts)
 }
 
+/** Waits until the route view-transition crossfade has finished. */
+async function settleViewTransition(page: Page) {
+  await page.waitForFunction(
+    () =>
+      !document
+        .getAnimations()
+        .some((animation) =>
+          String(
+            (animation.effect as KeyframeEffect | null)?.pseudoElement ?? '',
+          ).startsWith('::view-transition'),
+        ),
+  )
+}
+
 async function shoot(page: Page, name: string) {
   if (!screenshotDir) return
+  // Mid-crossfade frames show the old and new page blended together.
+  await settleViewTransition(page)
   await page.screenshot({ path: `${screenshotDir}/${name}.png` })
 }
 
@@ -131,6 +147,12 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('heading', { name: 'Okullar ve hizmet kapsamı' }),
     ).toBeFocused()
+    // Once the crossfade settles only the new page remains, still loading.
+    await settleViewTransition(page)
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText([
+      'Okullar ve hizmet kapsamı',
+    ])
+    await expect(loading).toBeInViewport()
     await shoot(page, `schools-page-loading-${viewport.width}`)
 
     schools.release()
