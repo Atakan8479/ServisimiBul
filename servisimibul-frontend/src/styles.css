@@ -979,25 +979,6 @@ a:focus-visible {
   font-size: 0.68rem;
 }
 
-.discovery-route-line {
-  position: absolute;
-  right: 0;
-  bottom: 5.5rem;
-  left: 0;
-  display: flex;
-  justify-content: space-around;
-  border-top: 1px dashed var(--teal-100);
-}
-
-.discovery-route-line span {
-  width: 0.45rem;
-  height: 0.45rem;
-  margin-top: -0.28rem;
-  border: 1px solid var(--teal-500);
-  border-radius: 50%;
-  background: var(--neutral-0);
-}
-
 .form-card.discovery-search {
   position: relative;
   z-index: 2;

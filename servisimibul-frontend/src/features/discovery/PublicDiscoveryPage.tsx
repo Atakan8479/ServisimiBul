@@ -515,12 +515,6 @@ export function PublicDiscoveryPage() {
             </figcaption>
           </figure>
         </div>
-        <div className="discovery-route-line" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-          <span />
-        </div>
       </section>
 
       <div className="form-card discovery-search" id="school-search">
