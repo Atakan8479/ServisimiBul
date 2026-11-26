@@ -113,7 +113,7 @@ function renderLayout(initialEntry = '/') {
         path: '/',
         Component: PublicLayout,
         children: [
-          { index: true, element: <h1>Okulunu seç</h1> },
+          { index: true, element: <h1>Okulunuzu seçin</h1> },
           {
             path: 'parent/login',
             element: (
@@ -158,12 +158,12 @@ describe('PublicLayout', () => {
       <MemoryRouter initialEntries={['/']}>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route index element={<h1>Okulunu seç</h1>} />
+            <Route index element={<h1>Okulunuzu seçin</h1>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
-    await screen.findByRole('link', { name: 'Kayıt Ol' })
+    await screen.findByRole('link', { name: 'Kayıt ol' })
 
     const toggle = screen.getByRole('button', { name: 'Menü' })
     fireEvent.click(toggle)
@@ -174,7 +174,7 @@ describe('PublicLayout', () => {
       name: 'Ana sayfa',
     })
     const lastLink = within(navigation).getByRole('link', {
-      name: 'Kayıt Ol',
+      name: 'Kayıt ol',
     })
     expect(firstLink).toHaveFocus()
     expect(dialog).toHaveAttribute('aria-modal', 'true')
@@ -203,7 +203,7 @@ describe('PublicLayout', () => {
       screen.queryByRole('button', { name: 'Çıkış yap' }),
     ).not.toBeInTheDocument()
     expect(
-      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
+      await mainMenu().findByRole('link', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
     expect(
@@ -251,10 +251,10 @@ describe('PublicLayout', () => {
         await mainMenu().findByRole('link', { name: 'Bildirim merkezi' }),
       ).toHaveAttribute('href', notifications)
       expect(
-        mainMenu().queryByRole('link', { name: 'Giriş Yap' }),
+        mainMenu().queryByRole('link', { name: 'Giriş yap' }),
       ).not.toBeInTheDocument()
       expect(
-        mainMenu().queryByRole('link', { name: 'Kayıt Ol' }),
+        mainMenu().queryByRole('link', { name: 'Kayıt ol' }),
       ).not.toBeInTheDocument()
       expect(screen.queryByText(status)).not.toBeInTheDocument()
 
@@ -295,7 +295,9 @@ describe('PublicLayout', () => {
 
     menu = await openAccountMenu()
     expect(menu.getByText('Veli oturumu açık')).toBeInTheDocument()
-    fireEvent.pointerDown(screen.getByRole('heading', { name: 'Okulunu seç' }))
+    fireEvent.pointerDown(
+      screen.getByRole('heading', { name: 'Okulunuzu seçin' }),
+    )
     expect(
       screen.queryByRole('group', { name: 'Hesabım' }),
     ).not.toBeInTheDocument()
@@ -368,7 +370,7 @@ describe('PublicLayout', () => {
     expect(router.state.location.search).toBe('?reason=session')
     expect(knownAuthRole()).toBeUndefined()
     expect(
-      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
+      await mainMenu().findByRole('link', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
   })
 
@@ -390,7 +392,7 @@ describe('PublicLayout', () => {
     const menu = await openAccountMenu()
     fireEvent.click(menu.getByRole('button', { name: 'Çıkış yap' }))
     const alert = await screen.findByRole('alert')
-    expect(alert).toHaveTextContent('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+    expect(alert).toHaveTextContent('Çıkış yapılamadı. Tekrar deneyin.')
     expect(alert).not.toHaveAttribute('inert')
     expect(navigationToggle).toHaveAttribute('aria-expanded', 'false')
 
@@ -434,12 +436,12 @@ describe('PublicLayout', () => {
       <MemoryRouter>
         <Routes>
           <Route element={<PublicLayout />}>
-            <Route index element={<h1>Okulunu seç</h1>} />
+            <Route index element={<h1>Okulunuzu seçin</h1>} />
           </Route>
         </Routes>
       </MemoryRouter>,
     )
-    await mainMenu().findByRole('link', { name: 'Giriş Yap' })
+    await mainMenu().findByRole('link', { name: 'Giriş yap' })
     act(() => {
       window.dispatchEvent(new Event('focus'))
       document.dispatchEvent(new Event('visibilitychange'))
@@ -448,14 +450,14 @@ describe('PublicLayout', () => {
     renderLayout()
 
     expect(
-      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
+      await mainMenu().findByRole('link', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(meRequests).toBe(1)
   })
 
   it('verifies when another tab signs in or out', async () => {
     renderLayout()
-    await mainMenu().findByRole('link', { name: 'Giriş Yap' })
+    await mainMenu().findByRole('link', { name: 'Giriş yap' })
 
     sessionRole = 'OPERATOR'
     announceFromOtherTab()
@@ -466,7 +468,7 @@ describe('PublicLayout', () => {
     sessionRole = undefined
     announceFromOtherTab()
     expect(
-      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
+      await mainMenu().findByRole('link', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
   })
@@ -498,7 +500,7 @@ describe('PublicLayout', () => {
       window.dispatchEvent(new Event('focus'))
     })
     expect(
-      await mainMenu().findByRole('link', { name: 'Giriş Yap' }),
+      await mainMenu().findByRole('link', { name: 'Giriş yap' }),
     ).toBeInTheDocument()
     expect(knownAuthRole()).toBeUndefined()
   })
@@ -558,7 +560,7 @@ function renderAccessibleRoutes() {
             path: '/',
             Component: PublicLayout,
             children: [
-              { index: true, element: <h1>Okulunu seç</h1> },
+              { index: true, element: <h1>Okulunuzu seçin</h1> },
               { path: 'late', element: <LateHeadingPage /> },
             ],
           },
@@ -574,7 +576,7 @@ function renderAccessibleRoutes() {
 describe('RouteAccessibility', () => {
   it('focuses a late page heading after genuine navigation', async () => {
     const router = renderAccessibleRoutes()
-    await screen.findByRole('heading', { name: 'Okulunu seç' })
+    await screen.findByRole('heading', { name: 'Okulunuzu seçin' })
     await act(() => router.navigate('/late'))
 
     const heading = await screen.findByRole('heading', { name: 'Geç başlık' })
@@ -591,7 +593,7 @@ describe('RouteAccessibility', () => {
     'does not steal focus from a %s interaction made before the heading loads',
     async (_, interact) => {
       const router = renderAccessibleRoutes()
-      await screen.findByRole('heading', { name: 'Okulunu seç' })
+      await screen.findByRole('heading', { name: 'Okulunuzu seçin' })
       await act(() => router.navigate('/late'))
 
       const button = screen.getByRole('button', { name: 'Yorum yaz' })

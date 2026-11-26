@@ -12,7 +12,7 @@ const supportFormSchema = z
     reasons: z.array(z.enum(supportReasons)).min(1, 'En az bir neden seçin.'),
   })
   .refine((values) => values.needsMorning || values.needsAfternoon, {
-    message: 'Sabah veya öğleden sonra yönlerinden en az birini seçin.',
+    message: 'En az bir servis yönü seçin.',
     path: ['needsMorning'],
   })
 

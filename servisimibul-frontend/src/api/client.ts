@@ -78,7 +78,7 @@ export async function apiRequest<T>(
     throw new ApiError({
       title: 'Bir sorun oluştu',
       status: 502,
-      detail: 'Bir sorun oluştu. Tekrar deneyin.',
+      detail: 'İşlem tamamlanamadı. Tekrar deneyin.',
       code: 'INVALID_API_RESPONSE',
     })
   }

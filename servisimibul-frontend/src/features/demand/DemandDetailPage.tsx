@@ -143,9 +143,7 @@ export function DemandDetailPage() {
     } catch {
       if (request === responseRequestVersion.current) {
         setServiceResponses(undefined)
-        setResponsesError(
-          'İşletmeci servis bildirimleri yüklenemedi. Tekrar deneyin.',
-        )
+        setResponsesError('Servis duyuruları yüklenemedi. Tekrar deneyin.')
       }
     } finally {
       if (request === responseRequestVersion.current) {
@@ -262,7 +260,7 @@ export function DemandDetailPage() {
         message:
           error instanceof ApiError
             ? error.problem.detail
-            : 'İşletmeci uygunluğu kontrol edilemedi. Tekrar deneyin.',
+            : 'Yayın koşulları kontrol edilemedi. Tekrar deneyin.',
       })
     } finally {
       if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
@@ -296,8 +294,8 @@ export function DemandDetailPage() {
       setServiceFormOpen(false)
       setServiceNotice(
         result.published
-          ? 'Servis bildiriminiz velilere hemen yayınlandı.'
-          : 'Servis bildiriminiz zaten yayında; yeni bir yayın olayı oluşturulmadı.',
+          ? 'Servis duyurunuz yayınlandı.'
+          : 'Servis duyurunuz zaten yayında.',
       )
       await loadServiceResponses()
     } catch (error) {
@@ -311,7 +309,7 @@ export function DemandDetailPage() {
         message:
           error instanceof ApiError
             ? error.problem.detail
-            : 'Servis bildirimi yayınlanamadı. Okul ve mahalle bilgilerinizi yenileyin.',
+            : 'Servis duyurusu yayınlanamadı. Tekrar deneyin.',
       })
     }
   }
@@ -336,7 +334,7 @@ export function DemandDetailPage() {
       )
       setServiceFormOpen(false)
       setServiceNotice(
-        'Servis bildiriminiz geri çekildi ve artık velilere gösterilmiyor.',
+        'Servis duyurunuz geri çekildi; artık velilere gösterilmiyor.',
       )
       await loadServiceResponses()
     } catch (error) {
@@ -350,7 +348,7 @@ export function DemandDetailPage() {
         message:
           error instanceof ApiError
             ? error.problem.detail
-            : 'Servis bildirimi geri çekilemedi. Tekrar deneyin.',
+            : 'Servis duyurusu geri çekilemedi. Tekrar deneyin.',
       })
     } finally {
       if (operatorSessionKeyRef.current === ownerKey) setServicePending(false)
@@ -395,9 +393,7 @@ export function DemandDetailPage() {
       await loadDemand()
       if (parentSessionKeyRef.current !== ownerKey) return
       setSupportMode(undefined)
-      setNotice(
-        'Desteğiniz geri çekildi. İsterseniz daha sonra yeniden katılabilirsiniz.',
-      )
+      setNotice('Desteğiniz geri çekildi. Daha sonra yeniden katılabilirsiniz.')
     } catch (error) {
       if (parentSessionKeyRef.current !== ownerKey) return
       handleMutationError(error, 'Desteğiniz geri çekilemedi. Tekrar deneyin.')
@@ -542,7 +538,7 @@ export function DemandDetailPage() {
                 <dd>{demand.school.name}</dd>
               </div>
               <div>
-                <dt>Servis alınacak konum</dt>
+                <dt>Servise biniş yeri</dt>
                 <dd>
                   {demand.neighborhood.districtName} ·{' '}
                   {demand.neighborhood.name}
@@ -606,12 +602,10 @@ export function DemandDetailPage() {
           >
             <div className="section-heading demand-service-heading">
               <div>
-                <h2 id="service-responses-title">
-                  İşletmecilerin servis duyuruları
-                </h2>
+                <h2 id="service-responses-title">Servis duyuruları</h2>
                 <p>
-                  Bilgiler işletmeciler tarafından paylaşılır. Ücret ve
-                  müsaitliği işletmeciyle görüşün.
+                  Duyurular işletmecilerin kendi beyanıdır. Ücret ve boş yer
+                  için işletmeciyle görüşün.
                 </p>
               </div>
               {serviceResponses && serviceResponses.totalElements > 0 && (
@@ -623,7 +617,7 @@ export function DemandDetailPage() {
 
             {responsesLoading && (
               <div className="demand-response-loading" role="status">
-                Servis bildirimleri yükleniyor…
+                Servis duyuruları yükleniyor…
               </div>
             )}
             {!responsesLoading && responsesError && (
@@ -685,13 +679,13 @@ export function DemandDetailPage() {
                   </ul>
                 ) : (
                   <div className="demand-service-empty">
-                    <h3>Henüz servis bildirimi yok</h3>
+                    <h3>Henüz servis duyurusu yok</h3>
                   </div>
                 )}
                 {serviceResponses.totalPages > 1 && (
                   <nav
                     className="pagination"
-                    aria-label="Servis bildirimi sayfaları"
+                    aria-label="Servis duyurusu sayfaları"
                   >
                     <button
                       className="secondary-button"
@@ -740,7 +734,7 @@ export function DemandDetailPage() {
                   >
                     {currentServicePending
                       ? 'Bilgiler kontrol ediliyor…'
-                      : 'Bu talep için servis ekle'}
+                      : 'Servis duyurusu ekle'}
                   </button>
                 )}
               </div>
@@ -769,7 +763,7 @@ export function DemandDetailPage() {
             {currentServiceEligibility &&
               currentServiceEligibility.blockers.length > 0 && (
                 <div className="demand-service-guidance" role="status">
-                  <h3>Yayınlamadan önce tamamlanması gerekenler</h3>
+                  <h3>Yayınlamak için gerekenler</h3>
                   <ul>
                     {currentServiceEligibility.blockers.map((blocker) => (
                       <li key={blocker}>
@@ -789,7 +783,7 @@ export function DemandDetailPage() {
                       to="/operator/schools"
                       viewTransition
                     >
-                      Okul ve kapsam yönetimine git
+                      Okullarımı düzenle
                     </Link>
                   )}
                   {currentServiceEligibility.blockers.includes(
@@ -809,7 +803,7 @@ export function DemandDetailPage() {
                     onClick={() => void beginServiceResponse()}
                     type="button"
                   >
-                    Uygunluğu yeniden kontrol et
+                    Yeniden kontrol et
                   </button>
                 </div>
               )}
@@ -825,8 +819,8 @@ export function DemandDetailPage() {
                     }`}
                   >
                     {currentServiceEligibility.response.currentlyPublic
-                      ? 'Bildiriminiz yayında'
-                      : 'Bildiriminiz şu anda gizli'}
+                      ? 'Duyurunuz yayında'
+                      : 'Duyurunuz şu anda gizli'}
                   </span>
                   <p>
                     {currentServiceEligibility.response.offersMorning &&
@@ -850,7 +844,7 @@ export function DemandDetailPage() {
                 >
                   {currentServicePending
                     ? 'Geri çekiliyor…'
-                    : 'Bildirimi geri çek'}
+                    : 'Duyuruyu geri çek'}
                 </button>
               </div>
             )}
@@ -895,10 +889,6 @@ export function DemandDetailPage() {
               <div className="section-heading">
                 <div>
                   <h2 id="support-title">Sizin desteğiniz</h2>
-                  <p>
-                    Katılımınız ve yön tercihleriniz yalnızca kendi hesabınızda
-                    yönetilir.
-                  </p>
                 </div>
                 {activeSupport && (
                   <span className="status-pill success">
@@ -919,8 +909,8 @@ export function DemandDetailPage() {
                     : demand.closureReason === 'INACTIVE' && !currentUserSupport
                       ? 'Talep hareketsizlik nedeniyle kapandı. Talebe katılarak yeniden açabilirsiniz.'
                       : demand.closureReason === 'FULFILLED'
-                        ? 'Bu talep bir velinin açık geri bildirimiyle karşılandı olarak kapatıldı.'
-                        : 'Bu talep yeni destek ve güncellemelere kapalıdır.'}
+                        ? 'Bir veli ihtiyacının karşılandığını bildirdi; talep kapandı.'
+                        : 'Bu talep yeni desteklere kapalı.'}
                 </div>
               )}
 
@@ -1068,18 +1058,18 @@ function demandLifecycleDescription(
   demand: Pick<Demand, 'status' | 'closureReason'>,
 ) {
   if (demand.status === 'OPEN') {
-    return 'Yeni veli destekleri, uygun işletmeci bildirimleri ve yorumlar kabul ediliyor.'
+    return 'Yeni destek, servis duyurusu ve yorum kabul ediliyor.'
   }
   if (demand.status === 'ARCHIVED') {
-    return 'Talep geçmiş kaydı olarak korunuyor; yeni katılım ve yayın kabul edilmiyor.'
+    return 'Talep arşivlendi; yeni destek ve duyuru kabul edilmiyor.'
   }
   if (demand.closureReason === 'FULFILLED') {
-    return 'En az bir veli, yayımlanan servis bildiriminin ihtiyacını karşıladığını bildirdi.'
+    return 'Bir veli, servis duyurusunun ihtiyacını karşıladığını bildirdi.'
   }
   if (demand.closureReason === 'INACTIVE') {
-    return 'Etkin destek kalmadığı için talep kapandı; uygun bir veli desteği yeniden açabilir.'
+    return 'Etkin destek kalmadığı için kapandı. Yeni bir destekle yeniden açılabilir.'
   }
-  return 'Talep yönetim kararıyla kapatıldı; geçmiş katılım bilgileri korunuyor.'
+  return 'Talep yönetici tarafından kapatıldı.'
 }
 
 function supportStateLabel(
@@ -1114,24 +1104,24 @@ function formatDemandDate(value: string) {
 function serviceResponseBlockerMessage(blocker: ServiceResponseBlocker) {
   switch (blocker) {
     case 'ACCOUNT_EMAIL_UNVERIFIED':
-      return 'İşletmeci hesabının e-posta adresi doğrulanmış olmalı.'
+      return 'E-posta adresinizi doğrulayın.'
     case 'ACCOUNT_DISABLED':
-      return 'İşletmeci hesabı etkin olmalı.'
+      return 'Hesabınızın etkin olması gerekir.'
     case 'PROFILE_INACTIVE':
-      return 'Askıya alınmış işletmeci profili servis bildirimi yayınlayamaz.'
+      return 'Profiliniz askıya alındığı için duyuru yayınlayamazsınız.'
     case 'PROFILE_HIDDEN':
-      return 'İşletmeci profili herkese görünür olmalı.'
+      return 'Profil görünürlüğünü açın.'
     case 'APPROVAL_REQUIRED':
-      return 'Bu ortamda işletmeci başvurusunun onaylanmış olması gerekiyor.'
+      return 'İşletmeci başvurunuzun onaylanması gerekir.'
     case 'DEMAND_NOT_OPEN':
-      return 'Talep artık yeni servis bildirimlerine açık değil.'
+      return 'Talep yeni servis duyurularına kapalı.'
     case 'SCHOOL_INACTIVE':
       return 'Talebin okulu şu anda etkin değil.'
     case 'SCHOOL_NOT_LINKED':
       return 'Bu okulu önce işletmeci hesabınıza ekleyin.'
     case 'SCHOOL_RELATIONSHIP_INACTIVE':
-      return 'İşletmeci hesabınızdaki okul bağlantısını etkinleştirin.'
+      return 'Bu okulu hesabınızda etkinleştirin.'
     case 'COVERAGE_MISSING':
-      return 'Talebin mahallesini bu okulun genel kapsamına ekleyin.'
+      return 'Talebin mahallesini bu okulun hizmet mahallelerine ekleyin.'
   }
 }

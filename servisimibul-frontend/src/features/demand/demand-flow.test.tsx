@@ -94,7 +94,7 @@ describe('public demand board', () => {
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
     expect(
-      await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' }),
+      await screen.findByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
     ).toBeInTheDocument()
     fireEvent.click(
       screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
@@ -181,7 +181,7 @@ describe('public demand board', () => {
       ),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText('Görünür servis bulunamadı'),
+      screen.queryByText('Eşleşen servis bulunamadı'),
     ).not.toBeInTheDocument()
     fireEvent.click(
       screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
@@ -216,7 +216,7 @@ describe('public demand board', () => {
 
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-    await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' })
+    await screen.findByRole('heading', { name: 'Eşleşen servis bulunamadı' })
     fireEvent.click(
       screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
     )
@@ -227,9 +227,7 @@ describe('public demand board', () => {
       screen.getByRole('button', { name: 'Bilgileri gözden geçir' }),
     )
 
-    expect(
-      await screen.findByText(/yalnızca veli hesabıyla yapılabilir/),
-    ).toBeInTheDocument()
+    expect(await screen.findByText(/veli hesabı gerekir/)).toBeInTheDocument()
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
@@ -264,7 +262,7 @@ describe('public demand board', () => {
     )
 
     expect(
-      await screen.findByText(/Katılmak için “Benim de ihtiyacım var”/),
+      await screen.findByText(/Mevcut talebe katılabilirsiniz/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('button', { name: 'Benim de ihtiyacım var' }),
@@ -486,7 +484,7 @@ describe('demand location filter regression', () => {
     renderRoute('/demands')
     const schoolStep = await screen.findByRole('group', { name: 'Okul seçimi' })
     const pickupStep = screen.getByRole('group', {
-      name: 'Servis alınacak konum',
+      name: 'Servise biniş yeri',
     })
     const preferences = screen.getByRole('group', { name: 'Sonuç tercihleri' })
     expect(
@@ -707,9 +705,7 @@ describe('demand location filter regression', () => {
     })
 
     expect(
-      screen.getByText(
-        /Filtre seçiminiz değişti. Aşağıdaki sonuçlar son uygulanan filtrelere aittir/,
-      ),
+      screen.getByText(/Filtreler değişti. Sonuçları güncellemek için/),
     ).toBeInTheDocument()
     const pendingLinks = screen.getAllByRole('link', {
       name: 'Yeni talep oluştur',
@@ -920,7 +916,7 @@ describe('demand board status filters', () => {
     renderRoute(filteredBoardPath)
     await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
     expect(
-      await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' }),
+      await screen.findByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
     ).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Kapalı' }))
@@ -1201,7 +1197,7 @@ describe('demand support management', () => {
 
       renderRoute(`/demands/${demandId}`)
       expect(
-        (await screen.findAllByText(/kapatıldı|kapalıdır/)).length,
+        (await screen.findAllByText(/kapandı|kapalı/)).length,
       ).toBeGreaterThan(0)
       expect(
         screen.queryByRole('button', { name: 'Benim de ihtiyacım var' }),
@@ -1299,7 +1295,7 @@ describe('parent service feedback', () => {
 
     renderRoute(`/demands/${demandId}`)
     expect(
-      await screen.findByText('Henüz değerlendirilecek servis bildirimi yok.'),
+      await screen.findByText('Henüz değerlendirilecek servis duyurusu yok.'),
     ).toBeInTheDocument()
   })
 
@@ -1382,7 +1378,7 @@ describe('parent service feedback', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Karşılanmadı' }))
     expect(
       await screen.findByText(
-        'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+        'Bu duyurunun ihtiyacınızı karşılamadığını belirttiniz.',
       ),
     ).toBeInTheDocument()
     expect(
@@ -1470,7 +1466,9 @@ describe('parent service feedback', () => {
       }),
     ).toBeInTheDocument()
     expect(await screen.findByText('Mavi Servis')).toBeInTheDocument()
-    expect(screen.getByText(/Hatırlatma:/)).toBeInTheDocument()
+    expect(
+      screen.getByText(/Yanıt süresi dolmadan seçiminizi yapın/),
+    ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Talebim karşılandı' }))
 
     expect(
@@ -1734,11 +1732,11 @@ describe('demand comments', () => {
         )
         expect(await screen.findByLabelText('Yorumunuz')).toBeInTheDocument()
         expect(
-          screen.queryByText(/işletme başvurunuzun yönetici tarafından/),
+          screen.queryByText(/Yorum yazmak için işletmeci onayı gerekir/),
         ).not.toBeInTheDocument()
       } else {
         expect(
-          await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
+          await screen.findByText(/Yorum yazmak için işletmeci onayı gerekir/),
         ).toBeInTheDocument()
         expect(
           screen.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),
@@ -1771,7 +1769,7 @@ describe('demand comments', () => {
     fireEvent.click(button)
 
     const note = await screen.findByText(
-      /işletme başvurunuzun yönetici tarafından/,
+      /Yorum yazmak için işletmeci onayı gerekir/,
     )
     await waitFor(() => expect(note).toHaveFocus())
     expect(
@@ -1798,7 +1796,7 @@ describe('demand comments', () => {
 
     renderRoute(`/demands/${demandId}`)
     expect(
-      await screen.findByText(/işletme başvurunuzun yönetici tarafından/),
+      await screen.findByText(/Yorum yazmak için işletmeci onayı gerekir/),
     ).toBeInTheDocument()
     await waitFor(() => expect(authChecks).toBeGreaterThanOrEqual(2))
 
@@ -1814,7 +1812,7 @@ describe('demand comments', () => {
       await screen.findByRole('button', { name: 'Yorum yaz' }),
     ).toBeInTheDocument()
     expect(
-      screen.queryByText(/işletme başvurunuzun yönetici tarafından/),
+      screen.queryByText(/Yorum yazmak için işletmeci onayı gerekir/),
     ).not.toBeInTheDocument()
   })
 })
@@ -1839,7 +1837,7 @@ describe('demand-specific operator service responses', () => {
     expect(await screen.findByText('Moda Öğrenci Servisi')).toBeInTheDocument()
     expect(screen.getByText(/Yayın 1 ·/)).toBeInTheDocument()
     expect(
-      screen.getByText(/Bilgiler işletmeciler tarafından paylaşılır/),
+      screen.getByText(/Duyurular işletmecilerin kendi beyanıdır/),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('link', { name: '+905321234567 numarasını ara' }),
@@ -1869,7 +1867,7 @@ describe('demand-specific operator service responses', () => {
       `/operator/login?next=${encodeURIComponent(`/demands/${demandId}?action=response`)}`,
     )
     expect(
-      screen.queryByRole('button', { name: 'Bu talep için servis ekle' }),
+      screen.queryByRole('button', { name: 'Servis duyurusu ekle' }),
     ).not.toBeInTheDocument()
   })
 
@@ -1895,7 +1893,7 @@ describe('demand-specific operator service responses', () => {
       expect(await screen.findByText(sessionLabel)).toBeInTheDocument()
       expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
       expect(
-        screen.queryByRole('button', { name: 'Bu talep için servis ekle' }),
+        screen.queryByRole('button', { name: 'Servis duyurusu ekle' }),
       ).not.toBeInTheDocument()
       expect(
         screen.queryByRole('heading', {
@@ -1918,7 +1916,7 @@ describe('demand-specific operator service responses', () => {
 
     expect(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     ).toBeInTheDocument()
   })
@@ -1940,7 +1938,7 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
 
@@ -1971,12 +1969,12 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Servis bildirimini yayınla',
+        name: 'Servis duyurusunu yayınla',
       }),
     )
 
@@ -2008,17 +2006,17 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
 
     expect(
       await screen.findByText(
-        'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+        'Talebin mahallesini bu okulun hizmet mahallelerine ekleyin.',
       ),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('link', { name: 'Okul ve kapsam yönetimine git' }),
+      screen.getByRole('link', { name: 'Okullarımı düzenle' }),
     ).toHaveAttribute('href', '/operator/schools')
   })
 
@@ -2043,12 +2041,12 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
 
     expect(
-      await screen.findByText('Bildiriminiz şu anda gizli'),
+      await screen.findByText('Duyurunuz şu anda gizli'),
     ).toBeInTheDocument()
     expect(
       screen.getByText(
@@ -2100,32 +2098,32 @@ describe('demand-specific operator service responses', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Servis bildirimini yayınla',
+        name: 'Servis duyurusunu yayınla',
       }),
     )
 
     expect(
-      await screen.findByText('Servis bildiriminiz velilere hemen yayınlandı.'),
+      await screen.findByText('Servis duyurunuz yayınlandı.'),
     ).toBeInTheDocument()
-    expect(screen.getByText('Bildiriminiz yayında')).toBeInTheDocument()
+    expect(screen.getByText('Duyurunuz yayında')).toBeInTheDocument()
     expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
     expect(publishBody).toEqual({
       offersMorning: true,
       offersAfternoon: false,
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Bildirimi geri çek' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Duyuruyu geri çek' }))
     expect(
-      await screen.findByText(/Servis bildiriminiz geri çekildi/),
+      await screen.findByText(/Servis duyurunuz geri çekildi/),
     ).toBeInTheDocument()
     expect(
       await screen.findByRole('heading', {
-        name: 'Henüz servis bildirimi yok',
+        name: 'Henüz servis duyurusu yok',
       }),
     ).toBeInTheDocument()
   })
@@ -2288,24 +2286,24 @@ describe('demand session ownership changes', () => {
       expect(await screen.findByText('İsimsiz işletmeci')).toBeInTheDocument()
       fireEvent.click(
         await screen.findByRole('button', {
-          name: 'Bu talep için servis ekle',
+          name: 'Servis duyurusu ekle',
         }),
       )
       if (initialState === 'form') {
         expect(
           await screen.findByRole('button', {
-            name: 'Servis bildirimini yayınla',
+            name: 'Servis duyurusunu yayınla',
           }),
         ).toBeInTheDocument()
       } else if (initialState === 'blocker') {
         expect(
           await screen.findByText(
-            'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+            'Talebin mahallesini bu okulun hizmet mahallelerine ekleyin.',
           ),
         ).toBeInTheDocument()
       } else {
         expect(
-          await screen.findByRole('button', { name: 'Bildirimi geri çek' }),
+          await screen.findByRole('button', { name: 'Duyuruyu geri çek' }),
         ).toBeInTheDocument()
       }
 
@@ -2329,16 +2327,16 @@ describe('demand session ownership changes', () => {
       }
       expect(
         screen.queryByRole('button', {
-          name: 'Servis bildirimini yayınla',
+          name: 'Servis duyurusunu yayınla',
         }),
       ).not.toBeInTheDocument()
       expect(
         screen.queryByText(
-          'Talebin mahallesini bu okulun genel kapsamına ekleyin.',
+          'Talebin mahallesini bu okulun hizmet mahallelerine ekleyin.',
         ),
       ).not.toBeInTheDocument()
       expect(
-        screen.queryByRole('button', { name: 'Bildirimi geri çek' }),
+        screen.queryByRole('button', { name: 'Duyuruyu geri çek' }),
       ).not.toBeInTheDocument()
       await waitFor(() => expect(demandOwners).toContain(nextSession?.id))
       await screen.findByRole('heading', { name: school.name })
@@ -2423,26 +2421,26 @@ describe('demand session ownership changes', () => {
     renderRoute(`/demands/${demandId}`)
     fireEvent.click(
       await screen.findByRole('button', {
-        name: 'Bu talep için servis ekle',
+        name: 'Servis duyurusu ekle',
       }),
     )
     expect(
-      await screen.findByRole('button', { name: 'Bildirimi geri çek' }),
+      await screen.findByRole('button', { name: 'Duyuruyu geri çek' }),
     ).toBeInTheDocument()
 
     session = operatorUser('63cd572a-a10b-4f39-8319-c22974ae47bf')
     announceAuthChangeFromOtherTab()
 
     const add = await screen.findByRole('button', {
-      name: 'Bu talep için servis ekle',
+      name: 'Servis duyurusu ekle',
     })
     expect(
-      screen.queryByRole('button', { name: 'Bildirimi geri çek' }),
+      screen.queryByRole('button', { name: 'Duyuruyu geri çek' }),
     ).not.toBeInTheDocument()
     fireEvent.click(add)
     expect(
       await screen.findByRole('button', {
-        name: 'Servis bildirimini yayınla',
+        name: 'Servis duyurusunu yayınla',
       }),
     ).toBeInTheDocument()
   })
@@ -2769,7 +2767,7 @@ function problem(status: number, detail: string) {
 
 async function openCreateForm() {
   await screen.findByRole('heading', { name: 'Bu seçim için açık talep yok' })
-  await screen.findByRole('heading', { name: 'Görünür servis bulunamadı' })
+  await screen.findByRole('heading', { name: 'Eşleşen servis bulunamadı' })
   fireEvent.click(
     screen.getAllByRole('link', { name: 'Yeni talep oluştur' })[0]!,
   )

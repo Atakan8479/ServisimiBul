@@ -392,17 +392,17 @@ describe('application routes', () => {
         screen.getByRole('navigation', { name: 'Ana menü' }),
       )
       expect(
-        await primaryNavigation.findByRole('link', { name: 'Giriş Yap' }),
+        await primaryNavigation.findByRole('link', { name: 'Giriş yap' }),
       ).toHaveAttribute('href', '/login')
       expect(
-        primaryNavigation.getByRole('link', { name: 'Kayıt Ol' }),
+        primaryNavigation.getByRole('link', { name: 'Kayıt ol' }),
       ).toHaveAttribute('href', '/register')
       // #276: exactly two guest entry points, no role-specific auth links.
       expect(
         primaryNavigation.queryByRole('link', { name: /girişi|kaydı/i }),
       ).not.toBeInTheDocument()
       fireEvent.click(
-        primaryNavigation.getByRole('link', { name: 'Giriş Yap' }),
+        primaryNavigation.getByRole('link', { name: 'Giriş yap' }),
       )
 
       const loginHeading = await screen.findByRole('heading', {

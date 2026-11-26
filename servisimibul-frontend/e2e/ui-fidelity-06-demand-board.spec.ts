@@ -133,7 +133,7 @@ test('D01 combines operator results with the dedicated creation screen', async (
   await page.getByLabel('Servis alınacak mahalle').selectOption('201')
   await page.getByRole('button', { name: 'Talepleri göster' }).click()
   await expect(
-    page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+    page.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
   ).toBeVisible()
   await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
   await expect(

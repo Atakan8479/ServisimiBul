@@ -79,7 +79,9 @@ describe('reporting and moderation flows', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Bildirimi gönder' }))
 
-    expect(await screen.findByText('Bildirim alındı')).toBeInTheDocument()
+    expect(
+      await screen.findByText('İçerik bildiriminiz alındı'),
+    ).toBeInTheDocument()
     expect(requestBody).toEqual({
       targetType: 'COMMENT',
       targetId: '75c3339d-f6f0-4e8e-aad9-2d783f7f2760',
@@ -266,7 +268,9 @@ describe('reporting and moderation flows', () => {
     fireEvent.click(
       await screen.findByRole('button', { name: 'Bildirimi gönder' }),
     )
-    expect(await screen.findByText('Bildirim alındı')).toBeInTheDocument()
+    expect(
+      await screen.findByText('İçerik bildiriminiz alındı'),
+    ).toBeInTheDocument()
 
     rerender(
       <MemoryRouter>
@@ -279,7 +283,9 @@ describe('reporting and moderation flows', () => {
         />
       </MemoryRouter>,
     )
-    expect(screen.queryByText('Bildirim alındı')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('İçerik bildiriminiz alındı'),
+    ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Bildir' })).toBeInTheDocument()
   })
 
@@ -624,9 +630,7 @@ describe('reporting and moderation flows', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Kararı kaydet' }))
 
-    expect(
-      await screen.findByText('Bu görünümde bildirim yok'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('İçerik bildirimi yok')).toBeInTheDocument()
     expect(queueStatuses.at(-1)).toBe('IN_REVIEW')
     expect(
       await screen.findByRole('button', { name: 'Sonuçlandı 1' }),
@@ -654,7 +658,7 @@ describe('reporting and moderation flows', () => {
     renderModeration()
 
     expect(
-      await screen.findByText('Bildirimler yüklenemedi'),
+      await screen.findByText('İçerik bildirimleri yüklenemedi'),
     ).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Tekrar dene' }))
 
@@ -683,7 +687,7 @@ describe('reporting and moderation flows', () => {
 
     await bodies.settle(countsGate.resolve, 1)
     expect(
-      screen.queryByText('Bildirimler yüklenemedi'),
+      screen.queryByText('İçerik bildirimleri yüklenemedi'),
     ).not.toBeInTheDocument()
     expect(pendingTotal()).toHaveTextContent('—')
     expect(
@@ -851,9 +855,7 @@ describe('reporting and moderation flows', () => {
       screen.getByText('Bu kayıt için uygulanabilecek başka işlem yok.'),
     ).toBeInTheDocument()
     expect(screen.queryByLabelText('Karar')).not.toBeInTheDocument()
-    expect(
-      await screen.findByText('Bu görünümde bildirim yok'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('İçerik bildirimi yok')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Kapat' })).toBeInTheDocument()
   })
 

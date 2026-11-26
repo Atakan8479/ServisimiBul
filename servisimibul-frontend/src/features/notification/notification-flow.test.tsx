@@ -1213,8 +1213,7 @@ function notificationPage() {
         feedbackId: null,
         moderationCaseId: null,
         title: 'Yeni servis talebi',
-        message:
-          'Hizmet verdiğiniz okulun mevcut kapsama alanında yeni bir talep oluşturuldu.',
+        message: 'Hizmet verdiğiniz okul ve mahallede yeni bir talep açıldı.',
         href: '/demands/1b0b4456-5e55-4814-b8f8-64d1343617fd',
         createdAt: '2026-10-25T09:00:00Z',
         readAt: null,

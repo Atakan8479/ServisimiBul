@@ -138,10 +138,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthFrame
-      title="İşletmenizi tanıtalım."
-      subtitle="Hizmet verdiğiniz okul ve mahalle kapsamını paylaşın."
-    >
+    <AuthFrame title="İşletmeci hesabı oluşturun">
       <form className="form-stack" onSubmit={handleSubmit(submit)} noValidate>
         <FormField
           label="İşletme adı (isteğe bağlı)"
@@ -192,7 +189,7 @@ export function RegisterPage() {
           className="status-banner neutral registration-disclosure"
         >
           <strong id="public-profile-disclosure-title">
-            İşletme profilinizin görünürlüğü
+            Profil görünürlüğü
           </strong>
           <p>
             {emailVerificationRequired ? (
@@ -277,20 +274,18 @@ export function ParentSignupPage() {
     } catch (error) {
       if (error instanceof ApiError && error.problem.status === 429) {
         setFormError(
-          'Çok fazla kayıt denemesi yapıldı. Lütfen daha sonra tekrar deneyin.',
+          'Çok fazla kayıt denemesi yapıldı. Daha sonra tekrar deneyin.',
         )
         return
       }
       if (error instanceof ApiError && error.problem.status === 503) {
         setFormError(
-          'Veli kaydı şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.',
+          'Veli kaydı şu anda kullanılamıyor. Daha sonra tekrar deneyin.',
         )
         return
       }
       if (!(error instanceof ApiError)) {
-        setFormError(
-          'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
-        )
+        setFormError('Bağlantı kurulamadı. Tekrar deneyin.')
         return
       }
       setFormError(applyFieldErrors(error, setError, parentRegistrationFields))
@@ -325,10 +320,6 @@ export function ParentSignupPage() {
             />
           }
         />
-        <p className="auth-security-note">
-          Veli hesabı servis aramak için zorunlu değildir; yalnızca talep ve
-          bildirim işlemlerinde kullanılır.
-        </p>
         <FormError message={formError} />
         <button
           className="primary-button auth-submit"
@@ -401,10 +392,7 @@ export function VerifyEmailPage() {
     >
       {complete ? (
         <div className="auth-completion" role="status">
-          <p>
-            E-posta adresiniz doğrulandı. Artık işletmeci hesabınızla güvenli
-            şekilde giriş yapabilirsiniz.
-          </p>
+          <p>E-posta adresiniz doğrulandı. Giriş yapabilirsiniz.</p>
           <Link className="button-link" to={operatorLoginPath} viewTransition>
             İşletmeci girişi
           </Link>
@@ -486,7 +474,7 @@ export function ForgotPasswordPage() {
       {complete ? (
         <div className="auth-completion" role="status">
           <p>
-            Hesap uygunsa şifre yenileme bağlantısı e-posta adresine gönderildi.
+            Bu adresle bir hesap varsa şifre yenileme bağlantısı gönderildi.
           </p>
           <Link className="button-link" to="/login" viewTransition>
             Giriş sayfasına dön
@@ -567,14 +555,12 @@ export function ResetPasswordPage() {
       subtitle={
         complete
           ? undefined
-          : 'Yeni şifreniz kaydedildiğinde açık oturumlarınız güvenli biçimde kapatılır.'
+          : 'Şifreniz değişince açık oturumlarınız kapatılır.'
       }
     >
       {complete ? (
         <div className="auth-completion" role="status">
-          <p>
-            Şifreniz yenilendi. Açık oturumlarınız güvenli biçimde kapatıldı.
-          </p>
+          <p>Şifreniz yenilendi. Açık oturumlarınız kapatıldı.</p>
           <Link className="button-link" to="/login" viewTransition>
             Giriş yap
           </Link>
@@ -669,7 +655,7 @@ export function LoginPage() {
       setFormError(
         error instanceof ApiError
           ? applyFieldErrors(error, setError, loginFields)
-          : 'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+          : 'Bağlantı kurulamadı. Tekrar deneyin.',
       )
     }
   }
@@ -688,8 +674,8 @@ export function LoginPage() {
       )}
       {searchParams.get('passwordChanged') === 'true' && (
         <div className="status-banner success" role="status">
-          Şifreniz güncellendi ve açık oturumlarınız sonlandırıldı. Yeni
-          şifrenizle yeniden giriş yapın.
+          Şifreniz güncellendi ve açık oturumlarınız kapatıldı. Yeni şifrenizle
+          giriş yapın.
         </div>
       )}
       {searchParams.get('accountDeactivated') === 'true' && (
@@ -805,7 +791,7 @@ function applyFieldErrors<T extends FieldValues>(
   fields: readonly Path<T>[],
 ): string {
   if (!(error instanceof ApiError)) {
-    return 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+    return 'İşlem tamamlanamadı. Tekrar deneyin.'
   }
 
   const allowed = new Set<string>(fields)

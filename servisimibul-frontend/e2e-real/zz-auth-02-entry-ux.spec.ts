@@ -149,17 +149,17 @@ test('AUTH-02 routes one login and one registration by the real server role', as
       await page.goto('/')
       const footer = page.getByRole('navigation', { name: 'Alt menü' })
       await expect(
-        footer.getByRole('link', { name: 'Giriş Yap', exact: true }),
+        footer.getByRole('link', { name: 'Giriş yap', exact: true }),
       ).toHaveAttribute('href', '/login')
       await expect(
-        footer.getByRole('link', { name: 'Kayıt Ol', exact: true }),
+        footer.getByRole('link', { name: 'Kayıt ol', exact: true }),
       ).toHaveAttribute('href', '/register')
       const header = page.getByRole('navigation', { name: 'Ana menü' })
       await expect(
-        header.getByRole('link', { name: 'Giriş Yap', exact: true }),
+        header.getByRole('link', { name: 'Giriş yap', exact: true }),
       ).toHaveAttribute('href', '/login')
       await expect(
-        header.getByRole('link', { name: 'Kayıt Ol', exact: true }),
+        header.getByRole('link', { name: 'Kayıt ol', exact: true }),
       ).toHaveAttribute('href', '/register')
       await expect(
         page.getByRole('link', {

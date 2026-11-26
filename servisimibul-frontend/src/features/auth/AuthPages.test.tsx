@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { RouterProvider, createMemoryRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -19,7 +25,7 @@ describe('parent account onboarding', () => {
     renderRoute('/register?next=%2Fdemands')
     expect(
       await screen.findByRole('heading', {
-        name: 'Nasıl katılmak istersiniz?',
+        name: 'Hesap türünüzü seçin',
       }),
     ).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Veli olarak/ })).toHaveAttribute(
@@ -30,7 +36,7 @@ describe('parent account onboarding', () => {
       screen.getByRole('link', { name: /İşletmeci olarak/ }),
     ).toHaveAttribute('href', '/operator/register')
     expect(
-      screen.getByText(/Servis aramak için hesap oluşturmanız gerekmez/),
+      screen.getByText(/Servis aramak için hesap gerekmez/),
     ).toBeInTheDocument()
     expect(
       screen.queryByText(/Veli hesabı yalnızca talep ve bildirim/),
@@ -81,11 +87,10 @@ describe('parent account onboarding', () => {
     expect(
       screen.getByRole('link', { name: 'Kullanım koşulları' }),
     ).toHaveAttribute('href', '/terms')
+    // The role picker already says search needs no account; no repeat here.
     expect(
-      await screen.findByText(
-        /Veli hesabı servis aramak için zorunlu değildir/,
-      ),
-    ).toBeInTheDocument()
+      screen.queryByText(/servis aramak için zorunlu değildir/),
+    ).not.toBeInTheDocument()
     expect(
       screen.queryByText(/Servis taleplerini takip etmek/),
     ).not.toBeInTheDocument()
@@ -351,7 +356,9 @@ describe('parent account onboarding', () => {
     )
 
     expect(
-      await screen.findByText(/Hesap uygunsa şifre yenileme bağlantısı/),
+      await screen.findByText(
+        /Bu adresle bir hesap varsa şifre yenileme bağlantısı/,
+      ),
     ).toBeInTheDocument()
     expect(requestBody).toEqual({ email: 'parent@example.test' })
     expect(
@@ -383,10 +390,11 @@ describe('parent account onboarding', () => {
       token: 'reset-token',
       newPassword: 'new secure password',
     })
-    expect(screen.getByRole('link', { name: 'Giriş yap' })).toHaveAttribute(
-      'href',
-      '/login',
-    )
+    expect(
+      within(screen.getByRole('status')).getByRole('link', {
+        name: 'Giriş yap',
+      }),
+    ).toHaveAttribute('href', '/login')
   })
 
   it('presents recovery in the shared auth frame and returns to the shared login', async () => {
@@ -431,7 +439,9 @@ describe('parent account onboarding', () => {
       'Çok sık denediniz. Biraz sonra tekrar deneyin.',
     )
     expect(
-      screen.queryByText(/Hesap uygunsa şifre yenileme bağlantısı/),
+      screen.queryByText(
+        /Bu adresle bir hesap varsa şifre yenileme bağlantısı/,
+      ),
     ).not.toBeInTheDocument()
     expect(screen.getByLabelText('E-posta')).toHaveValue('parent@example.test')
   })
@@ -696,9 +706,7 @@ describe('operator authentication screens', () => {
   it('explains public profile visibility without requiring consent', async () => {
     renderRoute('/operator/register')
 
-    expect(
-      await screen.findByText('İşletme profilinizin görünürlüğü'),
-    ).toBeInTheDocument()
+    expect(await screen.findByText('Profil görünürlüğü')).toBeInTheDocument()
     expect(
       screen.getByText(
         /E-posta doğrulamanızı tamamlayıp hizmet verdiğiniz okul ve mahalleleri ekleyin/,
@@ -961,7 +969,7 @@ describe('operator authentication screens', () => {
 
     expect(
       await screen.findByText(
-        'E-posta adresiniz doğrulandı. Artık işletmeci hesabınızla güvenli şekilde giriş yapabilirsiniz.',
+        'E-posta adresiniz doğrulandı. Giriş yapabilirsiniz.',
       ),
     ).toBeInTheDocument()
     expect(token).toEqual({ token: 'email-token' })

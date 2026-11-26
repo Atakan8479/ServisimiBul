@@ -61,10 +61,6 @@ export function PublicTariffReference({
       <div className="section-heading">
         <div>
           <h2>Okul servisi ücret tarifesi</h2>
-          <p>
-            Mesafe kademelerine göre azami tutarları inceleyin. Kesin ücret ve
-            hizmet koşulları için işletmeciyle görüşün.
-          </p>
         </div>
       </div>
 
@@ -79,7 +75,6 @@ export function PublicTariffReference({
       {visibleState === 'missing' && (
         <div className="tariff-state-card tariff-missing-state" role="status">
           <h3>Bu il için henüz ücret tarifesi yok.</h3>
-          <p>Resmî bir tarife kaydı olmadığında ücret tutarı göstermiyoruz.</p>
           <button
             className="secondary-button"
             onClick={retryTariff}
@@ -92,11 +87,8 @@ export function PublicTariffReference({
       {visibleState === 'error' && (
         <div className="tariff-state-card tariff-load-error" role="alert">
           <div>
-            <h3>Tarife bilgisi şu anda yüklenemedi</h3>
-            <p>
-              Ücret tarifesini şu anda gösteremiyoruz. Daha sonra tekrar
-              deneyin.
-            </p>
+            <h3>Tarife bilgisi yüklenemedi</h3>
+            <p>Daha sonra tekrar deneyin.</p>
           </div>
           <button
             className="secondary-button"
@@ -272,8 +264,8 @@ export function TariffDetails({
 
       <div className="tariff-guidance">
         <p>
-          Tutarlar resmî azami referanstır; kişisel güzergâh için kesin fiyat
-          değildir. Mesafe ve hizmet ayrıntılarını işletmeciyle doğrulayın.
+          Tutarlar resmî azami ücrettir, kişisel fiyat teklifi değildir. Kesin
+          ücret için işletmeciyle görüşün.
         </p>
       </div>
 

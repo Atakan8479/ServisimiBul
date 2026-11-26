@@ -77,13 +77,13 @@ const publicScreens: Screen[] = [
     heading: 'Örnek Okulu',
     marker: (page) => page.getByRole('heading', { name: 'Yorumlar' }),
   },
-  { id: 'A01', path: '/register', heading: 'Nasıl katılmak istersiniz?' },
+  { id: 'A01', path: '/register', heading: 'Hesap türünüzü seçin' },
   { id: 'A02', path: '/parent/register', heading: 'Veli hesabı oluşturun' },
   { id: 'A03', path: '/parent/login', heading: 'Giriş yap' },
   {
     id: 'A04',
     path: '/operator/register',
-    heading: 'İşletmenizi tanıtalım.',
+    heading: 'İşletmeci hesabı oluşturun',
   },
   {
     id: 'A05',

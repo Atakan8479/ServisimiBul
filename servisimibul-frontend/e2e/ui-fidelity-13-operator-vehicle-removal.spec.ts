@@ -114,7 +114,7 @@ test('confirming deletes the vehicle and moves focus to the fleet heading', asyn
   ).toBeVisible()
   await expect(page.getByRole('heading', { name: '34 DEF 456' })).toHaveCount(0)
   await expect(
-    page.getByRole('heading', { name: 'Filo bilgileri' }),
+    page.getByRole('heading', { name: 'Araçlar', exact: true }),
   ).toBeFocused()
   expect(state.vehicles.some((vehicle) => vehicle.id === FREE_ID)).toBe(false)
 })
@@ -175,7 +175,7 @@ for (const conflict of conflicts) {
         .getByText(conflict.note),
     ).toBeVisible()
     await expect(
-      page.getByRole('heading', { name: 'Filo bilgileri' }),
+      page.getByRole('heading', { name: 'Araçlar', exact: true }),
     ).toBeFocused()
     expect(state.vehicles).toHaveLength(4)
   })
@@ -194,7 +194,7 @@ test('an unexpected server failure keeps the vehicle and its delete action', asy
           body: JSON.stringify({
             title: 'Internal Server Error',
             status: 500,
-            detail: 'Araç şu anda silinemedi. Lütfen tekrar deneyin.',
+            detail: 'Araç şu anda silinemedi. Tekrar deneyin.',
             code: 'internal_error',
           }),
         })
@@ -319,7 +319,7 @@ async function openFleet(page: Page, state: MockApiState) {
   await expect(page.getByRole('heading', { name: 'Genel bakış' })).toBeVisible()
   await page.goto('/operator/offerings')
   await expect(
-    page.getByRole('heading', { name: 'Filo bilgileri' }),
+    page.getByRole('heading', { name: 'Araçlar', exact: true }),
   ).toBeVisible()
 }
 

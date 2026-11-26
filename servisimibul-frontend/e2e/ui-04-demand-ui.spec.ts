@@ -75,7 +75,7 @@ for (const viewport of viewports) {
       page.getByRole('heading', { name: 'Örnek Okulu' }),
     ).toBeVisible()
     await expect(
-      page.getByRole('heading', { name: 'İşletmecilerin servis duyuruları' }),
+      page.getByRole('heading', { name: 'Servis duyuruları' }),
     ).toBeVisible()
     await expect(page.getByText('Moda Öğrenci Servisi')).toBeVisible()
 

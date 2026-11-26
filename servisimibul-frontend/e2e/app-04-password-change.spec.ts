@@ -61,7 +61,7 @@ test('successful password change revokes the mocked session before login guidanc
 
   await expect(page).toHaveURL(/\/parent\/login\?passwordChanged=true$/)
   await expect(
-    page.getByText(/Şifreniz güncellendi ve açık oturumlarınız sonlandırıldı/),
+    page.getByText(/Şifreniz güncellendi ve açık oturumlarınız kapatıldı/),
   ).toBeVisible()
   expect(
     await page.evaluate(async () => (await fetch('/api/v1/auth/me')).status),

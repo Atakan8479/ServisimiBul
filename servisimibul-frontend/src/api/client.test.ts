@@ -129,9 +129,7 @@ describe('user-facing API messages', () => {
     )
     expect(error.code).toBe('AUTH_SERVICE_UNAVAILABLE')
     expect(error.status).toBe(503)
-    expect(error.detail).toBe(
-      'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
-    )
+    expect(error.detail).toBe('İşlem şu anda tamamlanamıyor. Tekrar deneyin.')
   })
 
   it('localizes known backend field validation messages per field', () => {
@@ -168,7 +166,7 @@ describe('user-facing API messages', () => {
     expect(error.fieldErrors).toEqual({
       email: 'Geçerli bir e-posta adresi girin.',
       newPassword:
-        'Şifre 12-64 karakter olmalı ve UTF-8 olarak 72 baytı aşmamalıdır.',
+        'Şifre 12-64 karakter olmalıdır. Çok sayıda özel karakter varsa daha kısa bir şifre seçin.',
       businessName: 'İşletme adı 2-120 karakter olmalıdır.',
       contactPhone: 'Geçerli bir telefon numarası girin.',
     })
@@ -210,11 +208,7 @@ describe('user-facing API messages', () => {
       'Bu talebe yorum yapmak için etkin destek gerekir.',
     ],
     ['demand_not_open', 409, 'Bu talep artık açık değil.'],
-    [
-      'report_already_open',
-      409,
-      'Bu içerik için açık bir bildiriminiz zaten var.',
-    ],
+    ['report_already_open', 409, 'Bu içeriği zaten bildirdiniz; inceleniyor.'],
     [
       'operator_coverage_required',
       409,

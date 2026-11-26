@@ -354,7 +354,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
           boardPath(newSchoolId, `&academicYear=${academicYear}`),
         )
         await expect(
-          parent.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+          parent.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
         ).toBeVisible()
         await parent
           .getByRole('button', { name: tab.label, exact: true })
@@ -439,7 +439,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         await review(page)
         await expect(
           page.getByText(
-            'Talep oluşturma ve destek işlemleri yalnızca veli hesabıyla yapılabilir.',
+            'Talep oluşturmak ve desteklemek için veli hesabı gerekir.',
           ),
         ).toBeVisible()
         await expect(
@@ -459,7 +459,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         ),
       ).toBeVisible()
       await expect(
-        page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+        page.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
       ).toHaveCount(0)
       await expect(
         page.getByRole('link', { name: createLink }).first(),
@@ -471,7 +471,7 @@ test('DEMAND-01 keeps demand creation and discovery recoverable on the real stac
         .getByRole('button', { name: 'Tekrar dene' })
         .click()
       await expect(
-        page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+        page.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
       ).toBeVisible()
       await expect(
         page.getByText(

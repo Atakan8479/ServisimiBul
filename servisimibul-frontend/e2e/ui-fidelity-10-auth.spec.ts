@@ -96,7 +96,7 @@ test('A07 posts the email and shows only the non-enumerating confirmation', asyn
   await page.getByLabel('E-posta').press('Enter')
 
   await expect(page.getByRole('status')).toHaveText(
-    /Hesap uygunsa şifre yenileme bağlantısı e-posta adresine gönderildi\./,
+    /Bu adresle bir hesap varsa şifre yenileme bağlantısı gönderildi\./,
   )
   expect(body).toEqual({ email: 'kisi@example.test' })
   await expect(

@@ -92,7 +92,7 @@ for (const viewport of viewports) {
       await page.goto('/operator/profile')
       const row = page.locator('.operator-profile-visibility')
       const visibility = page.getByRole('switch', {
-        name: /Profil görünürlük tercihi/,
+        name: /Profil görünürlüğü/,
       })
       const state = page.locator('.operator-profile-visibility-state')
       await expect(visibility).toBeEnabled()
@@ -155,7 +155,7 @@ for (const viewport of viewports) {
       await page.goto('/operator/profile')
       const row = page.locator('.operator-profile-visibility')
       const visibility = page.getByRole('switch', {
-        name: /Profil görünürlük tercihi/,
+        name: /Profil görünürlüğü/,
       })
       const label = page.locator('.operator-profile-visibility-state')
       await expect(visibility).toBeDisabled()

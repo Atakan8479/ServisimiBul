@@ -43,7 +43,7 @@ for (const viewport of viewports) {
 
     await expect(page.getByLabel('Okulun bulunduğu il')).toBeEnabled()
     const schoolFilters = page.getByRole('group', {
-      name: 'Okul kataloğu filtreleri',
+      name: 'Okul filtreleri',
     })
     await expect(schoolFilters).toBeVisible()
     await expect(schoolFilters.getByLabel('Okulun bulunduğu il')).toBeVisible()
@@ -105,7 +105,7 @@ test('hero CTA moves keyboard focus into the unchanged live search flow', async 
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  const searchCta = page.getByRole('link', { name: 'Okulunu seç' })
+  const searchCta = page.getByRole('link', { name: 'Okulunuzu seçin' })
   await searchCta.focus()
   await page.keyboard.press('Enter')
 

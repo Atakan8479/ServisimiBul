@@ -200,8 +200,7 @@ export function OperatorSchoolsPage() {
       closeAddDialog()
       setEditingCoverageId(created.id)
       setNotice({
-        message:
-          'Okul eklendi. Şimdi bu okul için hizmet mahallelerini seçip kapsamı kaydedin.',
+        message: 'Okul eklendi. Hizmet mahallelerini seçin.',
         tone: 'success',
       })
     } catch (reason) {
@@ -224,8 +223,8 @@ export function OperatorSchoolsPage() {
       updateRelationship(updated)
       setNotice({
         message: updated.active
-          ? 'Okul bağlantısı etkinleştirildi.'
-          : 'Okul bağlantısı pasife alındı; bu okul artık aramalara katkı sağlamaz.',
+          ? 'Okul etkinleştirildi.'
+          : 'Okul pasife alındı; artık aramalarda kullanılmaz.',
         tone: updated.active ? 'success' : 'warning',
       })
     } catch (reason) {
@@ -249,7 +248,7 @@ export function OperatorSchoolsPage() {
       focusAddAfterRemoval.current = true
       setRemoveTarget(undefined)
       setNotice({
-        message: 'Okul bağlantısı ve okula özel kapsam kaldırıldı.',
+        message: 'Okul ve hizmet mahalleleri kaldırıldı.',
         tone: 'warning',
       })
     } catch (reason) {
@@ -317,9 +316,7 @@ export function OperatorSchoolsPage() {
     <section className="workspace-page operator-workspace-page operator-schools-page">
       <header className="operator-page-header operator-overview-header">
         <div>
-          <p className="operator-eyebrow">İşletmeci paneli</p>
           <h1>Okullar ve hizmet kapsamı</h1>
-          <p>Hangi okullara ve mahallelere hizmet verdiğinizi yönetin.</p>
         </div>
         <button
           className="primary-button operator-school-add"
@@ -350,8 +347,7 @@ export function OperatorSchoolsPage() {
         <div className="status-banner warning" role="status">
           <strong>Profil görünürlüğünüz kapalı.</strong>
           <span>
-            Okul ve mahalle kapsamınız tam olsa da profilinizi herkese açık
-            yapana kadar aramalarda görünmezsiniz.{' '}
+            Profilinizi herkese açık yapana kadar aramalarda görünmezsiniz.{' '}
             <button
               className="text-button"
               onClick={() =>
@@ -369,10 +365,7 @@ export function OperatorSchoolsPage() {
         <span className="operator-coverage-note-icon" aria-hidden="true" />
         <div>
           <strong>Kapsamı okul bazında belirtin</strong>
-          <p>
-            Mahalle eşleşmesi, belirli bir ev adresinden alım sözü anlamına
-            gelmez. Aileler güzergâhı doğrudan teyit eder.
-          </p>
+          <p>Mahalle eşleşmesi belirli bir adresten alım sözü değildir.</p>
         </div>
       </aside>
 
@@ -400,10 +393,7 @@ export function OperatorSchoolsPage() {
       ) : relationships.length === 0 ? (
         <div className="empty-state operator-schools-empty">
           <h2>Henüz okul eklenmedi</h2>
-          <p>
-            Hizmet verdiğiniz okulları ekleyin; her okul için mahalleleri ayrı
-            seçersiniz.
-          </p>
+          <p>Her okul için hizmet mahallelerini ayrı seçersiniz.</p>
           <button
             className="primary-button"
             onClick={openAddDialog}
@@ -449,8 +439,7 @@ export function OperatorSchoolsPage() {
             </div>
             {visibleRelationships.length === 0 ? (
               <p className="operator-school-no-match" role="status">
-                Eşleşen okul yok. Arama terimini değiştirin veya yeni okul
-                ekleyin.
+                Eşleşen okul yok. Farklı bir arama deneyin.
               </p>
             ) : (
               <ul>
@@ -486,7 +475,7 @@ export function OperatorSchoolsPage() {
           description="Okulu arayın, seçin ve ardından hizmet mahallelerini ekleyin."
           onCancel={closeAddDialog}
           pending={pending === 'add'}
-          title="Hizmet kapsamına okul ekle"
+          title="Okul ekle"
         >
           <form className="search-row" onSubmit={findSchools}>
             <label className="form-field grow">
@@ -542,7 +531,7 @@ export function OperatorSchoolsPage() {
                 {schoolPage.totalPages > 1 && (
                   <nav
                     className="pagination"
-                    aria-label="Okul kataloğu sayfaları"
+                    aria-label="Okul listesi sayfaları"
                   >
                     <button
                       className="secondary-button"
@@ -648,13 +637,12 @@ export function OperatorSchoolsPage() {
             setNotice(
               updated.coverage.length > 0
                 ? {
-                    message:
-                      'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
+                    message: 'Hizmet mahalleleri kaydedildi.',
                     tone: 'success',
                   }
                 : {
                     message:
-                      'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
+                      'Tüm hizmet mahalleleri kaldırıldı; bu okul artık aramalarda kullanılmaz.',
                     tone: 'warning',
                   },
             )
@@ -665,10 +653,10 @@ export function OperatorSchoolsPage() {
 
       {removeTarget && (
         <SchoolDialog
-          description={`${removeTarget.schoolName} bağlantısı ve okula özel kapsamı kaldırılacak.`}
+          description={`${removeTarget.schoolName} ve hizmet mahalleleri kaldırılacak.`}
           onCancel={() => setRemoveTarget(undefined)}
           pending={pending === removeTarget.id}
-          title="Okul kapsamı kaldırılsın mı?"
+          title="Okul kaldırılsın mı?"
         >
           {removeError && (
             <div className="form-error" role="alert">
@@ -835,20 +823,19 @@ function SchoolRow({
         </div>
         {!relationship.schoolActive && (
           <p className="school-warning">
-            Bu okul yönetici tarafından pasife alındı ve aramalara katkı
-            sağlamaz.
+            Bu okul yönetici tarafından pasife alındı; aramalarda kullanılmaz.
           </p>
         )}
         {relationship.schoolActive && !relationship.active && (
           <p className="school-warning">
-            Bu bağlantıyı etkinleştirene kadar okul aramalara katkı sağlamaz.
+            Etkinleştirene kadar bu okul aramalarda kullanılmaz.
           </p>
         )}
         {relationship.schoolActive &&
           relationship.active &&
           relationship.coverage.length === 0 && (
             <p className="school-warning">
-              Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin.
+              Bu okul için hizmet mahallelerini seçin.
             </p>
           )}
       </article>
@@ -1102,10 +1089,10 @@ function CoverageEditor({
 
   return (
     <SchoolDialog
-      description={`${relationship.schoolName} için hizmet mahalleleri. Aynı ildeki farklı ilçelerden mahalle seçebilirsiniz.`}
+      description={`${relationship.schoolName} için hizmet mahalleleri. Aynı ildeki diğer ilçelerden de seçebilirsiniz.`}
       onCancel={onClose}
       pending={saving}
-      title="Okul kapsamını düzenle"
+      title="Hizmet mahallelerini düzenle"
       wide
     >
       <div className="operator-coverage-count">
@@ -1271,7 +1258,7 @@ function CoverageEditor({
           onClick={save}
           type="button"
         >
-          {saving ? 'Kaydediliyor…' : 'Kapsamı kaydet'}
+          {saving ? 'Kaydediliyor…' : 'Mahalleleri kaydet'}
         </button>
       </div>
     </SchoolDialog>
@@ -1291,25 +1278,16 @@ function SchoolCatalogGuidance({
   if (page.totalElements === 0 && query) {
     return (
       <p className="empty-note">
-        Bu aramayla eşleşen aktif okul bulunamadı. Okul adını kısaltarak yeniden
-        deneyin.
+        Bu aramayla eşleşen okul bulunamadı. Okul adını kısaltarak deneyin.
       </p>
     )
   }
   if (page.totalElements === 0) {
-    return (
-      <p className="empty-note">
-        Okul kataloğu henüz boş. Bir yönetici okul ekledikten sonra burada seçim
-        yapabilirsiniz.
-      </p>
-    )
+    return <p className="empty-note">Henüz eklenebilecek okul yok.</p>
   }
   if (page.content.length === 0) {
     return (
-      <p className="empty-note">
-        Bu sayfada okul bulunamadı. Önceki sayfaya dönün veya aramayı yeniden
-        çalıştırın.
-      </p>
+      <p className="empty-note">Bu sayfada okul yok. Önceki sayfaya dönün.</p>
     )
   }
   return (
@@ -1334,7 +1312,7 @@ function handleSession(
 function messageFor(error: unknown): string {
   return error instanceof ApiError
     ? error.problem.detail
-    : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+    : 'İşlem tamamlanamadı. Tekrar deneyin.'
 }
 
 function InlineLoading({ label }: { label: string }) {

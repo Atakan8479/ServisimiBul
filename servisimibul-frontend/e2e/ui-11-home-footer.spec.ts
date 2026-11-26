@@ -12,8 +12,8 @@ const viewports = [
 const footerLinks = [
   ['Ana sayfa', '/'],
   ['Talep panosu', '/demands'],
-  ['Giriş Yap', '/login'],
-  ['Kayıt Ol', '/register'],
+  ['Giriş yap', '/login'],
+  ['Kayıt ol', '/register'],
   ['Gizlilik ve kişisel veriler', '/privacy/notice'],
   ['Kullanım koşulları', '/terms'],
   ['Kişisel veri başvuru yolu', '/privacy/requests'],

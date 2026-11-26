@@ -50,7 +50,7 @@ describe('route error presentation', () => {
 
   it.each([
     [404, 'Sayfa bulunamadı'],
-    [500, 'Bir sorun oluştu'],
+    [500, 'Sayfa yüklenemedi'],
   ])(
     'preserves router response handling for HTTP %s',
     async (status, title) => {

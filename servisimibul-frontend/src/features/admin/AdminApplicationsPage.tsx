@@ -205,13 +205,7 @@ export function AdminApplicationsPage() {
   return (
     <section className="workspace-page admin-page admin-applications-page">
       <header className="admin-page-header admin-operator-header">
-        <p className="admin-eyebrow">Yönetim paneli</p>
         <h1>{approvalRequired ? 'İşletmeci başvuruları' : 'İşletmeciler'}</h1>
-        <p>
-          {approvalRequired
-            ? 'Başvuruları inceleyin ve gerekli düzeltmeleri açıkça iletin.'
-            : 'İşletmeci profillerini inceleyin ve hesap durumlarını yönetin.'}
-        </p>
       </header>
 
       <OperatorSummaryCards />
@@ -272,7 +266,7 @@ export function AdminApplicationsPage() {
           <div aria-hidden="true" className="admin-operator-columns">
             <span>İşletmeci</span>
             {approvalRequired && <span>Başvuru</span>}
-            <span>Profil görünürlük tercihi</span>
+            <span>Profil görünürlüğü</span>
             <span>Hesap</span>
             <span>Kayıt</span>
             <span>İşlem</span>
@@ -301,7 +295,7 @@ export function AdminApplicationsPage() {
                     </div>
                   )}
                   <div>
-                    <dt>Profil görünürlük tercihi</dt>
+                    <dt>Profil görünürlüğü</dt>
                     <dd>{visibilityPreferenceLabel(profile)}</dd>
                   </div>
                   <div>
@@ -330,9 +324,7 @@ export function AdminApplicationsPage() {
       ) : (
         <div className="empty-state">
           <h2>{status ? 'Bu durumda başvuru yok' : 'Henüz işletmeci yok'}</h2>
-          {status && (
-            <p>Başka bir durum seçerek listeyi değiştirebilirsiniz.</p>
-          )}
+          {status && <p>Farklı bir durum seçin.</p>}
         </div>
       )}
 
@@ -517,9 +509,6 @@ export function AdminApplicationDetailPage() {
         <div>
           <p className="admin-eyebrow">İşletmeci ayrıntısı</p>
           <h1>{profile.businessName || 'İsimsiz işletme'}</h1>
-          <p>
-            Profil bilgilerini, başvuru durumunu ve inceleme geçmişini yönetin.
-          </p>
         </div>
         <div className="admin-detail-badges">
           {approvalRequired && (
@@ -553,7 +542,6 @@ export function AdminApplicationDetailPage() {
               <OperatorInitials name={profile.businessName} />
               <div>
                 <h2>Profil bilgileri</h2>
-                <p>İşletmecinin kaydettiği bilgiler</p>
               </div>
             </div>
             <dl className="admin-detail-facts">
@@ -562,7 +550,7 @@ export function AdminApplicationDetailPage() {
                 <dd>{profile.contactPhone}</dd>
               </div>
               <div>
-                <dt>Profil görünürlük tercihi</dt>
+                <dt>Profil görünürlüğü</dt>
                 <dd>{visibilityPreferenceLabel(profile)}</dd>
               </div>
               <div>
@@ -581,7 +569,6 @@ export function AdminApplicationDetailPage() {
           </article>
 
           <section className="admin-detail-card">
-            <p className="admin-eyebrow">Hesap geçmişi</p>
             <h2>İnceleme geçmişi</h2>
             {reviewHistory.length ? (
               <ol className="admin-review-timeline">
@@ -617,8 +604,7 @@ export function AdminApplicationDetailPage() {
           aria-labelledby="admin-actions-title"
           className="admin-detail-card admin-detail-actions"
         >
-          <p className="admin-eyebrow">Yönetim aksiyonları</p>
-          <h2 id="admin-actions-title">Hesap durumunu yönetin</h2>
+          <h2 id="admin-actions-title">Hesap işlemleri</h2>
 
           {reviewable && (
             <div className="admin-review-actions">
@@ -675,8 +661,7 @@ export function AdminApplicationDetailPage() {
 
           {!approvalRequired && (
             <p className="admin-detail-note">
-              Bu ortamda profilin yayımlanması için yönetici onayı zorunlu
-              değildir.
+              Profilin yayımlanması için yönetici onayı gerekmiyor.
             </p>
           )}
         </aside>
@@ -779,7 +764,7 @@ function handleSession(
   setError(
     error instanceof ApiError
       ? error.problem.detail
-      : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+      : 'İşlem tamamlanamadı. Tekrar deneyin.',
   )
 }
 

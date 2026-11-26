@@ -111,27 +111,27 @@ public class NotificationService {
         return switch (type) {
             case DEMAND_CREATED -> new NotificationCopy(
                     "Yeni servis talebi",
-                    "Hizmet verdiğiniz okulun mevcut kapsama alanında yeni bir talep oluşturuldu."
+                    "Hizmet verdiğiniz okul ve mahallede yeni bir talep açıldı."
             );
             case SERVICE_PUBLISHED -> new NotificationCopy(
-                    "Servis uygunluğu bildirildi",
-                    "Bir işletmeci servis uygunluğu bildirdi. Bu beyan platform tarafından doğrulanmamıştır."
+                    "Yeni servis duyurusu",
+                    "Desteklediğiniz talep için servis duyurusu paylaşıldı. Duyuru platform tarafından doğrulanmamıştır."
             );
             case FEEDBACK_REMINDER -> new NotificationCopy(
-                    "Geri bildiriminizi bekliyoruz",
-                    "İşletmecinin uygunluk beyanı için geri bildirim süreniz devam ediyor."
+                    "Yanıtınız bekleniyor",
+                    "Süre dolmadan servis duyurusunun ihtiyacınızı karşılayıp karşılamadığını belirtin."
             );
             case SUPPORT_EXPIRED -> new NotificationCopy(
-                    "Destek süresi sona erdi",
-                    "Yanıtlanmayan servis uygunluğu bildirimi için desteğiniz pasif duruma alındı."
+                    "Desteğiniz pasife alındı",
+                    "Servis duyurusunu süresi içinde yanıtlamadığınız için desteğiniz pasife alındı."
             );
             case SERVICE_WITHDRAWN -> new NotificationCopy(
-                    "Servis uygunluğu geri çekildi",
-                    "İşletmeci servis uygunluğu bildirimini geri çekti; talep desteğiniz yeniden etkinleştirildi."
+                    "Servis duyurusu geri çekildi",
+                    "İşletmeci servis duyurusunu geri çekti; desteğiniz yeniden etkinleştirildi."
             );
             case CONTENT_REPORTED -> new NotificationCopy(
                     "Yeni içerik bildirimi",
-                    "İnceleme kuyruğuna yeni bir kullanıcı bildirimi eklendi."
+                    "İncelenmesi gereken yeni bir içerik bildirimi var."
             );
         };
     }

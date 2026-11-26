@@ -101,9 +101,7 @@ export function DemandLocationPicker({
       } catch {
         if (request === requestVersion.current) {
           setSchoolPage(undefined)
-          setError(
-            'Okullar yüklenemedi. Filtrelerinizi koruduk; tekrar deneyebilirsiniz.',
-          )
+          setError('Okullar yüklenemedi. Tekrar deneyin.')
         }
       } finally {
         if (request === requestVersion.current) setLoadingSchools(false)
@@ -123,7 +121,7 @@ export function DemandLocationPicker({
         )
         setProvinces(pilot)
         if (pilot.length === 0) {
-          setError('İstanbul okul kataloğunda bulunamadı.')
+          setError('İstanbul için okul bilgisi bulunamadı.')
         }
       })
       .catch(() => {
@@ -181,7 +179,7 @@ export function DemandLocationPicker({
         .catch(() => {
           if (request === requestVersion.current) {
             setError(
-              'Kaydedilen okul ve mahalle seçimi yüklenemedi. Lütfen yeniden seçin.',
+              'Kaydedilen okul ve mahalle seçimi yüklenemedi. Yeniden seçin.',
             )
             onSelectionChangeRef.current(undefined)
           }
@@ -245,7 +243,7 @@ export function DemandLocationPicker({
       setSchoolDistricts(districts)
       await loadSchoolPage(numericId, 0, '', '', DEFAULT_SORT)
     } catch {
-      setError('Okul ilçeleri yüklenemedi. İli yeniden seçip tekrar deneyin.')
+      setError('Okul ilçeleri yüklenemedi. İli yeniden seçin.')
     }
   }
 
@@ -318,7 +316,7 @@ export function DemandLocationPicker({
       setPickupDistricts(districts)
     } catch {
       setPickupDistricts([])
-      setError('Servis alınacak ilçeler yüklenemedi. Okulu yeniden seçin.')
+      setError('İlçeler yüklenemedi. Okulu yeniden seçin.')
     } finally {
       setLoadingPickup(false)
     }
@@ -336,7 +334,7 @@ export function DemandLocationPicker({
     try {
       setNeighborhoods(await getNeighborhoods(Number(value)))
     } catch {
-      setError('Mahalleler yüklenemedi. İlçeyi yeniden seçip tekrar deneyin.')
+      setError('Mahalleler yüklenemedi. İlçeyi yeniden seçin.')
     } finally {
       setLoadingPickup(false)
     }
@@ -376,7 +374,6 @@ export function DemandLocationPicker({
           <span aria-hidden="true">1</span>
           <div>
             <h3 id="demand-step-school">Okul seçimi</h3>
-            <p>Öğrencinin gittiği okulu ili ve ilçesiyle bulun.</p>
           </div>
         </div>
 
@@ -474,7 +471,7 @@ export function DemandLocationPicker({
 
             {!provinceId && !loadingProvinces && (
               <p className="demand-step-hint">
-                Okul listesini görmek için önce okulun bulunduğu ili seçin.
+                İl seçerek okulları görüntüleyin.
               </p>
             )}
 
@@ -496,9 +493,7 @@ export function DemandLocationPicker({
                       {schoolPage.totalElements} okul bulundu
                     </h4>
                     <p>
-                      {schoolQuery
-                        ? `“${schoolQuery}” araması`
-                        : 'Aktif okul kataloğu'}
+                      {schoolQuery ? `“${schoolQuery}” araması` : 'Tüm okullar'}
                     </p>
                   </div>
                 </div>
@@ -524,8 +519,8 @@ export function DemandLocationPicker({
                   </ul>
                 ) : (
                   <div className="school-browser-empty">
-                    <h4>Bu filtrelerle eşleşen okul yok</h4>
-                    <p>Okul adını veya ilçeyi değiştirerek tekrar deneyin.</p>
+                    <h4>Okul bulunamadı</h4>
+                    <p>Farklı bir okul adı veya ilçe deneyin.</p>
                   </div>
                 )}
                 {schoolPage.totalPages > 1 && (
@@ -567,11 +562,11 @@ export function DemandLocationPicker({
         <div className="demand-step-heading">
           <span aria-hidden="true">2</span>
           <div>
-            <h3 id="demand-step-pickup">Servis alınacak konum</h3>
+            <h3 id="demand-step-pickup">Servise biniş yeri</h3>
             <p>
               {selectedSchool
-                ? 'Öğrencinin servise bineceği ilçe ve mahalle. Okulun ilçesinden farklı olabilir.'
-                : 'Önce okulu seçin; servis alınacak ilçe ve mahalle buna göre açılır.'}
+                ? 'Okulun ilçesinden farklı olabilir.'
+                : 'Önce okulu seçin.'}
             </p>
           </div>
         </div>

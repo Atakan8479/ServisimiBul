@@ -31,7 +31,7 @@ const statusFilters: Array<{
     value: 'ALL',
     label: 'Tümü',
     title: 'Tüm talepler',
-    empty: 'Bu seçim için listelenecek talep yok',
+    empty: 'Bu seçim için talep yok',
     countLabel: 'talep',
   },
   {
@@ -121,7 +121,7 @@ export function DemandBoardPage() {
       } catch {
         if (request === demandRequest.current) {
           setDemands(undefined)
-          setDemandError('Bağlantıyı kontrol edip tekrar deneyin.')
+          setDemandError('Bağlantı kurulamadı. Tekrar deneyin.')
         }
       } finally {
         if (request === demandRequest.current) setLoadingDemands(false)
@@ -319,10 +319,7 @@ export function DemandBoardPage() {
       <header className="demand-intro">
         <div>
           <h1>Servis talep panosu</h1>
-          <p>
-            Okul ve servis alınacak mahalledeki gerçek ihtiyacı görün veya yeni
-            bir talep oluşturun.
-          </p>
+          <p>Servis taleplerini inceleyin veya yeni talep oluşturun.</p>
         </div>
         {createPath ? (
           <Link
@@ -351,10 +348,6 @@ export function DemandBoardPage() {
         </span>
         <div>
           <strong>Talep oluşturmak rezervasyon değildir.</strong>
-          <p>
-            Bu pano benzer servis ihtiyaçlarını görünür kılar. Hizmet kapsamını
-            işletmeciyle ayrıca teyit edin.
-          </p>
         </div>
         {demands && !loadingDemands && !demandError && (
           <p className="demand-board-total">
@@ -372,7 +365,6 @@ export function DemandBoardPage() {
         <div className="section-heading">
           <div>
             <h2 id="demand-filter-title">Okul ve mahalleye göre bulun</h2>
-            <p>Okulun konumu ile servis alınacak konumu ayrı ayrı seçin.</p>
           </div>
           <button className="text-button" type="button" onClick={clearFilters}>
             Filtreleri temizle
@@ -395,9 +387,6 @@ export function DemandBoardPage() {
             <span aria-hidden="true">3</span>
             <div>
               <h3 id="demand-step-preferences">Sonuç tercihleri</h3>
-              <p>
-                Listelenecek talepleri eğitim yılına göre daraltın ve sıralayın.
-              </p>
             </div>
           </div>
           <div className="demand-board-controls">
@@ -454,8 +443,8 @@ export function DemandBoardPage() {
 
       {!resultsMatchDraft && (
         <div className="status-banner pending" role="status">
-          Filtre seçiminiz değişti. Aşağıdaki sonuçlar son uygulanan filtrelere
-          aittir. Güncel sonuçlar için Talepleri göster&apos;i seçin.
+          Filtreler değişti. Sonuçları güncellemek için Talepleri göster&apos;e
+          basın.
         </div>
       )}
 
@@ -468,9 +457,7 @@ export function DemandBoardPage() {
             <div className="section-heading">
               <div>
                 <h2>{statusFilter.title}</h2>
-                <p>
-                  Destek sayıları yalnızca etkin veli katılımlarını gösterir.
-                </p>
+                <p>Yalnızca etkin destekler sayılır.</p>
               </div>
               {demands && !loadingDemands && !demandError && (
                 <span className="count-badge">
@@ -522,10 +509,6 @@ export function DemandBoardPage() {
             {!loadingDemands && demands?.content.length === 0 && (
               <div className="empty-state demand-empty-state">
                 <h3>{statusFilter.empty}</h3>
-                <p>
-                  Yeni talebe geçmeden önce mevcut servis işletmecilerini
-                  kontrol edebilirsiniz.
-                </p>
                 {createPath && resultsMatchDraft ? (
                   <Link
                     className="secondary-button"
@@ -536,7 +519,7 @@ export function DemandBoardPage() {
                   </Link>
                 ) : !createPath ? (
                   <a className="secondary-button" href="#demand-filters">
-                    Okul ve mahalle seç
+                    Okul ve mahalle seçin
                   </a>
                 ) : null}
               </div>
@@ -583,10 +566,6 @@ export function DemandBoardPage() {
               <div className="section-heading">
                 <div>
                   <h2>Eşleşen servis işletmecileri</h2>
-                  <p>
-                    Seçtiğiniz okul ve mahalle için görünür işletmeciler ayrı
-                    olarak yüklenir.
-                  </p>
                 </div>
               </div>
               {checkingOperators && (
@@ -694,7 +673,7 @@ function OperatorCheckResult({
         <h3>
           {operators.totalElements > 0
             ? `${operators.totalElements} mevcut servis bulundu`
-            : 'Görünür servis bulunamadı'}
+            : 'Eşleşen servis bulunamadı'}
         </h3>
         <p>
           Listelenmesi servis garantisi değildir. Ücret ve güzergâh için

@@ -24,7 +24,7 @@ for (const viewport of viewports) {
     )
 
     // The hero CTA remains the single route into the school search.
-    const heroCta = page.getByRole('link', { name: 'Okulunu seç' })
+    const heroCta = page.getByRole('link', { name: 'Okulunuzu seçin' })
     await expect(heroCta).toHaveAttribute('href', '#school-search')
     await expect(page.locator('#school-search')).toBeVisible()
     await expect(
@@ -73,7 +73,7 @@ test('keyboard focus moves from the demand callout straight into the footer', as
   ).toBeFocused()
 
   // Hero CTA still jumps to the school search.
-  await page.getByRole('link', { name: 'Okulunu seç' }).click()
+  await page.getByRole('link', { name: 'Okulunuzu seçin' }).click()
   await expect(page).toHaveURL(/#school-search$/)
   await expect(page.locator('#school-search')).toBeInViewport()
 })

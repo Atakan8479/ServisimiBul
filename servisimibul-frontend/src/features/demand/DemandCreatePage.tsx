@@ -87,9 +87,7 @@ export function DemandCreatePage() {
     try {
       const user = await currentUser()
       if (user.role !== 'PARENT') {
-        setError(
-          'Talep oluşturma ve destek işlemleri yalnızca veli hesabıyla yapılabilir.',
-        )
+        setError('Talep oluşturmak ve desteklemek için veli hesabı gerekir.')
         return
       }
       setConfirmation(values)
@@ -123,7 +121,7 @@ export function DemandCreatePage() {
               ? 'Bu okul ve mahalle için talep hareketsizlik nedeniyle kapanmış. Talebe katılarak yeniden açabilirsiniz.'
               : response.demand.status !== 'OPEN'
                 ? 'Bu okul ve mahalle için talep var ancak yeni katılıma kapalı.'
-                : 'Bu okul ve mahalle için zaten bir talep var. Katılmak için “Benim de ihtiyacım var” seçeneğini kullanın.',
+                : 'Bu okul ve mahalle için zaten bir talep var. Mevcut talebe katılabilirsiniz.',
         },
         viewTransition: typeof document.startViewTransition === 'function',
       })
@@ -141,7 +139,7 @@ export function DemandCreatePage() {
           ? 'Bu eğitim yılı için yeni talep açılamıyor. Güncel eğitim yılını seçin.'
           : failure instanceof ApiError
             ? failure.problem.detail
-            : 'Talep oluşturulamadı. Bilgileri koruduk; tekrar deneyin.',
+            : 'Talep oluşturulamadı. Tekrar deneyin.',
       )
     } finally {
       setSubmitting(false)
@@ -170,15 +168,13 @@ export function DemandCreatePage() {
       <header className="demand-intro">
         <div>
           <h1>Yeni servis talebi oluştur</h1>
-          <p>Konumu ve ihtiyacınızı gözden geçirin, ardından onaylayın.</p>
         </div>
       </header>
 
       <section className="demand-filter-panel" aria-labelledby="location-title">
         <div className="section-heading">
           <div>
-            <h2 id="location-title">Okul ve servis konumu</h2>
-            <p>Önceki seçiminiz hazırdır; gerekirse değiştirebilirsiniz.</p>
+            <h2 id="location-title">Okul ve biniş yeri</h2>
           </div>
         </div>
         <DemandLocationPicker
@@ -213,7 +209,6 @@ export function DemandCreatePage() {
         <div className="section-heading">
           <div>
             <h2 id="need-title">Servis ihtiyacınız</h2>
-            <p>Öğrenci adı, açık adres veya iletişim bilgisi eklemeyin.</p>
           </div>
         </div>
         <DemandSupportForm
@@ -302,7 +297,7 @@ function DemandConfirmationDialog({
           <dd>{selection.school.name}</dd>
         </div>
         <div>
-          <dt>Servis konumu</dt>
+          <dt>Servise biniş yeri</dt>
           <dd>
             {selection.neighborhood.name}, {selection.pickupDistrict.name}
           </dd>

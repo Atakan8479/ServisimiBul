@@ -184,7 +184,7 @@ test('M05 offers a retry when the queue fails', async ({ page }) => {
       : route.fallback(),
   )
   await page.goto('/admin/moderation')
-  await expect(page.getByText('Bildirimler yüklenemedi')).toBeVisible()
+  await expect(page.getByText('İçerik bildirimleri yüklenemedi')).toBeVisible()
   failing = false
   await page.getByRole('button', { name: 'Tekrar dene' }).click()
   await expect(

@@ -50,7 +50,7 @@ describe('shared design-system primitives', () => {
       <StatePanel
         tone="error"
         title="İçerik yüklenemedi"
-        detail="Lütfen tekrar deneyin."
+        detail="Tekrar deneyin."
       />,
     )
 

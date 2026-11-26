@@ -45,7 +45,7 @@ export function DemandServiceResponseForm({
       <fieldset>
         <legend>Hangi yönlerde servis sunuyorsunuz?</legend>
         <p className="fieldset-help">
-          Paylaştığınız bilgiler kesin fiyat veya boş yer garantisi değildir.
+          Duyurunuz fiyat veya boş yer garantisi değildir.
         </p>
         <div className="demand-choice-grid">
           <label className="checkbox-row">
@@ -75,7 +75,7 @@ export function DemandServiceResponseForm({
           disabled={isSubmitting}
           type="submit"
         >
-          {isSubmitting ? 'Yayınlanıyor…' : 'Servis bildirimini yayınla'}
+          {isSubmitting ? 'Yayınlanıyor…' : 'Servis duyurusunu yayınla'}
         </button>
         <button
           className="secondary-button"

@@ -13,7 +13,7 @@ const operatorPassword = 'ROLE01-operator-password'
 const neighborhoodId = 340101
 
 const publishHeading = 'Bu konuma servis sunuyor musunuz?'
-const publishButton = 'Bu talep için servis ekle'
+const publishButton = 'Servis duyurusu ekle'
 const joinButton = 'Benim de ihtiyacım var'
 const commentButton = 'Yorum yaz'
 const commentText = 'ROLE-01 herkese açık yorum.'

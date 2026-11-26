@@ -82,7 +82,7 @@ for (const viewport of viewports) {
 
     // The search steps and anchor navigation are untouched.
     await expect(page.locator('.discovery-search-steps li')).toHaveCount(3)
-    await page.getByRole('link', { name: 'Okulunu seç' }).click()
+    await page.getByRole('link', { name: 'Okulunuzu seçin' }).click()
     await expect(page).toHaveURL(/#school-search$/)
     await expect(page.locator('#school-search')).toBeInViewport()
 
@@ -102,7 +102,7 @@ test('ROUTE322 keyboard order runs from hero actions into the search card', asyn
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  const cta = page.getByRole('link', { name: 'Okulunu seç' })
+  const cta = page.getByRole('link', { name: 'Okulunuzu seçin' })
   await cta.focus()
   const order: string[] = []
   for (let step = 0; step < 6; step += 1) {

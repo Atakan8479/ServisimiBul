@@ -32,10 +32,10 @@ for (const viewport of viewports) {
       }),
     ).toBeVisible()
     await expect(
-      page.getByRole('region', { name: 'Filo bilgileri' }),
+      page.getByRole('region', { name: 'Araçlar', exact: true }),
     ).toBeVisible()
     await expect(
-      page.getByRole('region', { name: 'Paylaşılan hizmetler' }),
+      page.getByRole('region', { name: 'Servis teklifleri' }),
     ).toBeVisible()
     await expectTableLabelsOnOneLine(page)
     await expectNoOverflow(page)
@@ -93,7 +93,7 @@ test('COPY328 note stays put through loading, partial failure and retry', async 
   await expectSingleCalmNote(page)
 
   release()
-  const fleet = page.getByRole('region', { name: 'Filo bilgileri' })
+  const fleet = page.getByRole('region', { name: 'Araçlar', exact: true })
   await expect(fleet.getByRole('alert')).toContainText(
     'Araç bilgileri yüklenemedi',
   )

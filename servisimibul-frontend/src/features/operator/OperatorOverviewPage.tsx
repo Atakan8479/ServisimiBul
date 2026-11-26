@@ -24,7 +24,7 @@ export function OperatorOverviewPage() {
       setError(
         reason instanceof ApiError
           ? reason.problem.detail
-          : 'Arama uygunluğu yüklenemedi. Lütfen tekrar deneyin.',
+          : 'Profil durumu yüklenemedi. Tekrar deneyin.',
       )
     } finally {
       setLoading(false)
@@ -46,7 +46,7 @@ export function OperatorOverviewPage() {
         setError(
           reason instanceof ApiError
             ? reason.problem.detail
-            : 'Arama uygunluğu yüklenemedi. Lütfen tekrar deneyin.',
+            : 'Profil durumu yüklenemedi. Tekrar deneyin.',
         )
       })
       .finally(() => {
@@ -62,7 +62,6 @@ export function OperatorOverviewPage() {
       <header className="operator-page-header operator-overview-header">
         <div>
           <h1>Genel bakış</h1>
-          <p>Profilinizi, okul kapsamınızı ve servis bilgilerinizi yönetin.</p>
         </div>
         <Link
           className="secondary-button button-link"
@@ -73,7 +72,7 @@ export function OperatorOverviewPage() {
         </Link>
       </header>
 
-      {loading && <InlineLoading label="Arama uygunluğu yükleniyor" />}
+      {loading && <InlineLoading label="Profil durumu yükleniyor" />}
 
       {error && (
         <div className="form-error readiness-error" role="alert">
@@ -103,8 +102,8 @@ export function OperatorOverviewPage() {
               </strong>
               <span>
                 {readiness.discoveryEligible
-                  ? 'Veliler sizi yalnızca okul ve mahalle kapsamınızla eşleşen aramalarda görür.'
-                  : 'Aramalarda yer almak için aşağıdaki eksik adımları tamamlayın.'}
+                  ? 'Veliler sizi hizmet verdiğiniz okul ve mahallelerin aramalarında görür.'
+                  : 'Aramalarda görünmek için eksik adımları tamamlayın.'}
               </span>
             </div>
           </div>
@@ -122,13 +121,13 @@ export function OperatorOverviewPage() {
             />
             <SummaryCard
               label="Bağlı okul"
-              note={`${activeSchoolCount(readiness)} aktif okul bağlantısı`}
+              note={`${activeSchoolCount(readiness)} etkin okul`}
               tone="info"
               value={String(readiness.schools.length)}
             />
             <SummaryCard
-              label="Okul-mahalle kapsamı"
-              note="Okul bazındaki geçerli kayıt toplamı"
+              label="Hizmet mahallesi"
+              note="Tüm okullardaki toplam"
               tone="accent"
               value={String(coverageCount(readiness))}
             />
@@ -142,22 +141,18 @@ export function OperatorOverviewPage() {
               <div className="operator-section-heading">
                 <div>
                   <h2 id="readiness-steps-title">Profilinizi hazırlayın</h2>
-                  <p>
-                    Profil ve hizmet kapsamınızı güncel tutun. Araç bilgileri
-                    arama görünürlüğü için isteğe bağlıdır.
-                  </p>
                 </div>
               </div>
               <ol
                 className="readiness-list"
-                aria-label="Arama uygunluğu adımları"
+                aria-label="Profil hazırlık adımları"
               >
                 <ReadinessItem
                   complete={readiness.emailVerified && readiness.accountEnabled}
                   description={
                     readiness.emailVerified && readiness.accountEnabled
-                      ? 'E-posta doğrulandı ve hesap kullanıma açık.'
-                      : 'Doğrulanmış ve kullanıma açık bir hesap gereklidir.'
+                      ? 'E-posta doğrulandı, hesap etkin.'
+                      : 'Hesabınızın doğrulanmış ve etkin olması gerekir.'
                   }
                   title="Hesap doğrulaması"
                 />
@@ -177,7 +172,7 @@ export function OperatorOverviewPage() {
                     description={
                       readiness.approvalSatisfied
                         ? 'Yönetici onayı tamamlandı.'
-                        : 'Bu ortamda arama görünürlüğü için yönetici onayı gereklidir.'
+                        : 'Aramalarda görünmek için yönetici onayı gerekir.'
                     }
                     to="/operator/profile"
                     title="Yönetici onayı"
@@ -188,23 +183,23 @@ export function OperatorOverviewPage() {
                   complete={readiness.hasActiveSchoolRelationship}
                   description={
                     readiness.hasActiveSchoolRelationship
-                      ? 'En az bir aktif okul bağlantınız var.'
-                      : 'Aktif bir okula bağlı en az bir okul bağlantısı ekleyin.'
+                      ? 'En az bir etkin okulunuz var.'
+                      : 'En az bir etkin okul ekleyin.'
                   }
                   to={
                     canManageSchools(readiness)
                       ? '/operator/schools'
                       : undefined
                   }
-                  title="Okul kapsamınızı ekleyin"
+                  title="Okul ekleyin"
                 />
                 <ReadinessItem
                   action="Mahalleleri seç"
                   complete={readiness.hasEligibleSchoolCoverage}
                   description={
                     readiness.hasEligibleSchoolCoverage
-                      ? 'En az bir uygun okul için geçerli hizmet mahallesi seçildi.'
-                      : 'Aktif okullarınızdan en az biri için hizmet mahallesi seçin.'
+                      ? 'Hizmet mahallesi seçildi.'
+                      : 'En az bir okul için hizmet mahallesi seçin.'
                   }
                   to={
                     canManageSchools(readiness)
@@ -260,8 +255,7 @@ export function OperatorOverviewPage() {
                 </ul>
               ) : (
                 <p className="operator-overview-empty">
-                  Henüz bağlı okulunuz yok. Aramalarda görünmek için hizmet
-                  verdiğiniz okulu ve mahalleleri ekleyin.
+                  Henüz okul eklemediniz.
                 </p>
               )}
               {canManageSchools(readiness) && (
@@ -270,7 +264,7 @@ export function OperatorOverviewPage() {
                   to="/operator/schools"
                   viewTransition
                 >
-                  Okul kapsamını düzenle
+                  Okulları düzenle
                 </Link>
               )}
             </section>
@@ -281,7 +275,7 @@ export function OperatorOverviewPage() {
               className="operator-quick-links"
               aria-labelledby="quick-links-title"
             >
-              <h2 id="quick-links-title">Profilinize kısayollar</h2>
+              <h2 id="quick-links-title">Kısayollar</h2>
               <div>
                 <QuickLink
                   description="İletişim ve görünürlük"
@@ -310,10 +304,6 @@ export function OperatorOverviewPage() {
               aria-labelledby="account-status-title"
             >
               <h2 id="account-status-title">Profil görünürlüğü</h2>
-              <p>
-                Yayın koşulları tamamlandığında profiliniz uygun aramalarda
-                gösterilir.
-              </p>
               <StatusLine
                 complete={readiness.emailVerified && readiness.accountEnabled}
                 label="Hesap durumu"
@@ -438,22 +428,22 @@ function profileGuidance(readiness: DiscoveryReadiness) {
     return 'Askıya alınmış veya etkin olmayan profil aramalarda gösterilmez.'
   }
   if (!readiness.publiclyVisible) {
-    return 'Profil görünürlüğünü açarak işletme ve iletişim bilgilerinizi aramalarda yayınlayın.'
+    return 'Aramalarda görünmek için profil görünürlüğünü açın.'
   }
-  return 'Profil aktif ve herkese açık.'
+  return 'Profil etkin ve herkese açık.'
 }
 
 function schoolReadinessMessage(school: DiscoveryReadiness['schools'][number]) {
   if (!school.schoolActive) {
-    return 'Okul yönetici tarafından pasife alındı; aramalara katkı sağlamaz.'
+    return 'Okul yönetici tarafından pasife alındı; aramalarda kullanılmaz.'
   }
   if (!school.relationshipActive) {
-    return 'Okul bağlantısı pasif; etkinleştirmeniz gerekir.'
+    return 'Okul pasif; aramalarda görünmek için etkinleştirin.'
   }
   if (school.validCoverageCount === 0) {
     return 'Henüz hizmet mahallesi seçilmedi.'
   }
-  return `${school.validCoverageCount} geçerli hizmet mahallesiyle aramalara katkı sağlar.`
+  return `${school.validCoverageCount} hizmet mahallesi`
 }
 
 function activeSchoolCount(readiness: DiscoveryReadiness) {

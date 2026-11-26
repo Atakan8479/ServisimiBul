@@ -9,7 +9,7 @@ const viewports = [
 ] as const
 
 const routes = [
-  { id: 'A01', path: '/register', heading: 'Nasıl katılmak istersiniz?' },
+  { id: 'A01', path: '/register', heading: 'Hesap türünüzü seçin' },
   {
     id: 'A02',
     path: '/parent/register?next=%2Fdemands',

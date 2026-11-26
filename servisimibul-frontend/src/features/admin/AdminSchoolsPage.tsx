@@ -300,9 +300,7 @@ export function AdminSchoolsPage() {
     <section className="workspace-page admin-page admin-schools-page">
       <header className="admin-page-header admin-operator-header admin-detail-header">
         <div>
-          <p className="admin-eyebrow">Yönetim paneli</p>
           <h1>Okul kataloğu</h1>
-          <p>Okul kayıtlarını ve katalogdaki durumlarını yönetin.</p>
         </div>
         <button
           className="primary-button admin-school-add"
@@ -694,7 +692,7 @@ function handleSession(
   setError(
     failure instanceof ApiError
       ? failure.problem.detail
-      : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+      : 'İşlem tamamlanamadı. Tekrar deneyin.',
   )
 }
 

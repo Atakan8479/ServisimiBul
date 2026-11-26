@@ -64,7 +64,7 @@ test('O02 saves the real visibility preference and updates O01 readiness', async
   await expect(page.getByLabel('Kısa açıklama')).toBeFocused()
   await page.keyboard.press('Tab')
   const visibility = page.getByRole('switch', {
-    name: /Profil görünürlük tercihi/,
+    name: /Profil görünürlüğü/,
   })
   await expect(visibility).toBeFocused()
   await expect(visibility).toBeChecked()
@@ -75,9 +75,7 @@ test('O02 saves the real visibility preference and updates O01 readiness', async
   await expect(visibility).not.toBeChecked()
   await page.goto('/operator')
   await expect(
-    page.getByText(
-      'Profil görünürlüğünü açarak işletme ve iletişim bilgilerinizi aramalarda yayınlayın.',
-    ),
+    page.getByText('Aramalarda görünmek için profil görünürlüğünü açın.'),
   ).toBeVisible()
 })
 
@@ -106,7 +104,7 @@ test('O02 does not present a rejected visibility update as saved', async ({
   await page.goto('/operator/profile')
 
   const visibility = page.getByRole('switch', {
-    name: /Profil görünürlük tercihi/,
+    name: /Profil görünürlüğü/,
   })
   await visibility.click()
   await page.getByRole('button', { name: 'Değişiklikleri kaydet' }).click()
@@ -131,9 +129,7 @@ test('O02 preserves pending read-only behavior and keyboard order', async ({
   await expect(page.getByText('İncelemede')).toBeVisible()
   await expect(page.getByLabel('İşletme adı (isteğe bağlı)')).toBeDisabled()
   await expect(
-    page.getByText(
-      'İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.',
-    ),
+    page.getByText('İnceleme bitene kadar bilgilerinizi değiştiremezsiniz.'),
   ).toBeVisible()
   await page.getByRole('button', { name: 'Menü' }).focus()
   await expect(page.getByRole('button', { name: 'Menü' })).toBeFocused()
@@ -160,7 +156,7 @@ test('O02 remains usable at 200% zoom with reduced motion', async ({
     ),
   ).toBeLessThanOrEqual(1)
   const visibility = page.getByRole('switch', {
-    name: /Profil görünürlük tercihi/,
+    name: /Profil görünürlüğü/,
   })
   await visibility.focus()
   await expect(visibility).toBeFocused()

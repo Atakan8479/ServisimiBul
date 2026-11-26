@@ -191,8 +191,8 @@ const footerLinkGroups = [
     id: 'footer-group-account',
     label: 'Hesap',
     links: [
-      { to: '/login', label: 'Giriş Yap' },
-      { to: '/register', label: 'Kayıt Ol' },
+      { to: '/login', label: 'Giriş yap' },
+      { to: '/register', label: 'Kayıt ol' },
     ],
   },
   {
@@ -369,7 +369,7 @@ export function PublicLayout() {
         void navigate(session.loginOnExpiry, { replace: true })
         return
       }
-      setLogoutError('Çıkış yapılamadı. Lütfen tekrar deneyin.')
+      setLogoutError('Çıkış yapılamadı. Tekrar deneyin.')
       setMenuOpen(false)
     } finally {
       // The layout stays mounted across logout → login, so always release the busy state.
@@ -456,14 +456,14 @@ export function PublicLayout() {
             ) : (
               <>
                 <NavLink className="site-nav-login" to="/login" viewTransition>
-                  Giriş Yap
+                  Giriş yap
                 </NavLink>
                 <NavLink
                   className="site-nav-primary"
                   to="/register"
                   viewTransition
                 >
-                  Kayıt Ol
+                  Kayıt ol
                 </NavLink>
               </>
             )}

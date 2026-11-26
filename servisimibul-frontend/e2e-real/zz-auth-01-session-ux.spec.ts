@@ -92,9 +92,9 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
         await page.setViewportSize(viewport)
         const menu = await openMenu(page)
         await expect(
-          menu.getByRole('link', { name: 'Giriş Yap' }),
+          menu.getByRole('link', { name: 'Giriş yap' }),
         ).toBeVisible()
-        await expect(menu.getByRole('link', { name: 'Kayıt Ol' })).toBeVisible()
+        await expect(menu.getByRole('link', { name: 'Kayıt ol' })).toBeVisible()
         await expect(
           menu.getByRole('button', { name: 'Çıkış yap' }),
         ).toHaveCount(0)
@@ -125,10 +125,10 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
             ).toBeVisible()
           }
           await expect(
-            menu.getByRole('link', { name: 'Giriş Yap' }),
+            menu.getByRole('link', { name: 'Giriş yap' }),
           ).toHaveCount(0)
           await expect(
-            menu.getByRole('link', { name: 'Kayıt Ol' }),
+            menu.getByRole('link', { name: 'Kayıt ol' }),
           ).toHaveCount(0)
           await expect(
             menu.getByRole('button', { name: 'Hesabım' }),
@@ -206,7 +206,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
           .getByRole('button', { name: 'Çıkış yap' })
           .click()
         await expect(page.getByRole('alert')).toContainText(
-          'Çıkış yapılamadı. Lütfen tekrar deneyin.',
+          'Çıkış yapılamadı. Tekrar deneyin.',
         )
         await expect(page).toHaveURL(/\/$/)
         expect((await page.request.get('/api/v1/auth/me')).status()).toBe(200)
@@ -283,7 +283,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
       await expect(
         second
           .getByRole('navigation', { name: 'Ana menü' })
-          .getByRole('link', { name: 'Giriş Yap' }),
+          .getByRole('link', { name: 'Giriş yap' }),
       ).toBeVisible()
 
       await uiLogin(first, parentEmail, parentPassword!)
@@ -308,7 +308,7 @@ test('AUTH-01 keeps the public header in step with real sessions', async ({
       await expect(
         second
           .getByRole('navigation', { name: 'Ana menü' })
-          .getByRole('link', { name: 'Giriş Yap' }),
+          .getByRole('link', { name: 'Giriş yap' }),
       ).toBeVisible()
       await expect(
         second
