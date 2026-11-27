@@ -82,7 +82,7 @@ test('IA318 groups school, pickup and result preferences in reading order', asyn
   const panel = page.locator('#demand-filters')
 
   const school = panel.getByRole('group', { name: /Okul seçimi/ })
-  const pickup = panel.getByRole('group', { name: /Servis alınacak konum/ })
+  const pickup = panel.getByRole('group', { name: /Servise biniş yeri/ })
   const preferences = panel.getByRole('group', { name: /Sonuç tercihleri/ })
   await expect(school.getByLabel('Okulun bulunduğu il')).toBeVisible()
   await expect(school.getByLabel('Okulun ilçesi')).toBeVisible()
@@ -166,7 +166,7 @@ for (const path of ['/demands', '/demands/new']) {
     await page.getByLabel('Servis alınacak ilçe').selectOption('11')
     await page.getByLabel('Servis alınacak mahalle').selectOption('201')
     await expect(
-      page.getByRole('group', { name: /Servis alınacak konum/ }),
+      page.getByRole('group', { name: /Servise biniş yeri/ }),
     ).toHaveAttribute('data-complete', 'true')
     await expect(page.getByLabel('Eğitim yılı')).toHaveValue('2026-2027')
 

@@ -45,7 +45,7 @@ export function OperatorWorkspaceLayout() {
       setError(
         reason instanceof ApiError
           ? reason.problem.detail
-          : 'Çıkış yapılamadı. Lütfen tekrar deneyin.',
+          : 'Çıkış yapılamadı. Tekrar deneyin.',
       )
     } finally {
       setLoggingOut(false)

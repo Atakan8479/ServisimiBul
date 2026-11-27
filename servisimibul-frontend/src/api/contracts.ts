@@ -70,8 +70,7 @@ const localizedProblems: Record<string, string> = {
   EMAIL_UNAVAILABLE: 'Bu işlem şu anda tamamlanamıyor.',
   TOKEN_INVALID_OR_EXPIRED:
     'Doğrulama bağlantısı geçersiz, süresi dolmuş veya daha önce kullanılmış.',
-  AUTH_SERVICE_UNAVAILABLE:
-    'İşlem şu anda tamamlanamıyor. Lütfen tekrar deneyin.',
+  AUTH_SERVICE_UNAVAILABLE: 'İşlem şu anda tamamlanamıyor. Tekrar deneyin.',
   RATE_LIMITED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
   RATE_LIMIT_EXCEEDED: 'Çok sık denediniz. Biraz sonra tekrar deneyin.',
   AUTHENTICATION_REQUIRED: 'Devam etmek için giriş yapın.',
@@ -105,7 +104,7 @@ const localizedProblems: Record<string, string> = {
     'Bu servis duyurusu güncel değil. Sayfayı yenileyip tekrar deneyin.',
   school_inactive: 'Bu okul şu anda kullanılamıyor.',
   // Content reports and moderation.
-  report_already_open: 'Bu içerik için açık bir bildiriminiz zaten var.',
+  report_already_open: 'Bu içeriği zaten bildirdiniz; inceleniyor.',
   reporter_ineligible:
     'İçerik bildirmek için etkin bir veli veya işletmeci hesabı gerekir.',
   moderation_case_closed: 'Bu içerik bildirimi zaten sonuçlandırıldı.',
@@ -155,7 +154,7 @@ const localizedProblems: Record<string, string> = {
 const localizedFieldMessages: Record<string, string> = {
   'Enter a valid email address': 'Geçerli bir e-posta adresi girin.',
   'Password must be 12-64 characters and at most 72 UTF-8 bytes':
-    'Şifre 12-64 karakter olmalı ve UTF-8 olarak 72 baytı aşmamalıdır.',
+    'Şifre 12-64 karakter olmalı ve 72 baytı aşmamalıdır. Türkçe harf veya emoji kullandıysanız şifreyi kısaltın.',
   'Business name must be 2-120 characters':
     'İşletme adı 2-120 karakter olmalıdır.',
   'Enter a valid international phone number':

@@ -63,9 +63,7 @@ export function AccountSettingsPage() {
         )
         return
       }
-      setSignOutAllError(
-        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
-      )
+      setSignOutAllError('Bağlantı kurulamadı. Tekrar deneyin.')
     }
   }
 
@@ -90,9 +88,7 @@ export function AccountSettingsPage() {
         )
         return
       }
-      setDeactivateError(
-        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
-      )
+      setDeactivateError('Bağlantı kurulamadı. Tekrar deneyin.')
     }
   }
 
@@ -101,10 +97,6 @@ export function AccountSettingsPage() {
       <header className="account-settings-header">
         <div>
           <h1>Hesap ve gizlilik</h1>
-          <p>
-            Giriş hesabınızı görüntüleyin ve kullanıma açılacak hesap
-            işlemlerini takip edin.
-          </p>
         </div>
         <StatusBadge tone="info">
           {isOperator ? 'İşletmeci hesabı' : 'Veli hesabı'}
@@ -118,7 +110,6 @@ export function AccountSettingsPage() {
           </span>
           <div>
             <h2>{isOperator ? 'İşletmeci hesabı' : 'Veli hesabı'}</h2>
-            <p>Kimlik bilgileri mevcut oturumunuzdan alınır.</p>
           </div>
         </div>
         <dl className="account-facts">
@@ -134,11 +125,7 @@ export function AccountSettingsPage() {
       </SurfaceCard>
 
       <div className="account-settings-grid">
-        <SectionShell
-          className="account-settings-section"
-          title="Güvenlik"
-          description="Giriş bilgileriniz ve oturumlarınız."
-        >
+        <SectionShell className="account-settings-section" title="Güvenlik">
           <SurfaceCard className="account-action-card">
             {user.emailChangeAvailable ? (
               <EmailChangeAction
@@ -150,7 +137,7 @@ export function AccountSettingsPage() {
               />
             ) : (
               <FutureAction
-                description="E-posta teslimi ve gerekli hukuki kararlar tamamlanana kadar bu işlem kullanılamaz."
+                description="E-posta değişikliği şu anda kullanılamıyor."
                 title="E-posta adresini değiştir"
               />
             )}
@@ -167,11 +154,7 @@ export function AccountSettingsPage() {
           </SurfaceCard>
         </SectionShell>
 
-        <SectionShell
-          className="account-settings-section"
-          title="Gizlilik"
-          description="Kişisel veri ve hesap yaşam döngüsü işlemleri."
-        >
+        <SectionShell className="account-settings-section" title="Gizlilik">
           <SurfaceCard className="account-action-card">
             <PrivacyRequestAction
               path={
@@ -186,7 +169,7 @@ export function AccountSettingsPage() {
               />
             ) : (
               <FutureAction
-                description="Hesap devre dışı bırakma politikası henüz onaylanmadı."
+                description="Bu işlem şu anda kullanılamıyor."
                 title="Hesabı devre dışı bırak"
               />
             )}
@@ -214,10 +197,7 @@ export function AccountSettingsPage() {
         <SurfaceCard className="account-profile-note">
           <div>
             <h2>İşletme profili ayrı yönetilir</h2>
-            <p>
-              Herkese açık işletme ve iletişim bilgileriniz mevcut profil
-              ekranında kalır.
-            </p>
+            <p>Herkese açık bilgilerinizi işletme profilinden düzenleyin.</p>
           </div>
           <Link
             className="ui-button ui-button-secondary"
@@ -287,7 +267,6 @@ function PasswordAction({ path }: { path: string }) {
     <div className="account-action-row">
       <div>
         <h3>Şifreyi değiştir</h3>
-        <p>Mevcut şifrenizi doğrulayarak yeni bir şifre belirleyin.</p>
       </div>
       <div className="account-action-state">
         <Link className="ui-button ui-button-quiet" to={path} viewTransition>
@@ -303,10 +282,7 @@ function PrivacyRequestAction({ path }: { path: string }) {
     <div className="account-action-row">
       <div>
         <h3>Kişisel veri başvuruları</h3>
-        <p>
-          Başvuru formunu görüntüleyin. Hukuki onay tamamlanana kadar bilgi
-          gönderilemez.
-        </p>
+        <p>Başvuru gönderimi henüz açık değil; formu görüntüleyebilirsiniz.</p>
       </div>
       <div className="account-action-state">
         <Link className="ui-button ui-button-quiet" to={path} viewTransition>
@@ -378,7 +354,7 @@ export function AccountSettingsRouteError() {
         detail={
           error instanceof ApiError
             ? error.problem.detail
-            : 'Hesap bilgileri yüklenemedi. Lütfen tekrar deneyin.'
+            : 'Hesap bilgileri yüklenemedi. Tekrar deneyin.'
         }
         title="Hesap bilgileri yüklenemedi"
         tone="error"
@@ -393,7 +369,7 @@ const preferenceCopy: Partial<
   DEMAND_CREATED: {
     title: 'Yeni servis talepleri',
     description:
-      'Hizmet verdiğiniz okul ve bölgelerde yeni bir talep açıldığında uygulama içi bildirim alın.',
+      'Hizmet verdiğiniz okul ve mahallelerde yeni talep açıldığında bildirim alın.',
   },
 }
 
@@ -428,7 +404,7 @@ function NotificationPreferencesSection() {
       setError(
         caught instanceof ApiError
           ? caught.problem.detail
-          : 'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+          : 'Bağlantı kurulamadı. Tekrar deneyin.',
       )
     } finally {
       setPendingType(undefined)
@@ -518,10 +494,7 @@ function SignOutAllAction({
     <div className="account-action-row">
       <div>
         <h3>Oturumları sonlandır</h3>
-        <p>
-          Tüm cihazlardan çıkış yaparak bu cihaz dahil açık olan oturumları
-          sonlandırın.
-        </p>
+        <p>Bu cihaz dahil tüm açık oturumlarınızı kapatın.</p>
       </div>
       <div className="account-action-state">
         <Button onClick={onRequestConfirm} tone="quiet" type="button">

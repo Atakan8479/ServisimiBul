@@ -138,7 +138,7 @@ export function StatePanel({
   tone = 'neutral',
 }: {
   action?: ReactNode
-  detail: string
+  detail?: string
   title: string
   tone?: 'neutral' | 'loading' | 'error'
 }) {
@@ -152,7 +152,7 @@ export function StatePanel({
       <span className="ui-state-mark" aria-hidden="true" />
       <div>
         <h2>{title}</h2>
-        <p>{detail}</p>
+        {detail && <p>{detail}</p>}
       </div>
       {action && <div className="ui-state-action">{action}</div>}
     </SurfaceCard>

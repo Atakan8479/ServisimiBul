@@ -32,7 +32,7 @@ export function DemandFeedbackPanel({
         setError(
           caught instanceof ApiError && caught.problem.status === 401
             ? 'Geri bildirimi görmek için veli hesabınızla yeniden giriş yapın.'
-            : 'Servis geri bildirimi yüklenemedi. Sayfayı yenileyip tekrar deneyin.',
+            : 'Geri bildirim yüklenemedi. Sayfayı yenileyip tekrar deneyin.',
         )
       }
     }, 0)
@@ -82,7 +82,7 @@ export function DemandFeedbackPanel({
 
       {!data && !error && (
         <p className="demand-feedback-loading" role="status">
-          Servis geri bildirimi hazırlanıyor…
+          Geri bildirim yükleniyor…
         </p>
       )}
 
@@ -90,7 +90,7 @@ export function DemandFeedbackPanel({
         <>
           {data.feedback.length === 0 && (
             <p className="demand-feedback-loading">
-              Henüz değerlendirilecek servis bildirimi yok.
+              Henüz değerlendirilecek servis duyurusu yok.
             </p>
           )}
           <ul className="demand-feedback-list">
@@ -155,16 +155,16 @@ function feedbackStateLabel(item: DemandFeedback) {
   switch (item.status) {
     case 'AWAITING_FEEDBACK':
       return item.reminderTriggeredAt
-        ? 'Hatırlatma: Yanıt süresi dolmadan seçiminizi yapın.'
-        : 'Değerlendirmeniz bekleniyor.'
+        ? 'Yanıt süresi dolmadan seçiminizi yapın.'
+        : 'Yanıtınız bekleniyor.'
     case 'SATISFIED':
       return 'Talebinizin karşılandığını bildirdiniz.'
     case 'NOT_SATISFIED':
-      return 'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.'
+      return 'Bu duyurunun ihtiyacınızı karşılamadığını belirttiniz.'
     case 'INACTIVE_EXPIRED':
-      return 'Yanıt süresi dolduğu için bu destek pasife alındı.'
+      return 'Yanıt süresi dolduğu için desteğiniz pasife alındı.'
     case 'SUPERSEDED':
-      return 'Bu bildirim geri çekildi veya daha yeni bir yayınla değiştirildi.'
+      return 'Bu duyuru geri çekildi veya güncellendi.'
   }
 }
 

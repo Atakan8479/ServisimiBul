@@ -332,7 +332,7 @@ function feedbackStateCopy(
     return 'Talebinizin karşılandığını bildirdiniz.'
   }
   if (status === 'NOT_SATISFIED') {
-    return 'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.'
+    return 'Bu duyurunun ihtiyacınızı karşılamadığını belirttiniz.'
   }
-  return 'Hatırlatma: Yanıt süresi dolmadan seçiminizi yapın.'
+  return 'Yanıt süresi dolmadan seçiminizi yapın.'
 }

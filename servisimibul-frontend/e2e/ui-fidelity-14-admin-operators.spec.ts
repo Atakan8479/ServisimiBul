@@ -28,7 +28,7 @@ for (const viewport of viewports) {
     await expect(page.getByText('Mavi Rota Taşımacılık')).toBeVisible()
     await expect(
       page.locator('.admin-operator-row dt', {
-        hasText: 'Profil görünürlük tercihi',
+        hasText: 'Profil görünürlüğü',
       }),
     ).toHaveCount(1)
     await expect(page.getByText('Herkese açık')).toHaveCount(0)
@@ -39,7 +39,7 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('heading', { name: 'Mavi Rota Taşımacılık' }),
     ).toBeVisible()
-    await expect(page.getByText('Profil görünürlük tercihi')).toBeVisible()
+    await expect(page.getByText('Profil görünürlüğü')).toBeVisible()
     await expect(page.getByText('Herkese açık')).toHaveCount(0)
     await assertAccessibleAndContained(page)
     await capture(page, `M02-${viewport.name}`, viewport.name)

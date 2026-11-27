@@ -75,9 +75,7 @@ function SessionReportControl({
     try {
       const user = await currentUser()
       if (user.role !== 'PARENT' && user.role !== 'OPERATOR') {
-        setError(
-          'Bildirim yalnızca veli ve servis işletmecisi hesaplarıyla yapılabilir.',
-        )
+        setError('İçerik bildirmek için veli veya işletmeci hesabı gerekir.')
         return
       }
       setOpen(true)
@@ -117,7 +115,7 @@ function SessionReportControl({
       setError(
         failure instanceof ApiError &&
           failure.problem.code === 'report_already_open'
-          ? 'Bu içerik için açık bir bildiriminiz zaten var.'
+          ? 'Bu içeriği zaten bildirdiniz; inceleniyor.'
           : failure instanceof ApiError
             ? failure.problem.detail
             : 'Bildirim gönderilemedi. Tekrar deneyin.',
@@ -130,7 +128,7 @@ function SessionReportControl({
   if (sent) {
     return (
       <span className="report-sent" role="status">
-        <strong>Bildirim alındı</strong>
+        <strong>İçerik bildiriminiz alındı</strong>
         <small>İçerik inceleme sırasında görünür kalır.</small>
       </span>
     )
@@ -172,8 +170,7 @@ function SessionReportControl({
           <form className="report-form" onSubmit={submit}>
             <strong id={`${fieldId}-title`}>İçeriği bildir</strong>
             <p className="report-review-note">
-              İçerik hemen kaldırılmaz. Bildiriminiz inceleme sırasına alınır ve
-              içerik yalnızca yetkili bir moderasyon kararıyla değişir.
+              İçerik hemen kaldırılmaz; bildiriminiz incelenir.
             </p>
             <label htmlFor={`${fieldId}-reason`}>Bildirim nedeni</label>
             <select

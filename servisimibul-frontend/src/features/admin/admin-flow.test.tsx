@@ -57,7 +57,7 @@ describe('admin workspace flows', () => {
       name: 'Profili incele',
     })
     expect(requestedStatus).toBeNull()
-    expect(screen.getAllByText('Profil görünürlük tercihi')).not.toHaveLength(0)
+    expect(screen.getAllByText('Profil görünürlüğü')).not.toHaveLength(0)
     expect(screen.getByText('Açık')).toBeInTheDocument()
     expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(screen.queryByLabelText('Başvuru durumu')).not.toBeInTheDocument()
@@ -65,7 +65,7 @@ describe('admin workspace flows', () => {
     expect(
       await screen.findByRole('button', { name: 'İşletmeciyi askıya al' }),
     ).toBeInTheDocument()
-    expect(screen.getByText('Profil görünürlük tercihi')).toBeInTheDocument()
+    expect(screen.getByText('Profil görünürlüğü')).toBeInTheDocument()
     expect(screen.getByText('Açık')).toBeInTheDocument()
     expect(screen.queryByText('Herkese açık')).not.toBeInTheDocument()
     expect(
@@ -82,7 +82,7 @@ describe('admin workspace flows', () => {
     renderRoute('/admin/applications')
 
     expect(
-      await screen.findByRole('heading', { name: 'Bir sorun oluştu' }),
+      await screen.findByRole('heading', { name: 'Sayfa yüklenemedi' }),
     ).toBeInTheDocument()
   })
 

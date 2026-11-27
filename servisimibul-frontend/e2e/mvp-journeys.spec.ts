@@ -134,7 +134,9 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .selectOption({ label: 'Örnek Okulu — Kadıköy' })
     await operatorPage.getByRole('button', { name: 'Okulu ekle' }).click()
     await expect(
-      operatorPage.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
+      operatorPage.getByRole('heading', {
+        name: 'Hizmet mahallelerini düzenle',
+      }),
     ).toBeFocused()
     await operatorPage
       .getByRole('group', { name: 'Kadıköy' })
@@ -152,11 +154,11 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .getByRole('group', { name: 'Üsküdar' })
       .getByRole('checkbox', { name: 'Acıbadem' })
       .check()
-    await operatorPage.getByRole('button', { name: 'Kapsamı kaydet' }).click()
+    await operatorPage
+      .getByRole('button', { name: 'Mahalleleri kaydet' })
+      .click()
     await expect(
-      operatorPage.getByText(
-        'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
-      ),
+      operatorPage.getByText('Hizmet mahalleleri kaydedildi.'),
     ).toBeVisible()
   })
 
@@ -181,7 +183,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       }),
     ).toBeVisible()
     await expect(
-      publicPage.getByText('Servis ayrıntısı yayımlanmamış'),
+      publicPage.getByText('Servis bilgisi eklenmemiş'),
     ).toBeVisible()
     await expect(publicPage.getByText('operator@example.com')).toHaveCount(0)
   })
@@ -203,13 +205,11 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
     const createDialog = operatorPage.getByRole('dialog', {
       name: 'Servis teklifi oluştur',
     })
-    await createDialog
-      .getByLabel('Okul bağlantısı')
-      .selectOption({ label: 'Örnek Okulu' })
+    await createDialog.getByLabel('Okul').selectOption({ label: 'Örnek Okulu' })
     await createDialog
       .getByLabel('Etkin araç')
       .selectOption({ label: '34 ABC 123 — 16 kişi' })
-    await createDialog.getByLabel('Uygun koltuk (isteğe bağlı)').fill('4')
+    await createDialog.getByLabel('Boş koltuk (isteğe bağlı)').fill('4')
     await createDialog
       .getByLabel('Açıklama (isteğe bağlı)')
       .fill('Sabah ve akşam servisi')
@@ -228,9 +228,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       .getByRole('group', { name: 'Kadıköy' })
       .getByRole('checkbox', { name: 'Moda' })
       .check()
-    await editDialog
-      .getByRole('button', { name: 'Servis kapsamını kaydet' })
-      .click()
+    await editDialog.getByRole('button', { name: 'Mahalleleri kaydet' }).click()
     await editDialog
       .getByRole('button', {
         name: 'Servis teklifini düzenle penceresini kapat',
@@ -243,7 +241,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
   await test.step('11. Show the offering only in its specific coverage', async () => {
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(publicPage.getByText('Sabah ve akşam servisi')).toBeVisible()
-    await expect(publicPage.getByText('Yayımlanan uygun koltuk')).toBeVisible()
+    await expect(publicPage.getByText('Bildirilen boş koltuk')).toBeVisible()
     await expect(publicPage.getByText('Araç kapasitesi')).toBeVisible()
 
     await search(publicPage, 'Üsküdar', 'Acıbadem')
@@ -274,7 +272,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
       }),
     ).toBeVisible()
     await expect(
-      publicPage.getByText(/Kesin ücret ve hizmet koşulları için/),
+      publicPage.getByText(/kişisel fiyat teklifi değildir/),
     ).toBeVisible()
     await publicPage.getByRole('button', { name: 'Yıllık' }).click()
     await expect(publicPage.getByText('₺39.970,00')).toBeVisible()
@@ -304,7 +302,7 @@ test('completes all 13 MVP journeys and preserves privacy boundaries', async ({
 
     await search(publicPage, 'Kadıköy', 'Moda')
     await expect(
-      publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+      publicPage.getByRole('heading', { name: 'Eşleşen işletmeci bulunamadı' }),
     ).toBeVisible()
     await expect(publicPage.getByText('+905321234568')).toHaveCount(0)
   })

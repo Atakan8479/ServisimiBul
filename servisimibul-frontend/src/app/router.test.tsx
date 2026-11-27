@@ -372,14 +372,16 @@ describe('application routes', () => {
       expect(document.querySelector('.road-backdrop')).toBeInTheDocument()
       expect(
         screen.getByRole('heading', {
-          name: 'Okul servisini birlikte bulalım.',
+          name: 'Okul servisinizi bulun.',
         }),
       ).toBeInTheDocument()
       expect(
         screen.queryByText('Servis bulmanın yeni yolu.'),
       ).not.toBeInTheDocument()
       expect(
-        screen.getByRole('link', { name: 'Talep panosunu keşfet' }),
+        within(
+          screen.getByRole('region', { name: 'Okul servisinizi bulun.' }),
+        ).getByRole('link', { name: 'Talep panosuna git' }),
       ).toHaveAttribute('href', '/demands')
       // Let the public page's database-backed pilot location lookup finish.
       expect(
@@ -392,17 +394,17 @@ describe('application routes', () => {
         screen.getByRole('navigation', { name: 'Ana menü' }),
       )
       expect(
-        await primaryNavigation.findByRole('link', { name: 'Giriş Yap' }),
+        await primaryNavigation.findByRole('link', { name: 'Giriş yap' }),
       ).toHaveAttribute('href', '/login')
       expect(
-        primaryNavigation.getByRole('link', { name: 'Kayıt Ol' }),
+        primaryNavigation.getByRole('link', { name: 'Kayıt ol' }),
       ).toHaveAttribute('href', '/register')
       // #276: exactly two guest entry points, no role-specific auth links.
       expect(
         primaryNavigation.queryByRole('link', { name: /girişi|kaydı/i }),
       ).not.toBeInTheDocument()
       fireEvent.click(
-        primaryNavigation.getByRole('link', { name: 'Giriş Yap' }),
+        primaryNavigation.getByRole('link', { name: 'Giriş yap' }),
       )
 
       const loginHeading = await screen.findByRole('heading', {

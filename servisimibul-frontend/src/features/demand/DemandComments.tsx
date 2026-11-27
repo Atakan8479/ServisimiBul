@@ -352,7 +352,7 @@ export function DemandComments({
           ref={approvalNoteRef}
           tabIndex={-1}
         >
-          Yorum yazabilmek için işletme başvurunuzun yönetici tarafından
+          Yorum yazmak için işletmeci başvurunuzun yönetici tarafından
           onaylanması gerekir.{' '}
           <Link to="/operator/profile">Başvuru durumunu görüntüle</Link>
         </p>
@@ -434,9 +434,7 @@ export function DemandComments({
           </button>
         </div>
       ) : comments.length === 0 ? (
-        <p className="comment-state">
-          Henüz yorum yok. İlk bilgiyi siz paylaşın.
-        </p>
+        <p className="comment-state">Henüz yorum yok.</p>
       ) : (
         <ol className="demand-comment-list">
           {comments.map((comment) => (

@@ -36,7 +36,7 @@ export function RouteErrorPage() {
   if (isRouteErrorResponse(error)) {
     return (
       <StatePage
-        title={error.status === 404 ? 'Sayfa bulunamadı' : 'Bir sorun oluştu'}
+        title={error.status === 404 ? 'Sayfa bulunamadı' : 'Sayfa yüklenemedi'}
         detail="İstediğiniz sayfa şu anda görüntülenemiyor."
       />
     )
@@ -44,8 +44,8 @@ export function RouteErrorPage() {
 
   return (
     <StatePage
-      title="Bir sorun oluştu"
-      detail="Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+      title="Sayfa yüklenemedi"
+      detail="Sayfayı yenileyip tekrar deneyin."
     />
   )
 }

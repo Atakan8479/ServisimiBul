@@ -20,11 +20,7 @@ export function AuthFrame({
       >
         <div className="auth-experience-image" aria-hidden="true" />
         <div className="auth-experience-copy">
-          <h2>Okul servisi keşfi, daha anlaşılır.</h2>
-          <span>
-            Aramanızı okul ve mahalle kapsamına göre yapın; hizmeti işletmeciyle
-            doğrudan teyit edin.
-          </span>
+          <h2>Okulunuza servis veren işletmecileri bulun.</h2>
         </div>
       </aside>
 
@@ -36,7 +32,7 @@ export function AuthFrame({
           </header>
           {children}
           <footer className="auth-experience-footer">
-            <span>ServisimiBul · Okul servisi keşfi</span>
+            <span>ServisimiBul</span>
             <span className="auth-experience-footer-links">
               <Link to="/privacy/notice" viewTransition>
                 Gizlilik ve kişisel veriler

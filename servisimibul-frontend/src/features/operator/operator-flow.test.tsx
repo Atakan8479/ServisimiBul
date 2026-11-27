@@ -44,7 +44,7 @@ describe('operator workspace flows', () => {
     ).toBeInTheDocument()
     expect(screen.queryByText('Yönetici onayı')).not.toBeInTheDocument()
     expect(
-      screen.getByText(/Araç bilgileri arama görünürlüğü için isteğe bağlıdır/),
+      screen.getByText('Araçlar ve servisler isteğe bağlıdır'),
     ).toBeInTheDocument()
     expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
   })
@@ -68,14 +68,12 @@ describe('operator workspace flows', () => {
     renderRoute('/operator')
 
     const coverageSummary = (
-      await screen.findByText('Okul-mahalle kapsamı')
+      await screen.findByText('Hizmet mahallesi')
     ).closest('article')
     expect(coverageSummary).not.toBeNull()
     expect(within(coverageSummary!).getByText('3')).toBeInTheDocument()
     expect(
-      within(coverageSummary!).getByText(
-        'Okul bazındaki geçerli kayıt toplamı',
-      ),
+      within(coverageSummary!).getByText('Tüm okullardaki toplam'),
     ).toBeInTheDocument()
   })
 
@@ -153,11 +151,11 @@ describe('operator workspace flows', () => {
 
     renderRoute('/operator')
     expect(
-      await screen.findByText('Arama uygunluğu yükleniyor'),
+      await screen.findByText('Profil durumu yükleniyor'),
     ).toBeInTheDocument()
     release()
     expect(await screen.findByText('Hesap doğrulaması')).toBeInTheDocument()
-    expect(screen.getByText(/Henüz bağlı okulunuz yok/)).toBeInTheDocument()
+    expect(screen.getByText(/Henüz okul eklemediniz/)).toBeInTheDocument()
   })
 
   it('hides the approval workflow and keeps draft profile editing available in pilot mode', async () => {
@@ -202,7 +200,7 @@ describe('operator workspace flows', () => {
 
     expect(
       await screen.findByText(
-        'İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.',
+        'İnceleme bitene kadar bilgilerinizi değiştiremezsiniz.',
       ),
     ).toBeInTheDocument()
     expect(screen.getByLabelText('İşletme adı (isteğe bağlı)')).toBeDisabled()
@@ -290,7 +288,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/profile')
 
     const visibility = await screen.findByRole('switch', {
-      name: /Profil görünürlük tercihi/,
+      name: /Profil görünürlüğü/,
     })
     expect(visibility).toBeChecked()
     expect(screen.getByText('Açık')).toBeVisible()
@@ -444,12 +442,10 @@ describe('operator workspace flows', () => {
     fireEvent.click(kadikoyToggle)
     fireEvent.click(kadikoyToggle)
     expect(neighborhoodRequests).toEqual(['10'])
-    fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mahalleleri kaydet' }))
 
     expect(
-      await screen.findByText(
-        'Hizmet kapsamı kaydedildi. Bu okul uygun aramalara katkı sağlayabilir.',
-      ),
+      await screen.findByText('Hizmet mahalleleri kaydedildi.'),
     ).toBeInTheDocument()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
     expect(neighborhoodRequests).toEqual(['10'])
@@ -616,16 +612,14 @@ describe('operator workspace flows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Okulu ekle' }))
 
     expect(
-      await screen.findByText(/Şimdi bu okul için hizmet mahallelerini/),
+      await screen.findByText(/Okul eklendi. Hizmet mahallelerini seçin/),
     ).toBeInTheDocument()
     const heading = await screen.findByRole('heading', {
-      name: 'Okul kapsamını düzenle',
+      name: 'Hizmet mahallelerini düzenle',
     })
     await waitFor(() => expect(heading).toHaveFocus())
     expect(
-      screen.getByText(
-        /Bu okul için hizmet verdiğiniz mahalleleri seçip kaydedin/,
-      ),
+      screen.getByText(/Bu okul için hizmet mahallelerini seçin/),
     ).toBeInTheDocument()
   })
 
@@ -648,7 +642,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/schools')
     await openAddSchool()
     expect(
-      await screen.findByText(/Okul kataloğu henüz boş/),
+      await screen.findByText(/Henüz eklenebilecek okul yok/),
     ).toBeInTheDocument()
 
     fireEvent.change(screen.getByLabelText('Okul ara'), {
@@ -656,7 +650,7 @@ describe('operator workspace flows', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Ara' }))
     expect(
-      await screen.findByText(/Bu aramayla eşleşen aktif okul bulunamadı/),
+      await screen.findByText(/Bu aramayla eşleşen okul bulunamadı/),
     ).toBeInTheDocument()
   })
 
@@ -909,9 +903,7 @@ describe('operator workspace flows', () => {
       within(secondCard!).getByText(/0 hizmet mahallesi/),
     ).toBeInTheDocument()
     expect(
-      within(secondCard!).getByText(
-        /hizmet verdiğiniz mahalleleri seçip kaydedin/,
-      ),
+      within(secondCard!).getByText(/Bu okul için hizmet mahallelerini seçin/),
     ).toBeInTheDocument()
   })
 
@@ -982,7 +974,7 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/schools')
     fireEvent.click(await screen.findByRole('button', { name: 'Kaldır' }))
     let dialog = screen.getByRole('dialog', {
-      name: 'Okul kapsamı kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Vazgeç' }))
     expect(deletes).toBe(0)
@@ -990,7 +982,7 @@ describe('operator workspace flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Kaldır' }))
     dialog = screen.getByRole('dialog', {
-      name: 'Okul kapsamı kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     fireEvent.click(within(dialog).getByRole('button', { name: 'Kaldır' }))
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
@@ -1001,7 +993,7 @@ describe('operator workspace flows', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'Kaldır' }))
     expect(
       await screen.findByText(
-        'Okul bağlantısı ve okula özel kapsam kaldırıldı.',
+        'Okul ve hizmet mahalleleri listenizden kaldırıldı.',
       ),
     ).toBeInTheDocument()
     expect(screen.queryByText('Örnek Okulu')).not.toBeInTheDocument()
@@ -1042,11 +1034,11 @@ describe('operator workspace flows', () => {
     renderRoute('/operator/schools')
     fireEvent.click(await screen.findByRole('button', { name: 'Düzenle' }))
     const dialog = await screen.findByRole('dialog', {
-      name: 'Okul kapsamını düzenle',
+      name: 'Hizmet mahallelerini düzenle',
     })
     await within(dialog).findByRole('group', { name: 'Kadıköy' })
     fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Kapsamı kaydet' }),
+      within(dialog).getByRole('button', { name: 'Mahalleleri kaydet' }),
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
@@ -1249,7 +1241,7 @@ describe('operator workspace flows', () => {
       const dialog = await screen.findByRole('dialog')
       await within(dialog).findByRole('group', { name: 'Kadıköy' })
       fireEvent.click(
-        within(dialog).getByRole('button', { name: 'Kapsamı kaydet' }),
+        within(dialog).getByRole('button', { name: 'Mahalleleri kaydet' }),
       )
       await screen.findByText(/Tüm hizmet mahalleleri kaldırıldı/)
 
@@ -1381,7 +1373,9 @@ describe('operator workspace flows', () => {
 
         gate.resolve()
         expect(
-          await screen.findByRole('dialog', { name: 'Okul kapsamını düzenle' }),
+          await screen.findByRole('dialog', {
+            name: 'Hizmet mahallelerini düzenle',
+          }),
         ).toBeInTheDocument()
         expect(screen.getByText('Örnek Okulu')).toBeInTheDocument()
       })
@@ -1427,11 +1421,11 @@ describe('operator workspace flows', () => {
       ),
     )
     fireEvent.click(await screen.findByRole('checkbox', { name: 'Moda' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Kapsamı kaydet' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Mahalleleri kaydet' }))
 
     expect(
       await screen.findByText(
-        'Tüm hizmet mahalleleri kaldırıldı. Bu okul artık aramalara katkı sağlamaz.',
+        'Tüm hizmet mahalleleri kaldırıldı; bu okul artık aramalarda kullanılmaz.',
       ),
     ).toBeInTheDocument()
   })
@@ -1532,7 +1526,7 @@ describe('operator workspace flows', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Teklif oluştur' }))
     dialog = screen.getByRole('dialog', { name: 'Servis teklifi oluştur' })
-    fireEvent.change(within(dialog).getByLabelText('Okul bağlantısı'), {
+    fireEvent.change(within(dialog).getByLabelText('Okul'), {
       target: { value: '75ef6bb0-e313-43fb-a01c-c935774434b4' },
     })
     fireEvent.change(within(dialog).getByLabelText('Etkin araç'), {
@@ -1813,7 +1807,7 @@ describe('operator workspace flows', () => {
     const uskudar = within(dialog).getByRole('group', { name: 'Üsküdar' })
     fireEvent.click(within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }))
     fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Servis kapsamını kaydet' }),
+      within(dialog).getByRole('button', { name: 'Mahalleleri kaydet' }),
     )
 
     expect(await within(dialog).findByRole('alert')).toHaveTextContent(
@@ -1823,9 +1817,11 @@ describe('operator workspace flows', () => {
       within(uskudar).getByRole('checkbox', { name: 'Acıbadem' }),
     ).toBeChecked()
     fireEvent.click(
-      within(dialog).getByRole('button', { name: 'Servis kapsamını kaydet' }),
+      within(dialog).getByRole('button', { name: 'Mahalleleri kaydet' }),
     )
-    expect(await screen.findByText('Servis kapsamı kaydedildi.')).toBeVisible()
+    expect(
+      await screen.findByText('Servis mahalleleri kaydedildi.'),
+    ).toBeVisible()
     expect(coverageBody).toEqual({ neighborhoodIds: [101, 201] })
     expect(detailAttempts).toBe(2)
     expect(coverageAttempts).toBe(2)
@@ -1893,12 +1889,12 @@ describe('operator offerings partial load failures (#327)', () => {
     const calls = loadHandlers({ vehicles: 1 })
     renderRoute('/operator/offerings')
 
-    const fleet = await screen.findByRole('region', { name: 'Filo bilgileri' })
+    const fleet = await screen.findByRole('region', { name: 'Araçlar' })
     expect(
       await within(fleet).findByText('Araç bilgileri yüklenemedi'),
     ).toBeInTheDocument()
     const offerings = screen.getByRole('region', {
-      name: 'Paylaşılan hizmetler',
+      name: 'Servis teklifleri',
     })
     expect(
       await within(offerings).findByText('Sabah ve akşam servisi'),
@@ -1926,9 +1922,7 @@ describe('operator offerings partial load failures (#327)', () => {
     fireEvent.click(retry)
     // The button leaves while loading, so a second activation cannot fire again.
     fireEvent.click(retry)
-    expect(
-      screen.getByRole('heading', { name: 'Filo bilgileri' }),
-    ).toHaveFocus()
+    expect(screen.getByRole('heading', { name: 'Araçlar' })).toHaveFocus()
 
     expect(await within(fleet).findByText('34 ABC 123')).toBeInTheDocument()
     expect(screen.queryAllByRole('alert')).toHaveLength(0)
@@ -1946,15 +1940,15 @@ describe('operator offerings partial load failures (#327)', () => {
     renderRoute('/operator/offerings')
 
     const offerings = await screen.findByRole('region', {
-      name: 'Paylaşılan hizmetler',
+      name: 'Servis teklifleri',
     })
     expect(
-      await within(offerings).findByText('Okul bağlantıları yüklenemedi'),
+      await within(offerings).findByText('Okullar yüklenemedi'),
     ).toBeInTheDocument()
     expect(
-      await within(
-        screen.getByRole('region', { name: 'Filo bilgileri' }),
-      ).findByText('34 ABC 123'),
+      await within(screen.getByRole('region', { name: 'Araçlar' })).findByText(
+        '34 ABC 123',
+      ),
     ).toBeInTheDocument()
     expect(
       await within(offerings).findByText('Sabah ve akşam servisi'),
@@ -1973,7 +1967,7 @@ describe('operator offerings partial load failures (#327)', () => {
       within(offerings).getByRole('button', { name: 'Yeniden dene' }),
     )
     expect(
-      screen.getByRole('heading', { name: 'Paylaşılan hizmetler' }),
+      screen.getByRole('heading', { name: 'Servis teklifleri' }),
     ).toHaveFocus()
     expect(
       await screen.findByRole('button', { name: 'Teklif oluştur' }),
@@ -1988,9 +1982,9 @@ describe('operator offerings partial load failures (#327)', () => {
     const calls = loadHandlers({ vehicles: 2, offerings: 1 })
     renderRoute('/operator/offerings')
 
-    const fleet = await screen.findByRole('region', { name: 'Filo bilgileri' })
+    const fleet = await screen.findByRole('region', { name: 'Araçlar' })
     const offerings = screen.getByRole('region', {
-      name: 'Paylaşılan hizmetler',
+      name: 'Servis teklifleri',
     })
     expect(
       await within(offerings).findByText('Servis teklifleri yüklenemedi'),
@@ -2059,7 +2053,7 @@ describe('operator offerings partial load failures (#327)', () => {
     const notes = screen.getAllByText(/isteğe bağlıdır|zorunlu değildir/)
     expect(notes).toHaveLength(1)
     expect(notes[0]).toHaveTextContent(
-      'Araç ve servis teklifi eklemek isteğe bağlıdır. Bunlar olmadan da okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.',
+      'Araç ve servis teklifi eklemek isteğe bağlıdır. Bunlar olmadan da aramalarda yer alabilirsiniz.',
     )
     expect(heading.closest('header')).toContainElement(notes[0])
     expect(notes[0].closest('[role="alert"], [role="status"]')).toBeNull()

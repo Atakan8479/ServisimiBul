@@ -60,7 +60,7 @@ for (const width of [1440, 768, 390, 320]) {
     await page.goto(board)
     await page.getByRole('button', { name: 'Talepleri göster' }).click()
     await expect(
-      page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+      page.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
     ).toBeVisible()
 
     await expectBoardIsSound(page, tabs)

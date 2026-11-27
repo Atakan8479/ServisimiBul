@@ -403,9 +403,11 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .getByRole('group', { name: 'Üsküdar' })
         .getByRole('checkbox', { name: 'Acıbadem' })
         .check()
-      await operatorPage.getByRole('button', { name: 'Kapsamı kaydet' }).click()
+      await operatorPage
+        .getByRole('button', { name: 'Mahalleleri kaydet' })
+        .click()
       await expect(
-        operatorPage.getByText(/Hizmet kapsamı kaydedildi/),
+        operatorPage.getByText(/Hizmet mahalleleri kaydedildi/),
       ).toBeVisible()
     })
 
@@ -443,12 +445,12 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         }),
       ).toBeVisible()
       await expect(
-        publicPage.getByText('Servis ayrıntısı yayımlanmamış'),
+        publicPage.getByText('Servis bilgisi eklenmemiş'),
       ).toBeVisible()
       await expect(publicPage.getByText(operatorEmail)).toHaveCount(0)
       await expect(
         publicPage.getByText(
-          'Mesafe kademelerine göre azami tutarları inceleyin. Kesin ücret ve hizmet koşulları için işletmeciyle görüşün.',
+          'Tutarlar resmî azami ücrettir, kişisel fiyat teklifi değildir. Kesin ücret için işletmeciyle görüşün.',
         ),
       ).toBeVisible()
       await expect(publicPage.getByText('₺12.000,00')).toBeVisible()
@@ -460,18 +462,20 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
     await test.step('invalidate and restore publication through profile and coverage state', async () => {
       await operatorPage.goto('/operator/profile')
       await operatorPage
-        .getByRole('switch', { name: /Profil görünürlük tercihi/ })
+        .getByRole('switch', { name: /Profil görünürlüğü/ })
         .uncheck()
       await operatorPage
         .getByRole('button', { name: 'Değişiklikleri kaydet' })
         .click()
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
-        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+        publicPage.getByRole('heading', {
+          name: 'Eşleşen işletmeci bulunamadı',
+        }),
       ).toBeVisible()
 
       await operatorPage
-        .getByRole('switch', { name: /Profil görünürlük tercihi/ })
+        .getByRole('switch', { name: /Profil görünürlüğü/ })
         .check()
       await operatorPage
         .getByRole('button', { name: 'Değişiklikleri kaydet' })
@@ -490,10 +494,14 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         .click()
       await operatorPage.getByRole('checkbox', { name: 'Moda' }).uncheck()
       await operatorPage.getByRole('checkbox', { name: 'Acıbadem' }).uncheck()
-      await operatorPage.getByRole('button', { name: 'Kapsamı kaydet' }).click()
+      await operatorPage
+        .getByRole('button', { name: 'Mahalleleri kaydet' })
+        .click()
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
-        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+        publicPage.getByRole('heading', {
+          name: 'Eşleşen işletmeci bulunamadı',
+        }),
       ).toBeVisible()
 
       const operatorCsrf = await csrf(operatorPage)
@@ -526,18 +534,20 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(await contributes()).toBe(false)
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
-        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+        publicPage.getByRole('heading', {
+          name: 'Eşleşen işletmeci bulunamadı',
+        }),
       ).toBeVisible()
 
       await operatorPage.getByRole('button', { name: 'Etkinleştir' }).click()
       await expect(
-        operatorPage.getByText('Okul bağlantısı etkinleştirildi.'),
+        operatorPage.getByText('Okul hizmet listenizde etkinleştirildi.'),
       ).toBeVisible()
       expect(await contributes()).toBe(true)
 
       await operatorPage.getByRole('button', { name: 'Kaldır' }).click()
       await operatorPage
-        .getByRole('dialog', { name: 'Okul kapsamı kaldırılsın mı?' })
+        .getByRole('dialog', { name: 'Okul listenizden kaldırılsın mı?' })
         .getByRole('button', { name: 'Kaldır' })
         .click()
       await expect(
@@ -546,7 +556,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       expect(await contributes()).toBe(false)
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
-        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+        publicPage.getByRole('heading', {
+          name: 'Eşleşen işletmeci bulunamadı',
+        }),
       ).toBeVisible()
 
       await operatorPage
@@ -563,7 +575,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await operatorPage.getByRole('button', { name: 'Okulu ekle' }).click()
       operatorSchoolId = ((await (await created).json()) as { id: string }).id
       await operatorPage
-        .getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+        .getByRole('dialog', { name: 'Hizmet mahallelerini düzenle' })
         .getByRole('button', { name: 'Vazgeç' })
         .click()
       const operatorCsrf = await csrf(operatorPage)
@@ -1185,15 +1197,15 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         `/demands/${sharedDemandId}`,
         { width: 768, height: 1024 },
         operatorPage.getByRole('button', {
-          name: 'Bu talep için servis ekle',
+          name: 'Servis duyurusu ekle',
         }),
       )
       await operatorPage
-        .getByRole('button', { name: 'Bu talep için servis ekle' })
+        .getByRole('button', { name: 'Servis duyurusu ekle' })
         .click()
       await operatorPage.getByLabel('Sabah').uncheck()
       await operatorPage
-        .getByRole('button', { name: 'Servis bildirimini yayınla' })
+        .getByRole('button', { name: 'Servis duyurusunu yayınla' })
         .click()
       await expect(
         operatorPage.getByRole('alert').filter({
@@ -1552,17 +1564,19 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       const serviceReport = (await (
         await reportCreated
       ).json()) as ReportReceipt
-      await expect(parentPage.getByText('Bildirim alındı')).toBeVisible()
+      await expect(
+        parentPage.getByText('İçerik bildiriminiz alındı'),
+      ).toBeVisible()
       await expect(
         parentPage
-          .getByRole('region', { name: 'İşletmecilerin servis duyuruları' })
+          .getByRole('region', { name: 'Servis duyuruları' })
           .getByText('J03 Gerçek Servis'),
       ).toBeVisible()
 
       await parentPage.getByRole('button', { name: 'Karşılanmadı' }).click()
       await expect(
         parentPage.getByText(
-          'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+          'Bu duyurunun ihtiyacınızı karşılamadığını belirttiniz.',
         ),
       ).toBeVisible()
       for (const viewport of [
@@ -1575,7 +1589,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await parentPage.reload()
         await expect(
           parentPage.getByText(
-            'Bu bildirimin ihtiyacınızı karşılamadığını bildirdiniz.',
+            'Bu duyurunun ihtiyacınızı karşılamadığını belirttiniz.',
           ),
         ).toBeVisible()
         expect(
@@ -1607,12 +1621,12 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       await review.getByRole('button', { name: 'Kararı kaydet' }).click()
       await adminPage
         .getByRole('dialog', {
-          name: 'Servis bildirimini geri çek işlemi onaylansın mı?',
+          name: 'Servis duyurusunu geri çek işlemi onaylansın mı?',
         })
-        .getByRole('button', { name: 'Servis bildirimini geri çek' })
+        .getByRole('button', { name: 'Servis duyurusunu geri çek' })
         .click()
       await expect(
-        adminPage.getByText('Servis bildirimini geri çek işlemi kaydedildi.'),
+        adminPage.getByText('Servis duyurusunu geri çek işlemi kaydedildi.'),
       ).toBeVisible()
 
       await adminPage.reload()
@@ -1649,7 +1663,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
 
       await parentPage.reload()
       await expect(
-        parentPage.getByRole('heading', { name: 'Henüz servis bildirimi yok' }),
+        parentPage.getByRole('heading', { name: 'Henüz servis duyurusu yok' }),
       ).toBeVisible()
       const republished = await operatorPage.request.post(responsePath, {
         headers: { [operatorCsrf.headerName]: operatorCsrf.token },
@@ -1846,7 +1860,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(skipLink).toBeAttached()
         await expect(
           mobilePage.getByRole('heading', {
-            name: 'Okul servisini birlikte bulalım.',
+            name: 'Okul servisinizi bulun.',
           }),
         ).toBeVisible()
         await mobilePage.bringToFront()
@@ -1865,7 +1879,7 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
         await expect(
           mobilePage
             .locator('#public-navigation')
-            .getByRole('link', { name: 'Giriş Yap' }),
+            .getByRole('link', { name: 'Giriş yap' }),
         ).toBeVisible()
         await expect(mobilePage.locator('#public-navigation')).toHaveCSS(
           'opacity',
@@ -2029,7 +2043,9 @@ test('runs the approved MVP journey against the real backend and PostgreSQL', as
       )
       await search(publicPage, 'Üsküdar', 'Acıbadem')
       await expect(
-        publicPage.getByRole('heading', { name: 'Henüz bir eşleşme yok' }),
+        publicPage.getByRole('heading', {
+          name: 'Eşleşen işletmeci bulunamadı',
+        }),
       ).toBeVisible()
 
       const afterSuspension = (await (

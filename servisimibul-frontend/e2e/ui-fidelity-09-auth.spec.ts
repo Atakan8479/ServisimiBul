@@ -12,7 +12,7 @@ const routes = [
   {
     id: 'A04',
     path: '/operator/register',
-    heading: 'İşletmenizi tanıtalım.',
+    heading: 'İşletmeci hesabı oluşturun',
   },
   {
     id: 'A05',

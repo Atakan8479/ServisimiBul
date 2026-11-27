@@ -49,9 +49,11 @@ for (const viewport of viewports) {
     const row = page.locator('article', { hasText: 'Örnek Okulu' })
     const edit = row.getByRole('button', { name: 'Düzenle', exact: true })
     await edit.click()
-    const editor = page.getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+    const editor = page.getByRole('dialog', {
+      name: 'Hizmet mahallelerini düzenle',
+    })
     await expect(
-      editor.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
+      editor.getByRole('heading', { name: 'Hizmet mahallelerini düzenle' }),
     ).toBeFocused()
     await expect(editor.getByText('Seçili: Moda')).toBeVisible()
     await assertAccessibleAndContained(page)
@@ -63,7 +65,7 @@ for (const viewport of viewports) {
     const removeButton = row.getByRole('button', { name: 'Kaldır' })
     await removeButton.click()
     const confirm = page.getByRole('dialog', {
-      name: 'Okul kapsamı kaldırılsın mı?',
+      name: 'Okul listenizden kaldırılsın mı?',
     })
     await expect(confirm.getByRole('button', { name: 'Vazgeç' })).toBeFocused()
     await assertAccessibleAndContained(page)
@@ -72,7 +74,7 @@ for (const viewport of viewports) {
     await expect(removeButton).toBeFocused()
 
     await page.getByRole('button', { name: 'Okul ekle' }).click()
-    const add = page.getByRole('dialog', { name: 'Hizmet kapsamına okul ekle' })
+    const add = page.getByRole('dialog', { name: 'Okul ekle' })
     await expect(add.getByLabel('Okul ara')).toBeFocused()
     await assertAccessibleAndContained(page)
     await capture(page, `state-O03-add-${viewport.name}`, viewport.name)
@@ -92,15 +94,17 @@ test('O03 adds a school, saves cross-district coverage and reopens it', async ({
   ).toBeVisible()
 
   await page.getByRole('button', { name: 'Okul ekle' }).click()
-  const add = page.getByRole('dialog', { name: 'Hizmet kapsamına okul ekle' })
+  const add = page.getByRole('dialog', { name: 'Okul ekle' })
   await add
     .getByLabel('Aktif okul')
     .selectOption({ label: 'Örnek Okulu — Kadıköy' })
   await add.getByRole('button', { name: 'Okulu ekle' }).click()
 
-  const editor = page.getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+  const editor = page.getByRole('dialog', {
+    name: 'Hizmet mahallelerini düzenle',
+  })
   await expect(
-    editor.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
+    editor.getByRole('heading', { name: 'Hizmet mahallelerini düzenle' }),
   ).toBeFocused()
   for (const [district, neighborhood] of [
     ['Kadıköy', 'Moda'],
@@ -110,9 +114,9 @@ test('O03 adds a school, saves cross-district coverage and reopens it', async ({
     await group.getByRole('button', { name: district }).click()
     await group.getByRole('checkbox', { name: neighborhood }).check()
   }
-  await editor.getByRole('button', { name: 'Kapsamı kaydet' }).click()
+  await editor.getByRole('button', { name: 'Mahalleleri kaydet' }).click()
   await expect(editor).toHaveCount(0)
-  await expect(page.getByText(/Hizmet kapsamı kaydedildi/)).toBeVisible()
+  await expect(page.getByText(/Hizmet mahalleleri kaydedildi/)).toBeVisible()
   expect(state.generalCoverage).toEqual([101, 201])
 
   const row = page.locator('article', { hasText: 'Örnek Okulu' })
@@ -144,7 +148,9 @@ test('O03 activation changes O01 readiness and keeps keyboard focus', async ({
 
   await page.goto('/operator/schools')
   await activate.click()
-  await expect(page.getByText('Okul bağlantısı etkinleştirildi.')).toBeVisible()
+  await expect(
+    page.getByText('Okul hizmet listenizde etkinleştirildi.'),
+  ).toBeVisible()
   await page.goto('/operator')
   await expect(ready).toBeVisible()
 })
@@ -176,7 +182,7 @@ test('O03 confirms removal, survives Escape and reports failures', async ({
   await page.goto('/operator/schools')
   await page.getByRole('button', { name: 'Kaldır' }).click()
   const confirm = page.getByRole('dialog', {
-    name: 'Okul kapsamı kaldırılsın mı?',
+    name: 'Okul listenizden kaldırılsın mı?',
   })
   await confirm.getByRole('button', { name: 'Kaldır' }).click()
   await expect(confirm.getByRole('alert')).toHaveText(
@@ -194,7 +200,7 @@ test('O03 confirms removal, survives Escape and reports failures', async ({
   release()
   await expect(confirm).toHaveCount(0)
   await expect(
-    page.getByText('Okul bağlantısı ve okula özel kapsam kaldırıldı.'),
+    page.getByText('Okul ve hizmet mahalleleri listenizden kaldırıldı.'),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Okul ekle' })).toBeFocused()
   expect(state.operatorSchoolAdded).toBe(false)
@@ -243,13 +249,15 @@ test('O03 add dialog stays usable with a shrunken viewport', async ({
   await prepare(page, approvedState())
   await page.goto('/operator/schools')
   await page.getByRole('button', { name: 'Düzenle', exact: true }).click()
-  const editor = page.getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+  const editor = page.getByRole('dialog', {
+    name: 'Hizmet mahallelerini düzenle',
+  })
   const box = await editor.boundingBox()
   expect(box).not.toBeNull()
   expect(box!.y).toBeGreaterThanOrEqual(0)
   expect(box!.y + box!.height).toBeLessThanOrEqual(420)
   await expect(
-    editor.getByRole('button', { name: 'Kapsamı kaydet' }),
+    editor.getByRole('button', { name: 'Mahalleleri kaydet' }),
   ).toBeInViewport({ ratio: 1 })
 })
 
@@ -270,7 +278,9 @@ test('O03 coverage editor stays usable at 320px with many selections', async ({
   await page.goto('/operator/schools')
   const opener = page.getByRole('button', { name: 'Düzenle', exact: true })
   await opener.click()
-  const editor = page.getByRole('dialog', { name: 'Okul kapsamını düzenle' })
+  const editor = page.getByRole('dialog', {
+    name: 'Hizmet mahallelerini düzenle',
+  })
   const kadikoy = editor.getByRole('group', { name: 'Kadıköy' })
   await kadikoy.getByRole('button', { name: 'Kadıköy' }).click()
   await kadikoy.getByRole('button', { name: 'Bu ilçenin tümünü seç' }).click()
@@ -285,7 +295,7 @@ test('O03 coverage editor stays usable at 320px with many selections', async ({
   await last.scrollIntoViewIfNeeded()
   await expect(last).toBeInViewport()
   await expect(
-    editor.getByRole('button', { name: 'Kapsamı kaydet' }),
+    editor.getByRole('button', { name: 'Mahalleleri kaydet' }),
   ).toBeInViewport({ ratio: 1 })
   await assertAccessibleAndContained(page)
 

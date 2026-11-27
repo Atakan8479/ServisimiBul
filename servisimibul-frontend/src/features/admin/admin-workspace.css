@@ -61,13 +61,6 @@
   max-width: 82rem;
 }
 
-.admin-workspace .moderation-human-note {
-  max-width: none;
-  color: var(--color-text);
-  font-size: 0.88rem;
-  font-weight: 700;
-}
-
 .admin-workspace .moderation-summary {
   display: grid;
   grid-template-columns: minmax(9rem, 11rem) minmax(9rem, 11rem) minmax(0, 1fr);

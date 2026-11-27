@@ -56,9 +56,7 @@ export function EmailChangePage() {
         }
         return
       }
-      setFormError(
-        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
-      )
+      setFormError('Bağlantı kurulamadı. Tekrar deneyin.')
     }
   }
 
@@ -66,7 +64,6 @@ export function EmailChangePage() {
     <section className="account-password-page">
       <header className="account-settings-header">
         <div>
-          <p className="account-password-eyebrow">Güvenlik</p>
           <h1>E-posta adresini değiştir</h1>
           <p>
             Yeni adres doğrulanana kadar mevcut e-postanız kullanılmaya devam
@@ -179,7 +176,7 @@ export function EmailChangeConfirmationPage() {
       setError(
         caught instanceof ApiError
           ? caught.problem.detail
-          : 'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+          : 'Bağlantı kurulamadı. Tekrar deneyin.',
       )
     } finally {
       setPending(false)
@@ -190,7 +187,6 @@ export function EmailChangeConfirmationPage() {
     <section className="account-password-page account-email-confirmation">
       <header className="account-settings-header">
         <div>
-          <p className="account-password-eyebrow">Hesap güvenliği</p>
           <h1>E-posta değişikliğini doğrula</h1>
           <p>
             Bu işlem yeni adresi hesabınıza bağlar ve açık oturumları kapatır.

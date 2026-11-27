@@ -807,24 +807,6 @@
   width: min(76rem, 100%);
 }
 
-.operator-schools-page .operator-page-header .operator-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  color: var(--teal-700);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.operator-eyebrow::before {
-  width: 1.15rem;
-  height: 2px;
-  background: var(--yellow-500);
-  content: '';
-}
-
 .operator-schools-page .operator-school-add {
   flex: 0 0 auto;
   min-height: 3rem;

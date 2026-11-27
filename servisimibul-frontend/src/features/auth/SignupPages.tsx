@@ -18,8 +18,8 @@ export function SignupChoicePage() {
 
   return (
     <AuthFrame
-      title="Nasıl katılmak istersiniz?"
-      subtitle="İhtiyacınıza uygun hesap türünü seçin. Servis aramak için hesap oluşturmanız gerekmez."
+      title="Hesap türünüzü seçin"
+      subtitle="Servis aramak için hesap gerekmez."
     >
       <div className="account-type-options">
         <Link

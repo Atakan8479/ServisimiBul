@@ -34,7 +34,7 @@ for (const viewport of [
     expect(m.principles.bottom).toBeLessThan(m.image.bottom)
     // First-screen CTA stays visible.
     await expect(
-      page.getByRole('link', { name: 'Okulunu seç' }),
+      page.getByRole('link', { name: 'Okulunuzu seçin' }),
     ).toBeInViewport({
       ratio: 1,
     })
@@ -59,7 +59,7 @@ for (const viewport of [
     expect(m.lede.left).toBeGreaterThanOrEqual(0)
     expect(m.overflow).toBeLessThanOrEqual(0)
     await expect(
-      page.getByRole('link', { name: 'Okulunu seç' }),
+      page.getByRole('link', { name: 'Okulunuzu seçin' }),
     ).toBeInViewport({
       ratio: 1,
     })
@@ -77,9 +77,11 @@ test('hero CTAs keep their keyboard order', async ({ page }) => {
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  await page.getByRole('link', { name: 'Okulunu seç' }).focus()
+  await page.getByRole('link', { name: 'Okulunuzu seçin' }).focus()
   await page.keyboard.press('Tab')
   await expect(
-    page.getByRole('link', { name: 'Talep panosunu keşfet' }),
+    page
+      .getByRole('region', { name: 'Okul servisinizi bulun.' })
+      .getByRole('link', { name: 'Talep panosuna git' }),
   ).toBeFocused()
 })

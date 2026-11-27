@@ -83,7 +83,7 @@ export function ErasureRequestPage() {
         setLoadError(
           error instanceof ApiError
             ? error.problem.detail
-            : 'Başvurular yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.',
+            : 'Başvurular yüklenemedi. Tekrar deneyin.',
         )
       })
     return () => controller.abort()
@@ -129,7 +129,7 @@ export function ErasureRequestPage() {
       setSubmitError(
         error instanceof ApiError
           ? error.problem.detail
-          : 'Başvuru gönderilemedi. Bağlantınızı kontrol edip tekrar deneyin.',
+          : 'Başvuru gönderilemedi. Tekrar deneyin.',
       )
     } finally {
       setSubmitting(false)
@@ -204,7 +204,6 @@ export function ErasureRequestPage() {
           <div className="erasure-history-heading">
             <div>
               <h2 id="erasure-history-title">Başvuru durumu</h2>
-              <p>En yeni başvuru önce gösterilir.</p>
             </div>
             {loadError && (
               <Button

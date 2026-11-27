@@ -137,9 +137,7 @@ export function AdminTariffsPage() {
     <section className="workspace-page admin-page tariff-admin-page">
       <header className="admin-page-header admin-operator-header admin-detail-header">
         <div>
-          <p className="admin-eyebrow">Yönetim paneli</p>
           <h1>UKOME tarife yönetimi</h1>
-          <p>Tarife verisini inceleyin, JSON'u doğrulayın ve önizleyin.</p>
         </div>
         {published && (
           <span className="tariff-version-chip">
@@ -380,6 +378,6 @@ function handleSession(
   setError(
     reason instanceof ApiError
       ? reason.problem.detail
-      : 'Tarife işlemi tamamlanamadı. Lütfen tekrar deneyin.',
+      : 'Tarife işlemi tamamlanamadı. Tekrar deneyin.',
   )
 }

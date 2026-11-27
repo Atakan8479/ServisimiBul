@@ -889,96 +889,6 @@ a:focus-visible {
   box-shadow: 0 2rem 4rem rgba(16, 40, 67, 0.19);
 }
 
-.discovery-hero-visual figcaption {
-  position: absolute;
-  right: 1rem;
-  bottom: 1rem;
-  left: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem;
-  border-radius: var(--radius-medium);
-  background: rgba(10, 28, 48, 0.9);
-  color: var(--neutral-0);
-  box-shadow: 0 0.8rem 2rem rgba(0, 0, 0, 0.24);
-}
-
-.discovery-hero-visual figcaption > span:last-child {
-  display: grid;
-  gap: 0.2rem;
-}
-
-.discovery-hero-visual figcaption strong {
-  font-size: 0.9rem;
-}
-
-.discovery-hero-visual figcaption small {
-  color: #c7d7e2;
-  font-size: 0.78rem;
-  line-height: 1.45;
-}
-
-.discovery-caption-mark,
-.discovery-hero-float > span {
-  flex: 0 0 auto;
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 50%;
-  background: var(--yellow-500);
-}
-
-.discovery-caption-mark::after,
-.discovery-hero-float > span::after {
-  display: block;
-  width: 0.45rem;
-  height: 0.45rem;
-  margin: 0.7rem auto 0;
-  border: 2px solid var(--navy-900);
-  border-radius: 50%;
-  content: '';
-}
-
-.discovery-hero-float {
-  position: absolute;
-  z-index: 2;
-  top: 22%;
-  left: -1.5rem;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.7rem 0.9rem;
-  border-radius: var(--radius-small);
-  background: var(--neutral-0);
-  color: var(--navy-900);
-  box-shadow: 0 1rem 2.4rem rgba(16, 40, 67, 0.18);
-}
-
-.discovery-hero-float > span {
-  width: 2rem;
-  height: 2rem;
-  background: var(--teal-100);
-}
-
-.discovery-hero-float > span::after {
-  margin-top: 0.6rem;
-  border-color: var(--teal-700);
-}
-
-.discovery-hero-float div {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.discovery-hero-float strong {
-  font-size: 0.78rem;
-}
-
-.discovery-hero-float small {
-  color: var(--color-muted);
-  font-size: 0.68rem;
-}
-
 .form-card.discovery-search {
   position: relative;
   z-index: 2;
@@ -1255,6 +1165,11 @@ a:focus-visible {
   border-top: 1px solid var(--color-border);
 }
 
+/* Takes the gap the removed contact note used to provide. */
+.pickup-search > .primary-button {
+  margin-top: 1.25rem;
+}
+
 .discovery-demand-promo {
   display: grid;
   width: min(72rem, calc(100% - 2rem));
@@ -1335,14 +1250,6 @@ a:focus-visible {
   to {
     opacity: 1;
   }
-}
-
-.discovery-note {
-  max-width: 60ch;
-  margin: 1.25rem 0;
-  color: var(--color-muted);
-  font-size: 0.95rem;
-  line-height: 1.55;
 }
 
 .discovery-load-error {
@@ -5928,17 +5835,6 @@ dialog[data-closing] {
 
   .discovery-hero-visual {
     padding-left: 0;
-  }
-
-  .discovery-hero-float {
-    top: -1rem;
-    left: 0.75rem;
-  }
-
-  .discovery-hero-visual figcaption {
-    right: 0.75rem;
-    bottom: 0.75rem;
-    left: 0.75rem;
   }
 
   .form-card.discovery-search {

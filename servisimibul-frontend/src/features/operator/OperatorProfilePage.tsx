@@ -47,8 +47,7 @@ const statusContent: Record<ApprovalStatus, { label: string; detail: string }> =
     },
     APPROVED: {
       label: 'Onaylandı',
-      detail:
-        'Geçerli görünürlük koşulları sağlandığında profiliniz bulunabilir.',
+      detail: 'Diğer adımlar tamamlandığında profiliniz aramalarda görünür.',
     },
   }
 
@@ -205,7 +204,6 @@ export function OperatorProfilePage() {
           <div className="operator-profile-card-header">
             <div>
               <h2>İşletme bilgileri</h2>
-              <p>Aramalarda kullanılacak güncel profil bilgilerinizi girin.</p>
             </div>
             {user.operatorApprovalRequired ? (
               <StatusBadge
@@ -293,11 +291,8 @@ export function OperatorProfilePage() {
 
           <label className="operator-profile-visibility">
             <span>
-              <strong>Profil görünürlük tercihi</strong>
-              <small>
-                Kapalıyken profiliniz aramalarda görünmez. Açık olması tek
-                başına yayımlanacağınız anlamına gelmez.
-              </small>
+              <strong>Profil görünürlüğü</strong>
+              <small>Kapalıyken profiliniz aramalarda görünmez.</small>
             </span>
             <span className="operator-profile-visibility-control">
               <span
@@ -318,13 +313,13 @@ export function OperatorProfilePage() {
           <footer className="operator-profile-footer">
             <div className="operator-profile-guidance">
               {user.operatorApprovalRequired && !profileEditable
-                ? 'İnceleme tamamlanana kadar başvuru bilgileri salt okunurdur.'
+                ? 'İnceleme bitene kadar bilgilerinizi değiştiremezsiniz.'
                 : user.operatorApprovalRequired &&
                     isDirty &&
                     (profile.approvalStatus === 'DRAFT' ||
                       profile.approvalStatus === 'CHANGES_REQUESTED')
                   ? 'Başvuruyu göndermeden önce değişiklikleri kaydedin.'
-                  : 'Aramalarda görünmek için hesap, profil, okul ve kapsam koşullarının da sağlanması gerekir.'}
+                  : 'Aramalarda görünmek için Genel bakıştaki adımları da tamamlayın.'}
             </div>
             <div className="button-row">
               {profileEditable && (
@@ -372,7 +367,7 @@ function toForm(profile: OperatorProfile): ProfileForm {
 function messageFor(error: unknown): string {
   return error instanceof ApiError
     ? error.problem.detail
-    : 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.'
+    : 'İşlem tamamlanamadı. Tekrar deneyin.'
 }
 
 function PageLoading({ label }: { label: string }) {

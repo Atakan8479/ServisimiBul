@@ -18,7 +18,6 @@ const roleCopy = {
   parent: {
     eyebrow: 'Veli hesabı',
     title: 'Bildirimler',
-    detail: 'Talep ve servis gelişmelerini burada görün.',
     account: 'veli hesabı',
     back: 'Talep panosuna dön',
     backTo: '/demands',
@@ -26,7 +25,6 @@ const roleCopy = {
   operator: {
     eyebrow: 'İşletmeci paneli',
     title: 'Bildirimler',
-    detail: 'Servis talepleri ve hesabınızla ilgili gelişmeleri burada görün.',
     account: 'işletmeci hesabı',
     back: 'Panele dön',
     backTo: '/operator',
@@ -34,7 +32,6 @@ const roleCopy = {
   admin: {
     eyebrow: 'Yönetim paneli',
     title: 'Yönetim bildirimleri',
-    detail: 'İçerik bildirimleri ve yönetim gelişmelerini burada görün.',
     account: 'yönetici hesabı',
     back: 'Panele dön',
     backTo: '/admin/applications',
@@ -74,7 +71,7 @@ const readFilters: Array<{
   value: NotificationReadState
   label: string
   summary: string
-  empty: { title: string; detail: string }
+  empty: { title: string; detail?: string }
 }> = [
   {
     value: 'ALL',
@@ -82,7 +79,6 @@ const readFilters: Array<{
     summary: 'toplam bildirim',
     empty: {
       title: 'Henüz bildiriminiz yok',
-      detail: 'Yeni bir gelişme olduğunda burada göreceksiniz.',
     },
   },
   {
@@ -91,7 +87,6 @@ const readFilters: Array<{
     summary: 'okunmamış bildirim listeleniyor',
     empty: {
       title: 'Okunmamış bildiriminiz yok',
-      detail: 'Tüm bildirimlerinizi okudunuz.',
     },
   },
   {
@@ -100,7 +95,6 @@ const readFilters: Array<{
     summary: 'okunmuş bildirim listeleniyor',
     empty: {
       title: 'Okunmuş bildiriminiz yok',
-      detail: 'Okuduğunuz bildirimler burada listelenir.',
     },
   },
 ]
@@ -198,7 +192,7 @@ export function NotificationCenterPage() {
         setError(
           failure instanceof ApiError
             ? failure.problem.detail
-            : 'Bildirimler yüklenemedi. Lütfen tekrar deneyin.',
+            : 'Bildirimler yüklenemedi. Tekrar deneyin.',
         )
       } finally {
         if (request === listRequest.current) {
@@ -307,7 +301,7 @@ export function NotificationCenterPage() {
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
-          : 'Bildirimler işaretlenemedi. Lütfen tekrar deneyin.',
+          : 'Bildirimler işaretlenemedi. Tekrar deneyin.',
       )
     } finally {
       mutationLock.current = false
@@ -347,7 +341,7 @@ export function NotificationCenterPage() {
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
-          : 'Bildirim işaretlenemedi. Lütfen tekrar deneyin.',
+          : 'Bildirim işaretlenemedi. Tekrar deneyin.',
       )
     } finally {
       mutationLock.current = false
@@ -370,7 +364,7 @@ export function NotificationCenterPage() {
       setError(
         failure instanceof ApiError
           ? failure.problem.detail
-          : 'Bildirim açılamadı. Lütfen tekrar deneyin.',
+          : 'Bildirim açılamadı. Tekrar deneyin.',
       )
       mutationLock.current = false
       setOpeningId(undefined)
@@ -383,7 +377,6 @@ export function NotificationCenterPage() {
         <div>
           <p className="notification-eyebrow">{copy.eyebrow}</p>
           <h1>{copy.title}</h1>
-          <p>{copy.detail}</p>
         </div>
         {unreadCount === 0 && !!result?.totalElements && (
           <StatusBadge tone="success">Hepsi okundu</StatusBadge>

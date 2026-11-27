@@ -13,7 +13,7 @@ const operatorPassword = 'ROLE01-operator-password'
 const neighborhoodId = 340101
 
 const publishHeading = 'Bu konuma servis sunuyor musunuz?'
-const publishButton = 'Bu talep için servis ekle'
+const publishButton = 'Servis duyurusu ekle'
 const joinButton = 'Benim de ihtiyacım var'
 const commentButton = 'Yorum yaz'
 const commentText = 'ROLE-01 herkese açık yorum.'
@@ -305,7 +305,7 @@ test('ROLE-01 shows only the actions each real role may take', async ({
         await page.goto(demandPath)
         await expectPublicContent(page)
         await expect(
-          page.getByText(/işletme başvurunuzun yönetici tarafından/),
+          page.getByText(/işletmeci başvurunuzun yönetici tarafından/),
         ).toBeVisible()
         await expect(
           page.getByRole('link', { name: 'Başvuru durumunu görüntüle' }),

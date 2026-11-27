@@ -196,7 +196,7 @@ test('route changes restore page context and mobile controls meet the touch targ
 
   await page.getByRole('button', { name: 'Düzenle', exact: true }).click()
   await expect(
-    page.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
+    page.getByRole('heading', { name: 'Hizmet mahallelerini düzenle' }),
   ).toBeFocused()
   await page.getByRole('button', { name: 'Kadıköy' }).click()
   await expect(page.getByRole('checkbox', { name: 'Moda' })).toBeVisible()
@@ -312,7 +312,7 @@ test('reduced-motion mode removes decorative and page-transition motion', async 
     .selectOption({ label: 'Örnek Okulu — Kadıköy' })
   await page.getByRole('button', { name: 'Okulu ekle' }).click()
   await expect(
-    page.getByRole('heading', { name: 'Okul kapsamını düzenle' }),
+    page.getByRole('heading', { name: 'Hizmet mahallelerini düzenle' }),
   ).toBeFocused()
   expect(
     await page.evaluate(

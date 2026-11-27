@@ -103,9 +103,7 @@ export function PasswordChangePage() {
         }
         return
       }
-      setFormError(
-        'Bağlantı kurulamadı. Bağlantınızı kontrol edip tekrar deneyin.',
-      )
+      setFormError('Bağlantı kurulamadı. Tekrar deneyin.')
     }
   }
 
@@ -113,9 +111,7 @@ export function PasswordChangePage() {
     <section className="account-password-page">
       <header className="account-settings-header">
         <div>
-          <p className="account-password-eyebrow">Güvenlik</p>
           <h1>Şifreyi değiştir</h1>
-          <p>Mevcut şifrenizi doğrulayın ve yeni şifrenizi iki kez girin.</p>
         </div>
         <StatusBadge tone="info">
           {isOperator ? 'İşletmeci hesabı' : 'Veli hesabı'}
@@ -142,7 +138,7 @@ export function PasswordChangePage() {
           </FormField>
           <FormField
             error={errors.newPassword?.message}
-            hint="12–64 karakter; UTF-8 olarak en fazla 72 bayt."
+            hint="12–64 karakter; boşluk kullanabilirsiniz."
             htmlFor="new-password"
             label="Yeni şifre"
           >

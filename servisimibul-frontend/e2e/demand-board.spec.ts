@@ -56,7 +56,7 @@ test('parent keeps an edited academic year through registration, login and refre
   ).toBeVisible()
 
   await expect(
-    page.getByRole('heading', { name: 'Görünür servis bulunamadı' }),
+    page.getByRole('heading', { name: 'Eşleşen servis bulunamadı' }),
   ).toBeVisible()
   await page.getByRole('link', { name: 'Yeni talep oluştur' }).first().click()
   await expect(
@@ -206,13 +206,11 @@ test('eligible operator publishes and withdraws a demand-specific service respon
     page.getByRole('group', { name: 'Hangi yönlerde servis sunuyorsunuz?' }),
   ).toBeVisible()
   await page.getByLabel(/^Öğleden sonra/).check()
-  await page.getByRole('button', { name: 'Servis bildirimini yayınla' }).click()
+  await page.getByRole('button', { name: 'Servis duyurusunu yayınla' }).click()
 
-  await expect(
-    page.getByText('Servis bildiriminiz velilere hemen yayınlandı.'),
-  ).toBeVisible()
+  await expect(page.getByText('Servis duyurunuz yayınlandı.')).toBeVisible()
   await expect(page.getByText('Moda Öğrenci Servisi')).toBeVisible()
-  await expect(page.getByText('Bildiriminiz yayında')).toBeVisible()
+  await expect(page.getByText('Duyurunuz yayında')).toBeVisible()
   expect(state.serviceResponse).toMatchObject({
     status: 'ACTIVE',
     offersMorning: true,
@@ -220,10 +218,10 @@ test('eligible operator publishes and withdraws a demand-specific service respon
     publicationVersion: 1,
   })
 
-  await page.getByRole('button', { name: 'Bildirimi geri çek' }).click()
-  await expect(page.getByText(/Servis bildiriminiz geri çekildi/)).toBeVisible()
+  await page.getByRole('button', { name: 'Duyuruyu geri çek' }).click()
+  await expect(page.getByText(/Servis duyurunuz geri çekildi/)).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Henüz servis bildirimi yok' }),
+    page.getByRole('heading', { name: 'Henüz servis duyurusu yok' }),
   ).toBeVisible()
   expect(state.serviceResponse?.status).toBe('WITHDRAWN')
 })
@@ -263,7 +261,7 @@ test('service publish errors stay with the form at supported widths', async ({
   await page.getByRole('button', { name: 'Giriş yap' }).click()
   const form = page.locator('.demand-service-response-form')
   await expect(form).toBeVisible()
-  await page.getByRole('button', { name: 'Servis bildirimini yayınla' }).click()
+  await page.getByRole('button', { name: 'Servis duyurusunu yayınla' }).click()
 
   const alert = page.getByRole('alert')
   await expect(alert).toBeFocused()
@@ -316,7 +314,7 @@ test('failed service withdrawal stays actionable on mobile', async ({
         type: 'about:blank',
         title: 'Internal Server Error',
         status: 500,
-        detail: 'Servis bildirimi geri çekilemedi.',
+        detail: 'Servis duyurusu geri çekilemedi.',
       }),
       contentType: 'application/problem+json',
       status: 500,
@@ -328,10 +326,10 @@ test('failed service withdrawal stays actionable on mobile', async ({
   await page.getByLabel('E-posta').fill('operator@example.com')
   await page.getByLabel('Şifre').fill('operator password')
   await page.getByRole('button', { name: 'Giriş yap' }).click()
-  await page.getByRole('button', { name: 'Servis bildirimini yayınla' }).click()
+  await page.getByRole('button', { name: 'Servis duyurusunu yayınla' }).click()
 
   const withdrawal = page.locator('.demand-service-owned')
-  await withdrawal.getByRole('button', { name: 'Bildirimi geri çek' }).click()
+  await withdrawal.getByRole('button', { name: 'Duyuruyu geri çek' }).click()
   const alert = page.getByRole('alert')
   await expect(alert).toBeFocused()
   await expect(alert).toHaveText('İşlem tamamlanamadı. Tekrar deneyin.')
@@ -364,8 +362,8 @@ test('failed service withdrawal stays actionable on mobile', async ({
     .analyze()
   expect(accessibility.violations).toEqual([])
 
-  await withdrawal.getByRole('button', { name: 'Bildirimi geri çek' }).click()
-  await expect(page.getByText(/Servis bildiriminiz geri çekildi/)).toBeVisible()
+  await withdrawal.getByRole('button', { name: 'Duyuruyu geri çek' }).click()
+  await expect(page.getByText(/Servis duyurunuz geri çekildi/)).toBeVisible()
   expect(withdrawalAttempts).toBe(2)
   expect(state.serviceResponse?.status).toBe('WITHDRAWN')
 })

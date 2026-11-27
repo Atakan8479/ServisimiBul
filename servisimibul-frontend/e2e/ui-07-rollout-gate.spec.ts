@@ -30,11 +30,11 @@ interface Screen {
 }
 
 const publicScreens: Screen[] = [
-  { id: 'P01', path: '/', heading: 'Okul servisini birlikte bulalım.' },
+  { id: 'P01', path: '/', heading: 'Okul servisinizi bulun.' },
   {
     id: 'P02',
     path: '/',
-    heading: 'Okul servisini birlikte bulalım.',
+    heading: 'Okul servisinizi bulun.',
     marker: (page) =>
       page.getByRole('heading', { name: '1 işletmeci bulundu' }),
     reach: async (page) => {
@@ -52,7 +52,7 @@ const publicScreens: Screen[] = [
   {
     id: 'P03',
     path: '/',
-    heading: 'Okul servisini birlikte bulalım.',
+    heading: 'Okul servisinizi bulun.',
     marker: (page) =>
       page.getByRole('region', { name: 'Mesafeye göre aylık resmî ücretler' }),
     reach: async (page) => {
@@ -77,13 +77,13 @@ const publicScreens: Screen[] = [
     heading: 'Örnek Okulu',
     marker: (page) => page.getByRole('heading', { name: 'Yorumlar' }),
   },
-  { id: 'A01', path: '/register', heading: 'Nasıl katılmak istersiniz?' },
+  { id: 'A01', path: '/register', heading: 'Hesap türünüzü seçin' },
   { id: 'A02', path: '/parent/register', heading: 'Veli hesabı oluşturun' },
   { id: 'A03', path: '/parent/login', heading: 'Giriş yap' },
   {
     id: 'A04',
     path: '/operator/register',
-    heading: 'İşletmenizi tanıtalım.',
+    heading: 'İşletmeci hesabı oluşturun',
   },
   {
     id: 'A05',

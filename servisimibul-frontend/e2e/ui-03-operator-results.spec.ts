@@ -40,9 +40,9 @@ for (const viewport of viewports) {
     await expect(
       page.getByRole('heading', { name: 'Bağımsız servis işletmecisi' }),
     ).toBeVisible()
-    await expect(page.getByText('Servis ayrıntısı yayımlanmamış')).toBeVisible()
+    await expect(page.getByText('Servis bilgisi eklenmemiş')).toBeVisible()
     await expect(
-      page.getByText(/kesin adres, güzergâh, güncel kapasite veya fiyat/),
+      page.getByText(/Listelenmek servis garantisi değildir/),
     ).toBeVisible()
     const resultHeading = page.getByRole('heading', {
       name: '1 işletmeci bulundu',
@@ -52,7 +52,7 @@ for (const viewport of viewports) {
     if (viewport.width <= 960) {
       const searchContext = page.locator('.discovery-context-disclosure')
       await expect(searchContext).toBeVisible()
-      await searchContext.getByText('Arama ölçütlerini göster').click()
+      await searchContext.getByText('Filtreleri göster').click()
       await expect(searchContext.getByText('Örnek Okulu')).toBeVisible()
       await expect(searchContext.getByText('Üsküdar / Acıbadem')).toBeVisible()
     } else {

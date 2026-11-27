@@ -12,8 +12,8 @@ const viewports = [
 const footerLinks = [
   ['Ana sayfa', '/'],
   ['Talep panosu', '/demands'],
-  ['Giriş Yap', '/login'],
-  ['Kayıt Ol', '/register'],
+  ['Giriş yap', '/login'],
+  ['Kayıt ol', '/register'],
   ['Gizlilik ve kişisel veriler', '/privacy/notice'],
   ['Kullanım koşulları', '/terms'],
   ['Kişisel veri başvuru yolu', '/privacy/requests'],
@@ -28,7 +28,7 @@ for (const viewport of viewports) {
     await page.goto('/')
 
     await expect(
-      page.getByRole('heading', { name: 'Okul servisini birlikte bulalım.' }),
+      page.getByRole('heading', { name: 'Okul servisinizi bulun.' }),
     ).toBeVisible()
     await expect(
       page.getByRole('heading', { name: 'Üç adımda servis keşfi' }),

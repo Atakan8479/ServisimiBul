@@ -269,12 +269,11 @@ export function OperatorOfferingsPage() {
     <section className="workspace-page operator-workspace-page operator-offerings-page">
       <header className="operator-page-header operator-offerings-header">
         <h1>Araçlar ve servis teklifleri</h1>
-        <p>Paylaşmak istediğiniz araç ve hizmet ayrıntılarını düzenleyin.</p>
         <p className="operator-offerings-note">
           <InfoIcon />
           <span>
             Araç ve servis teklifi eklemek isteğe bağlıdır. Bunlar olmadan da
-            okul ve mahalle kapsamınızla uygun aramalarda yer alabilirsiniz.
+            aramalarda yer alabilirsiniz.
           </span>
         </p>
       </header>
@@ -300,9 +299,8 @@ export function OperatorOfferingsPage() {
         <div className="operator-offerings-section-heading">
           <div>
             <h2 id="vehicles-title" ref={vehiclesHeadingRef} tabIndex={-1}>
-              Filo bilgileri
+              Araçlar
             </h2>
-            <p>Servis tekliflerinizde kullanacağınız araçları yönetin.</p>
           </div>
           {vehiclesReady && (
             <button
@@ -320,7 +318,7 @@ export function OperatorOfferingsPage() {
           <InlineLoading label="Araçlar yükleniyor" />
         ) : loadStatus.vehicles === 'error' ? (
           <LoadErrorPanel
-            detail="Filo bilgileriniz şu anda alınamadı. Araç ekleme ve silme, bilgiler yüklenene kadar kapalıdır."
+            detail="Araçlar yüklenene kadar araç eklenemez ve silinemez."
             onRetry={() => retryLoad('vehicles')}
             title="Araç bilgileri yüklenemedi"
           />
@@ -335,7 +333,7 @@ export function OperatorOfferingsPage() {
                 İlk aracı ekle
               </button>
             }
-            detail="Servis teklifi paylaşmak isterseniz önce plaka ve kapasite bilgisiyle bir araç ekleyin."
+            detail="Servis teklifi için önce plaka ve kapasiteyle bir araç ekleyin."
             title="Henüz araç eklenmedi"
           />
         ) : (
@@ -379,7 +377,7 @@ export function OperatorOfferingsPage() {
                   {!vehicle.deletable || eligibilityStale ? (
                     <p className="operator-vehicle-removal-note">
                       {eligibilityStale
-                        ? 'Silme uygunluğu doğrulanamadı; sayfayı yenileyin.'
+                        ? 'Silinip silinemeyeceği kontrol edilemedi; sayfayı yenileyin.'
                         : deletionBlockedNotes[
                             vehicle.deletionBlockedReason ?? 'HISTORY_UNKNOWN'
                           ]}
@@ -409,11 +407,8 @@ export function OperatorOfferingsPage() {
         <div className="operator-offerings-section-heading">
           <div>
             <h2 id="offerings-title" ref={offeringsHeadingRef} tabIndex={-1}>
-              Paylaşılan hizmetler
+              Servis teklifleri
             </h2>
-            <p>
-              Okul ve mahalle kapsamıyla ilişkilendirilmiş servis teklifleri.
-            </p>
           </div>
           {canCreateOffering && (
             <button
@@ -429,15 +424,15 @@ export function OperatorOfferingsPage() {
 
         {loadStatus.schools === 'error' ? (
           <LoadErrorPanel
-            detail="Teklif oluşturmak, düzenlemek ve yayımlamak için okul bağlantılarınızın yüklenmesi gerekir."
+            detail="Teklif işlemleri için okullarınızın yüklenmesi gerekir."
             onRetry={() => retryLoad('schools')}
-            title="Okul bağlantıları yüklenemedi"
+            title="Okullar yüklenemedi"
           />
         ) : (
           loadStatus.vehicles === 'error' &&
           schoolsReady && (
             <StatePanel
-              detail="Araç bilgileri yüklenene kadar teklif oluşturma, düzenleme ve yayımlama kapalıdır."
+              detail="Araçlar yüklenene kadar teklif işlemleri kapalıdır."
               title="Teklif işlemleri şu an kullanılamıyor"
             />
           )
@@ -459,8 +454,8 @@ export function OperatorOfferingsPage() {
               }
               detail={
                 activeSchools.length === 0
-                  ? 'Servis teklifi oluşturmak için önce etkin bir okul bağlantısı ekleyin.'
-                  : 'Servis teklifi oluşturmak için en az bir etkin aracınız olmalıdır.'
+                  ? 'Servis teklifi için önce etkin bir okul ekleyin.'
+                  : 'Servis teklifi için en az bir etkin araç gerekir.'
               }
               title="Önce gerekli bilgileri tamamlayın"
             />
@@ -470,7 +465,7 @@ export function OperatorOfferingsPage() {
           <InlineLoading label="Servis teklifleri yükleniyor" />
         ) : loadStatus.offerings === 'error' ? (
           <LoadErrorPanel
-            detail="Teklifleriniz şu anda alınamadı. Mevcut teklifler doğrulanana kadar yeni teklif oluşturulamaz."
+            detail="Teklifler yüklenene kadar yeni teklif oluşturulamaz."
             onRetry={() => retryLoad('offerings')}
             title="Servis teklifleri yüklenemedi"
           />
@@ -486,7 +481,7 @@ export function OperatorOfferingsPage() {
                   İlk teklifi oluştur
                 </button>
               }
-              detail="Taslak oluşturduktan sonra servis mahallelerini seçip teklifi yayımlayabilirsiniz."
+              detail="Taslak oluşturup mahalleleri seçtikten sonra yayımlayabilirsiniz."
               title="Henüz servis teklifi yok"
             />
           )
@@ -525,11 +520,11 @@ export function OperatorOfferingsPage() {
                           ? offering.coverage
                               .map((item) => item.neighborhoodName)
                               .join(', ')
-                          : 'Yayın için kapsam ekleyin'}
+                          : 'Yayın için mahalle seçin'}
                       </small>
                       {offering.availableSeats !== null && (
                         <small>
-                          Uygun koltuk: {offering.availableSeats}/
+                          Boş koltuk: {offering.availableSeats}/
                           {offering.vehicleCapacity}
                         </small>
                       )}
@@ -733,9 +728,6 @@ function VehicleCreateForm({
 
   return (
     <form className="operator-dialog-form" onSubmit={submit}>
-      <p className="operator-dialog-intro">
-        Plaka ve kapasite bilgisi servis tekliflerinde kullanılır.
-      </p>
       <div className="form-grid two-columns">
         <label className="form-field">
           Plaka
@@ -874,14 +866,14 @@ function OfferingCreateForm({
     const vehicle = vehicles.find((item) => item.id === vehicleId)
     const seats = availableSeats === '' ? null : Number(availableSeats)
     if (!operatorSchoolId || !vehicle) {
-      setValidation('Etkin bir okul bağlantısı ve araç seçin.')
+      setValidation('Etkin bir okul ve araç seçin.')
       return
     }
     if (
       seats !== null &&
       (!Number.isInteger(seats) || seats < 0 || seats > vehicle.capacity)
     ) {
-      setValidation(`Uygun koltuk 0–${vehicle.capacity} arasında olmalıdır.`)
+      setValidation(`Boş koltuk 0–${vehicle.capacity} arasında olmalıdır.`)
       return
     }
     setPending(true)
@@ -908,12 +900,12 @@ function OfferingCreateForm({
   return (
     <form className="operator-dialog-form" onSubmit={submit}>
       <p className="operator-dialog-intro">
-        Teklif önce taslak olarak oluşturulur. Mahalle kapsamını ekledikten
-        sonra yayımlayabilirsiniz.
+        Teklif taslak olarak oluşturulur; mahalleleri seçtikten sonra
+        yayımlayabilirsiniz.
       </p>
       <div className="form-grid two-columns">
         <label className="form-field">
-          Okul bağlantısı
+          Okul
           <select
             onChange={(event) => setOperatorSchoolId(event.target.value)}
             value={operatorSchoolId}
@@ -941,7 +933,7 @@ function OfferingCreateForm({
           </select>
         </label>
         <label className="form-field">
-          Uygun koltuk (isteğe bağlı)
+          Boş koltuk (isteğe bağlı)
           <input
             min="0"
             onChange={(event) => setAvailableSeats(event.target.value)}
@@ -965,7 +957,7 @@ function OfferingCreateForm({
       )}
       {(schools.length === 0 || vehicles.length === 0) && (
         <p className="empty-note">
-          Taslak oluşturmak için etkin okul bağlantısı ve etkin araç gerekir.
+          Taslak oluşturmak için etkin okul ve araç gerekir.
         </p>
       )}
       <div className="operator-dialog-actions">
@@ -1039,14 +1031,14 @@ function OfferingEditor({
     const vehicle = vehicles.find((item) => item.id === vehicleId)
     const seats = availableSeats === '' ? null : Number(availableSeats)
     if (!operatorSchoolId || !vehicle) {
-      setValidation('Etkin bir okul bağlantısı ve araç seçin.')
+      setValidation('Etkin bir okul ve araç seçin.')
       return
     }
     if (
       seats !== null &&
       (!Number.isInteger(seats) || seats < 0 || seats > vehicle.capacity)
     ) {
-      setValidation(`Uygun koltuk 0–${vehicle.capacity} arasında olmalıdır.`)
+      setValidation(`Boş koltuk 0–${vehicle.capacity} arasında olmalıdır.`)
       return
     }
     setPending('details')
@@ -1082,7 +1074,7 @@ function OfferingEditor({
       setSelectedCoverage(
         new Set(updated.coverage.map((item) => item.neighborhoodId)),
       )
-      onUpdated(updated, 'Servis kapsamı kaydedildi.')
+      onUpdated(updated, 'Servis mahalleleri kaydedildi.')
     } catch (reason) {
       setCoverageError(onError(reason))
     } finally {
@@ -1096,7 +1088,7 @@ function OfferingEditor({
         <h3>Teklif ayrıntıları</h3>
         <div className="form-grid two-columns">
           <label className="form-field">
-            Okul bağlantısı
+            Okul
             <select
               onChange={(event) => setOperatorSchoolId(event.target.value)}
               value={operatorSchoolId}
@@ -1124,7 +1116,7 @@ function OfferingEditor({
             </select>
           </label>
           <label className="form-field">
-            Uygun koltuk (isteğe bağlı)
+            Boş koltuk (isteğe bağlı)
             <input
               min="0"
               onChange={(event) => setAvailableSeats(event.target.value)}
@@ -1163,7 +1155,7 @@ function OfferingEditor({
 
         {groupedCoverage.length === 0 ? (
           <p className="empty-note">
-            Önce okulun genel kapsamına mahalle ekleyin.
+            Önce bu okul için hizmet mahallesi seçin.
           </p>
         ) : (
           groupedCoverage.map(([district, items]) => (
@@ -1201,9 +1193,7 @@ function OfferingEditor({
             disabled={pending === 'coverage'}
             type="submit"
           >
-            {pending === 'coverage'
-              ? 'Kaydediliyor…'
-              : 'Servis kapsamını kaydet'}
+            {pending === 'coverage' ? 'Kaydediliyor…' : 'Mahalleleri kaydet'}
           </button>
         </div>
       </form>
@@ -1213,11 +1203,11 @@ function OfferingEditor({
 
 const deletionConflictMessages: Record<string, string> = {
   vehicle_in_use:
-    'Bu araç bir servis teklifinde kullanıldığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+    'Bu araç bir servis teklifinde kullanıldığı için silinemez. Pasife alabilirsiniz.',
   vehicle_previously_used:
-    'Bu araç daha önce bir servis teklifinde kullanıldığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+    'Bu araç daha önce bir servis teklifinde kullanıldığı için silinemez. Pasife alabilirsiniz.',
   vehicle_history_unknown:
-    'Bu aracın kullanım geçmişi doğrulanamadığı için silinemez. Bunun yerine pasife alabilirsiniz.',
+    'Bu aracın kullanım geçmişi doğrulanamadığı için silinemez. Pasife alabilirsiniz.',
 }
 
 const deletionBlockedNotes: Record<
@@ -1287,7 +1277,6 @@ function ModalDialog({
       <div className="operator-dialog-header">
         <div>
           <h2>{title}</h2>
-          <p>Değişiklikler gerçek hesabınıza kaydedilir.</p>
         </div>
         <button
           aria-label={`${title} penceresini kapat`}
@@ -1391,7 +1380,7 @@ function dialogErrorFor(
 function messageFor(reason: unknown): string {
   return reason instanceof ApiError
     ? reason.problem.detail
-    : 'İşlem tamamlanamadı. Lütfen tekrar deneyin.'
+    : 'İşlem tamamlanamadı. Tekrar deneyin.'
 }
 
 /** Section-scoped read failure with a localized message; never shows server text. */

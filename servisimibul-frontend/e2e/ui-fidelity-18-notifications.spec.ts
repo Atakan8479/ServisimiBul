@@ -249,7 +249,7 @@ test('N01 retries a failed list and pages through results', async ({
   await expect(page.getByText('Henüz bildiriminiz yok')).toHaveCount(0)
   await assertAccessibleAndContained(page)
   await page.getByRole('button', { name: 'Tekrar dene' }).click()
-  await expect(page.getByText('Servis uygunluğu bildirildi')).toBeVisible()
+  await expect(page.getByText('Yeni servis duyurusu')).toBeVisible()
   await page.getByRole('button', { name: 'Sonraki' }).click()
   await expect(page.getByText('Geri bildiriminizi bekliyoruz')).toBeVisible()
   await expect(page.getByText('Sayfa 2 / 2')).toBeVisible()
@@ -333,7 +333,7 @@ function feed(roleId: (typeof roles)[number]['id']) {
         1,
         'DEMAND_CREATED',
         'Yeni servis talebi',
-        'Hizmet verdiğiniz okulun mevcut kapsama alanında yeni bir talep oluşturuldu.',
+        'Hizmet verdiğiniz okul ve mahallede yeni bir talep açıldı.',
         `/demands/${demandId}`,
         null,
       ),
@@ -341,7 +341,7 @@ function feed(roleId: (typeof roles)[number]['id']) {
         2,
         'DEMAND_CREATED',
         'Yeni servis talebi',
-        'Hizmet verdiğiniz okulun mevcut kapsama alanında yeni bir talep oluşturuldu.',
+        'Hizmet verdiğiniz okul ve mahallede yeni bir talep açıldı.',
         `/demands/${demandId}`,
         null,
       ),
@@ -349,7 +349,7 @@ function feed(roleId: (typeof roles)[number]['id']) {
         3,
         'DEMAND_CREATED',
         'Yeni servis talebi',
-        'Hizmet verdiğiniz okulun mevcut kapsama alanında yeni bir talep oluşturuldu.',
+        'Hizmet verdiğiniz okul ve mahallede yeni bir talep açıldı.',
         `/demands/${demandId}`,
         '2026-10-25T09:10:00Z',
       ),
@@ -387,7 +387,7 @@ function feed(roleId: (typeof roles)[number]['id']) {
     notification(
       1,
       'SERVICE_PUBLISHED',
-      'Servis uygunluğu bildirildi',
+      'Yeni servis duyurusu',
       'Bir işletmeci servis uygunluğu bildirdi. Bu beyan platform tarafından doğrulanmamıştır.',
       `/demands/${demandId}?feedback=${demandId}`,
       null,

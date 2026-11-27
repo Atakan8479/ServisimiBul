@@ -24,11 +24,15 @@ for (const viewport of viewports) {
     )
 
     // The hero CTA remains the single route into the school search.
-    const heroCta = page.getByRole('link', { name: 'Okulunu seç' })
+    const heroCta = page.getByRole('link', { name: 'Okulunuzu seçin' })
     await expect(heroCta).toHaveAttribute('href', '#school-search')
     await expect(page.locator('#school-search')).toBeVisible()
     await expect(
-      page.getByRole('link', { name: 'Talep panosuna git' }),
+      page
+        .getByRole('complementary', {
+          name: 'Okulunuzda servis seçeneği bulamadınız mı?',
+        })
+        .getByRole('link', { name: 'Talep panosuna git' }),
     ).toHaveAttribute('href', '/demands')
 
     // The demand callout meets the footer with a bounded, intentional gap.
@@ -64,7 +68,12 @@ test('keyboard focus moves from the demand callout straight into the footer', as
   await installMockApi(page, createMockApiState())
   await page.goto('/')
 
-  await page.getByRole('link', { name: 'Talep panosuna git' }).focus()
+  await page
+    .getByRole('complementary', {
+      name: 'Okulunuzda servis seçeneği bulamadınız mı?',
+    })
+    .getByRole('link', { name: 'Talep panosuna git' })
+    .focus()
   await page.keyboard.press('Tab')
   await expect(
     page
@@ -73,7 +82,7 @@ test('keyboard focus moves from the demand callout straight into the footer', as
   ).toBeFocused()
 
   // Hero CTA still jumps to the school search.
-  await page.getByRole('link', { name: 'Okulunu seç' }).click()
+  await page.getByRole('link', { name: 'Okulunuzu seçin' }).click()
   await expect(page).toHaveURL(/#school-search$/)
   await expect(page.locator('#school-search')).toBeInViewport()
 })

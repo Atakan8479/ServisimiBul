@@ -120,14 +120,12 @@ export function PublicDiscoveryPage() {
       setProvinces(pilotProvinces)
       if (pilotProvinces.length === 0) {
         setLocationError(
-          'İstanbul için okul bilgisi bulunamadı. Daha sonra tekrar deneyin.',
+          'İstanbul okulları yüklenemedi. Daha sonra tekrar deneyin.',
         )
       }
     } catch {
       setProvinces([])
-      setLocationError(
-        'İller yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.',
-      )
+      setLocationError('İller yüklenemedi. Tekrar deneyin.')
     } finally {
       setLoadingProvinces(false)
     }
@@ -203,9 +201,7 @@ export function PublicDiscoveryPage() {
       )
 
     if (!districtMatches || !queryMatches) {
-      clearSelectedSchool(
-        'Filtreleri değiştirdiğiniz için okul seçimi temizlendi. Yeniden okul seçin.',
-      )
+      clearSelectedSchool('Filtreler değişti. Yeniden okul seçin.')
     }
   }
 
@@ -239,9 +235,7 @@ export function PublicDiscoveryPage() {
       })
       .catch(() => {
         if (districtRequest === schoolDistrictRequest.current) {
-          setLocationError(
-            'Okul ilçeleri yüklenemedi. İli yeniden seçip tekrar deneyin.',
-          )
+          setLocationError('Okul ilçeleri yüklenemedi. Tekrar deneyin.')
         }
       })
       .finally(() => {
@@ -356,9 +350,7 @@ export function PublicDiscoveryPage() {
       }
     } catch {
       if (request === pickupDistrictRequest.current) {
-        setLocationError(
-          'Servis alınacak ilçeler yüklenemedi. Okulu yeniden seçip tekrar deneyin.',
-        )
+        setLocationError('İlçeler yüklenemedi. Tekrar deneyin.')
       }
     } finally {
       if (request === pickupDistrictRequest.current) {
@@ -387,9 +379,7 @@ export function PublicDiscoveryPage() {
       }
     } catch {
       if (request === neighborhoodRequest.current) {
-        setLocationError(
-          'Mahalleler yüklenemedi. İlçeyi yeniden seçip tekrar deneyin.',
-        )
+        setLocationError('Mahalleler yüklenemedi. Tekrar deneyin.')
       }
     } finally {
       if (request === neighborhoodRequest.current) {
@@ -442,9 +432,7 @@ export function PublicDiscoveryPage() {
       if (request === searchRequest.current) setResults(nextResults)
     } catch {
       if (request === searchRequest.current) {
-        setSearchError(
-          'Servis işletmecileri yüklenemedi. Lütfen tekrar deneyin.',
-        )
+        setSearchError('Servis işletmecileri yüklenemedi. Tekrar deneyin.')
       }
     } finally {
       if (request === searchRequest.current) setSearching(false)
@@ -472,47 +460,30 @@ export function PublicDiscoveryPage() {
       <section className="discovery-hero" aria-labelledby="discovery-title">
         <div className="discovery-hero-inner">
           <div className="discovery-hero-copy">
-            <p className="discovery-kicker">İstanbul'da okul servisi keşfi</p>
+            <p className="discovery-kicker">İstanbul okulları için</p>
             <h1 id="discovery-title">
-              Okul servisini <em>birlikte bulalım.</em>
+              Okul servisinizi <em>bulun.</em>
             </h1>
             <p className="discovery-hero-lede">
-              Okulunu ve mahalleni seç. Kapsama uyan işletmecileri gör, hizmet
-              ayrıntılarını doğrudan teyit et.
+              Okulunuzu ve servise bineceğiniz mahalleyi seçin.
             </p>
             <div className="discovery-hero-actions">
               <a className="primary-button" href="#school-search">
-                Okulunu seç
+                Okulunuzu seçin
               </a>
               <Link className="secondary-button" to="/demands" viewTransition>
-                Talep panosunu keşfet
+                Talep panosuna git
               </Link>
             </div>
             <ul className="discovery-principles" aria-label="Arama özellikleri">
               <li>Üyelik gerekmez</li>
-              <li>Okul ve mahalle ayrı seçilir</li>
-              <li>Adres garantisi değildir</li>
             </ul>
           </div>
           <figure className="discovery-hero-visual">
-            <div className="discovery-hero-float" aria-hidden="true">
-              <span />
-              <div>
-                <strong>İhtiyacına göre ara</strong>
-                <small>Okul · ilçe · mahalle</small>
-              </div>
-            </div>
             <img
               alt="İstanbul'da ilerleyen sarı okul servis aracı"
               src="/assets/istanbul-school-shuttle-hero.png"
             />
-            <figcaption>
-              <span className="discovery-caption-mark" aria-hidden="true" />
-              <span>
-                <strong>Mahalle kapsamını gör</strong>
-                <small>Okuluna uygun seçenekler</small>
-              </span>
-            </figcaption>
           </figure>
         </div>
       </section>
@@ -520,7 +491,6 @@ export function PublicDiscoveryPage() {
       <div className="form-card discovery-search" id="school-search">
         <div className="discovery-search-heading">
           <div>
-            <p className="discovery-section-label">Aramanı kişiselleştir</p>
             <h2>Hangi okula servis arıyorsunuz?</h2>
           </div>
           <ol className="discovery-search-steps" aria-hidden="true">
@@ -545,7 +515,7 @@ export function PublicDiscoveryPage() {
 
         <div
           className="school-filter-grid"
-          aria-label="Okul kataloğu filtreleri"
+          aria-label="Okul filtreleri"
           role="group"
         >
           <label className="form-field">
@@ -706,7 +676,6 @@ export function PublicDiscoveryPage() {
         >
           <div className="section-heading pickup-heading">
             <div>
-              <p className="discovery-section-label">Servis bölgesi</p>
               <h2>Servise bineceğiniz yeri seçin</h2>
             </div>
           </div>
@@ -775,10 +744,6 @@ export function PublicDiscoveryPage() {
             </label>
           </div>
 
-          <p className="discovery-note">
-            Güzergâh, boş yer ve ücret için işletmeciyle görüşün.
-          </p>
-
           <button className="primary-button" disabled={searching} type="submit">
             {searching
               ? 'İşletmeciler aranıyor...'
@@ -808,13 +773,12 @@ export function PublicDiscoveryPage() {
       >
         <span className="discovery-demand-mark" aria-hidden="true" />
         <div>
-          <p className="discovery-section-label">Birlikte daha görünür</p>
           <h2 id="demand-promo-title">
             Okulunuzda servis seçeneği bulamadınız mı?
           </h2>
           <p>
-            Mahallenizdeki ailelerle ortak bir servis talebi oluşturun. Bu bir
-            rezervasyon değildir; talebinizi görünür kılar.
+            Mahallenizdeki ailelerle ortak bir servis talebi oluşturun. Talep
+            oluşturmak rezervasyon değildir.
           </p>
         </div>
         <Link className="secondary-button" to="/demands" viewTransition>
@@ -1014,11 +978,11 @@ function DiscoveryResults({
   }
 
   const resultTitle = loading
-    ? 'Uygun işletmeciler aranıyor'
+    ? 'İşletmeciler aranıyor'
     : error
       ? 'Sonuçlar yüklenemedi'
       : page?.totalElements === 0
-        ? 'Henüz bir eşleşme yok'
+        ? 'Eşleşen işletmeci bulunamadı'
         : `${page?.totalElements ?? 0} işletmeci bulundu`
 
   return (
@@ -1032,25 +996,27 @@ function DiscoveryResults({
           <h2 ref={headingRef} tabIndex={-1}>
             {resultTitle}
           </h2>
-          <p>Seçtiğiniz okul ve servis bölgesi için yayımlanan profiller.</p>
         </div>
         <a href="#school-search">Aramayı düzenle</a>
       </header>
 
       <details className="discovery-context-disclosure">
-        <summary>Arama ölçütlerini göster</summary>
+        <summary>Filtreleri göster</summary>
         <SearchContext selection={selection} />
       </details>
 
       <div className="discovery-result-layout">
-        <aside className="discovery-context-panel" aria-label="Arama ölçütleri">
+        <aside
+          className="discovery-context-panel"
+          aria-label="Arama filtreleri"
+        >
           <SearchContext selection={selection} />
         </aside>
 
         <div className="discovery-result-content">
           {loading && (
             <div
-              aria-label="Okul ve servis bölgesi eşleşmeleri kontrol ediliyor."
+              aria-label="Sonuçlar yükleniyor"
               className="result-loading"
               role="status"
             >
@@ -1071,7 +1037,6 @@ function DiscoveryResults({
           {!loading && error && (
             <div className="discovery-result-state result-error" role="alert">
               <div>
-                <h3>İşletmeci profilleri alınamadı.</h3>
                 <p>{error}</p>
               </div>
               <button
@@ -1088,10 +1053,9 @@ function DiscoveryResults({
             <div className="discovery-result-state result-empty">
               <span className="result-state-mark" aria-hidden="true" />
               <div>
-                <h3>Bu bölgede henüz servis işletmecisi bulunamadı.</h3>
                 <p>
-                  Farklı bir mahalle deneyebilir veya bölgedeki ihtiyacı talep
-                  panosunda görebilirsiniz.
+                  Farklı bir mahalle deneyebilir veya servis talebi
+                  oluşturabilirsiniz.
                 </p>
               </div>
               <Link
@@ -1113,8 +1077,8 @@ function DiscoveryResults({
               </div>
               <div className="discovery-result-guidance">
                 <p>
-                  Eşleşme; kesin adres, güzergâh, güncel kapasite veya fiyat
-                  garantisi değildir. Ayrıntıları işletmeciyle doğrudan görüşün.
+                  Listelenmek servis garantisi değildir. Güzergâh, boş yer ve
+                  ücreti işletmeciyle görüşün.
                 </p>
                 <a href="#resmi-tarife">Resmî ücret tarifesine bak</a>
               </div>
@@ -1171,7 +1135,7 @@ function demandBoardPath(selection?: SearchSelection) {
 function SearchContext({ selection }: { selection: SearchSelection }) {
   return (
     <div className="discovery-context-content">
-      <h3>Arama ölçütleri</h3>
+      <h3>Arama filtreleri</h3>
       <dl className="discovery-match-context">
         <div>
           <dt>Okul</dt>
@@ -1184,7 +1148,6 @@ function SearchContext({ selection }: { selection: SearchSelection }) {
           </dd>
         </div>
       </dl>
-      <p>Sonuçlar okul ve mahalle eşleşmesine göre gösterilir.</p>
       <a href="#resmi-tarife">Resmî ücret tarifesini incele</a>
     </div>
   )
@@ -1220,7 +1183,7 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
 
       {operator.publishedOfferings.length > 0 ? (
         <div className="offering-summary">
-          <h4>Yayımlanan servis bilgileri</h4>
+          <h4>Servis bilgileri</h4>
           <ul>
             {operator.publishedOfferings.map((offering) => (
               <li key={offering.offeringId}>
@@ -1232,7 +1195,7 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
                   </div>
                   {offering.availableSeats !== null && (
                     <div>
-                      <dt>Yayımlanan uygun koltuk</dt>
+                      <dt>Bildirilen boş koltuk</dt>
                       <dd>{offering.availableSeats}</dd>
                     </div>
                   )}
@@ -1243,11 +1206,7 @@ function OperatorCard({ operator }: { operator: PublicOperator }) {
         </div>
       ) : (
         <div className="operator-offering-empty">
-          <strong>Servis ayrıntısı yayımlanmamış</strong>
-          <span>
-            Araç ve koltuk bilgisi olmadan da bu işletmeciyle doğrudan
-            görüşebilirsiniz.
-          </span>
+          <strong>Servis bilgisi eklenmemiş</strong>
         </div>
       )}
 

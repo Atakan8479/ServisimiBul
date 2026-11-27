@@ -22,8 +22,8 @@ for (const viewport of viewports) {
     const vehicleReads = await failReads(page, '/api/v1/operator/vehicles')
     await page.goto('/operator/offerings')
 
-    const fleet = page.getByRole('region', { name: 'Filo bilgileri' })
-    const offerings = page.getByRole('region', { name: 'Paylaşılan hizmetler' })
+    const fleet = page.getByRole('region', { name: 'Araçlar', exact: true })
+    const offerings = page.getByRole('region', { name: 'Servis teklifleri' })
     const alert = fleet.getByRole('alert')
     await expect(alert).toContainText('Araç bilgileri yüklenemedi')
     await expect(page.getByRole('alert')).toHaveCount(1)
@@ -59,7 +59,7 @@ for (const viewport of viewports) {
     await retry.focus()
     await page.keyboard.press('Enter')
     await expect(
-      page.getByRole('heading', { name: 'Filo bilgileri' }),
+      page.getByRole('heading', { name: 'Araçlar', exact: true }),
     ).toBeFocused()
     await expect(fleet.getByText('34 ABC 123')).toBeVisible()
     await expect(page.getByRole('alert')).toHaveCount(0)
@@ -79,16 +79,16 @@ test('LOAD327 school-only failure blocks creation without a false empty state', 
   const schoolReads = await failReads(page, '/api/v1/operator/schools')
   await page.goto('/operator/offerings')
 
-  const offerings = page.getByRole('region', { name: 'Paylaşılan hizmetler' })
+  const offerings = page.getByRole('region', { name: 'Servis teklifleri' })
   await expect(offerings.getByRole('alert')).toContainText(
-    'Okul bağlantıları yüklenemedi',
+    'Okullar yüklenemedi',
   )
   await expect(page.getByText('Önce gerekli bilgileri tamamlayın')).toHaveCount(
     0,
   )
   await expect(
     page
-      .getByRole('region', { name: 'Filo bilgileri' })
+      .getByRole('region', { name: 'Araçlar', exact: true })
       .getByText('34 ABC 123'),
   ).toBeVisible()
   await expect(
@@ -119,7 +119,7 @@ test('LOAD327 simultaneous failures each keep their own retry', async ({
   await expectNoOverflow(page)
   await shoot(page, 'multiple-errors-390')
 
-  const offerings = page.getByRole('region', { name: 'Paylaşılan hizmetler' })
+  const offerings = page.getByRole('region', { name: 'Servis teklifleri' })
   offeringReads.recover()
   await offerings.getByRole('button', { name: 'Yeniden dene' }).click()
   await expect(offerings.getByText('Sabah ve akşam servisi')).toBeVisible()

@@ -40,7 +40,7 @@ const statusLabels: Record<ModerationCaseStatus, string> = {
 const targetLabels: Record<ModerationTargetType, string> = {
   COMMENT: 'Yorum',
   DEMAND: 'Talep',
-  SERVICE_RESPONSE: 'Servis bildirimi',
+  SERVICE_RESPONSE: 'Servis duyurusu',
 }
 const reasonLabels: Record<ReportReason, string> = {
   ABUSE_HARASSMENT: 'Hakaret veya taciz',
@@ -56,7 +56,7 @@ const actionLabels: Record<ModerationAction, string> = {
   RESOLVE_NO_ACTION: 'İşlem yapmadan sonuçlandır',
   HIDE_COMMENT: 'Yorumu gizle',
   RESTORE_COMMENT: 'Yorumu geri getir',
-  WITHDRAW_SERVICE_RESPONSE: 'Servis bildirimini geri çek',
+  WITHDRAW_SERVICE_RESPONSE: 'Servis duyurusunu geri çek',
   SUSPEND_OPERATOR: 'İşletmeciyi askıya al',
   CLOSE_DEMAND: 'Talebi kapat',
 }
@@ -134,7 +134,7 @@ export function AdminModerationPage() {
           setDetailError(
             failureMessage(
               failure,
-              'Bildirim ayrıntısı yüklenemedi. Tekrar deneyin.',
+              'İçerik bildirimi yüklenemedi. Tekrar deneyin.',
             ),
           )
         }
@@ -188,7 +188,7 @@ export function AdminModerationPage() {
       setLoadError(
         failureMessage(
           failure,
-          'Bildirim kuyruğu yüklenemedi. Tekrar deneyin.',
+          'İçerik bildirimleri yüklenemedi. Tekrar deneyin.',
         ),
       )
       setLoading(false)
@@ -326,15 +326,7 @@ export function AdminModerationPage() {
   return (
     <section className="workspace-page admin-page moderation-page">
       <header className="admin-page-header admin-operator-header">
-        <p className="admin-eyebrow">Yönetim paneli</p>
         <h1>Raporlama ve moderasyon</h1>
-        <p>
-          İçerik bildirimlerini inceleyin ve gerekçeli işlem kaydı oluşturun.
-        </p>
-        <p className="moderation-human-note">
-          Kararlar insan tarafından verilir; yapay zekâ moderasyonu veya
-          otomatik silme yoktur.
-        </p>
       </header>
 
       {notice && (
@@ -362,8 +354,8 @@ export function AdminModerationPage() {
         <div className="moderation-guidance">
           <ShieldIcon />
           <p>
-            Bildirilen içerik otomatik kaldırılmaz. Kaydı inceleyin, gerekçenizi
-            yazın ve uygun kararı seçin.
+            Bildirilen içerik otomatik kaldırılmaz; kararı yönetici verir.
+            Gerekçenizi yazıp uygun kararı seçin.
           </p>
         </div>
       </div>
@@ -492,19 +484,19 @@ export function AdminModerationPage() {
             </button>
           }
           detail={loadError}
-          title="Bildirimler yüklenemedi"
+          title="İçerik bildirimleri yüklenemedi"
           tone="error"
         />
       ) : loading ? (
         <StatePanel
-          detail="Güncel bildirim kayıtları getiriliyor."
-          title="Bildirimler yükleniyor"
+          detail="Güncel kayıtlar getiriliyor."
+          title="İçerik bildirimleri yükleniyor"
           tone="loading"
         />
       ) : !result || result.content.length === 0 ? (
         <StatePanel
-          detail="Diğer durumları seçebilir veya filtreyi sıfırlayabilirsiniz."
-          title="Bu görünümde bildirim yok"
+          detail="Farklı bir durum seçin veya filtreyi sıfırlayın."
+          title="İçerik bildirimi yok"
         />
       ) : (
         <ul className="moderation-report-cards">
